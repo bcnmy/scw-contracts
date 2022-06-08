@@ -1,0 +1,69 @@
+// SPDX-License-Identifier: MIT
+pragma solidity ^0.8.0;
+
+//import "@openzeppelin/contracts/proxy/Clones.sol";
+import "./Proxy.sol";
+import "./SmartWallet.sol"; 
+//@review
+//possibly IWallet.sol
+
+contract WalletFactory {
+    address internal _defaultImpl; 
+
+    //states : registry
+    mapping (address => bool) public isWalletExist;
+
+    constructor(address _baseImpl) {
+        _defaultImpl = _baseImpl;
+    }
+
+    event WalletCreated(address indexed _proxy, address indexed _implementation, address indexed _owner);
+
+    /**
+     * @notice Deploys wallet using create2 and points it to _defaultImpl
+     * @param _owner EOA signatory of the wallet
+     * @param _entryPoint AA 4337 entry point address
+     * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
+     */
+    function deployCounterFactualWallet(address _owner, address _entryPoint, uint _index) public returns(address proxy){
+        bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
+        bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint(uint160(_defaultImpl)));
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            proxy := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
+        }
+        require(address(proxy) != address(0), "Create2 call failed");
+        emit WalletCreated(proxy,_defaultImpl,_owner);
+        SmartWallet(proxy).init(_owner, _entryPoint);
+        isWalletExist[_owner] = true;
+    }
+
+    /**
+     * @notice Deploys wallet using create and points it to _defaultImpl
+     * @param _owner EOA signatory of the wallet
+     * @param _entryPoint AA 4337 entry point address
+    */ 
+    function deployWallet(address _owner, address _entryPoint) public returns(address proxy){ 
+        bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint(uint160(_defaultImpl)));
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            proxy := create(0x0, add(0x20, deploymentData), mload(deploymentData))
+        }
+        emit WalletCreated(proxy,_defaultImpl,_owner);
+        SmartWallet(proxy).init(_owner, _entryPoint);
+        isWalletExist[_owner] = true;
+    }
+
+    /**
+     * @notice Allows to find out wallet address prior to deployment
+     * @param _owner EOA signatory of the wallet
+     * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
+    */
+    function getAddressForCounterfactualWallet(address _owner, uint _index) external view returns (address _wallet) {
+       bytes memory code = abi.encodePacked(type(Proxy).creationCode, uint(uint160(_defaultImpl)));
+       bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
+       bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code)));
+        _wallet = address(uint160(uint(hash)));
+    }
+
+}

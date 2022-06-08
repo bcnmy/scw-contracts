@@ -6,6 +6,7 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+const walletUtils = require("./walletUtils");
 
 dotenv.config();
 
@@ -23,12 +24,68 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
-  solidity: "0.8.4",
+  solidity: {
+    compilers: [
+      {
+        version: "0.8.4",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+      {
+        version: "0.8.7",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+      {
+        version: "0.4.23",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+      {
+        version: "0.6.2",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+      {
+        version: "0.7.6",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+      {
+        version: "0.5.12",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+      {
+        version: "0.6.12",
+        settings: {
+          optimizer: {
+            enabled: true,
+            runs: 200,
+          },
+        },
+      },
+    ],
+  },
   networks: {
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
       accounts:
-        process.env.PRIVATE_KEY !== undefined ? [process.env.PRIVATE_KEY] : [],
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    goerli: {
+      url: process.env.GOERLI_URL || "",
+      accounts: walletUtils.makeKeyList(),
+      chainId: 5,
+      // gas: 6400000
     },
   },
   gasReporter: {
