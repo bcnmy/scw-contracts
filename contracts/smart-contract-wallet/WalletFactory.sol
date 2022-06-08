@@ -23,9 +23,10 @@ contract WalletFactory {
      * @notice Deploys wallet using create2 and points it to _defaultImpl
      * @param _owner EOA signatory of the wallet
      * @param _entryPoint AA 4337 entry point address
+     * @param _handler fallback handler address
      * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
      */
-    function deployCounterFactualWallet(address _owner, address _entryPoint, uint _index) public returns(address proxy){
+    function deployCounterFactualWallet(address _owner, address _entryPoint, address _handler, uint _index) public returns(address proxy){
         bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
         bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint(uint160(_defaultImpl)));
         // solhint-disable-next-line no-inline-assembly
@@ -34,24 +35,25 @@ contract WalletFactory {
         }
         require(address(proxy) != address(0), "Create2 call failed");
         emit WalletCreated(proxy,_defaultImpl,_owner);
-        SmartWallet(proxy).init(_owner, _entryPoint);
-        isWalletExist[_owner] = true;
+        SmartWallet(proxy).init(_owner, _entryPoint, _handler);
+        isWalletExist[proxy] = true;
     }
 
     /**
      * @notice Deploys wallet using create and points it to _defaultImpl
      * @param _owner EOA signatory of the wallet
      * @param _entryPoint AA 4337 entry point address
+     * @param _handler fallback handler address
     */ 
-    function deployWallet(address _owner, address _entryPoint) public returns(address proxy){ 
+    function deployWallet(address _owner, address _entryPoint, address _handler) public returns(address proxy){ 
         bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint(uint160(_defaultImpl)));
         // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create(0x0, add(0x20, deploymentData), mload(deploymentData))
         }
         emit WalletCreated(proxy,_defaultImpl,_owner);
-        SmartWallet(proxy).init(_owner, _entryPoint);
-        isWalletExist[_owner] = true;
+        SmartWallet(proxy).init(_owner, _entryPoint, _handler);
+        isWalletExist[proxy] = true;
     }
 
     /**

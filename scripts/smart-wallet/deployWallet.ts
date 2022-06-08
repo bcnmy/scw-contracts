@@ -37,11 +37,19 @@ async function main() {
 
   const mockEntryPoint = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
 
+  const DefaultHandler = await ethers.getContractFactory(
+    "DefaultCallbackHandler"
+  );
+  const handler = await DefaultHandler.deploy();
+  await handler.deployed();
+  console.log("Default callback handler deployed at: ", handler.address);
+
   // TODO
   // how can write tx return address to var
   const proxy = await walletFactory.deployCounterFactualWallet(
     owner,
     mockEntryPoint,
+    handler.address,
     0
   );
 

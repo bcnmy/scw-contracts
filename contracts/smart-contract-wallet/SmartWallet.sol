@@ -7,14 +7,17 @@ pragma solidity ^0.8.0;
 
 import "./libs/LibAddress.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "./IWallet.sol";
 import "./common/Singleton.sol";
 import "./storage/WalletStorage.sol";
 import "./base/ModuleManager.sol";
+import "./base/FallbackManager.sol";
 import "./common/SignatureDecoder.sol";
 // import "./common/Hooks.sol";
 import "./common/SecuredTokenTransfer.sol";
 import "./interfaces/ISignatureValidator.sol";
+import "./interfaces/IERC165.sol";
 import "./libs/SafeMath.sol";
 import "./libs/ECDSA.sol";
 
@@ -22,11 +25,13 @@ import "./libs/ECDSA.sol";
 contract SmartWallet is 
      Singleton,
      IWallet,
+     IERC165,
      WalletStorage,
      ModuleManager,
      SignatureDecoder,
      SecuredTokenTransfer,
      ISignatureValidatorConstants,
+     FallbackManager,
      Initializable     
     {
     using ECDSA for bytes32;
@@ -40,7 +45,6 @@ contract SmartWallet is
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
 
     // modifiers
-    // @review the need of modifier as per thoughts and might use _msgSender with ERC2771Context
     // onlyOwner
     /**
      * @notice Throws if the sender is not an the owner.
@@ -50,11 +54,17 @@ contract SmartWallet is
         _;
     }
 
+    // onlyOwner OR self
+    modifier mixedAuth {
+    require(msg.sender == owner || msg.sender == address(this),"Only owner or self");
+    _;
+   }
+
     // @notice authorized modifier (onlySelf) is already inherited
 
     // Setters
 
-    function setOwner(address _newOwner) external onlyOwner {
+    function setOwner(address _newOwner) external mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
         owner = _newOwner;
         emit EOAChanged(address(this),owner,_newOwner);
@@ -64,13 +74,13 @@ contract SmartWallet is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    function updateImplementation(address _implementation) external onlyOwner {
+    function updateImplementation(address _implementation) external mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         _setImplementation(_implementation);
         emit ImplementationUpdated(_implementation);
     }
 
-    function updateEntryPoint(address _entryPoint) external onlyOwner {
+    function updateEntryPoint(address _entryPoint) external mixedAuth {
         require(_entryPoint != address(0), "Smart Account:: new entry point address cannot be zero");
         emit EntryPointChanged(entryPoint, _entryPoint);
         entryPoint = _entryPoint;
@@ -92,7 +102,6 @@ contract SmartWallet is
         return id;
     }
 
-    // @review
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -106,18 +115,19 @@ contract SmartWallet is
     
     // Initialize / Setup
     // Used to setup
-    // i. owner ii. entry point iii. modules (through setUpModules) iv. handlers
-    // @review 
-    function init(address _owner, address _entryPoint) public initializer { 
+    // i. owner ii. entry point iii. handlers
+    function init(address _owner, address _entryPoint, address _handler) public initializer { 
         require(owner == address(0), "Already initialized");
         require(entryPoint == address(0), "Already initialized");
         owner = _owner;
-        entryPoint = _entryPoint; 
-        // set anything else
+        entryPoint = _entryPoint;
+        if (_handler != address(0)) internalSetFallbackHandler(_handler);
+        setupModules(address(0), bytes(""));
     }
 
     // @review 2D nonces and args as default batchId 0 is always used
-
+    // TODO : Update description
+    // TODO : Add batchId and update in test cases, utils etc
     // Gnosis style transaction with optional repay in native tokens OR ERC20 
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
@@ -172,7 +182,7 @@ contract SmartWallet is
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
-        require(gasleft() >= ((safeTxGas * 64) / 63).max(safeTxGas + 2500) + 500, "GS010");
+        require(gasleft() >= ((safeTxGas * 64) / 63).max(safeTxGas + 2500) + 500, "BSA010");
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             uint256 gasUsed = gasleft();
@@ -182,7 +192,7 @@ contract SmartWallet is
             gasUsed = gasUsed.sub(gasleft());
             // If no safeTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
-            require(success || safeTxGas != 0 || gasPrice != 0, "GS013");
+            require(success || safeTxGas != 0 || gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
             if (gasPrice > 0) {
@@ -205,10 +215,10 @@ contract SmartWallet is
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             payment = gasUsed.add(baseGas).mul(gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            require(receiver.send(payment), "GS011");
+            require(receiver.send(payment), "BSA011");
         } else {
             payment = gasUsed.add(baseGas).mul(gasPrice);
-            require(transferToken(gasToken, receiver, payment), "GS012");
+            require(transferToken(gasToken, receiver, payment), "BSA012");
         }
     }
 
@@ -229,7 +239,8 @@ contract SmartWallet is
         uint256 i = 0;
         address _signer;
         (v, r, s) = signatureSplit(signatures, i);
-        // review if necessary v = 0 and v = 1
+        // review if necessary v = 1
+        // review sig verification from other wallets
         if(v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the contract is encoded into r
@@ -238,10 +249,10 @@ contract SmartWallet is
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
                 // This check is not completely accurate, since it is possible that more signatures than the threshold are send.
                 // Here we only check that the pointer is not pointing inside the part that is being processed
-                require(uint256(s) >= uint256(1).mul(65), "GS021");
+                require(uint256(s) >= uint256(1).mul(65), "BSA021");
 
                 // Check that signature data pointer (s) is in bounds (points to the length of data -> 32 bytes)
-                require(uint256(s).add(32) <= signatures.length, "GS022");
+                require(uint256(s).add(32) <= signatures.length, "BSA022");
 
                 // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
                 uint256 contractSignatureLen;
@@ -249,7 +260,7 @@ contract SmartWallet is
                 assembly {
                     contractSignatureLen := mload(add(add(signatures, s), 0x20))
                 }
-                require(uint256(s).add(32).add(contractSignatureLen) <= signatures.length, "GS023");
+                require(uint256(s).add(32).add(contractSignatureLen) <= signatures.length, "BSA023");
 
                 // Check signature
                 bytes memory contractSignature;
@@ -258,7 +269,7 @@ contract SmartWallet is
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                require(ISignatureValidator(_signer).isValidSignature(data, contractSignature) == EIP1271_MAGIC_VALUE, "GS024");
+                require(ISignatureValidator(_signer).isValidSignature(data, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
         }
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
@@ -343,6 +354,28 @@ contract SmartWallet is
         return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), safeTxHash);
     }
 
+    // Extra Utils
+    
+    function transfer(address payable dest, uint amount) external onlyOwner {
+        dest.transfer(amount);
+    }
+
+    function pullTokens(address token, address dest, uint256 amount) external onlyOwner {
+        IERC20 tokenContract = IERC20(token);
+        tokenContract.transfer(dest, amount);
+    }
+
+    function exec(address dest, uint value, bytes calldata func) external onlyOwner{
+        _call(dest, value, func);
+    }
+
+    function execBatch(address[] calldata dest, bytes[] calldata func) external onlyOwner{
+        require(dest.length == func.length, "wrong array lengths");
+        for (uint i = 0; i < dest.length; i++) {
+            _call(dest[i], 0, func[i]);
+        }
+    }
+
     // AA implementation
     function _call(address sender, uint value, bytes memory data) internal {
         // @review linter
@@ -373,6 +406,7 @@ contract SmartWallet is
     }
 
     // review nonce conflict with AA userOp nonce
+    // userOp can omit nonce or have batchId as well!
     function _validateAndIncrementNonce(UserOperation calldata userOp) internal {
         //during construction, the "nonce" field hold the salt.
         // if we assert it is zero, then we allow only a single wallet per owner.
@@ -401,20 +435,11 @@ contract SmartWallet is
     
     /**
      * @notice Query if a contract implements an interface
-     * @param _interfaceID The interface identifier, as specified in ERC-165
-     * @dev If using a new main module, developpers must ensure that all inherited
-     *      contracts by the mainmodule don't conflict and are accounted for to be
-     *      supported by the supportsInterface method.
+     * @param interfaceId The interface identifier, as specified in ERC165
      * @return `true` if the contract implements `_interfaceID`
     */
-    // Avoided since hooks are not added yet
-    // This can be added through default callbackHandler (using FallbackHandler base)
-    /*function supportsInterface(
-    bytes4 _interfaceID
-    ) public override(
-    Hooks
-    ) pure returns (bool) {
-    return super.supportsInterface(_interfaceID);
-    }*/
+    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
+        return interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
+    }
     
 }

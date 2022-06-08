@@ -30,6 +30,13 @@ describe("Wallet Deployment", function () {
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
+    const DefaultHandler = await ethers.getContractFactory(
+      "DefaultCallbackHandler"
+    );
+    const handler = await DefaultHandler.deploy();
+    await handler.deployed();
+    console.log("Default callback handler deployed at: ", handler.address);
+
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
       0
@@ -37,7 +44,12 @@ describe("Wallet Deployment", function () {
     console.log("deploying new wallet..expected address: ", expected);
 
     await expect(
-      walletFactory.deployCounterFactualWallet(owner, entryPoint.address, 0)
+      walletFactory.deployCounterFactualWallet(
+        owner,
+        entryPoint.address,
+        handler.address,
+        0
+      )
     )
       .to.emit(walletFactory, "WalletCreated")
       .withArgs(expected, baseImpl.address, owner);

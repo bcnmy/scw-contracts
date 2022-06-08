@@ -8,6 +8,7 @@ import {
   MultiSend,
   StorageSetter,
   WhitelistModule,
+  DefaultCallbackHandler,
 } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { encodeTransfer, encodeTransferFrom } from "./testUtils";
@@ -34,6 +35,7 @@ describe("Base Wallet Functionality", function () {
   let bob: string;
   let charlie: string;
   let userSCW: any;
+  let handler: DefaultCallbackHandler;
   const UNSTAKE_DELAY_SEC = 100;
   const PAYMASTER_STAKE = ethers.utils.parseEther("1");
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
@@ -80,6 +82,13 @@ describe("Base Wallet Functionality", function () {
     await token.deployed();
     console.log("Test token deployed at: ", token.address);
 
+    const DefaultHandler = await ethers.getContractFactory(
+      "DefaultCallbackHandler"
+    );
+    handler = await DefaultHandler.deploy();
+    await handler.deployed();
+    console.log("Default callback handler deployed at: ", handler.address);
+
     const Storage = await ethers.getContractFactory("StorageSetter");
     storage = await Storage.deploy();
     console.log("storage setter contract deployed at: ", storage.address);
@@ -101,7 +110,12 @@ describe("Base Wallet Functionality", function () {
     console.log("deploying new wallet..expected address: ", expected);
 
     await expect(
-      walletFactory.deployCounterFactualWallet(owner, entryPoint.address, 0)
+      walletFactory.deployCounterFactualWallet(
+        owner,
+        entryPoint.address,
+        handler.address,
+        0
+      )
     )
       .to.emit(walletFactory, "WalletCreated")
       .withArgs(expected, baseImpl.address, owner);
@@ -130,6 +144,37 @@ describe("Base Wallet Functionality", function () {
       to: expected,
       value: ethers.utils.parseEther("5"),
     });
+  });
+
+  // Transactions
+  it("Should send basic transactions from SCW to external contracts", async function () {
+    console.log("sending tokens to the safe..");
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    const data = encodeTransfer(bob, ethers.utils.parseEther("10").toString());
+    const tx = await userSCW
+      .connect(accounts[0])
+      .exec(token.address, ethers.utils.parseEther("0"), data);
+    const receipt = await tx.wait();
+    console.log(receipt.transactionHash);
+
+    expect(await token.balanceOf(bob)).to.equal(ethers.utils.parseEther("10"));
+
+    // executeBatch
+    const data2 = encodeTransfer(
+      charlie,
+      ethers.utils.parseEther("10").toString()
+    );
+    await userSCW
+      .connect(accounts[0])
+      .execBatch([token.address, token.address], [data, data2]);
+
+    expect(await token.balanceOf(bob)).to.equal(ethers.utils.parseEther("20"));
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
   });
 
   it("should send transactions in a batch", async function () {
@@ -283,6 +328,19 @@ describe("Base Wallet Functionality", function () {
         userSCW,
         "enableModule",
         [sampleModule.address],
+        [accounts[0]]
+      )
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    // Check if owner with valid signature can change ownership with safe transaction
+    // (setOwner being onlyOwner!) can't
+    // (setOwner being authorised) it can
+    await expect(
+      executeContractCallWithSigners(
+        userSCW,
+        userSCW,
+        "setOwner",
+        [owner],
         [accounts[0]]
       )
     ).to.emit(userSCW, "ExecutionSuccess");
