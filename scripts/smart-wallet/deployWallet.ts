@@ -17,7 +17,12 @@ async function main() {
   // await hre.run('compile');
 
   // Gasless deployment
+  // Add your owner - could be any
   const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
+
+  const UNSTAKE_DELAY_SEC = 100;
+  const PAYMASTER_STAKE = ethers.utils.parseEther("1");
+  const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
 
   const SmartWallet = await ethers.getContractFactory("SmartWallet");
   const baseImpl = await SmartWallet.deploy();
@@ -35,7 +40,14 @@ async function main() {
   );
   console.log("deploying new wallet..expected address: ", expected);
 
-  const mockEntryPoint = "0x68b3465833fb72A70ecDF485E0e4C7bD8665Fc45";
+  const EntryPoint = await ethers.getContractFactory("EntryPoint");
+  const entryPoint = await EntryPoint.deploy(
+    create2FactoryAddress,
+    PAYMASTER_STAKE,
+    UNSTAKE_DELAY_SEC
+  );
+  await entryPoint.deployed();
+  console.log("Entry point deployed at: ", entryPoint.address);
 
   const DefaultHandler = await ethers.getContractFactory(
     "DefaultCallbackHandler"
@@ -48,7 +60,7 @@ async function main() {
   // how can write tx return address to var
   const proxy = await walletFactory.deployCounterFactualWallet(
     owner,
-    mockEntryPoint,
+    entryPoint.address,
     handler.address,
     0
   );
