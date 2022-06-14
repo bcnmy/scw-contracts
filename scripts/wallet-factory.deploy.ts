@@ -56,8 +56,7 @@ async function main() {
     
     console.log("Wallet Factory Computed Address: ", walletFactoryComputedAddr);
 
-    const iswalletFactoryDeployed = await isContract(baseImpComputedAddr, provider); // true (deployed on-chain)
-
+    const iswalletFactoryDeployed = await isContract(walletFactoryComputedAddr, provider); // true (deployed on-chain)
     if (!iswalletFactoryDeployed){
         const walletFactoryTxDetail: any = await (await singletonFactory.deploy(walletFactoryBytecode, SALT)).wait();
 
