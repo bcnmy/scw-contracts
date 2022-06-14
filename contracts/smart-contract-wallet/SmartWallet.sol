@@ -131,26 +131,14 @@ contract SmartWallet is
     // Gnosis style transaction with optional repay in native tokens OR ERC20 
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
-    /// @param to Destination address of Safe transaction.
-    /// @param value Ether value of Safe transaction.
-    /// @param data Data payload of Safe transaction.
-    /// @param operation Operation type of Safe transaction.
-    /// @param safeTxGas Gas that should be used for the Safe transaction.
-    /// @param baseGas Gas costs that are independent of the transaction execution(e.g. base transaction fee, signature check, payment of the refund)
-    /// @param gasPrice Gas price that should be used for the payment calculation.
-    /// @param gasToken Token address (or 0 if ETH) that is used for the payment.
-    /// @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
+    /// @param _tx Wallet transaction 
+    /// @param batchId batchId key for 2D nonces
+    /// @param refundInfo Required information for gas refunds
     /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
     function execTransaction(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        Enum.Operation operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice, //gasPrice or tokenGasPrice
-        address gasToken,
-        address payable refundReceiver,
+        Transaction memory _tx,
+        uint256 batchId,
+        FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual returns (bool success) {
         bytes32 txHash;
@@ -159,22 +147,15 @@ contract SmartWallet is
             bytes memory txHashData =
                 encodeTransactionData(
                     // Transaction info
-                    to,
-                    value,
-                    data,
-                    operation,
-                    safeTxGas,
+                    _tx,
                     // Payment info
-                    baseGas,
-                    gasPrice,
-                    gasToken,
-                    refundReceiver,
+                    refundInfo,
                     // Signature info
-                    nonces[0]
+                    nonces[batchId]
                 );
             // Increase nonce and execute transaction.
             // Default space aka batchId is 0
-            nonces[0]++;
+            nonces[batchId]++;
             txHash = keccak256(txHashData);
             checkSignatures(txHash, txHashData, signatures);
         }
@@ -182,21 +163,21 @@ contract SmartWallet is
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
-        require(gasleft() >= ((safeTxGas * 64) / 63).max(safeTxGas + 2500) + 500, "BSA010");
+        require(gasleft() >= ((_tx.safeTxGas * 64) / 63).max(_tx.safeTxGas + 2500) + 500, "BSA010");
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             uint256 gasUsed = gasleft();
             // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than safeTxGas)
             // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than safeTxGas
-            success = execute(to, value, data, operation, gasPrice == 0 ? (gasleft() - 2500) : safeTxGas);
+            success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.safeTxGas);
             gasUsed = gasUsed.sub(gasleft());
             // If no safeTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
-            require(success || safeTxGas != 0 || gasPrice != 0, "BSA013");
+            require(success || _tx.safeTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
-            if (gasPrice > 0) {
-                payment = handlePayment(gasUsed, baseGas, gasPrice, gasToken, refundReceiver);
+            if (refundInfo.gasPrice > 0) {
+                payment = handlePayment(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
             else emit ExecutionFailure(txHash, payment);
@@ -304,50 +285,49 @@ contract SmartWallet is
         uint256 baseGas,
         uint256 gasPrice,
         address gasToken,
-        address refundReceiver,
+        address payable refundReceiver,
         uint256 _nonce
     ) public view returns (bytes32) {
-        return keccak256(encodeTransactionData(to, value, data, operation, safeTxGas, baseGas, gasPrice, gasToken, refundReceiver, _nonce));
+        Transaction memory _tx = Transaction({
+            to: to,
+            value: value,
+            data: data,
+            operation: operation,
+            safeTxGas: safeTxGas
+        });
+        FeeRefund memory refundInfo = FeeRefund({
+            baseGas: baseGas,
+            gasPrice: gasPrice,
+            gasToken: gasToken,
+            refundReceiver: refundReceiver
+        });
+        return keccak256(encodeTransactionData(_tx, refundInfo, _nonce));
     }
 
 
     /// @dev Returns the bytes that are hashed to be signed by owner.
-    /// @param to Destination address.
-    /// @param value Ether value.
-    /// @param data Data payload.
-    /// @param operation Operation type.
-    /// @param safeTxGas Gas that should be used for the safe transaction.
-    /// @param baseGas Gas costs for that are independent of the transaction execution(e.g. base transaction fee, signature check, payment of the refund)
-    /// @param gasPrice Maximum gas price that should be used for this transaction.
-    /// @param gasToken Token address (or 0 if ETH) that is used for the payment.
-    /// @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
+    /// @param _tx Wallet transaction 
+    /// @param refundInfo Required information for gas refunds
     /// @param _nonce Transaction nonce.
     /// @return Transaction hash bytes.
     function encodeTransactionData(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        Enum.Operation operation,
-        uint256 safeTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address refundReceiver,
+        Transaction memory _tx,
+        FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
         bytes32 safeTxHash =
             keccak256(
                 abi.encode(
                     SAFE_TX_TYPEHASH,
-                    to,
-                    value,
-                    keccak256(data),
-                    operation,
-                    safeTxGas,
-                    baseGas,
-                    gasPrice,
-                    gasToken,
-                    refundReceiver,
+                    _tx.to,
+                    _tx.value,
+                    keccak256(_tx.data),
+                    _tx.operation,
+                    _tx.safeTxGas,
+                    refundInfo.baseGas,
+                    refundInfo.gasPrice,
+                    refundInfo.gasToken,
+                    refundInfo.refundReceiver,
                     _nonce
                 )
             );

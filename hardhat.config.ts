@@ -88,7 +88,7 @@ const config: HardhatUserConfig = {
       // gas: 6400000
     },
     kovan: {
-      url: process.env.ROPSTEN_URL,
+      url: process.env.KOVAN_URL || "",
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
