@@ -76,6 +76,55 @@ const config: HardhatUserConfig = {
   networks: {
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
+      chainId: 3,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    rinkeby: {
+      url: process.env.RINKEBY_URL || "",
+      chainId: 4,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    kovan: {
+      url: process.env.KOVAN_URL || "",
+      chainId: 42,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    eth_mainnet: {
+      url: process.env.ETH_MAINNET_URL || "",
+      chainId: 1,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    bsc: {
+      url: process.env.BSC_URL || "",
+      chainId: 56,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    bsc_testnet: {
+      url: process.env.BSC_TESTNET_URL || "",
+      chainId: 97,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    polygon_mumbai: {
+      url: process.env.POLYGON_MUMBAI_URL || "",
+      chainId: 80001,
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
