@@ -55,6 +55,28 @@ export interface SafeTransaction extends MetaTransaction {
   nonce: string | number;
 }
 
+export interface Transaction {
+  to: string;
+  value: string | number | BigNumber;
+  data: string;
+  operation: number;
+  safeTxGas: string | number;
+}
+
+export interface FeeRefund {
+  baseGas: string | number;
+  gasPrice: string | number;
+  gasToken: string;
+  refundReceiver: string;
+}
+
+export interface WalletTransaction {
+  _tx: Transaction;
+  refundInfo: FeeRefund;
+  batchId: number;
+  nonce: string | number;
+}
+
 export interface SafeSignature {
   signer: string;
   data: string;
@@ -212,16 +234,23 @@ export const executeTx = async (
   overrides?: any
 ): Promise<any> => {
   const signatureBytes = buildSignatureBytes(signatures);
+  const transaction: Transaction = {
+    to: safeTx.to,
+    value: safeTx.value,
+    data: safeTx.data,
+    operation: safeTx.operation,
+    safeTxGas: safeTx.safeTxGas,
+  };
+  const refundInfo: FeeRefund = {
+    baseGas: safeTx.baseGas,
+    gasPrice: safeTx.gasPrice,
+    gasToken: safeTx.gasToken,
+    refundReceiver: safeTx.refundReceiver,
+  };
   return safe.execTransaction(
-    safeTx.to,
-    safeTx.value,
-    safeTx.data,
-    safeTx.operation,
-    safeTx.safeTxGas,
-    safeTx.baseGas,
-    safeTx.gasPrice,
-    safeTx.gasToken,
-    safeTx.refundReceiver,
+    transaction,
+    0, // batchId
+    refundInfo,
     signatureBytes,
     overrides || {}
   );
@@ -234,16 +263,23 @@ export const populateExecuteTx = async (
   overrides?: any
 ): Promise<PopulatedTransaction> => {
   const signatureBytes = buildSignatureBytes(signatures);
+  const transaction: Transaction = {
+    to: safeTx.to,
+    value: safeTx.value,
+    data: safeTx.data,
+    operation: safeTx.operation,
+    safeTxGas: safeTx.safeTxGas,
+  };
+  const refundInfo: FeeRefund = {
+    baseGas: safeTx.baseGas,
+    gasPrice: safeTx.gasPrice,
+    gasToken: safeTx.gasToken,
+    refundReceiver: safeTx.refundReceiver,
+  };
   return safe.populateTransaction.execTransaction(
-    safeTx.to,
-    safeTx.value,
-    safeTx.data,
-    safeTx.operation,
-    safeTx.safeTxGas,
-    safeTx.baseGas,
-    safeTx.gasPrice,
-    safeTx.gasToken,
-    safeTx.refundReceiver,
+    transaction,
+    0, // batchId
+    refundInfo,
     signatureBytes,
     overrides || {}
   );

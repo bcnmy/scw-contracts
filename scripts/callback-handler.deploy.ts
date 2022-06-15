@@ -4,7 +4,7 @@ import {
   FACTORY_ADDRESS,
   buildCreate2Address,
   isContract,
-} from './utils'
+} from "./utils";
 
 async function main() {
     const provider = ethers.provider;
@@ -32,29 +32,40 @@ async function main() {
       );
     console.log("CallBack Handler Computed Address: ", callBackHandlerComputedAddr);
 
-    const iscallBackHandlerDeployed = await isContract(callBackHandlerComputedAddr, provider); // true (deployed on-chain)
-    if (!iscallBackHandlerDeployed){
+  const iscallBackHandlerDeployed = await isContract(
+    callBackHandlerComputedAddr,
+    provider
+  ); // true (deployed on-chain)
+  if (!iscallBackHandlerDeployed) {
+    const callBackHandlerTxDetail: any = await (
+      await singletonFactory.deploy(callBackHandlerBytecode, SALT)
+    ).wait();
 
-        const callBackHandlerTxDetail: any = await (await singletonFactory.deploy(callBackHandlerBytecode, SALT)).wait();
+    const callBackHandlerDeployedAddr =
+      callBackHandlerTxDetail.events[0].args.addr.toLowerCase();
+    console.log("callBackHandlerDeployedAddr ", callBackHandlerDeployedAddr);
+    const callBackHandlerDeploymentStatus =
+      callBackHandlerComputedAddr === callBackHandlerDeployedAddr
+        ? "Deployed Successfully"
+        : false;
 
-        const callBackHandlerDeployedAddr = callBackHandlerTxDetail.events[0].args.addr.toLowerCase();
-        console.log('callBackHandlerDeployedAddr ', callBackHandlerDeployedAddr);
-        const callBackHandlerDeploymentStatus = callBackHandlerComputedAddr == callBackHandlerDeployedAddr ? "Deployed Successfully" : false;
-        
-        console.log("callBackHandlerDeploymentStatus ", callBackHandlerDeploymentStatus);
-        
-        if (!callBackHandlerDeploymentStatus){
-            console.log("Invalid CallBack Handler Deployment");
-            return
-        }
+    console.log(
+      "callBackHandlerDeploymentStatus ",
+      callBackHandlerDeploymentStatus
+    );
 
-    }else{
-        console.log('CallBack Handler is Already deployed with address ', callBackHandlerComputedAddr);
+    if (!callBackHandlerDeploymentStatus) {
+      console.log("Invalid CallBack Handler Deployment");
     }
+  } else {
+    console.log(
+      "CallBack Handler is Already deployed with address ",
+      callBackHandlerComputedAddr
+    );
+  }
 }
 
-
 main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
+  console.error(error);
+  process.exitCode = 1;
+});

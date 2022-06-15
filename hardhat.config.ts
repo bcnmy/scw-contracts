@@ -126,16 +126,16 @@ const config: HardhatUserConfig = {
       url: process.env.POLYGON_MUMBAI_URL || "",
       chainId: 80001,
       accounts:
-      process.env.PRIVATE_KEY !== undefined
-        ? [process.env.PRIVATE_KEY]
-        : walletUtils.makeKeyList(),
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
     },
     goerli: {
       url: process.env.GOERLI_URL || "",
       accounts: walletUtils.makeKeyList(),
       chainId: 5,
       // gas: 6400000
-    },
+    }
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

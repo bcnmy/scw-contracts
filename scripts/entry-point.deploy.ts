@@ -5,7 +5,7 @@ import {
   buildCreate2Address,
   encodeParam,
   isContract,
-} from './utils'
+} from "./utils";
 
 async function main() {
     const provider = ethers.provider;
@@ -44,29 +44,37 @@ async function main() {
       );
     console.log("Entry Point Computed Address: ", entryPointComputedAddr);
 
-    const isEntryPointDeployed = await isContract(entryPointComputedAddr, provider); // true (deployed on-chain)
-    if (!isEntryPointDeployed){
+  const isEntryPointDeployed = await isContract(
+    entryPointComputedAddr,
+    provider
+  ); // true (deployed on-chain)
+  if (!isEntryPointDeployed) {
+    const entryPointTxDetail: any = await (
+      await singletonFactory.deploy(entryPointBytecode, SALT)
+    ).wait();
 
-        const entryPointTxDetail: any = await (await singletonFactory.deploy(entryPointBytecode, SALT)).wait();
+    const entryPointDeployedAddr =
+      entryPointTxDetail.events[0].args.addr.toLowerCase();
+    console.log("entryPointDeployedAddr ", entryPointDeployedAddr);
+    const entryPointDeploymentStatus =
+      entryPointComputedAddr === entryPointDeployedAddr
+        ? "Deployed Successfully"
+        : false;
 
-        const entryPointDeployedAddr = entryPointTxDetail.events[0].args.addr.toLowerCase();
-        console.log('entryPointDeployedAddr ', entryPointDeployedAddr);
-        const entryPointDeploymentStatus = entryPointComputedAddr == entryPointDeployedAddr ? "Deployed Successfully" : false;
-        
-        console.log("entryPointDeploymentStatus ", entryPointDeploymentStatus);
-        
-        if (!entryPointDeploymentStatus){
-            console.log("Invalid Entry Point Deployment");
-            return
-        }
+    console.log("entryPointDeploymentStatus ", entryPointDeploymentStatus);
 
-    }else{
-        console.log('Entry Point is Already deployed with address ', entryPointComputedAddr);
+    if (!entryPointDeploymentStatus) {
+      console.log("Invalid Entry Point Deployment");
     }
+  } else {
+    console.log(
+      "Entry Point is Already deployed with address ",
+      entryPointComputedAddr
+    );
+  }
 }
 
-
 main().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
+  console.error(error);
+  process.exitCode = 1;
+});
