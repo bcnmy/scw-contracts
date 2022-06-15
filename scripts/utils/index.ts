@@ -57,12 +57,21 @@ export const buildBytecode = (
     2
   )}`;
 
-export const buildCreate2Address = (saltHex: string, byteCode: string, factoryAddress?: string, ) => {  
+export const buildCreate2Address = (
+  saltHex: string,
+  byteCode: string,
+  factoryAddress?: string
+) => {
   return `0x${ethers.utils
     .keccak256(
-      `0x${['ff', factoryAddress ? factoryAddress : FACTORY_ADDRESS, saltHex, ethers.utils.keccak256(byteCode)]
-        .map((x) => x.replace(/0x/, ''))
-        .join('')}`,
+      `0x${[
+        "ff",
+        factoryAddress ? factoryAddress : FACTORY_ADDRESS,
+        saltHex,
+        ethers.utils.keccak256(byteCode),
+      ]
+        .map((x) => x.replace(/0x/, ""))
+        .join("")}`
     )
     .slice(-40)}`.toLowerCase();
 };
@@ -81,7 +90,7 @@ export const saltToHex = (salt: string | number) => {
   return ethers.utils.id(salt);
 };
 
-export const SALT = saltToHex("BICONOMY_SCW_V1")
+export const SALT = saltToHex("BICONOMY_SCW_V1");
 
 export const encodeParam = (dataType: any, data: any) => {
   const abiCoder = ethers.utils.defaultAbiCoder;

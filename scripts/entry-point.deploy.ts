@@ -8,41 +8,38 @@ import {
 } from "./utils";
 
 async function main() {
-    const provider = ethers.provider;
-    const providerInfo = await provider.getNetwork(); // contains name and chainId
+  const provider = ethers.provider;
+  const providerInfo = await provider.getNetwork(); // contains name and chainId
 
-    const UNSTAKE_DELAY_SEC = 100;
-    const PAYMASTER_STAKE = ethers.utils.parseEther("1");
-    const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
-   
-    let singletonFactory
+  const UNSTAKE_DELAY_SEC = 100;
+  const PAYMASTER_STAKE = ethers.utils.parseEther("1");
+  const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
 
-    if ( providerInfo?.chainId === 31337) // 31337 is hardhat chainid
-    {
-      // if the network is hardhat we will deploy own factory address
-      singletonFactory = await SingletonFactory.deploy()
-      singletonFactory = await singletonFactory.deployed()      
-    }else{
-      singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
-    }
+  let singletonFactory;
 
-    const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    const entryPointBytecode = `${EntryPoint.bytecode}${encodeParam(
-      "address",
-      FACTORY_ADDRESS
-    ).slice(2)}${encodeParam(
-      "uint",
-      PAYMASTER_STAKE
-    ).slice(2)}${encodeParam(
-      "uint32",
-      UNSTAKE_DELAY_SEC
-    ).slice(2)}`;
-    const entryPointComputedAddr = buildCreate2Address(
-        SALT,
-        entryPointBytecode,
-        singletonFactory.address
-      );
-    console.log("Entry Point Computed Address: ", entryPointComputedAddr);
+  if (providerInfo?.chainId === 31337) {
+    // 31337 is hardhat chainid
+    // if the network is hardhat we will deploy own factory address
+    singletonFactory = await SingletonFactory.deploy();
+    singletonFactory = await singletonFactory.deployed();
+  } else {
+    singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
+  }
+
+  const EntryPoint = await ethers.getContractFactory("EntryPoint");
+  const entryPointBytecode = `${EntryPoint.bytecode}${encodeParam(
+    "address",
+    FACTORY_ADDRESS
+  ).slice(2)}${encodeParam("uint", PAYMASTER_STAKE).slice(2)}${encodeParam(
+    "uint32",
+    UNSTAKE_DELAY_SEC
+  ).slice(2)}`;
+  const entryPointComputedAddr = buildCreate2Address(
+    SALT,
+    entryPointBytecode,
+    singletonFactory.address
+  );
+  console.log("Entry Point Computed Address: ", entryPointComputedAddr);
 
   const isEntryPointDeployed = await isContract(
     entryPointComputedAddr,
