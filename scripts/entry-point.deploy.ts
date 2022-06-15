@@ -9,11 +9,22 @@ import {
 
 async function main() {
     const provider = ethers.provider;
+    const providerInfo = await provider.getNetwork(); // contains name and chainId
 
     const UNSTAKE_DELAY_SEC = 100;
     const PAYMASTER_STAKE = ethers.utils.parseEther("1");
     const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
-    const singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
+   
+    let singletonFactory
+
+    if ( providerInfo?.chainId === 31337) // 31337 is hardhat chainid
+    {
+      // if the network is hardhat we will deploy own factory address
+      singletonFactory = await SingletonFactory.deploy()
+      singletonFactory = await singletonFactory.deployed()      
+    }else{
+      singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
+    }
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
     const entryPointBytecode = `${EntryPoint.bytecode}${encodeParam(
@@ -28,7 +39,8 @@ async function main() {
     ).slice(2)}`;
     const entryPointComputedAddr = buildCreate2Address(
         SALT,
-        entryPointBytecode
+        entryPointBytecode,
+        singletonFactory.address
       );
     console.log("Entry Point Computed Address: ", entryPointComputedAddr);
 

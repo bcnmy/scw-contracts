@@ -9,15 +9,28 @@ import {
 
 async function main() {
     const provider = ethers.provider;
+    const providerInfo = await provider.getNetwork(); // contains name and chainId
+   
 
     const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
-    const singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
+    let singletonFactory
+
+    if ( providerInfo?.chainId === 31337) // 31337 is hardhat chainid
+    {
+      // if the network is hardhat we will deploy own factory address
+      singletonFactory = await SingletonFactory.deploy()
+      singletonFactory = await singletonFactory.deployed()
+      
+    }else{
+      singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
+    }
 
     const SmartWallet = await ethers.getContractFactory("SmartWallet");
     const smartWalletBytecode = `${SmartWallet.bytecode}`;
     const baseImpComputedAddr = buildCreate2Address(
         SALT,
-        smartWalletBytecode
+        smartWalletBytecode,
+        singletonFactory.address
       );
     console.log("Base wallet Computed Address: ", baseImpComputedAddr);
 
@@ -51,7 +64,8 @@ async function main() {
 
       const walletFactoryComputedAddr = buildCreate2Address(
         SALT,
-        walletFactoryBytecode
+        walletFactoryBytecode,
+        singletonFactory.address
       );
     
     console.log("Wallet Factory Computed Address: ", walletFactoryComputedAddr);
