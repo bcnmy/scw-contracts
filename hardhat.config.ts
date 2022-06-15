@@ -135,15 +135,7 @@ const config: HardhatUserConfig = {
       accounts: walletUtils.makeKeyList(),
       chainId: 5,
       // gas: 6400000
-    },
-    kovan: {
-      url: process.env.KOVAN_URL || "",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-      chainId: 42,
-    },
+    }
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

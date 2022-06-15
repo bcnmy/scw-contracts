@@ -8,9 +8,20 @@ import {
 
 async function main() {
   const provider = ethers.provider;
+  const providerInfo = await provider.getNetwork(); // contains name and chainId
 
   const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
-  const singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
+
+  let singletonFactory;
+
+  if (providerInfo?.chainId === 31337) {
+    // 31337 is hardhat chainid
+    // if the network is hardhat we will deploy own factory address
+    singletonFactory = await SingletonFactory.deploy();
+    singletonFactory = await singletonFactory.deployed();
+  } else {
+    singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
+  }
 
   const callBackHandler = await ethers.getContractFactory(
     "DefaultCallbackHandler"
@@ -18,7 +29,8 @@ async function main() {
   const callBackHandlerBytecode = `${callBackHandler.bytecode}`;
   const callBackHandlerComputedAddr = buildCreate2Address(
     SALT,
-    callBackHandlerBytecode
+    callBackHandlerBytecode,
+    singletonFactory.address
   );
   console.log(
     "CallBack Handler Computed Address: ",
