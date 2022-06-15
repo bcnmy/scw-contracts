@@ -16,6 +16,8 @@ import {
   buildContractCall,
   MetaTransaction,
   SafeTransaction,
+  Transaction,
+  FeeRefund,
   executeTx,
   safeSignTypedData,
   buildSafeTransaction,
@@ -221,23 +223,30 @@ describe("Base Wallet Functionality", function () {
       safeTx,
       chainId
     );
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      safeTxGas: safeTx.safeTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
     let signature = "0x";
     signature += data.slice(2);
     await expect(
-      userSCW
-        .connect(accounts[0])
-        .execTransaction(
-          safeTx.to,
-          safeTx.value,
-          safeTx.data,
-          safeTx.operation,
-          safeTx.safeTxGas,
-          safeTx.baseGas,
-          safeTx.gasPrice,
-          safeTx.gasToken,
-          safeTx.refundReceiver,
-          signature
-        )
+      userSCW.connect(accounts[0]).execTransaction(
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature
+      )
     ).to.emit(userSCW, "ExecutionSuccess");
 
     await expect(
@@ -282,23 +291,29 @@ describe("Base Wallet Functionality", function () {
 
     console.log(safeTx);
 
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      safeTxGas: safeTx.safeTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
     let signature = "0x";
     signature += data.slice(2);
     await expect(
-      userSCW
-        .connect(accounts[0])
-        .execTransaction(
-          safeTx.to,
-          safeTx.value,
-          safeTx.data,
-          safeTx.operation,
-          safeTx.safeTxGas,
-          safeTx.baseGas,
-          safeTx.gasPrice,
-          safeTx.gasToken,
-          safeTx.refundReceiver,
-          signature
-        )
+      userSCW.connect(accounts[0]).execTransaction(
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature
+      )
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -450,22 +465,28 @@ describe("Base Wallet Functionality", function () {
     let signature = "0x";
     signature += data.slice(2);
 
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      safeTxGas: safeTx.safeTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
     await expect(
-      userSCW
-        .connect(accounts[1])
-        .execTransaction(
-          safeTx.to,
-          safeTx.value,
-          safeTx.data,
-          safeTx.operation,
-          safeTx.safeTxGas,
-          safeTx.baseGas,
-          safeTx.gasPrice,
-          safeTx.gasToken,
-          safeTx.refundReceiver,
-          signature,
-          { gasPrice: safeTx.gasPrice }
-        )
+      userSCW.connect(accounts[1]).execTransaction(
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature,
+        { gasPrice: safeTx.gasPrice }
+      )
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -520,22 +541,28 @@ describe("Base Wallet Functionality", function () {
     let signature = "0x";
     signature += data.slice(2);
 
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      safeTxGas: safeTx.safeTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
     await expect(
-      userSCW
-        .connect(accounts[1])
-        .execTransaction(
-          safeTx.to,
-          safeTx.value,
-          safeTx.data,
-          safeTx.operation,
-          safeTx.safeTxGas,
-          safeTx.baseGas,
-          safeTx.gasPrice,
-          safeTx.gasToken,
-          safeTx.refundReceiver,
-          signature,
-          { gasPrice: safeTx.gasPrice }
-        )
+      userSCW.connect(accounts[1]).execTransaction(
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature,
+        { gasPrice: safeTx.gasPrice }
+      )
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(

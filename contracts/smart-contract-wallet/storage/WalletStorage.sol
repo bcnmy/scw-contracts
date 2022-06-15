@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
+import "../common/Enum.sol";
+
 contract WalletStorage {
     // Version
     string public constant VERSION = "0.0.1";
@@ -19,6 +21,22 @@ contract WalletStorage {
 
     // Owner storage
     address public owner;
+
+    struct Transaction {
+        address to;
+        uint256 value;
+        bytes data;
+        Enum.Operation operation;
+        uint256 safeTxGas;
+        // uint256 batchId;
+    }
+
+    struct FeeRefund {
+        uint256 baseGas;
+        uint256 gasPrice; //gasPrice or tokenGasPrice
+        address gasToken;
+        address payable refundReceiver;
+    }
 
     // @review
     // uint256 public nonce; //changed to 2D nonce
