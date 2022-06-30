@@ -15,9 +15,9 @@ contract WalletStorage {
 
     // @review for any modifications
     // keccak256(
-    //     "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+    //     "WalletTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
     // );
-    bytes32 internal constant SAFE_TX_TYPEHASH = 0xbb8310d486368db6bd6f849402fdd73ad53d316b5a4b2644ad6efe0f941286d8;
+    bytes32 internal constant WALLET_TX_TYPEHASH = 0xeedfef42e81fe8cd0e4185e4320e9f8d52fd97eb890b85fa9bd7ad97c9a18de2;
 
     // Owner storage
     address public owner;
@@ -27,7 +27,7 @@ contract WalletStorage {
         uint256 value;
         bytes data;
         Enum.Operation operation;
-        uint256 safeTxGas;
+        uint256 targetTxGas;
         // uint256 batchId;
     }
 

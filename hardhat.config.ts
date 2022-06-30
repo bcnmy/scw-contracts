@@ -90,14 +90,6 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
     },
-    kovan: {
-      url: process.env.KOVAN_URL || "",
-      chainId: 42,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
     eth_mainnet: {
       url: process.env.ETH_MAINNET_URL || "",
       chainId: 1,

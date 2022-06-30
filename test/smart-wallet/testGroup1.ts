@@ -229,7 +229,7 @@ describe("Base Wallet Functionality", function () {
       value: safeTx.value,
       data: safeTx.data,
       operation: safeTx.operation,
-      safeTxGas: safeTx.safeTxGas,
+      targetTxGas: safeTx.targetTxGas,
     };
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
@@ -296,7 +296,7 @@ describe("Base Wallet Functionality", function () {
       value: safeTx.value,
       data: safeTx.data,
       operation: safeTx.operation,
-      safeTxGas: safeTx.safeTxGas,
+      targetTxGas: safeTx.targetTxGas,
     };
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
@@ -450,7 +450,7 @@ describe("Base Wallet Functionality", function () {
     safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
     safeTx.gasToken = "0x0000000000000000000000000000000000000000";
     safeTx.gasPrice = 10000000000;
-    safeTx.safeTxGas = gasEstimate1.toNumber();
+    safeTx.targetTxGas = gasEstimate1.toNumber();
     safeTx.baseGas = 21000 + 21000; // base plus eth transfer
 
     const { signer, data } = await safeSignTypedData(
@@ -470,7 +470,7 @@ describe("Base Wallet Functionality", function () {
       value: safeTx.value,
       data: safeTx.data,
       operation: safeTx.operation,
-      safeTxGas: safeTx.safeTxGas,
+      targetTxGas: safeTx.targetTxGas,
     };
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
@@ -526,7 +526,7 @@ describe("Base Wallet Functionality", function () {
     safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
     safeTx.gasToken = token.address;
     safeTx.gasPrice = 1000000000000; // this would be token gas price
-    safeTx.safeTxGas = gasEstimate1.toNumber();
+    safeTx.targetTxGas = gasEstimate1.toNumber();
     safeTx.baseGas = 21000 + gasEstimate1.toNumber() - 21000; // base plus erc20 token transfer
 
     const { signer, data } = await safeSignTypedData(
@@ -546,7 +546,7 @@ describe("Base Wallet Functionality", function () {
       value: safeTx.value,
       data: safeTx.data,
       operation: safeTx.operation,
-      safeTxGas: safeTx.safeTxGas,
+      targetTxGas: safeTx.targetTxGas,
     };
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,

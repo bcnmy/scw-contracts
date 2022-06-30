@@ -163,17 +163,17 @@ contract SmartWallet is
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
-        require(gasleft() >= ((_tx.safeTxGas * 64) / 63).max(_tx.safeTxGas + 2500) + 500, "BSA010");
+        require(gasleft() >= ((_tx.targetTxGas * 64) / 63).max(_tx.targetTxGas + 2500) + 500, "BSA010");
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             uint256 gasUsed = gasleft();
-            // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than safeTxGas)
-            // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than safeTxGas
-            success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.safeTxGas);
+            // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
+            // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than targetTxGas
+            success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.targetTxGas);
             gasUsed = gasUsed.sub(gasleft());
-            // If no safeTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
+            // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
-            require(success || _tx.safeTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
+            require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
             if (refundInfo.gasPrice > 0) {
@@ -269,7 +269,7 @@ contract SmartWallet is
     /// @param value Ether value.
     /// @param data Data payload.
     /// @param operation Operation type.
-    /// @param safeTxGas Fas that should be used for the safe transaction.
+    /// @param targetTxGas Fas that should be used for the safe transaction.
     /// @param baseGas Gas costs for data used to trigger the safe transaction.
     /// @param gasPrice Maximum gas price that should be used for this transaction.
     /// @param gasToken Token address (or 0 if ETH) that is used for the payment.
@@ -281,7 +281,7 @@ contract SmartWallet is
         uint256 value,
         bytes calldata data,
         Enum.Operation operation,
-        uint256 safeTxGas,
+        uint256 targetTxGas,
         uint256 baseGas,
         uint256 gasPrice,
         address gasToken,
@@ -293,7 +293,7 @@ contract SmartWallet is
             value: value,
             data: data,
             operation: operation,
-            safeTxGas: safeTxGas
+            targetTxGas: targetTxGas
         });
         FeeRefund memory refundInfo = FeeRefund({
             baseGas: baseGas,
@@ -318,12 +318,12 @@ contract SmartWallet is
         bytes32 safeTxHash =
             keccak256(
                 abi.encode(
-                    SAFE_TX_TYPEHASH,
+                    WALLET_TX_TYPEHASH,
                     _tx.to,
                     _tx.value,
                     keccak256(_tx.data),
                     _tx.operation,
-                    _tx.safeTxGas,
+                    _tx.targetTxGas,
                     refundInfo.baseGas,
                     refundInfo.gasPrice,
                     refundInfo.gasToken,

@@ -18,14 +18,14 @@ export const EIP_DOMAIN = {
   ],
 };
 
-export const EIP712_SAFE_TX_TYPE = {
-  // "SafeTx(address to,uint256 value,bytes data,uint8 operation,uint256 safeTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
-  SafeTx: [
+export const EIP712_WALLET_TX_TYPE = {
+  // "WalletTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+  WalletTx: [
     { type: "address", name: "to" },
     { type: "uint256", name: "value" },
     { type: "bytes", name: "data" },
     { type: "uint8", name: "operation" },
-    { type: "uint256", name: "safeTxGas" },
+    { type: "uint256", name: "targetTxGas" },
     { type: "uint256", name: "baseGas" },
     { type: "uint256", name: "gasPrice" },
     { type: "address", name: "gasToken" },
@@ -47,7 +47,7 @@ export interface MetaTransaction {
 }
 
 export interface SafeTransaction extends MetaTransaction {
-  safeTxGas: string | number;
+  targetTxGas: string | number;
   baseGas: string | number;
   gasPrice: string | number;
   gasToken: string;
@@ -60,7 +60,7 @@ export interface Transaction {
   value: string | number | BigNumber;
   data: string;
   operation: number;
-  safeTxGas: string | number;
+  targetTxGas: string | number;
 }
 
 export interface FeeRefund {
@@ -99,7 +99,7 @@ export const preimageSafeTransactionHash = (
 ): string => {
   return utils._TypedDataEncoder.encode(
     { verifyingContract: safe.address, chainId },
-    EIP712_SAFE_TX_TYPE,
+    EIP712_WALLET_TX_TYPE,
     safeTx
   );
 };
@@ -111,7 +111,7 @@ export const calculateSafeTransactionHash = (
 ): string => {
   return utils._TypedDataEncoder.hash(
     { verifyingContract: safe.address, chainId },
-    EIP712_SAFE_TX_TYPE,
+    EIP712_WALLET_TX_TYPE,
     safeTx
   );
 };
@@ -169,7 +169,7 @@ export const safeSignTypedData = async (
     signer: signerAddress,
     data: await signer._signTypedData(
       { verifyingContract: safe.address, chainId: cid },
-      EIP712_SAFE_TX_TYPE,
+      EIP712_WALLET_TX_TYPE,
       safeTx
     ),
   };
@@ -239,7 +239,7 @@ export const executeTx = async (
     value: safeTx.value,
     data: safeTx.data,
     operation: safeTx.operation,
-    safeTxGas: safeTx.safeTxGas,
+    targetTxGas: safeTx.targetTxGas,
   };
   const refundInfo: FeeRefund = {
     baseGas: safeTx.baseGas,
@@ -268,7 +268,7 @@ export const populateExecuteTx = async (
     value: safeTx.value,
     data: safeTx.data,
     operation: safeTx.operation,
-    safeTxGas: safeTx.safeTxGas,
+    targetTxGas: safeTx.targetTxGas,
   };
   const refundInfo: FeeRefund = {
     baseGas: safeTx.baseGas,
@@ -344,7 +344,7 @@ export const buildSafeTransaction = (template: {
   value?: BigNumber | number | string;
   data?: string;
   operation?: number;
-  safeTxGas?: number | string;
+  targetTxGas?: number | string;
   baseGas?: number | string;
   gasPrice?: number | string;
   gasToken?: string;
@@ -356,7 +356,7 @@ export const buildSafeTransaction = (template: {
     value: template.value || 0,
     data: template.data || "0x",
     operation: template.operation || 0,
-    safeTxGas: template.safeTxGas || 0,
+    targetTxGas: template.targetTxGas || 0,
     baseGas: template.baseGas || 0,
     gasPrice: template.gasPrice || 0,
     gasToken: template.gasToken || AddressZero,
