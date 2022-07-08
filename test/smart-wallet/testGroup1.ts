@@ -500,7 +500,7 @@ describe("Base Wallet Functionality", function () {
     }
   });
 
-  it("can send transactions and charge wallet for fees in native tokens", async function () {
+  it("can send transactions and charge wallet for fees in erc20 tokens", async function () {
     await token
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
