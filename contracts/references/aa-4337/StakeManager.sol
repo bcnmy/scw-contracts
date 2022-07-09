@@ -150,6 +150,7 @@ abstract contract StakeManager {
      * @param withdrawAddress the address to send withdrawn value.
      */
     function withdrawStake(address payable withdrawAddress) external {
+        require(withdrawAddress != address(0), "Invalid withdraw address");
         DepositInfo storage info = deposits[msg.sender];
         uint256 stake = info.stake;
         require(stake > 0, "No stake to withdraw");
@@ -169,6 +170,7 @@ abstract contract StakeManager {
      * @param withdrawAmount the amount to withdraw.
      */
     function withdrawTo(address payable withdrawAddress, uint256 withdrawAmount) external {
+        require(withdrawAddress != address(0), "Invalid withdraw address");
         DepositInfo memory info = deposits[msg.sender];
         require(withdrawAmount <= info.deposit, "Withdraw amount too large");
         info.deposit = uint112(info.deposit - withdrawAmount);

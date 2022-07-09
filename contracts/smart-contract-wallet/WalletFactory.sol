@@ -14,6 +14,7 @@ contract WalletFactory {
     mapping (address => bool) public isWalletExist;
 
     constructor(address _baseImpl) {
+        require(_baseImpl != address(0), "base wallet address can not be zero");
         _defaultImpl = _baseImpl;
     }
 

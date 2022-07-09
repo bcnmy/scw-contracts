@@ -8,6 +8,7 @@ pragma solidity ^0.8.0;
 import "./libs/LibAddress.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "./IWallet.sol";
 import "./common/Singleton.sol";
 import "./storage/WalletStorage.sol";
@@ -117,6 +118,8 @@ contract SmartWallet is
     function init(address _owner, address _entryPoint, address _handler) public initializer { 
         require(owner == address(0), "Already initialized");
         require(entryPoint == address(0), "Already initialized");
+        require(_owner != address(0),"Invalid owner");
+        require(_entryPoint != address(0), "Invalid Entrypoint");
         owner = _owner;
         entryPoint = _entryPoint;
         if (_handler != address(0)) internalSetFallbackHandler(_handler);
@@ -201,7 +204,9 @@ contract SmartWallet is
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            require(receiver.send(payment), "BSA011");
+            // Review: low level call value vs transfer
+            (bool success,) = receiver.call{value: payment}("");
+            require(success, "BSA011");
         } else {
             payment = (gasUsed + baseGas) * (gasPrice);
             require(transferToken(gasToken, receiver, payment), "BSA012");
@@ -268,8 +273,31 @@ contract SmartWallet is
         }
     }
 
+    /// review necessity for this method for estimating execute call
+    /// @dev Allows to estimate a transaction.
+    ///      This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
+    ///      Since the `estimateGas` function includes refunds, call this method to get an estimated of the costs that are deducted from the safe with `execTransaction`
+    /// @param to Destination address of Safe transaction.
+    /// @param value Ether value of transaction.
+    /// @param data Data payload of transaction.
+    /// @param operation Operation type of transaction.
+    /// @return Estimate without refunds and overhead fees (base transaction and payload data gas costs).
+    function requiredTxGas(
+        address to,
+        uint256 value,
+        bytes calldata data,
+        Enum.Operation operation
+    ) external returns (uint256) {
+        uint256 startGas = gasleft();
+        // We don't provide an error message here, as we use it to return the estimate
+        require(execute(to, value, data, operation, gasleft()));
+        uint256 requiredGas = startGas - gasleft();
+        // Convert response to string and return via error message
+        revert(string(abi.encodePacked(requiredGas)));
+    }
 
-    /// @dev Returns hash to be signed by owners.
+
+    /// @dev Returns hash to be signed by owner.
     /// @param to Destination address.
     /// @param value Ether value.
     /// @param data Data payload.
@@ -341,13 +369,16 @@ contract SmartWallet is
 
     // Extra Utils
     
+    // Review: low level call value vs transfer // dest.transfer(amount);
     function transfer(address payable dest, uint amount) external onlyOwner {
-        dest.transfer(amount);
+        require(dest != address(0), "this action will burn your funds");
+        (bool success,) = dest.call{value:amount}("");
+        require(success,"transfer failed");
     }
 
     function pullTokens(address token, address dest, uint256 amount) external onlyOwner {
         IERC20 tokenContract = IERC20(token);
-        tokenContract.transfer(dest, amount);
+        SafeERC20.safeTransfer(tokenContract, dest, amount);
     }
 
     function exec(address dest, uint value, bytes calldata func) external onlyOwner{
@@ -356,8 +387,11 @@ contract SmartWallet is
 
     function execBatch(address[] calldata dest, bytes[] calldata func) external onlyOwner{
         require(dest.length == func.length, "wrong array lengths");
-        for (uint i = 0; i < dest.length; i++) {
+        for (uint i = 0; i < dest.length;) {
             _call(dest[i], 0, func[i]);
+            unchecked {
+                ++i;
+            }
         }
     }
 
@@ -386,19 +420,18 @@ contract SmartWallet is
     function validateUserOp(UserOperation calldata userOp, bytes32 requestId, uint requiredPrefund) external override {
         _requireFromEntryPoint();
         _validateSignature(userOp, requestId);
-        _validateAndIncrementNonce(userOp);
+        //during construction, the "nonce" field hold the salt.
+        // if we assert it is zero, then we allow only a single wallet per owner.
+        if (userOp.initCode.length == 0) {
+            _validateAndUpdateNonce(userOp);
+        }
         _payPrefund(requiredPrefund);
     }
 
     // review nonce conflict with AA userOp nonce
     // userOp can omit nonce or have batchId as well!
-    function _validateAndIncrementNonce(UserOperation calldata userOp) internal {
-        //during construction, the "nonce" field hold the salt.
-        // if we assert it is zero, then we allow only a single wallet per owner.
-        if (userOp.initCode.length == 0) {
-            require(nonces[0]++ == userOp.nonce, "wallet: invalid nonce");
-        }
-        // default batchId aka space 0 for any wallet
+    function _validateAndUpdateNonce(UserOperation calldata userOp) internal {
+        require(nonces[0]++ == userOp.nonce, "wallet: invalid nonce");
     }
 
     function _payPrefund(uint requiredPrefund) internal {
@@ -426,5 +459,9 @@ contract SmartWallet is
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
-    
+
+    // Review
+    // withdrawDepositTo
+    // addDeposit
+    // getDeposit
 }

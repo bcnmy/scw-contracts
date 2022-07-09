@@ -13,8 +13,7 @@ contract SecuredTokenTransfer {
         uint256 amount
     ) internal returns (bool transferred) {
         // 0xa9059cbb - keccack("transfer(address,uint256)")
-        // TODO
-        // Review for sig collision 
+        // Review for sig collision and HAL-04
         bytes memory data = abi.encodeWithSelector(0xa9059cbb, receiver, amount);
         // solhint-disable-next-line no-inline-assembly
         assembly {
