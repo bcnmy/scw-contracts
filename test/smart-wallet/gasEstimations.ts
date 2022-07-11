@@ -7,10 +7,8 @@ import {
   TestToken,
   MultiSend,
   StorageSetter,
-  WhitelistModule,
   GasEstimator,
   DefaultCallbackHandler,
-  GasEstimator__factory,
 } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { encodeTransfer, encodeTransferFrom } from "./testUtils";
@@ -64,7 +62,7 @@ function txBaseCost(data: BytesLike): number {
     .toNumber();
 }
 
-describe("Base Wallet Functionality", function () {
+describe("Wallet tx gas estimations with and without refunds", function () {
   // TODO
   let baseImpl: SmartWallet;
   let walletFactory: WalletFactory;
