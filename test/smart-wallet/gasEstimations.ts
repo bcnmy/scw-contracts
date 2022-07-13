@@ -33,7 +33,6 @@ import { provider } from "ganache";
 // i) getting signature twice for estimation
 // ii) relayer should be able to check what is expected spend and what is being paid!
 
-
 function tryDecodeError(bytes: BytesLike): string {
   try {
     return ethers.utils.toUtf8String(
@@ -483,6 +482,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
       from: userSCW.address,
     });
+    // this is fine as targetTxGas (can also get from safeServiceClient)
 
     const chainId = await userSCW.getChainId();
 
@@ -490,7 +490,17 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     safeTx.gasToken = "0x0000000000000000000000000000000000000000";
     safeTx.gasPrice = 1743296144515; // this would be very high gas price in case of eth refund
     safeTx.targetTxGas = gasEstimate1.toNumber();
-    safeTx.baseGas = gasEstimate1.toNumber(); // some non-zero value
+
+    // for base Gas we estimate handle payment here
+    // 21000 + salt offset + handle payment estimate
+    // instead of salt i could do this in fucntion itself using msg.data! write txBaseCost method in solidity
+
+    // TODO
+    // Estimate handle payment
+    // using requiredTxGas or special method call from GasEstimator contract
+
+    safeTx.baseGas = 21000 + 4172 + 7325; // + 10000; // 10k is % fee
+    // for a matter of fact i know it is 7325 for ether payment
 
     console.log(safeTx);
 
@@ -500,7 +510,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       safeTx,
       chainId
     );
-
 
     let signature = "0x";
     signature += data.slice(2);
@@ -521,106 +530,42 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     const SmartWallet = await ethers.getContractFactory("SmartWallet");
 
-    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
-      "requiredTxGas",
-      [safeTx.to, safeTx.value, safeTx.data, safeTx.operation]
+    const tx = await userSCW.connect(accounts[1]).execTransaction(
+      transaction,
+      0, // batchId
+      refundInfo,
+      signature
     );
 
-    console.log(requiredTxGasData);
-
-    const [user1] = waffle.provider.getWallets();
-    const decoder = await deployContract(user1, decoderSource);
-
-    const result = await decoder.callStatic.decode(
-      userSCW.address,
-      requiredTxGasData
-    );
-    console.log(result);
-    const internalEstimate = ethers.BigNumber.from(
-      "0x" + result.slice(result.length - 32)
-    ).toNumber();
-    console.log("targetTxGas estimation part 1: ", internalEstimate);
-
-    const Estimator = await ethers.getContractFactory("GasEstimator");
-    const gasEstimatorInterface = Estimator.interface;
-    const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
-      "estimate",
+    const execTransactionData = SmartWallet.interface.encodeFunctionData(
+      "execTransaction",
       [
-        userSCW.address,
-        SmartWallet.interface.encodeFunctionData("execTransaction", [
-          transaction,
-          0, // batchId
-          refundInfo,
-          signature,
-        ]),
-      ]
-    );
-
-    const response = await ethers.provider.send("eth_call", [
-      {
-        to: estimator.address,
-        data: encodedEstimate,
-        from: bob,
-        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
-        // gas: "200000",
-      },
-      "latest",
-    ]);
-
-    const decoded = gasEstimatorInterface.decodeFunctionResult(
-      "estimate",
-      response
-    );
-
-    if (!decoded.success) {
-      throw Error(
-        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
-      );
-    }
-
-    const execTransactionGas = ethers.BigNumber.from(decoded.gas)
-      .add(txBaseCost(encodedEstimate))
-      .toNumber();
-    console.log("estimated gas to be used ", execTransactionGas);
-
-    refundInfo.baseGas = execTransactionGas - internalEstimate; // + 5000;
-    safeTx.baseGas = execTransactionGas - internalEstimate; // + 5000;
-
-    if (safeTx.baseGas) {
-      const { signer, data } = await safeSignTypedData(
-        accounts[0],
-        userSCW,
-        safeTx,
-        chainId
-      );
-
-      let signature = "0x";
-      signature += data.slice(2);
-
-      console.log(refundInfo);
-
-      const tx = await userSCW.connect(accounts[1]).execTransaction(
         transaction,
         0, // batchId
         refundInfo,
-        signature
-      );
+        signature,
+      ]
+    );
 
-      const receipt = await tx.wait(1);
-      console.log("gasPrice: ", tx.gasPrice);
-      console.log("real txn gas used: ", receipt.gasUsed.toNumber());
+    console.log("base cost would have been...");
+    console.log(txBaseCost(execTransactionData));
 
-      expect(await token.balanceOf(charlie)).to.equal(
-        ethers.utils.parseEther("10")
-      );
+    const receipt = await tx.wait(1);
+    console.log("gasPrice: ", tx.gasPrice);
+    console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
-      console.log("native tokens held by relayer after");
-      const tokenBalanceAfter = await ethers.provider.getBalance(bob);
-      console.log(tokenBalanceAfter.toString());
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
 
-      const diff = tokenBalanceBefore.sub(tokenBalanceAfter).toNumber();
-      console.log("difference is after - before", diff);
-      // 0.000002985503910649
-    }
+    console.log("native tokens held by relayer after");
+    const tokenBalanceAfter = await ethers.provider.getBalance(bob);
+    console.log(tokenBalanceAfter.toString());
+
+    const diff = tokenBalanceAfter.sub(tokenBalanceBefore).toNumber();
+    console.log("difference is after - before", diff); // ideally should be nearly 0 or positive
+
+    // 0.000002985503910649
+    // }
   });
 });

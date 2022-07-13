@@ -149,6 +149,7 @@ contract SmartWallet is
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual returns (bool success) {
+        uint256 gasUsed = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -174,17 +175,16 @@ contract SmartWallet is
         require(gasleft() >= max((_tx.targetTxGas * 64) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
-            uint256 gasUsed = gasleft();
             // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
             // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than targetTxGas
             success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.targetTxGas);
-            gasUsed = gasUsed - gasleft();
             // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
             if (refundInfo.gasPrice > 0) {
+                gasUsed = gasUsed - gasleft();
                 payment = handlePayment(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
