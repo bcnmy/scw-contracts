@@ -20,6 +20,7 @@ import "./common/SecuredTokenTransfer.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import "./libs/ECDSA.sol";
+import "hardhat/console.sol";
 
 // Hooks not made a base yet
 contract SmartWallet is 
@@ -185,6 +186,7 @@ contract SmartWallet is
             uint256 payment = 0;
             if (refundInfo.gasPrice > 0) {
                 gasUsed = gasUsed - gasleft();
+                console.log("Sending this to handle payment %s", gasUsed);
                 payment = handlePayment(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
@@ -199,6 +201,7 @@ contract SmartWallet is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
+        uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
         if (gasToken == address(0)) {
@@ -211,6 +214,34 @@ contract SmartWallet is
             payment = (gasUsed + baseGas) * (gasPrice);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
+        console.log("handle payment full gas %s", startGas - gasleft());
+    }
+
+    function handlePaymentAndRevert(
+        uint256 gasUsed,
+        uint256 baseGas,
+        uint256 gasPrice,
+        address gasToken,
+        address payable refundReceiver
+    ) external returns (uint256) {
+        uint256 startGas = gasleft();
+        uint256 payment;
+        // solhint-disable-next-line avoid-tx-origin
+        address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
+        if (gasToken == address(0)) {
+            // For ETH we will only adjust the gas price to not be higher than the actual used gas price
+            payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
+            // Review: low level call value vs transfer
+            (bool success,) = receiver.call{value: payment}("");
+            require(success, "BSA011");
+        } else {
+            payment = (gasUsed + baseGas) * (gasPrice);
+            require(transferToken(gasToken, receiver, payment), "BSA012");
+        }
+        uint256 requiredGas = startGas - gasleft();
+        console.log("handle payment revert method gas %s", requiredGas);
+        // Convert response to string and return via error message
+        revert(string(abi.encodePacked(requiredGas)));
     }
 
     // @review

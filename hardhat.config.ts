@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 
 import { HardhatUserConfig, task } from "hardhat/config";
-import '@nomiclabs/hardhat-truffle5';
+import "@nomiclabs/hardhat-truffle5";
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
@@ -76,6 +76,15 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
+    hardhat: {
+      allowUnlimitedContractSize: false,
+      gas: "auto",
+      accounts: walletUtils.localWallet("1000000000000000000000000", 20),
+      forking: {
+        // url:`https://mainnet.infura.io/v3/${infuraKey}`
+        url: `https://eth-mainnet.g.alchemy.com/v2/8vLFyF65nIpyd1CrfhqHd7kYtetw3Y7y`,
+      },
+    },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
       chainId: 3,

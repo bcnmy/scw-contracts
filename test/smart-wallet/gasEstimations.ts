@@ -491,6 +491,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     safeTx.gasPrice = 1743296144515; // this would be very high gas price in case of eth refund
     safeTx.targetTxGas = gasEstimate1.toNumber();
 
+    console.log(safeTx);
+
     // for base Gas we estimate handle payment here
     // 21000 + salt offset + handle payment estimate
     // instead of salt i could do this in fucntion itself using msg.data! write txBaseCost method in solidity
@@ -498,6 +500,32 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     // TODO
     // Estimate handle payment
     // using requiredTxGas or special method call from GasEstimator contract
+
+    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+
+    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
+      "handlePaymentAndRevert",
+      [
+        safeTx.targetTxGas,
+        safeTx.targetTxGas,
+        safeTx.gasPrice,
+        safeTx.gasToken,
+        safeTx.refundReceiver,
+      ]
+    );
+
+    const [user1] = waffle.provider.getWallets();
+    const decoder = await deployContract(user1, decoderSource);
+
+    const result = await decoder.callStatic.decode(
+      userSCW.address,
+      requiredTxGasData
+    );
+    console.log(result);
+    const internalEstimate = ethers.BigNumber.from(
+      "0x" + result.slice(result.length - 32)
+    ).toNumber();
+    console.log("handle eth payment gas estimation: ", internalEstimate);
 
     safeTx.baseGas = 21000 + 4172 + 7325; // + 10000; // 10k is % fee
     // for a matter of fact i know it is 7325 for ether payment
@@ -527,8 +555,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
-
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
 
     const tx = await userSCW.connect(accounts[1]).execTransaction(
       transaction,
