@@ -23,7 +23,7 @@ import "./libs/ECDSA.sol";
 import "hardhat/console.sol";
 
 // Hooks not made a base yet
-contract SmartWallet is 
+contract SmartWalletV2 is 
      Singleton,
      IWallet,
      IERC165,
@@ -138,22 +138,38 @@ contract SmartWallet is
         return a >= b ? a : b;
     }
 
+    function execTransactionBatch(
+    Transaction[] memory _txs,
+    uint256 _nonce,
+    bytes memory signature
+  ) public virtual {
+    // Validate and update nonce
+   
+    // Hash transaction bundle
+    // bytes32 txHash = _subDigest(keccak256(abi.encode(_nonce, _txs)));
+
+    // Verify that signatures are valid
+    /*require(
+      checkSignature(txHash, txHashData, signature),
+      "ModuleCalls#execute: INVALID_SIGNATURE"
+    );*/
+
+    // Execute the transactions
+    // _execute(txHash, _txs);
+  }
+
     // @review 2D nonces and args as default batchId 0 is always used
     // TODO : Update description
     // TODO : Add batchId and update in test cases, utils etc
-    // Gnosis style transaction with optional repay in native tokens OR ERC20 
-    /// Note: The fees are always transferred, even if the user transaction fails.
     /// @param _tx Wallet transaction 
-    /// @param batchId batchId key for 2D nonces
-    /// @param refundInfo Required information for gas refunds
-    /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
+    /// @param signature Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
     function execTransaction(
         Transaction memory _tx,
-        uint256 batchId,
-        FeeRefund memory refundInfo,
-        bytes memory signatures
+        // uint256 batchId,
+        // FeeRefund memory refundInfo,
+        bytes memory signature
     ) public payable virtual returns (bool success) {
-        uint256 gasUsed = gasleft();
+        // uint256 gasUsed = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -162,15 +178,15 @@ contract SmartWallet is
                     // Transaction info
                     _tx,
                     // Payment info
-                    refundInfo,
+                    // refundInfo,
                     // Signature info
-                    nonces[batchId]
+                    nonces[0]
                 );
             // Increase nonce and execute transaction.
             // Default space aka batchId is 0
-            nonces[batchId]++;
+            nonces[0]++;
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, txHashData, signatures);
+            checkSignature(txHash, txHashData, signature);
         }
 
 
@@ -181,89 +197,34 @@ contract SmartWallet is
         {
             // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
             // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than targetTxGas
-            success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.targetTxGas);
+            success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, (gasleft() - 2500));
             // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
-            require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
+            require(success || _tx.targetTxGas != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
-            if (refundInfo.gasPrice > 0) {
-                gasUsed = gasUsed - gasleft();
-                console.log("Sending this to handle payment %s", gasUsed);
-                payment = handlePayment(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
-            }
             if (success) emit ExecutionSuccess(txHash, payment);
             else emit ExecutionFailure(txHash, payment);
         }
-    }
-
-    function handlePayment(
-        uint256 gasUsed,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver
-    ) private returns (uint256 payment) {
-        uint256 startGas = gasleft();
-        // solhint-disable-next-line avoid-tx-origin
-        address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
-        if (gasToken == address(0)) {
-            // For ETH we will only adjust the gas price to not be higher than the actual used gas price
-            payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            // Review: low level call value vs transfer
-            (bool success,) = receiver.call{value: payment}("");
-            require(success, "BSA011");
-        } else {
-            payment = (gasUsed + baseGas) * (gasPrice);
-            require(transferToken(gasToken, receiver, payment), "BSA012");
-        }
-        console.log("handle payment full gas %s", startGas - gasleft());
-    }
-
-    function handlePaymentAndRevert(
-        uint256 gasUsed,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver
-    ) external returns (uint256) {
-        uint256 startGas = gasleft();
-        uint256 payment;
-        // solhint-disable-next-line avoid-tx-origin
-        address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
-        if (gasToken == address(0)) {
-            // For ETH we will only adjust the gas price to not be higher than the actual used gas price
-            payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            // Review: low level call value vs transfer
-            (bool success,) = receiver.call{value: payment}("");
-            require(success, "BSA011");
-        } else {
-            payment = (gasUsed + baseGas) * (gasPrice);
-            require(transferToken(gasToken, receiver, payment), "BSA012");
-        }
-        uint256 requiredGas = startGas - gasleft();
-        console.log("handle payment revert method gas %s", requiredGas);
-        // Convert response to string and return via error message
-        revert(string(abi.encodePacked(requiredGas)));
     }
 
     // @review
     /**
      * @dev Checks whether the signature provided is valid for the provided data, hash. Will revert otherwise.
      * @param dataHash Hash of the data (could be either a message hash or transaction hash)
-     * @param signatures Signature data that should be verified. Can be ECDSA signature, contract signature (EIP-1271) or approved hash.
+     * @param signature Signature data that should be verified. Can be ECDSA signature, contract signature (EIP-1271) or approved hash.
      */
-    function checkSignatures(
+    function checkSignature(
         bytes32 dataHash,
         bytes memory data,
-        bytes memory signatures
+        bytes memory signature
     ) public virtual view {
         uint8 v;
         bytes32 r;
         bytes32 s;
         uint256 i = 0;
         address _signer;
-        (v, r, s) = signatureSplit(signatures, i);
+        (v, r, s) = signatureSplit(signature, i);
         // review if necessary v = 1
         // review sig verification from other wallets
         if(v == 0) {
@@ -277,22 +238,22 @@ contract SmartWallet is
                 require(uint256(s) >= uint256(1) * 65, "BSA021");
 
                 // Check that signature data pointer (s) is in bounds (points to the length of data -> 32 bytes)
-                require(uint256(s) + 32 <= signatures.length, "BSA022");
+                require(uint256(s) + 32 <= signature.length, "BSA022");
 
                 // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
                 uint256 contractSignatureLen;
                 // solhint-disable-next-line no-inline-assembly
                 assembly {
-                    contractSignatureLen := mload(add(add(signatures, s), 0x20))
+                    contractSignatureLen := mload(add(add(signature, s), 0x20))
                 }
-                require(uint256(s) + 32 + contractSignatureLen <= signatures.length, "BSA023");
+                require(uint256(s) + 32 + contractSignatureLen <= signature.length, "BSA023");
 
                 // Check signature
                 bytes memory contractSignature;
                 // solhint-disable-next-line no-inline-assembly
                 assembly {
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
-                    contractSignature := add(add(signatures, s), 0x20)
+                    contractSignature := add(add(signature, s), 0x20)
                 }
                 require(ISignatureValidator(_signer).isValidSignature(data, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
         }
@@ -337,10 +298,6 @@ contract SmartWallet is
     /// @param data Data payload.
     /// @param operation Operation type.
     /// @param targetTxGas Fas that should be used for the safe transaction.
-    /// @param baseGas Gas costs for data used to trigger the safe transaction.
-    /// @param gasPrice Maximum gas price that should be used for this transaction.
-    /// @param gasToken Token address (or 0 if ETH) that is used for the payment.
-    /// @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
     /// @param _nonce Transaction nonce.
     /// @return Transaction hash.
     function getTransactionHash(
@@ -349,10 +306,10 @@ contract SmartWallet is
         bytes calldata data,
         Enum.Operation operation,
         uint256 targetTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        address gasToken,
-        address payable refundReceiver,
+        // uint256 baseGas,
+        // uint256 gasPrice,
+        // address gasToken,
+        // address payable refundReceiver,
         uint256 _nonce
     ) public view returns (bytes32) {
         Transaction memory _tx = Transaction({
@@ -362,39 +319,38 @@ contract SmartWallet is
             operation: operation,
             targetTxGas: targetTxGas
         });
-        FeeRefund memory refundInfo = FeeRefund({
+        /*FeeRefund memory refundInfo = FeeRefund({
             baseGas: baseGas,
             gasPrice: gasPrice,
             gasToken: gasToken,
             refundReceiver: refundReceiver
-        });
-        return keccak256(encodeTransactionData(_tx, refundInfo, _nonce));
+        });*/
+        return keccak256(encodeTransactionData(_tx, _nonce));
     }
 
 
     /// @dev Returns the bytes that are hashed to be signed by owner.
     /// @param _tx Wallet transaction 
-    /// @param refundInfo Required information for gas refunds
     /// @param _nonce Transaction nonce.
     /// @return Transaction hash bytes.
     function encodeTransactionData(
         Transaction memory _tx,
-        FeeRefund memory refundInfo,
+        // FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
         bytes32 safeTxHash =
             keccak256(
                 abi.encode(
-                    WALLET_TX_TYPEHASH,
+                    WALLET_TX_TYPEHASH_V2,
                     _tx.to,
                     _tx.value,
                     keccak256(_tx.data),
                     _tx.operation,
                     _tx.targetTxGas,
-                    refundInfo.baseGas,
-                    refundInfo.gasPrice,
-                    refundInfo.gasToken,
-                    refundInfo.refundReceiver,
+                    //refundInfo.baseGas,
+                    //refundInfo.gasPrice,
+                    //refundInfo.gasToken,
+                    //refundInfo.refundReceiver,
                     _nonce
                 )
             );

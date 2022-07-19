@@ -19,6 +19,11 @@ contract WalletStorage {
     // );
     bytes32 internal constant WALLET_TX_TYPEHASH = 0xeedfef42e81fe8cd0e4185e4320e9f8d52fd97eb890b85fa9bd7ad97c9a18de2;
 
+    // keccak256(
+    //     "WalletTxV2(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 nonce)"
+    // );
+    bytes32 internal constant WALLET_TX_TYPEHASH_V2 = 0x4eb9ca0c7259005c57c1081da8627a4272a7e0eeac54affd279beb4c8fe983d5;
+
     // Owner storage
     address public owner;
 

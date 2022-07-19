@@ -62,6 +62,7 @@ function txBaseCost(data: BytesLike): number {
 }
 
 describe("Wallet tx gas estimations with and without refunds", function () {
+  this.timeout(200000);
   // TODO
   let baseImpl: SmartWallet;
   let walletFactory: WalletFactory;
@@ -465,9 +466,11 @@ describe("Wallet tx gas estimations with and without refunds", function () {
   });
 
   it("can send transactions and charge wallet for fees in ether", async function () {
-    await token
+    const txn = await token
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    await txn.wait(1);
 
     console.log("ether held by relayer before");
     const tokenBalanceBefore = await ethers.provider.getBalance(bob);

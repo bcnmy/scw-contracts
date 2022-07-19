@@ -405,6 +405,124 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     );
   });
 
+  // send regular baseGas for txn + send wallet deployment gas!
+  // we could probably do simulate for each tx and add for one
+  /* it("Should estimate wallet deployment and send first transacton and charge fees in ether", async function () {
+    const expected = await walletFactory.getAddressForCounterfactualWallet(
+      owner,
+      1
+    );
+    console.log("deploying new wallet..expected address: ", expected);
+
+    await token
+      .connect(accounts[0])
+      .transfer(expected, ethers.utils.parseEther("100"));
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      // value: ethers.utils.parseEther("1"),
+      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+      nonce: 0, // nonce picked 0 for first transaction as we can't read from state yet (?)
+    });
+
+    const Estimator = await ethers.getContractFactory("GasEstimator");
+    const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
+    const gasEstimatorInterface = Estimator.interface;
+
+    const chainId = await userSCW.getChainId();
+    userSCW = userSCW.attach(expected);
+    const { signer, data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx,
+      chainId
+    );
+
+    console.log(safeTx);
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    let signature = "0x";
+    signature += data.slice(2);
+
+    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+
+    const txs: MetaTransaction[] = [
+      buildContractCall(
+        walletFactory,
+        "deployCounterFactualWallet",
+        [owner, entryPoint.address, handler.address, 1],
+        0
+      ),
+      buildContractCall(
+        userSCW,
+        "execTransaction",
+        [transaction, 1, refundInfo, signature],
+        0
+      ),
+    ];
+
+    const txnData = MultiSend.interface.encodeFunctionData("multiSend", [
+      encodeMultiSend(txs),
+    ]);
+
+    const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
+      "estimate",
+      [multiSend.address, txnData]
+    );
+
+    const response = await ethers.provider.send("eth_call", [
+      {
+        to: estimator.address,
+        data: encodedEstimate,
+        from: bob,
+        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
+        // gas: "200000",
+      },
+      "latest",
+    ]);
+
+    const decoded = gasEstimatorInterface.decodeFunctionResult(
+      "estimate",
+      response
+    );
+
+    if (!decoded.success) {
+      throw Error(
+        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
+      );
+    }
+
+    console.log(
+      "estimated gas to be used ",
+      ethers.BigNumber.from(decoded.gas).add(txBaseCost(txnData)).toNumber()
+    );
+
+    // await expect(
+    const txn = await multiSend
+      .connect(accounts[0])
+      .multiSend(encodeMultiSend(txs));
+
+    const receipt = await txn.wait(1);
+    console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
+  }); */
+
   it("Should estimate wallet deployment and enable module", async function () {
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
@@ -580,7 +698,6 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const Estimator = await ethers.getContractFactory("GasEstimator");
     const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
     const gasEstimatorInterface = Estimator.interface;
-
 
     // TODO
     // In the sdk relayer sendTransaction (wallet.executeTransaction) check if wallet exits and make helper to prepend the deployment
