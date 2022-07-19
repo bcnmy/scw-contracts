@@ -407,12 +407,25 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
   // send regular baseGas for txn + send wallet deployment gas!
   // we could probably do simulate for each tx and add for one
-  /* it("Should estimate wallet deployment and send first transacton and charge fees in ether", async function () {
+  it("Should estimate wallet deployment and send first transacton and charge fees in ether", async function () {
+    // we know estimated gas for wallet deployment
+    const walletDeployApprox = 264722;
+
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
       1
     );
     console.log("deploying new wallet..expected address: ", expected);
+
+    await accounts[1].sendTransaction({
+      from: bob,
+      to: expected,
+      value: ethers.utils.parseEther("5"),
+    });
+
+    console.log("ether held by relayer before");
+    const tokenBalanceBefore = await ethers.provider.getBalance(bob);
+    console.log(tokenBalanceBefore.toString());
 
     await token
       .connect(accounts[0])
@@ -425,12 +438,27 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       nonce: 0, // nonce picked 0 for first transaction as we can't read from state yet (?)
     });
 
+    /* const gasEstimate1 = await ethers.provider.estimateGas({
+      to: token.address,
+      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+      from: userSCW.address,
+    }); */
+
+    safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
+    safeTx.gasToken = "0x0000000000000000000000000000000000000000";
+    safeTx.gasPrice = 1743296144515; // this would be very high gas price in case of eth refund
+    safeTx.targetTxGas = 70000; // non-zero // please note whenever fee refund is involved targetTxGas should not be sent 0!
+    // 7299 is handle payment
+    safeTx.baseGas = walletDeployApprox + 7299 + 10000; // this is offset;
+    // notice we did not add 21000 here
+
     const Estimator = await ethers.getContractFactory("GasEstimator");
     const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
     const gasEstimatorInterface = Estimator.interface;
 
     const chainId = await userSCW.getChainId();
     userSCW = userSCW.attach(expected);
+
     const { signer, data } = await safeSignTypedData(
       accounts[0],
       userSCW,
@@ -459,6 +487,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const SmartWallet = await ethers.getContractFactory("SmartWallet");
 
+    // One more thing we can do for base gas is that we could estimate individual txns seperately (mostly wallet deployment) and add handlePayment gas in one of safe txns!
     const txs: MetaTransaction[] = [
       buildContractCall(
         walletFactory,
@@ -512,16 +541,51 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     // await expect(
     const txn = await multiSend
-      .connect(accounts[0])
+      .connect(accounts[1])
       .multiSend(encodeMultiSend(txs));
 
+    /* const execTransactionData = MultiSend.interface.encodeFunctionData(
+      "multisend",
+      [encodeMultiSend(txs)]
+    );
+
+    console.log("base cost would have been...");
+    console.log(txBaseCost(execTransactionData)); */
+
     const receipt = await txn.wait(1);
-    console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
+    console.log("gasPrice: ", txn.gasPrice);
+    console.log("real txn gas used: ", receipt.gasUsed.toNumber());
+
+    console.log("Gas Prices");
+    console.log(txn.gasPrice);
+    console.log(receipt.effectiveGasPrice);
+
+    const eventLogs = SmartWallet.interface.decodeEventLog(
+      "ExecutionSuccess",
+      receipt.logs[3].data
+    );
+    const paymentDeducted = eventLogs.payment.toString();
+    console.log(paymentDeducted);
+
+    const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);
+    console.log("gasFees", gasFees.toString());
+
+    expect(gasFees.toNumber()).to.approximately(
+      Number(paymentDeducted),
+      ethers.BigNumber.from(5000).mul(receipt.effectiveGasPrice).toNumber()
+    );
 
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
     );
-  }); */
+
+    console.log("native tokens held by relayer after");
+    const tokenBalanceAfter = await ethers.provider.getBalance(bob);
+    console.log(tokenBalanceAfter.toString());
+
+    const diff = tokenBalanceAfter.sub(tokenBalanceBefore).toNumber();
+    console.log("difference is after - before", diff); // ideally should be nearly 0 or positive
+  });
 
   it("Should estimate wallet deployment and enable module", async function () {
     const expected = await walletFactory.getAddressForCounterfactualWallet(
@@ -633,6 +697,9 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
   });
 
+  // MultiSendCallOnly -> WalletFactory
+  //                   -> Wallet -> MultiSend (delegateCall) -> enable module
+  //                                                         -> lego approve and stake
   it("Should estimate wallet deployment, enable module and send basic lego", async function () {
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,

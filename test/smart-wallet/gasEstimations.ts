@@ -330,7 +330,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
     safeTx.gasToken = token.address;
-    safeTx.gasPrice = 1683625926886; // this would be token gas price
+    safeTx.gasPrice = "1753210000000"; // this would be token gas price
     safeTx.targetTxGas = gasEstimate1.toNumber();
 
     // 25945 is handlePayment for DAI
@@ -448,12 +448,15 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);
     console.log("gasFees", gasFees.toNumber());
 
-    const ethusd = 1537; // fetch
+    const ethusd = 1569; // fetch
     const daiusd = 1;
 
     /* expect(gasFees.toNumber()).to.approximately(
-      paymentDeducted.div(ethers.BigNumber.from(ethusd)).toNumber(),
-      ethers.BigNumber.from(11000).mul(receipt.effectiveGasPrice).toNumber()
+      paymentDeducted
+        // .div(ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18)))
+        .div(ethers.BigNumber.from(ethusd))
+        .toNumber(),
+      ethers.BigNumber.from(5000).mul(receipt.effectiveGasPrice).toNumber()
     ); */
 
     expect(await token.balanceOf(charlie)).to.equal(
