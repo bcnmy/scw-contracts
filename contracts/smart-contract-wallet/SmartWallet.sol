@@ -70,6 +70,10 @@ contract SmartWallet is
         emit EOAChanged(address(this),owner,_newOwner);
     }
 
+    function getOwner() public view returns(address) {
+        return owner;
+    }
+
     /**
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
@@ -254,7 +258,7 @@ contract SmartWallet is
         bytes32 dataHash,
         bytes memory data,
         bytes memory signatures
-    ) public view {
+    ) public virtual view {
         uint8 v;
         bytes32 r;
         bytes32 s;

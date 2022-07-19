@@ -200,7 +200,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     });
   });
 
-  it("should send a single transacton", async function () {
+  it("should send a single transacton and estimate gas for it", async function () {
     await token
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
@@ -285,6 +285,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
         .toNumber()
     );
 
+    // No gas refunds involved so not altering baseGas fields and no double sig
+
     // await expect(
     const txn = await userSCW.connect(accounts[0]).execTransaction(
       transaction,
@@ -327,9 +329,12 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
     safeTx.gasToken = token.address;
-    safeTx.gasPrice = 1743296144515; // this would be token gas price
+    safeTx.gasPrice = 1683625926886; // this would be token gas price
     safeTx.targetTxGas = gasEstimate1.toNumber();
-    safeTx.baseGas = gasEstimate1.toNumber(); // some non-zero value
+
+    // 25945 is handlePayment for DAI
+    safeTx.baseGas = 21000 + 4424 + 25945 + 10000; // this is offset;
+    // can be added more for relayer premium
 
     console.log(safeTx);
 
@@ -360,26 +365,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     };
 
     const SmartWallet = await ethers.getContractFactory("SmartWallet");
-
-    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
-      "requiredTxGas",
-      [safeTx.to, safeTx.value, safeTx.data, safeTx.operation]
-    );
-
-    console.log(requiredTxGasData);
-
-    const [user1] = waffle.provider.getWallets();
-    const decoder = await deployContract(user1, decoderSource);
-
-    const result = await decoder.callStatic.decode(
-      userSCW.address,
-      requiredTxGasData
-    );
-    console.log(result);
-    const internalEstimate = ethers.BigNumber.from(
-      "0x" + result.slice(result.length - 32)
-    ).toNumber();
-    console.log("targetTxGas estimation part 1: ", internalEstimate);
 
     const Estimator = await ethers.getContractFactory("GasEstimator");
     const gasEstimatorInterface = Estimator.interface;
@@ -423,42 +408,60 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       .toNumber();
     console.log("estimated gas to be used ", execTransactionGas);
 
-    refundInfo.baseGas = execTransactionGas - internalEstimate + 5000;
-    safeTx.baseGas = execTransactionGas - internalEstimate + 5000;
-
-    if (safeTx.baseGas) {
-      const { signer, data } = await safeSignTypedData(
-        accounts[0],
-        userSCW,
-        safeTx,
-        chainId
-      );
-
-      let signature = "0x";
-      signature += data.slice(2);
-
-      console.log(refundInfo);
-
-      // await expect(
-      const tx = await userSCW.connect(accounts[1]).execTransaction(
+    const execTransactionData = SmartWallet.interface.encodeFunctionData(
+      "execTransaction",
+      [
         transaction,
         0, // batchId
         refundInfo,
-        signature
-      );
+        signature,
+      ]
+    );
 
-      const receipt = await tx.wait(1);
-      console.log("gasPrice: ", tx.gasPrice);
-      console.log("real txn gas used: ", receipt.gasUsed.toNumber());
+    console.log("base cost would have been...");
+    console.log(txBaseCost(execTransactionData));
 
-      expect(await token.balanceOf(charlie)).to.equal(
-        ethers.utils.parseEther("10")
-      );
+    // await expect(
+    const tx = await userSCW.connect(accounts[1]).execTransaction(
+      transaction,
+      0, // batchId
+      refundInfo,
+      signature
+    );
 
-      console.log("tokens held by relayer after");
-      const tokenBalanceAfter = await token.balanceOf(bob);
-      console.log(tokenBalanceAfter.toString());
-    }
+    const receipt = await tx.wait(1);
+    console.log("gasPrice: ", tx.gasPrice);
+    console.log("real txn gas used: ", receipt.gasUsed.toNumber());
+
+    console.log("Gas Prices");
+    console.log(tx.gasPrice);
+    console.log(receipt.effectiveGasPrice);
+
+    const eventLogs = SmartWallet.interface.decodeEventLog(
+      "ExecutionSuccess",
+      receipt.logs[2].data
+    );
+    const paymentDeducted = eventLogs.payment; // no of DAI tokens
+    console.log("tokens refund ", paymentDeducted);
+
+    const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);
+    console.log("gasFees", gasFees.toNumber());
+
+    const ethusd = 1537; // fetch
+    const daiusd = 1;
+
+    /* expect(gasFees.toNumber()).to.approximately(
+      paymentDeducted.div(ethers.BigNumber.from(ethusd)).toNumber(),
+      ethers.BigNumber.from(11000).mul(receipt.effectiveGasPrice).toNumber()
+    ); */
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
+
+    console.log("tokens held by relayer after");
+    const tokenBalanceAfter = await token.balanceOf(bob);
+    console.log(tokenBalanceAfter.toString());
   });
 
   it("can send transactions and charge wallet for fees in ether", async function () {
@@ -527,7 +530,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     ).toNumber();
     console.log("handle eth payment gas estimation: ", internalEstimate);
 
-    safeTx.baseGas = 21000 + 4172 + 7325; // + 10000; // 10k is % fee
+    // 7299 is handlePayment!
+    safeTx.baseGas = 21000 + 4172 + 7299 + 10000; // this is offset;
+    // + 10000; // another 10k % fee on top?
     // for a matter of fact i know it is 7325 for ether payment
 
     console.log(safeTx);
@@ -579,6 +584,24 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const receipt = await tx.wait(1);
     console.log("gasPrice: ", tx.gasPrice);
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
+
+    console.log("Gas Prices");
+    console.log(tx.gasPrice);
+    console.log(receipt.effectiveGasPrice);
+
+    const eventLogs = SmartWallet.interface.decodeEventLog(
+      "ExecutionSuccess",
+      receipt.logs[1].data
+    );
+    const paymentDeducted = eventLogs.payment.toNumber();
+
+    const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);
+    console.log("gasFees", gasFees.toNumber());
+
+    expect(gasFees.toNumber()).to.approximately(
+      paymentDeducted,
+      ethers.BigNumber.from(2800).mul(receipt.effectiveGasPrice).toNumber()
+    );
 
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")

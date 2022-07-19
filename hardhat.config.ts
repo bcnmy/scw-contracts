@@ -136,6 +136,7 @@ const config: HardhatUserConfig = {
     goerli: {
       url: process.env.GOERLI_URL || "",
       accounts: walletUtils.makeKeyList(),
+      gas: "auto",
       chainId: 5,
       // gas: 6400000
     },
