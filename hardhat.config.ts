@@ -124,6 +124,14 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
     },
+    polygon_mainnet: {
+      url: process.env.POLYGON_URL || "",
+      chainId: 137,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
     goerli: {
       url: process.env.GOERLI_URL || "",
       accounts: walletUtils.makeKeyList(),
@@ -144,7 +152,7 @@ const config: HardhatUserConfig = {
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: process.env.POLYGONSCAN_API_KEY,
   },
 };
 
