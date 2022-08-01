@@ -28,6 +28,9 @@ import { BytesLike } from "ethers";
 import { deployContract } from "../utils/setupHelper";
 import { provider } from "ganache";
 
+const SCWNoAuth = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWalletNoAuth.sol/SmartWalletNoAuth.json");
+const SCW = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWallet.sol/SmartWallet.json");
+
 // NOTE :
 // things to solve:
 // i) getting signature twice for estimation
@@ -266,6 +269,11 @@ describe("Wallet tx gas estimations with and without refunds", function () {
         // gas: "200000",
       },
       "latest",
+      {
+        [userSCW.address]: {
+          code: SCWNoAuth.deployedBytecode,
+        },
+      },
     ]);
 
     const decoded = gasEstimatorInterface.decodeFunctionResult(
@@ -391,6 +399,11 @@ describe("Wallet tx gas estimations with and without refunds", function () {
         // gas: "200000",
       },
       "latest",
+      {
+        [userSCW.address]: {
+          code: SCWNoAuth.deployedBytecode,
+        },
+      },
     ]);
 
     const decoded = gasEstimatorInterface.decodeFunctionResult(
@@ -523,7 +536,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       ]
     );
 
-    const [user1] = waffle.provider.getWallets();
+    const [user1] = await ethers.getSigners();
     const decoder = await deployContract(user1, decoderSource);
 
     const result = await decoder.callStatic.decode(

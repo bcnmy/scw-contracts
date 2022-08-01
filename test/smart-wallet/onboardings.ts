@@ -37,6 +37,9 @@ import { deployContract } from "../utils/setupHelper";
 import { provider } from "ganache";
 import { sign } from "crypto";
 
+const SCWNoAuth = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWalletNoAuth.sol/SmartWalletNoAuth.json");
+const SCW = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWallet.sol/SmartWallet.json");
+
 const GasEstimatorArtifact = artifacts.require("GasEstimator");
 
 function tryDecodeError(bytes: BytesLike): string {
@@ -288,7 +291,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   });
 
   // TODO
-  // Review if the first transaction fails
+  // Review
   it("Should estimate wallet deployment and send first transacton", async function () {
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
@@ -374,6 +377,11 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
         // gas: "200000",
       },
       "latest",
+      /* {
+        [expected]: {
+          code: SCWNoAuth.deployedBytecode,
+        },
+      }, */
     ]);
 
     const decoded = gasEstimatorInterface.decodeFunctionResult(
@@ -521,6 +529,11 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
         // gas: "200000",
       },
       "latest",
+      /* {
+        [userSCW.address]: {
+          code: SCWNoAuth.deployedBytecode,
+        },
+      }, */
     ]);
 
     const decoded = gasEstimatorInterface.decodeFunctionResult(
@@ -670,6 +683,11 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
         // gas: "200000",
       },
       "latest",
+      /* {
+        [userSCW.address]: {
+          code: SCWNoAuth.deployedBytecode,
+        },
+      }, */
     ]);
 
     const decoded = gasEstimatorInterface.decodeFunctionResult(
@@ -805,6 +823,11 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
         // gas: "200000",
       },
       "latest",
+      /* {
+        [userSCW.address]: {
+          code: SCWNoAuth.deployedBytecode,
+        },
+      }, */
     ]);
 
     const decoded = gasEstimatorInterface.decodeFunctionResult(

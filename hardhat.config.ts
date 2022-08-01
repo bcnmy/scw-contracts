@@ -26,6 +26,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
+  defaultNetwork: "ganache",
   solidity: {
     compilers: [
       {
@@ -76,6 +77,17 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
+    ganache: {
+      chainId: 1337,
+      url: "http://localhost:8545",
+      accounts: {
+        mnemonic:
+          "stand hand health lawn hurry park bulk across onion cause urban license",
+        path: "m/44'/60'/0'/0",
+        initialIndex: 0,
+        count: 20,
+      },
+    },
     hardhat: {
       allowUnlimitedContractSize: false,
       gas: "auto",
