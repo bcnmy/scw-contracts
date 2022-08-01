@@ -127,10 +127,11 @@ export const deploy = async (
 export const deployFactory = async (provider: Provider): Promise<void> => {
   const signer = (provider as ethers.providers.JsonRpcProvider).getSigner();
   // Return if it's already deployed
-  await (signer ?? signer).sendTransaction({
+  const txn = await (signer ?? signer).sendTransaction({
     to: factoryDeployer,
     value: BigNumber.from(factoryDeploymentFee),
   });
+  await txn.wait(2);
   const tx = await provider.sendTransaction(factoryTx);
   await tx.wait();
   // if still not deployed then throw / inform

@@ -156,6 +156,14 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
     },
+    moonbeam_mainnet: {
+      url: "https://rpc.api.moonbeam.network",
+      chainId: 1284,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
     goerli: {
       url: process.env.GOERLI_URL || "",
       accounts: walletUtils.makeKeyList(),
