@@ -203,7 +203,7 @@ contract SmartWallet is
         uint256 gasPrice,
         address gasToken,
         address payable refundReceiver
-    ) internal returns (uint256 payment) {
+    ) private returns (uint256 payment) {
         uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;

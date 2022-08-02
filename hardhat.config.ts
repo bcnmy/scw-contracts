@@ -82,7 +82,7 @@ const config: HardhatUserConfig = {
       url: "http://localhost:8545",
       accounts: {
         mnemonic:
-          "stand hand health lawn hurry park bulk across onion cause urban license",
+          "tiny blur attitude ready found couch error end eyebrow sunny monkey minor",
         path: "m/44'/60'/0'/0",
         initialIndex: 0,
         count: 20,

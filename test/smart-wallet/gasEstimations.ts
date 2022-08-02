@@ -580,6 +580,53 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       refundReceiver: safeTx.refundReceiver,
     };
 
+    const Estimator = await ethers.getContractFactory("GasEstimator");
+    const gasEstimatorInterface = Estimator.interface;
+    const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
+      "estimate",
+      [
+        userSCW.address,
+        SmartWallet.interface.encodeFunctionData("execTransaction", [
+          transaction,
+          0, // batchId
+          refundInfo,
+          signature,
+        ]),
+      ]
+    );
+
+    const response = await ethers.provider.send("eth_call", [
+      {
+        to: estimator.address,
+        data: encodedEstimate,
+        from: bob,
+        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
+        // gas: "200000",
+      },
+      "latest",
+      {
+        [userSCW.address]: {
+          code: SCW.deployedBytecode,
+        },
+      },
+    ]);
+
+    const decoded = gasEstimatorInterface.decodeFunctionResult(
+      "estimate",
+      response
+    );
+
+    if (!decoded.success) {
+      throw Error(
+        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
+      );
+    }
+
+    const execTransactionGas = ethers.BigNumber.from(decoded.gas)
+      .add(txBaseCost(encodedEstimate))
+      .toNumber();
+    console.log("estimated gas to be used ", execTransactionGas);
+
     const tx = await userSCW.connect(accounts[1]).execTransaction(
       transaction,
       0, // batchId

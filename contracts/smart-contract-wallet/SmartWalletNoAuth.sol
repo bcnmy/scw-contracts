@@ -109,10 +109,33 @@ contract SmartWalletNoAuth is SmartWallet {
             if (refundInfo.gasPrice > 0) {
                 gasUsed = gasUsed - gasleft();
                 console.log("Sending this to handle payment %s", gasUsed);
-                payment = handlePayment(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
+                payment = handlePaymentEstimate(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
             else emit ExecutionFailure(txHash, payment);
         }
+    }
+
+    function handlePaymentEstimate(
+        uint256 gasUsed,
+        uint256 baseGas,
+        uint256 gasPrice,
+        address gasToken,
+        address payable refundReceiver
+    ) internal returns (uint256 payment) {
+        uint256 startGas = gasleft();
+        // solhint-disable-next-line avoid-tx-origin
+        address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
+        if (gasToken == address(0)) {
+            // For ETH we will only adjust the gas price to not be higher than the actual used gas price
+            payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
+            // Review: low level call value vs transfer
+            (bool success,) = receiver.call{value: payment}("");
+            require(success, "BSA011");
+        } else {
+            payment = (gasUsed + baseGas) * (gasPrice);
+            require(transferToken(gasToken, receiver, payment), "BSA012");
+        }
+        console.log("handle payment full gas %s", startGas - gasleft());
     }
 }
