@@ -2,23 +2,29 @@ import { ethers } from "hardhat";
 import {
   SALT,
   FACTORY_ADDRESS,
-  buildCreate2Address,
+  getDeployedAddress,
+  deploy,
+  deployFactory,
   isContract,
 } from "./utils";
+
+const options = { gasLimit: 7000000 };
 
 async function main() {
   const provider = ethers.provider;
 
-  const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
-  const singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
+  const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
+  if (!isFactoryDeployed) {
+    const deployedFactory = await deployFactory(provider);
+  }
 
   const callBackHandler = await ethers.getContractFactory(
     "DefaultCallbackHandler"
   );
   const callBackHandlerBytecode = `${callBackHandler.bytecode}`;
-  const callBackHandlerComputedAddr = buildCreate2Address(
-    SALT,
-    callBackHandlerBytecode
+  const callBackHandlerComputedAddr = getDeployedAddress(
+    callBackHandlerBytecode,
+    ethers.BigNumber.from(SALT)
   );
   console.log(
     "CallBack Handler Computed Address: ",
@@ -30,12 +36,12 @@ async function main() {
     provider
   ); // true (deployed on-chain)
   if (!iscallBackHandlerDeployed) {
-    const callBackHandlerTxDetail: any = await (
-      await singletonFactory.deploy(callBackHandlerBytecode, SALT)
-    ).wait();
+    const callBackHandlerDeployedAddr = await deploy(
+      provider,
+      callBackHandlerBytecode,
+      ethers.BigNumber.from(SALT)
+    );
 
-    const callBackHandlerDeployedAddr =
-      callBackHandlerTxDetail.events[0].args.addr.toLowerCase();
     console.log("callBackHandlerDeployedAddr ", callBackHandlerDeployedAddr);
     const callBackHandlerDeploymentStatus =
       callBackHandlerComputedAddr === callBackHandlerDeployedAddr

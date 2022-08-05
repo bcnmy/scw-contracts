@@ -2,30 +2,43 @@ import { ethers } from "hardhat";
 import {
   SALT,
   FACTORY_ADDRESS,
-  buildCreate2Address,
+  getDeployedAddress,
+  deploy,
+  deployFactory,
   encodeParam,
   isContract,
 } from "./utils";
 
+const options = { gasLimit: 7000000, gasPrice: 70000000000 };
+
 async function main() {
   const provider = ethers.provider;
 
-  const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
-  const singletonFactory = SingletonFactory.attach(FACTORY_ADDRESS);
+  // const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
+  // const singletonFactory = SingletonFactory.attach(FACTORY_ADDRESS);
+
+  const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
+  if (!isFactoryDeployed) {
+    const deployedFactory = await deployFactory(provider);
+  }
 
   const SmartWallet = await ethers.getContractFactory("SmartWallet");
   const smartWalletBytecode = `${SmartWallet.bytecode}`;
-  const baseImpComputedAddr = buildCreate2Address(SALT, smartWalletBytecode);
+  const baseImpComputedAddr = getDeployedAddress(
+    smartWalletBytecode,
+    ethers.BigNumber.from(SALT)
+  );
   console.log("Base wallet Computed Address: ", baseImpComputedAddr);
 
   let baseImpDeployedAddr;
   const isBaseImpDeployed = await isContract(baseImpComputedAddr, provider); // true (deployed on-chain)
   if (!isBaseImpDeployed) {
-    const baseImpTxDetail: any = await (
-      await singletonFactory.deploy(smartWalletBytecode, SALT)
-    ).wait();
+    baseImpDeployedAddr = await deploy(
+      provider,
+      smartWalletBytecode,
+      ethers.BigNumber.from(SALT)
+    );
 
-    baseImpDeployedAddr = baseImpTxDetail.events[0].args.addr.toLowerCase();
     console.log("baseImpDeployedAddr ", baseImpDeployedAddr);
     const baseImpDeploymentStatus =
       baseImpComputedAddr === baseImpDeployedAddr
@@ -52,9 +65,9 @@ async function main() {
     baseImpDeployedAddr
   ).slice(2)}`;
 
-  const walletFactoryComputedAddr = buildCreate2Address(
-    SALT,
-    walletFactoryBytecode
+  const walletFactoryComputedAddr = getDeployedAddress(
+    walletFactoryBytecode,
+    ethers.BigNumber.from(SALT)
   );
 
   console.log("Wallet Factory Computed Address: ", walletFactoryComputedAddr);
@@ -64,13 +77,11 @@ async function main() {
     provider
   ); // true (deployed on-chain)
   if (!iswalletFactoryDeployed) {
-    const walletFactoryTxDetail: any = await (
-      await singletonFactory.deploy(walletFactoryBytecode, SALT)
-    ).wait();
-
-    const walletFactoryDeployedAddr =
-      walletFactoryTxDetail.events[0].args.addr.toLowerCase();
-    console.log("walletFactoryDeployedAddr ", walletFactoryDeployedAddr);
+    const walletFactoryDeployedAddr = await deploy(
+      provider,
+      walletFactoryBytecode,
+      ethers.BigNumber.from(SALT)
+    );
 
     const walletFactoryDeploymentStatus =
       walletFactoryComputedAddr === walletFactoryDeployedAddr

@@ -42,6 +42,12 @@ const config: HardhatUserConfig = {
         },
       },
       {
+        version: "0.8.12",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
+      {
         version: "0.4.23",
         settings: {
           optimizer: { enabled: true, runs: 200 },
@@ -108,6 +114,7 @@ const config: HardhatUserConfig = {
     rinkeby: {
       url: process.env.RINKEBY_URL || "",
       chainId: 4,
+      gas: 5000000,
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
@@ -132,6 +139,7 @@ const config: HardhatUserConfig = {
     bsc_testnet: {
       url: process.env.BSC_TESTNET_URL || "",
       chainId: 97,
+      gas: 5000000,
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
@@ -140,6 +148,38 @@ const config: HardhatUserConfig = {
     polygon_mumbai: {
       url: process.env.POLYGON_MUMBAI_URL || "",
       chainId: 80001,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    polygon_mainnet: {
+      url: process.env.POLYGON_URL || "",
+      chainId: 137,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    bnb_mainnet: {
+      url: "https://bsc-dataseed2.binance.org",
+      chainId: 56,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    bnb_testnet: {
+      url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
+      chainId: 97,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    moonbeam_mainnet: {
+      url: "https://rpc.api.moonbeam.network",
+      chainId: 1284,
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
