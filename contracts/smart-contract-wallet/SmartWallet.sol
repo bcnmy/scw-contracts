@@ -20,7 +20,7 @@ import "./common/SecuredTokenTransfer.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import "./libs/ECDSA.sol";
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 // Hooks not made a base yet
 contract SmartWallet is 
@@ -187,13 +187,17 @@ contract SmartWallet is
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
+            // uint256 testGas = gasleft();
             if (refundInfo.gasPrice > 0) {
                 gasUsed = gasUsed - gasleft();
-                console.log("Sending this to handle payment %s", gasUsed);
+                // testGas = gasleft();
+                // console.log("Sending this to handle payment %s", gasUsed);
                 payment = handlePayment(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
             else emit ExecutionFailure(txHash, payment);
+            // testGas = testGas - gasleft();
+            // console.log("gas used extra: %s", testGas);
         }
     }
 
@@ -217,7 +221,7 @@ contract SmartWallet is
             payment = (gasUsed + baseGas) * (gasPrice);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
-        console.log("handle payment full gas %s", startGas - gasleft());
+        // console.log("handle payment full gas %s", startGas - gasleft());
     }
 
     function handlePaymentAndRevert(
@@ -242,7 +246,7 @@ contract SmartWallet is
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
         uint256 requiredGas = startGas - gasleft();
-        console.log("handle payment revert method gas %s", requiredGas);
+        // console.log("handle payment revert method gas %s", requiredGas);
         // Convert response to string and return via error message
         revert(string(abi.encodePacked(requiredGas)));
     }

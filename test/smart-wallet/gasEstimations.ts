@@ -260,7 +260,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       ]
     );
 
-    const response = await ethers.provider.send("eth_call", [
+    /* const response = await ethers.provider.send("eth_call", [
       {
         to: estimator.address,
         data: encodedEstimate,
@@ -269,7 +269,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
         // gas: "200000",
       },
       "latest",
-      {
+      /* {
         [userSCW.address]: {
           code: SCWNoAuth.deployedBytecode,
         },
@@ -292,7 +292,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       ethers.BigNumber.from(decoded.gas)
         .add(txBaseCost(encodedEstimate))
         .toNumber()
-    );
+    ); */
 
     // No gas refunds involved so not altering baseGas fields and no double sig
 
@@ -341,8 +341,37 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     safeTx.gasPrice = "1753210000000"; // this would be token gas price
     safeTx.targetTxGas = gasEstimate1.toNumber();
 
+    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+
+    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
+      "handlePaymentAndRevert",
+      [
+        safeTx.targetTxGas,
+        safeTx.targetTxGas,
+        safeTx.gasPrice,
+        safeTx.gasToken,
+        safeTx.refundReceiver,
+      ]
+    );
+
+    const [user1] = await ethers.getSigners();
+    const decoder = await deployContract(user1, decoderSource);
+
+    const result = await decoder.callStatic.decode(
+      userSCW.address,
+      requiredTxGasData,
+      {
+        gasPrice: 200000000000,
+      }
+    );
+    console.log(result);
+    const internalEstimate = ethers.BigNumber.from(
+      "0x" + result.slice(result.length - 32)
+    ).toNumber();
+    console.log("handle ERC20 payment gas estimation: ", internalEstimate);
+
     // 25945 is handlePayment for DAI
-    safeTx.baseGas = 21000 + 4424 + 25945 + 10000; // this is offset;
+    safeTx.baseGas = 21000 + 4424 + internalEstimate + 27408 - 16097 + 1395; // this is offset;
     // can be added more for relayer premium
 
     console.log(safeTx);
@@ -373,8 +402,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       refundReceiver: safeTx.refundReceiver,
     };
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
-
     const Estimator = await ethers.getContractFactory("GasEstimator");
     const gasEstimatorInterface = Estimator.interface;
     const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
@@ -390,7 +417,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       ]
     );
 
-    const response = await ethers.provider.send("eth_call", [
+    /* const response = await ethers.provider.send("eth_call", [
       {
         to: estimator.address,
         data: encodedEstimate,
@@ -399,7 +426,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
         // gas: "200000",
       },
       "latest",
-      {
+      /* {
         [userSCW.address]: {
           code: SCWNoAuth.deployedBytecode,
         },
@@ -420,7 +447,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const execTransactionGas = ethers.BigNumber.from(decoded.gas)
       .add(txBaseCost(encodedEstimate))
       .toNumber();
-    console.log("estimated gas to be used ", execTransactionGas);
+    console.log("estimated gas to be used ", execTransactionGas); */
 
     const execTransactionData = SmartWallet.interface.encodeFunctionData(
       "execTransaction",
@@ -464,13 +491,13 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const ethusd = 1569; // fetch
     const daiusd = 1;
 
-    /* expect(gasFees.toNumber()).to.approximately(
+    expect(gasFees.toNumber()).to.approximately(
       paymentDeducted
         // .div(ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18)))
         .div(ethers.BigNumber.from(ethusd))
         .toNumber(),
       ethers.BigNumber.from(5000).mul(receipt.effectiveGasPrice).toNumber()
-    ); */
+    );
 
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
@@ -541,7 +568,10 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     const result = await decoder.callStatic.decode(
       userSCW.address,
-      requiredTxGasData
+      requiredTxGasData,
+      {
+        gasPrice: 200000000000,
+      }
     );
     console.log(result);
     const internalEstimate = ethers.BigNumber.from(
@@ -550,7 +580,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("handle eth payment gas estimation: ", internalEstimate);
 
     // 7299 is handlePayment!
-    safeTx.baseGas = 21000 + 4172 + 7299 + 10000; // this is offset;
+    safeTx.baseGas = 21000 + 4172 + internalEstimate + 27408 - 16097 + 1395; // this is offset;
     // + 10000; // another 10k % fee on top?
     // for a matter of fact i know it is 7325 for ether payment
 
@@ -595,7 +625,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       ]
     );
 
-    const response = await ethers.provider.send("eth_call", [
+    /* const response = await ethers.provider.send("eth_call", [
       {
         to: estimator.address,
         data: encodedEstimate,
@@ -604,7 +634,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
         // gas: "200000",
       },
       "latest",
-      {
+      /* {
         [userSCW.address]: {
           code: SCW.deployedBytecode,
         },
@@ -625,7 +655,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const execTransactionGas = ethers.BigNumber.from(decoded.gas)
       .add(txBaseCost(encodedEstimate))
       .toNumber();
-    console.log("estimated gas to be used ", execTransactionGas);
+    console.log("estimated gas to be used ", execTransactionGas); */
 
     const tx = await userSCW.connect(accounts[1]).execTransaction(
       transaction,
@@ -666,7 +696,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     expect(gasFees.toNumber()).to.approximately(
       paymentDeducted,
-      ethers.BigNumber.from(2800).mul(receipt.effectiveGasPrice).toNumber()
+      ethers.BigNumber.from(5000).mul(receipt.effectiveGasPrice).toNumber()
     );
 
     expect(await token.balanceOf(charlie)).to.equal(

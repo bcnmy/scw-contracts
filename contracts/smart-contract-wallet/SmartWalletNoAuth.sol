@@ -108,7 +108,7 @@ contract SmartWalletNoAuth is SmartWallet {
             uint256 payment = 0;
             if (refundInfo.gasPrice > 0) {
                 gasUsed = gasUsed - gasleft();
-                console.log("Sending this to handle payment %s", gasUsed);
+                // console.log("Sending this to handle payment %s", gasUsed);
                 payment = handlePaymentEstimate(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
@@ -136,6 +136,6 @@ contract SmartWalletNoAuth is SmartWallet {
             payment = (gasUsed + baseGas) * (gasPrice);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
-        console.log("handle payment full gas %s", startGas - gasleft());
+        // console.log("handle payment full gas %s", startGas - gasleft());
     }
 }
