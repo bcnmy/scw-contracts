@@ -149,7 +149,9 @@ contract SmartWallet is
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual returns (bool success) {
-        uint256 gasUsed = gasleft();
+        // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
+        //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
+        uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -184,8 +186,7 @@ contract SmartWallet is
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
             if (refundInfo.gasPrice > 0) {
-                gasUsed = gasUsed - gasleft();
-                payment = handlePayment(gasUsed, refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
+                payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
             else emit ExecutionFailure(txHash, payment);
