@@ -26,7 +26,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
-  defaultNetwork: "ganache",
+  // defaultNetwork: "ganache",
   solidity: {
     compilers: [
       {
