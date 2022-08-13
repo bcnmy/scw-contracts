@@ -20,6 +20,7 @@ import "./common/SecuredTokenTransfer.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import "./libs/ECDSA.sol";
+// import "hardhat/console.sol";
 
 // Hooks not made a base yet
 contract SmartWallet is 
@@ -152,6 +153,7 @@ contract SmartWallet is
         // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
         //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
         uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
+        //console.log("init %s", 21000 + msg.data.length * 8);
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -186,6 +188,7 @@ contract SmartWallet is
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
             if (refundInfo.gasPrice > 0) {
+                //console.log("sent %s", startGas - gasleft());
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
@@ -235,6 +238,7 @@ contract SmartWallet is
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
         uint256 requiredGas = startGas - gasleft();
+        //console.log("hp %s", requiredGas);
         // Convert response to string and return via error message
         revert(string(abi.encodePacked(requiredGas)));
     }
