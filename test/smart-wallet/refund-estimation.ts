@@ -270,7 +270,10 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const handlePaymentEstimate = ethers.BigNumber.from(
       "0x" + resultNew.slice(resultNew.length - 32)
     ).toNumber();
-    console.log("handle ERC20 payment gas estimation: ", handlePaymentEstimate);
+    console.log(
+      "handle ETH/native payment gas estimation: ",
+      handlePaymentEstimate
+    );
 
     // 25945 is handlePayment for DAI
     safeTx.baseGas = handlePaymentEstimate + 5000; // this is offset;
@@ -339,5 +342,153 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const diff = tokenBalanceBefore.sub(tokenBalanceAfter).toNumber();
     console.log("difference is after - before", diff);
     // 0.000002985503910649
+  });
+
+  it("can send transactions and charge wallet for fees in erc20 tokens", async function () {
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    /* await token
+      .connect(accounts[0])
+      .transfer(bob, ethers.utils.parseEther("100")); */
+
+    console.log("tokens held by relayer before");
+    const tokenBalanceBefore = await token.balanceOf(bob);
+    console.log(tokenBalanceBefore.toString());
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      // value: ethers.utils.parseEther("1"),
+      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+      nonce: await userSCW.getNonce(0),
+    });
+
+    const chainId = await userSCW.getChainId();
+
+    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+
+    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
+      "requiredTxGas",
+      [safeTx.to, safeTx.value, safeTx.data, safeTx.operation]
+    );
+
+    console.log(requiredTxGasData);
+
+    const [user1] = waffle.provider.getWallets();
+    const decoder = await deployContract(user1, decoderSource);
+
+    const result = await decoder.callStatic.decode(
+      userSCW.address,
+      requiredTxGasData
+    );
+    console.log(result);
+    const internalEstimate = ethers.BigNumber.from(
+      "0x" + result.slice(result.length - 32)
+    ).toNumber();
+    console.log("targetTxGas estimation part 1: ", internalEstimate);
+
+    safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
+    safeTx.gasToken = token.address;
+    safeTx.gasPrice = 1743296144515; // this would be token gas price
+    safeTx.targetTxGas = internalEstimate;
+    safeTx.baseGas = internalEstimate; // some non-zero value
+
+    // handlePaymentRevert
+
+    const handlePaymentGasData = SmartWallet.interface.encodeFunctionData(
+      "handlePaymentRevert",
+      [
+        safeTx.targetTxGas,
+        safeTx.targetTxGas,
+        safeTx.gasPrice,
+        safeTx.gasToken,
+        safeTx.refundReceiver,
+      ]
+    );
+
+    const resultNew = await decoder.callStatic.decode(
+      userSCW.address,
+      handlePaymentGasData,
+      {
+        gasPrice: 200000000000,
+      }
+    );
+    console.log(resultNew);
+    const handlePaymentEstimate = ethers.BigNumber.from(
+      "0x" + resultNew.slice(resultNew.length - 32)
+    ).toNumber();
+    console.log("handle ERC20 payment gas estimation: ", handlePaymentEstimate);
+
+    safeTx.baseGas = handlePaymentEstimate + 5000 + 5000; // this is offset; // consider offsets for state of relayer
+
+    console.log(safeTx);
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    const { signer, data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx,
+      chainId
+    );
+
+    let signature = "0x";
+    signature += data.slice(2);
+
+    console.log(refundInfo);
+
+    // await expect(
+    const tx = await userSCW.connect(accounts[1]).execTransaction(
+      transaction,
+      0, // batchId
+      refundInfo,
+      signature
+    );
+
+    const receipt = await tx.wait(1);
+    console.log("gasPrice: ", tx.gasPrice);
+    console.log("real txn gas used: ", receipt.gasUsed.toNumber());
+
+    const eventLogs = SmartWallet.interface.decodeEventLog(
+      "ExecutionSuccess",
+      receipt.logs[2].data
+    );
+    const paymentDeducted = eventLogs.payment; // no of DAI tokens
+    console.log("tokens refund ", paymentDeducted);
+
+    const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);
+    console.log("gasFees", gasFees.toNumber());
+
+    const ethusd = 1569; // fetch
+    const daiusd = 1;
+
+    expect(gasFees.toNumber()).to.approximately(
+      paymentDeducted
+        // .div(ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18)))
+        .div(ethers.BigNumber.from(ethusd))
+        .toNumber(),
+      ethers.BigNumber.from(5000).mul(receipt.effectiveGasPrice).toNumber()
+    );
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
+
+    console.log("tokens held by relayer after");
+    const tokenBalanceAfter = await token.balanceOf(bob);
+    console.log(tokenBalanceAfter.toString());
   });
 });
