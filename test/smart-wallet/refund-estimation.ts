@@ -205,6 +205,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
 
+    console.log("nonce is ", await userSCW.getNonce(0));
+
     console.log("ether held by relayer before");
     const tokenBalanceBefore = await ethers.provider.getBalance(bob);
     console.log(tokenBalanceBefore.toString());
@@ -275,8 +277,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       handlePaymentEstimate
     );
 
-    // 25945 is handlePayment for DAI
-    safeTx.baseGas = handlePaymentEstimate + 5000; // this is offset;
+    safeTx.baseGas = handlePaymentEstimate + 2360 + 5000; // Add 5000 is offset for delegate call?;
 
     console.log(safeTx);
 
@@ -310,7 +311,10 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       transaction,
       0, // batchId
       refundInfo,
-      signature
+      signature,
+      {
+        gasPrice: 20000000000,
+      }
     );
 
     const receipt = await tx.wait(1);
@@ -328,7 +332,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     expect(gasFees.toNumber()).to.approximately(
       paymentDeducted,
-      ethers.BigNumber.from(3380).mul(receipt.effectiveGasPrice).toNumber()
+      ethers.BigNumber.from(1000).mul(receipt.effectiveGasPrice).toNumber()
     );
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -349,9 +353,15 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
 
+    console.log("nonce is ", await userSCW.getNonce(0));
+
     /* await token
       .connect(accounts[0])
-      .transfer(bob, ethers.utils.parseEther("100")); */
+      .transfer(bob, ethers.utils.parseEther("1")); */
+
+    /* await token
+      .connect(accounts[0])
+      .transfer(charlie, ethers.utils.parseEther("1")); */
 
     console.log("tokens held by relayer before");
     const tokenBalanceBefore = await token.balanceOf(bob);
@@ -390,7 +400,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
     safeTx.gasToken = token.address;
-    safeTx.gasPrice = 1743296144515; // this would be token gas price
+    safeTx.gasPrice = 38165026000000; // this would be token gas price
     safeTx.targetTxGas = internalEstimate;
     safeTx.baseGas = internalEstimate; // some non-zero value
 
@@ -411,7 +421,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       userSCW.address,
       handlePaymentGasData,
       {
-        gasPrice: 200000000000,
+        gasPrice: 20000000000,
       }
     );
     console.log(resultNew);
@@ -420,7 +430,17 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     ).toNumber();
     console.log("handle ERC20 payment gas estimation: ", handlePaymentEstimate);
 
-    safeTx.baseGas = handlePaymentEstimate + 5000 + 5000; // this is offset; // consider offsets for state of relayer
+    // Based on relayer balance checks add these offsets for state changes (17100)
+    // 2360 is for emitting events
+
+    // safeTx.baseGas = handlePaymentEstimate + 17100 - 9794 + 2360 + 5000; // add 5000 offset for delegate call?;
+
+    safeTx.baseGas = handlePaymentEstimate + 17100 - 7306 + 2360 + 5000; // add 5000 offset for delegate call?;
+    // safeTx.baseGas = handlePaymentEstimate + 17100; // add 5000 offset for delegate call?;
+
+    // todo
+    // 7306 check later
+    // and validate on goerli
 
     console.log(safeTx);
 
@@ -455,7 +475,10 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       transaction,
       0, // batchId
       refundInfo,
-      signature
+      signature,
+      {
+        gasPrice: 20000000000,
+      }
     );
 
     const receipt = await tx.wait(1);
@@ -472,7 +495,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);
     console.log("gasFees", gasFees.toNumber());
 
-    const ethusd = 1569; // fetch
+    const ethusd = 1902; // fetch
     const daiusd = 1;
 
     expect(gasFees.toNumber()).to.approximately(
@@ -480,7 +503,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
         // .div(ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18)))
         .div(ethers.BigNumber.from(ethusd))
         .toNumber(),
-      ethers.BigNumber.from(5000).mul(receipt.effectiveGasPrice).toNumber()
+      ethers.BigNumber.from(1000).mul(receipt.effectiveGasPrice).toNumber()
     );
 
     expect(await token.balanceOf(charlie)).to.equal(

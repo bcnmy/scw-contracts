@@ -187,12 +187,16 @@ contract SmartWallet is
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
+            // uint256 extraGas;
             if (refundInfo.gasPrice > 0) {
                 //console.log("sent %s", startGas - gasleft());
+                // extraGas = gasleft();
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
             else emit ExecutionFailure(txHash, payment);
+            // extraGas = extraGas - gasleft();
+            //console.log("extra gas %s ", extraGas);
         }
     }
 
@@ -203,6 +207,7 @@ contract SmartWallet is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
+        // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
         if (gasToken == address(0)) {
@@ -215,6 +220,8 @@ contract SmartWallet is
             payment = (gasUsed + baseGas) * (gasPrice);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
+        // uint256 requiredGas = startGas - gasleft();
+        //console.log("hp %s", requiredGas);
     }
 
     function handlePaymentRevert(
@@ -238,7 +245,7 @@ contract SmartWallet is
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
         uint256 requiredGas = startGas - gasleft();
-        //console.log("hp %s", requiredGas);
+        //console.log("hpr %s", requiredGas);
         // Convert response to string and return via error message
         revert(string(abi.encodePacked(requiredGas)));
     }
