@@ -332,6 +332,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
@@ -448,6 +449,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
@@ -570,6 +572,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };

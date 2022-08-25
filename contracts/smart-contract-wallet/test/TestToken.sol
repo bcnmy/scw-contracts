@@ -11,4 +11,8 @@ contract TestToken is ERC20 {
     function mint(address sender, uint amount) external {
         _mint(sender, amount);
     }
+
+    function decimals() public view virtual override returns (uint8) {
+        return 6;
+    }
 }

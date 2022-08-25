@@ -188,7 +188,7 @@ contract SmartWalletGasEstimation is
             if (refundInfo.gasPrice > 0) {
                 //console.log("sent %s", startGas - gasleft());
                 // extraGas = gasleft();
-                payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
+                payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
             else emit ExecutionFailure(txHash, payment);
@@ -257,7 +257,7 @@ contract SmartWalletGasEstimation is
             if (refundInfo.gasPrice > 0) {
                 //console.log("sent %s", startGas - gasleft());
                 // extraGas = gasleft();
-                payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.gasToken, refundInfo.refundReceiver);
+                payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
             }
             if (success) emit ExecutionSuccess(txHash, payment);
             else emit ExecutionFailure(txHash, payment);
@@ -270,6 +270,7 @@ contract SmartWalletGasEstimation is
         uint256 gasUsed,
         uint256 baseGas,
         uint256 gasPrice,
+        uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
@@ -283,7 +284,7 @@ contract SmartWalletGasEstimation is
             (bool success,) = receiver.call{value: payment}("");
             require(success, "BSA011");
         } else {
-            payment = (gasUsed + baseGas) * (gasPrice);
+            payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
         // uint256 requiredGas = startGas - gasleft();
@@ -294,6 +295,7 @@ contract SmartWalletGasEstimation is
         uint256 gasUsed,
         uint256 baseGas,
         uint256 gasPrice,
+        uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
     ) external returns (uint256 payment) {
@@ -307,7 +309,7 @@ contract SmartWalletGasEstimation is
             (bool success,) = receiver.call{value: payment}("");
             require(success, "BSA011");
         } else {
-            payment = (gasUsed + baseGas) * (gasPrice);
+            payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
         uint256 requiredGas = startGas - gasleft();
@@ -420,6 +422,7 @@ contract SmartWalletGasEstimation is
         uint256 targetTxGas,
         uint256 baseGas,
         uint256 gasPrice,
+        uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver,
         uint256 _nonce
@@ -434,6 +437,7 @@ contract SmartWalletGasEstimation is
         FeeRefund memory refundInfo = FeeRefund({
             baseGas: baseGas,
             gasPrice: gasPrice,
+            tokenGasPriceFactor: tokenGasPriceFactor,
             gasToken: gasToken,
             refundReceiver: refundReceiver
         });
