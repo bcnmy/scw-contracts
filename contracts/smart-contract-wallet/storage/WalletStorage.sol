@@ -5,7 +5,7 @@ import "../common/Enum.sol";
 
 contract WalletStorage {
     // Version
-    string public constant VERSION = "0.0.1";
+    string public constant VERSION = "1.0.2";
 
     // Domain Seperators
     // keccak256(
