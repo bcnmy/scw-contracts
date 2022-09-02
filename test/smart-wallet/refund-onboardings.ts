@@ -39,6 +39,9 @@ import { sign } from "crypto";
 
 const GasEstimatorArtifact = artifacts.require("GasEstimator");
 
+const SCWNoAuth = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWalletNoAuth.sol/SmartWalletNoAuth.json");
+const SCW = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWallet.sol/SmartWallet.json");
+
 function tryDecodeError(bytes: BytesLike): string {
   try {
     return ethers.utils.toUtf8String(
@@ -258,7 +261,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     expect(deployTransactionGas).to.approximately(
       receipt.gasUsed.toNumber(),
-      5000
+      3000
     );
 
     userSCW = await ethers.getContractAt(
@@ -289,7 +292,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
   // TODO
   // Review if the first transaction fails
-  it("Should estimate wallet deployment and send first transacton", async function () {
+  it("Should estimate wallet deployment and send first transacton and charge for fees in ether", async function () {
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
       1
@@ -299,6 +302,65 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     await token
       .connect(accounts[0])
       .transfer(expected, ethers.utils.parseEther("100"));
+
+    await accounts[1].sendTransaction({
+      from: bob,
+      to: expected,
+      value: ethers.utils.parseEther("5"),
+    });
+
+    console.log("nonce is ", await userSCW.getNonce(0));
+
+    console.log("ether held by relayer before");
+    const tokenBalanceBefore = await ethers.provider.getBalance(bob);
+    console.log(tokenBalanceBefore.toString());
+
+    const Estimator = await ethers.getContractFactory("GasEstimator");
+    const WalletFactory = await ethers.getContractFactory("WalletFactory");
+    const gasEstimatorInterface = Estimator.interface;
+    const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
+      "estimate",
+      [
+        walletFactory.address,
+        WalletFactory.interface.encodeFunctionData(
+          "deployCounterFactualWallet",
+          [owner, entryPoint.address, handler.address, 0]
+        ),
+      ]
+    );
+
+    const txnData = WalletFactory.interface.encodeFunctionData(
+      "deployCounterFactualWallet",
+      [owner, entryPoint.address, handler.address, 0]
+    );
+
+    const response = await ethers.provider.send("eth_call", [
+      {
+        to: estimator.address,
+        data: encodedEstimate,
+        from: bob,
+        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
+        // gas: "200000",
+      },
+      "latest",
+    ]);
+
+    const decoded = gasEstimatorInterface.decodeFunctionResult(
+      "estimate",
+      response
+    );
+
+    if (!decoded.success) {
+      throw Error(
+        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
+      );
+    }
+
+    const deployTransactionGas = ethers.BigNumber.from(decoded.gas)
+      .add(txBaseCost(txnData))
+      .toNumber();
+
+    console.log("estimated gas to be used ", deployTransactionGas);
 
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: token.address,
@@ -307,20 +369,29 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       nonce: 0, // nonce picked 0 for first transaction as we can't read from state yet (?)
     });
 
-    const Estimator = await ethers.getContractFactory("GasEstimator");
-    const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
-    const gasEstimatorInterface = Estimator.interface;
-
+    // First we get chainId using different wallet
+    // or just hard code it
     const chainId = await userSCW.getChainId();
     userSCW = userSCW.attach(expected);
+    console.log("expected ", expected);
+
+    // const SmartWallet = await ethers.getContractFactory("SmartWallet");
+
+    safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
+    safeTx.gasToken = "0x0000000000000000000000000000000000000000";
+    safeTx.gasPrice = 1743296144515; // this would be very high gas price in case of eth refund
+    safeTx.targetTxGas = 500000;
+
+    safeTx.baseGas = 22900 + deployTransactionGas - 21000 + 2360 + 5000; // Add 5000 is offset for delegate call?;
+
+    console.log(safeTx);
+
     const { signer, data } = await safeSignTypedData(
       accounts[0],
       userSCW,
       safeTx,
       chainId
     );
-
-    console.log(safeTx);
 
     const transaction: Transaction = {
       to: safeTx.to,
@@ -340,8 +411,6 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     let signature = "0x";
     signature += data.slice(2);
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
-
     const txs: MetaTransaction[] = [
       buildContractCall(
         walletFactory,
@@ -357,42 +426,6 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       ),
     ];
 
-    const txnData = MultiSend.interface.encodeFunctionData("multiSend", [
-      encodeMultiSend(txs),
-    ]);
-
-    const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
-      "estimate",
-      [multiSend.address, txnData]
-    );
-
-    const response = await ethers.provider.send("eth_call", [
-      {
-        to: estimator.address,
-        data: encodedEstimate,
-        from: bob,
-        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
-        // gas: "200000",
-      },
-      "latest",
-    ]);
-
-    const decoded = gasEstimatorInterface.decodeFunctionResult(
-      "estimate",
-      response
-    );
-
-    if (!decoded.success) {
-      throw Error(
-        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
-      );
-    }
-
-    console.log(
-      "estimated gas to be used ",
-      ethers.BigNumber.from(decoded.gas).add(txBaseCost(txnData)).toNumber()
-    );
-
     // await expect(
     const txn = await multiSend
       .connect(accounts[0])
@@ -400,259 +433,10 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const receipt = await txn.wait(1);
     console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
+
+    // expect(estimatedGas).to.approximately(receipt.gasUsed.toNumber(), 5000);
 
     expect(await token.balanceOf(charlie)).to.equal(
-      ethers.utils.parseEther("10")
-    );
-  });
-
-  it("Should estimate wallet deployment and enable module", async function () {
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
-      owner,
-      1
-    );
-    console.log("deploying new wallet..expected address: ", expected);
-
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
-
-    const safeTx: SafeTransaction = buildSafeTransaction({
-      to: expected,
-      // value: ethers.utils.parseEther("1"),
-      data: SmartWallet.interface.encodeFunctionData("enableModule", [
-        whitelistModule.address,
-      ]),
-      nonce: 0, // nonce picked 0 for first transaction as we can't read from state yet (?)
-    });
-
-    const Estimator = await ethers.getContractFactory("GasEstimator");
-    const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
-    const gasEstimatorInterface = Estimator.interface;
-
-    const chainId = await userSCW.getChainId();
-    userSCW = userSCW.attach(expected);
-    const { signer, data } = await safeSignTypedData(
-      accounts[0],
-      userSCW,
-      safeTx,
-      chainId
-    );
-
-    console.log(safeTx);
-
-    const transaction: Transaction = {
-      to: safeTx.to,
-      value: safeTx.value,
-      data: safeTx.data,
-      operation: safeTx.operation,
-      targetTxGas: safeTx.targetTxGas,
-    };
-    const refundInfo: FeeRefund = {
-      baseGas: safeTx.baseGas,
-      gasPrice: safeTx.gasPrice,
-      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
-      gasToken: safeTx.gasToken,
-      refundReceiver: safeTx.refundReceiver,
-    };
-
-    let signature = "0x";
-    signature += data.slice(2);
-
-    const txs: MetaTransaction[] = [
-      buildContractCall(
-        walletFactory,
-        "deployCounterFactualWallet",
-        [owner, entryPoint.address, handler.address, 1],
-        0
-      ),
-      buildContractCall(
-        userSCW,
-        "execTransaction",
-        [transaction, 1, refundInfo, signature],
-        0
-      ),
-    ];
-
-    const txnData = MultiSend.interface.encodeFunctionData("multiSend", [
-      encodeMultiSend(txs),
-    ]);
-
-    const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
-      "estimate",
-      [multiSend.address, txnData]
-    );
-
-    const response = await ethers.provider.send("eth_call", [
-      {
-        to: estimator.address,
-        data: encodedEstimate,
-        from: bob,
-        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
-        // gas: "200000",
-      },
-      "latest",
-    ]);
-
-    const decoded = gasEstimatorInterface.decodeFunctionResult(
-      "estimate",
-      response
-    );
-
-    if (!decoded.success) {
-      throw Error(
-        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
-      );
-    }
-
-    console.log(
-      "estimated gas to be used ",
-      ethers.BigNumber.from(decoded.gas).add(txBaseCost(txnData)).toNumber()
-    );
-
-    // await expect(
-    const txn = await multiSend
-      .connect(accounts[0])
-      .multiSend(encodeMultiSend(txs));
-
-    const receipt = await txn.wait(1);
-    console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
-  });
-
-  it("Should estimate wallet deployment, enable module and send basic lego", async function () {
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
-      owner,
-      1
-    );
-    console.log("deploying new wallet..expected address: ", expected);
-
-    const chainId = await userSCW.getChainId();
-    userSCW = userSCW.attach(expected);
-
-    // sending tokens to counter factual wallet address so it can pay or transfer funds
-
-    await token
-      .connect(accounts[0])
-      .transfer(expected, ethers.utils.parseEther("100"));
-
-    const batch: MetaTransaction[] = [
-      buildContractCall(userSCW, "enableModule", [whitelistModule.address], 0),
-      buildContractCall(
-        token,
-        "approve",
-        [stToken.address, ethers.utils.parseEther("10")],
-        0
-      ),
-      buildContractCall(
-        stToken,
-        "stake",
-        [charlie, ethers.utils.parseEther("10")],
-        0
-      ),
-    ];
-
-    const safeTx: SafeTransaction = buildMultiSendSafeTx(
-      multiSend,
-      batch,
-      0 // await userSCW.getNonce(0) //should send 0 because can not query until deployment
-    );
-
-    const { signer, data } = await safeSignTypedData(
-      accounts[0],
-      userSCW,
-      safeTx,
-      chainId
-    );
-
-    const transaction: Transaction = {
-      to: safeTx.to,
-      value: safeTx.value,
-      data: safeTx.data,
-      operation: safeTx.operation,
-      targetTxGas: safeTx.targetTxGas,
-    };
-    const refundInfo: FeeRefund = {
-      baseGas: safeTx.baseGas,
-      gasPrice: safeTx.gasPrice,
-      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
-      gasToken: safeTx.gasToken,
-      refundReceiver: safeTx.refundReceiver,
-    };
-
-    let signature = "0x";
-    signature += data.slice(2);
-
-    const Estimator = await ethers.getContractFactory("GasEstimator");
-    const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
-    const gasEstimatorInterface = Estimator.interface;
-
-
-    // TODO
-    // In the sdk relayer sendTransaction (wallet.executeTransaction) check if wallet exits and make helper to prepend the deployment
-    // i.e. bundleWithDeploy
-
-    const txs: MetaTransaction[] = [
-      buildContractCall(
-        walletFactory,
-        "deployCounterFactualWallet",
-        [owner, entryPoint.address, handler.address, 1],
-        0
-      ),
-      buildContractCall(
-        userSCW,
-        "execTransaction",
-        [transaction, 1, refundInfo, signature],
-        0
-      ),
-    ];
-
-    // For deployment with some action we always send to MultiSendCallOnly
-
-    const txnData = MultiSend.interface.encodeFunctionData("multiSend", [
-      encodeMultiSend(txs),
-    ]);
-
-    const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
-      "estimate",
-      [multiSend.address, txnData]
-    );
-
-    const response = await ethers.provider.send("eth_call", [
-      {
-        to: estimator.address,
-        data: encodedEstimate,
-        from: bob,
-        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
-        // gas: "200000",
-      },
-      "latest",
-    ]);
-
-    const decoded = gasEstimatorInterface.decodeFunctionResult(
-      "estimate",
-      response
-    );
-
-    if (!decoded.success) {
-      throw Error(
-        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
-      );
-    }
-
-    console.log(
-      "estimated gas to be used ",
-      ethers.BigNumber.from(decoded.gas).add(txBaseCost(txnData)).toNumber()
-    );
-
-    // await expect(
-    const txn = await multiSend
-      .connect(accounts[0])
-      .multiSend(encodeMultiSend(txs));
-
-    const receipt = await txn.wait(1);
-    console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
-    // TODO // Review
-    // Major difference here
-
-    expect(await stToken.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
     );
   });

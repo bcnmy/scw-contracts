@@ -235,6 +235,7 @@ describe("Base Wallet Functionality", function () {
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
@@ -302,6 +303,7 @@ describe("Base Wallet Functionality", function () {
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
@@ -354,6 +356,7 @@ describe("Base Wallet Functionality", function () {
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
@@ -528,6 +531,7 @@ describe("Base Wallet Functionality", function () {
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
@@ -604,6 +608,7 @@ describe("Base Wallet Functionality", function () {
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
