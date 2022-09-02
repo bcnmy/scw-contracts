@@ -303,15 +303,64 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       .connect(accounts[0])
       .transfer(expected, ethers.utils.parseEther("100"));
 
+    await accounts[1].sendTransaction({
+      from: bob,
+      to: expected,
+      value: ethers.utils.parseEther("5"),
+    });
+
     console.log("nonce is ", await userSCW.getNonce(0));
 
     console.log("ether held by relayer before");
     const tokenBalanceBefore = await ethers.provider.getBalance(bob);
     console.log(tokenBalanceBefore.toString());
 
-    // estimated using call() :  264789
-    // estimated gas to be used  264789
-    // Real transaction gas used:  261884
+    const Estimator = await ethers.getContractFactory("GasEstimator");
+    const WalletFactory = await ethers.getContractFactory("WalletFactory");
+    const gasEstimatorInterface = Estimator.interface;
+    const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
+      "estimate",
+      [
+        walletFactory.address,
+        WalletFactory.interface.encodeFunctionData(
+          "deployCounterFactualWallet",
+          [owner, entryPoint.address, handler.address, 0]
+        ),
+      ]
+    );
+
+    const txnData = WalletFactory.interface.encodeFunctionData(
+      "deployCounterFactualWallet",
+      [owner, entryPoint.address, handler.address, 0]
+    );
+
+    const response = await ethers.provider.send("eth_call", [
+      {
+        to: estimator.address,
+        data: encodedEstimate,
+        from: bob,
+        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
+        // gas: "200000",
+      },
+      "latest",
+    ]);
+
+    const decoded = gasEstimatorInterface.decodeFunctionResult(
+      "estimate",
+      response
+    );
+
+    if (!decoded.success) {
+      throw Error(
+        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
+      );
+    }
+
+    const deployTransactionGas = ethers.BigNumber.from(decoded.gas)
+      .add(txBaseCost(txnData))
+      .toNumber();
+
+    console.log("estimated gas to be used ", deployTransactionGas);
 
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: token.address,
@@ -320,89 +369,20 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       nonce: 0, // nonce picked 0 for first transaction as we can't read from state yet (?)
     });
 
-    const Estimator = await ethers.getContractFactory("GasEstimator");
-    const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
-    const gasEstimatorInterface = Estimator.interface;
-
     // First we get chainId using different wallet
     // or just hard code it
     const chainId = await userSCW.getChainId();
-    // userSCW = userSCW.attach(expected);
+    userSCW = userSCW.attach(expected);
     console.log("expected ", expected);
 
-    const txnData = WalletFactory.interface.encodeFunctionData(
-      "deployCounterFactualWallet",
-      [owner, entryPoint.address, handler.address, 1]
-    );
-
-    const offset = txBaseCost(txnData);
-    const walletDeployMentEstimatedGas = 264789;
-
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
-
-    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
-      "requiredTxGas",
-      [safeTx.to, safeTx.value, safeTx.data, safeTx.operation]
-    );
-
-    console.log(requiredTxGasData);
-
-    const [user1] = waffle.provider.getWallets();
-    const decoder = await deployContract(user1, decoderSource);
-
-    console.log("userSCW.address ", userSCW.address);
-    const result = await decoder.callStatic.decode(
-      userSCW.address,
-      requiredTxGasData
-    );
-    console.log(result);
-    const internalEstimate = ethers.BigNumber.from(
-      "0x" + result.slice(result.length - 32)
-    ).toNumber();
-    console.log("targetTxGas estimation part 1: ", internalEstimate);
+    // const SmartWallet = await ethers.getContractFactory("SmartWallet");
 
     safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
     safeTx.gasToken = "0x0000000000000000000000000000000000000000";
     safeTx.gasPrice = 1743296144515; // this would be very high gas price in case of eth refund
-    safeTx.targetTxGas = internalEstimate;
-    safeTx.baseGas = internalEstimate; // some non-zero value
+    safeTx.targetTxGas = 500000;
 
-    // handlePaymentRevert
-
-    const handlePaymentGasData = SmartWallet.interface.encodeFunctionData(
-      "handlePaymentRevert",
-      [
-        safeTx.targetTxGas,
-        safeTx.targetTxGas,
-        safeTx.gasPrice,
-        safeTx.gasToken,
-        safeTx.refundReceiver,
-      ]
-    );
-
-    const resultNew = await decoder.callStatic.decode(
-      userSCW.address,
-      handlePaymentGasData,
-      {
-        gasPrice: 200000000000,
-      }
-    );
-    console.log(resultNew);
-    const handlePaymentEstimate = ethers.BigNumber.from(
-      "0x" + resultNew.slice(resultNew.length - 32)
-    ).toNumber();
-    console.log(
-      "handle ETH/native payment gas estimation: ",
-      handlePaymentEstimate
-    );
-
-    safeTx.baseGas =
-      handlePaymentEstimate +
-      walletDeployMentEstimatedGas -
-      offset +
-      2360 +
-      5000; // Add 5000 is offset for delegate call?;
+    safeTx.baseGas = 22900 + deployTransactionGas - 21000 + 2360 + 5000; // Add 5000 is offset for delegate call?;
 
     console.log(safeTx);
 
