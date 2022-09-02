@@ -37,7 +37,8 @@ contract SmartWallet is
     using ECDSA for bytes32;
     using LibAddress for address;
 
-    event ImplementationUpdated(address newImplementation);
+    // EOA + Version tracking
+    event ImplementationUpdated(address _scw, string version, address newImplementation);
     event ExecutionFailure(bytes32 txHash, uint256 payment);
     event ExecutionSuccess(bytes32 txHash, uint256 payment);
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
@@ -76,7 +77,8 @@ contract SmartWallet is
     function updateImplementation(address _implementation) external mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         _setImplementation(_implementation);
-        emit ImplementationUpdated(_implementation);
+        // EOA + Version tracking
+        emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
     function updateEntryPoint(address _entryPoint) external mixedAuth {

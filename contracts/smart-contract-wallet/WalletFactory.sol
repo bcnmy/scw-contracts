@@ -5,10 +5,14 @@ pragma solidity ^0.8.0;
 import "./Proxy.sol";
 import "./SmartWallet.sol"; 
 //@review
+//@todo IWallet should have execTransaction
 //possibly IWallet.sol
 
 contract WalletFactory {
     address internal _defaultImpl; 
+
+    // EOA + Version tracking
+    string public constant VERSION = "1.0.1"; // Forward enabled refund enhancements
 
     //states : registry
     mapping (address => bool) public isWalletExist;
@@ -18,7 +22,9 @@ contract WalletFactory {
         _defaultImpl = _baseImpl;
     }
 
-    event WalletCreated(address indexed _proxy, address indexed _implementation, address indexed _owner);
+    // event WalletCreated(address indexed _proxy, address indexed _implementation, address indexed _owner);
+    // EOA + Version tracking
+    event WalletCreated(address indexed _proxy, address indexed _implementation, address indexed _owner, string version, uint256 _index);
 
     /**
      * @notice Deploys wallet using create2 and points it to _defaultImpl
@@ -35,7 +41,8 @@ contract WalletFactory {
             proxy := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
         }
         require(address(proxy) != address(0), "Create2 call failed");
-        emit WalletCreated(proxy,_defaultImpl,_owner);
+        // EOA + Version tracking
+        emit WalletCreated(proxy,_defaultImpl,_owner, VERSION, _index);
         SmartWallet(proxy).init(_owner, _entryPoint, _handler);
         isWalletExist[proxy] = true;
     }
@@ -52,7 +59,6 @@ contract WalletFactory {
         assembly {
             proxy := create(0x0, add(0x20, deploymentData), mload(deploymentData))
         }
-        emit WalletCreated(proxy,_defaultImpl,_owner);
         SmartWallet(proxy).init(_owner, _entryPoint, _handler);
         isWalletExist[proxy] = true;
     }
