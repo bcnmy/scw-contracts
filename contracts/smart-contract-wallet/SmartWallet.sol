@@ -233,7 +233,7 @@ contract SmartWallet is
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) external virtual returns (uint256 payment) {
+    ) external returns (uint256 payment) {
         uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -327,7 +327,7 @@ contract SmartWallet is
         uint256 value,
         bytes calldata data,
         Enum.Operation operation
-    ) external virtual returns (uint256) {
+    ) external returns (uint256) {
         uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
         require(execute(to, value, data, operation, gasleft()));
