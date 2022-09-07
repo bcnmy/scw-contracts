@@ -33,6 +33,9 @@ import { provider } from "ganache";
 // i) getting signature twice for estimation
 // ii) relayer should be able to check what is expected spend and what is being paid!
 
+// TODO
+// Add a test case for requiredTxGas using NoAuth override for undeployed wallet...
+
 function tryDecodeError(bytes: BytesLike): string {
   try {
     return ethers.utils.toUtf8String(
