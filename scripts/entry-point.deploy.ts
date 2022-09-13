@@ -16,9 +16,6 @@ async function main() {
 
   const UNSTAKE_DELAY_SEC = 100;
   const PAYMASTER_STAKE = ethers.utils.parseEther("1");
-  // const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
-  const EIP2470_FACTORY_ADDRESS = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
-  // const singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
 
   const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
   if (!isFactoryDeployed) {
@@ -27,12 +24,9 @@ async function main() {
 
   const EntryPoint = await ethers.getContractFactory("EntryPoint");
   const entryPointBytecode = `${EntryPoint.bytecode}${encodeParam(
-    "address",
-    EIP2470_FACTORY_ADDRESS
-  ).slice(2)}${encodeParam("uint", PAYMASTER_STAKE).slice(2)}${encodeParam(
-    "uint32",
-    UNSTAKE_DELAY_SEC
-  ).slice(2)}`;
+    "uint",
+    PAYMASTER_STAKE
+  ).slice(2)}${encodeParam("uint32", UNSTAKE_DELAY_SEC).slice(2)}`;
   const entryPointComputedAddr = getDeployedAddress(
     entryPointBytecode,
     ethers.BigNumber.from(SALT)

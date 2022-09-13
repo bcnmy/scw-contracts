@@ -103,6 +103,8 @@ contract SmartWallet is
         return id;
     }
 
+    // TODO 
+    // Review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -454,20 +456,22 @@ contract SmartWallet is
     }
 
     //called by entryPoint, only after validateUserOp succeeded.
+    // TODO
+    // Update this method with possible execute() call and emit geenric event Success or Failure
     function execFromEntryPoint(address dest, uint value, bytes calldata func) external {
         _requireFromEntryPoint();
         _call(dest, value, func);
     }
 
-    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, uint requiredPrefund) external override {
+    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override {
         _requireFromEntryPoint();
-        _validateSignature(userOp, requestId);
+        _validateSignature(userOp, requestId, aggregator);
         //during construction, the "nonce" field hold the salt.
         // if we assert it is zero, then we allow only a single wallet per owner.
         if (userOp.initCode.length == 0) {
             _validateAndUpdateNonce(userOp);
         }
-        _payPrefund(requiredPrefund);
+        _payPrefund(missingWalletFunds);
     }
 
     // review nonce conflict with AA userOp nonce
@@ -487,7 +491,7 @@ contract SmartWallet is
         }
     }
 
-    function _validateSignature(UserOperation calldata userOp, bytes32 requestId) internal view {
+    function _validateSignature(UserOperation calldata userOp, bytes32 requestId, address) internal view {
         bytes32 hash = requestId.toEthSignedMessageHash();
         require(owner == hash.recover(userOp.signature), "wallet: wrong signature");
     }
@@ -502,8 +506,4 @@ contract SmartWallet is
         return interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
 
-    // Review
-    // withdrawDepositTo
-    // addDeposit
-    // getDeposit
 }
