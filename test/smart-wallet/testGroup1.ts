@@ -40,6 +40,7 @@ describe("Base Wallet Functionality", function () {
   let userSCW: any;
   let handler: DefaultCallbackHandler;
   const UNSTAKE_DELAY_SEC = 100;
+  const VERSION = '1.0.1'
   const PAYMASTER_STAKE = ethers.utils.parseEther("1");
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
@@ -73,7 +74,6 @@ describe("Base Wallet Functionality", function () {
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
     entryPoint = await EntryPoint.deploy(
-      create2FactoryAddress,
       PAYMASTER_STAKE,
       UNSTAKE_DELAY_SEC
     );
@@ -121,7 +121,7 @@ describe("Base Wallet Functionality", function () {
       )
     )
       .to.emit(walletFactory, "WalletCreated")
-      .withArgs(expected, baseImpl.address, owner);
+      .withArgs(expected, baseImpl.address, owner, VERSION, 0);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartWallet.sol:SmartWallet",

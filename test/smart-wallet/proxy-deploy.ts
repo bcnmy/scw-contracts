@@ -23,7 +23,6 @@ describe("Wallet Deployment", function () {
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
     const entryPoint = await EntryPoint.deploy(
-      create2FactoryAddress,
       PAYMASTER_STAKE,
       UNSTAKE_DELAY_SEC
     );
