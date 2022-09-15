@@ -7,12 +7,12 @@ import {
     keccak256
   } from 'ethers/lib/utils'
   import { BigNumber, Contract, Signer, Wallet } from 'ethers'
-  import { AddressZero, callDataCost, HashZero, rethrow } from './testutils'
+  import { AddressZero, callDataCost, HashZero, rethrow } from '../smart-wallet/testutils'
   import { ecsign, toRpcSig, keccak256 as keccak256_buffer } from 'ethereumjs-util'
   import {
-    EntryPoint, VerifyingPayMaster
+    EntryPoint, VerifyingPaymaster
   } from '../../typechain'
-  import { UserOperation } from './UserOperation'
+  import { UserOperation } from './userOpetation'
   import { Create2Factory } from '../../src/Create2Factory'
   
   function encode (typevalues: Array<{ type: string, val: any }>, forSignature: boolean): string {
@@ -242,34 +242,6 @@ import {
     }
     console.log('userOp made succesfully')
     return op2
-  }
-  
-  export async function getPaymasterAuthorization (op: Partial<UserOperation>, signer: Wallet | Signer, paymaster?: VerifyingPayMaster): Promise<string> {
-    /* const opToSign = defaultAbiCoder.encode([
-      'address', // sender
-      'uint256', // nonce
-      'bytes32', // initCode
-      'bytes32', // callData
-      'uint256', // callGasLimit
-      'uint', // verificationGasLimit
-      'uint', // preVerificationGas
-      'uint256', // maxFeePerGas
-      'uint256' // maxPriorityFeePerGas
-    ], [
-      op.sender,
-      op.nonce,
-      keccak256(op.initCode!),
-      keccak256(op.callData!),
-      op.callGasLimit,
-      op.verificationGasLimit,
-      op.preVerificationGas,
-      op.maxFeePerGas,
-      op.maxPriorityFeePerGas
-    ]) */
-    const hash = await paymaster!.getHash(op)
-    const paymasterSignature = await signer.signMessage(arrayify(hash))
-    console.log('paymaster signer signature ', paymasterSignature)
-    return paymasterSignature
   }
   
 

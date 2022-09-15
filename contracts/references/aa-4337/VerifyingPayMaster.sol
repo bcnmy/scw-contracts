@@ -17,7 +17,7 @@ import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
  * - the paymaster signs to agree to PAY for GAS.
  * - the wallet signs to prove identity and wallet ownership.
  */
-contract VerifyingPayMaster is BasePaymaster, Initializable {
+contract VerifyingPaymaster is BasePaymaster, Initializable {
 
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
@@ -38,8 +38,8 @@ contract VerifyingPayMaster is BasePaymaster, Initializable {
     /**
     this function will let owner change signer
     */
-    function setSigner( address _newSigner) external onlyOwner{
-        verifyingSigner = _newSigner;
+    function setSigner( address _newVerifyingSigner) external onlyOwner{
+        verifyingSigner = _newVerifyingSigner;
     }
 
     /**

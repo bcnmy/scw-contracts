@@ -1,11 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-/**
- * @title Proxy // This is the user's wallet
- * @notice Basic proxy that delegates all calls to a fixed implementing contract.
- */
-contract VerifyPayMasterProxy {
+contract VerifyPaymasterProxy {
 
     /* This is the keccak-256 hash of "biconomy.paymaster.proxy.implementation" subtracted by 1, and is validated in the constructor */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x396cb660e6e8daa7b387f1f198b46e21cbeb4eb8ce888649d091e80e86c4c314;
