@@ -39,9 +39,6 @@ import { sign } from "crypto";
 
 const GasEstimatorArtifact = artifacts.require("GasEstimator");
 
-const SCWNoAuth = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWalletNoAuth.sol/SmartWalletNoAuth.json");
-const SCW = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWallet.sol/SmartWallet.json");
-
 function tryDecodeError(bytes: BytesLike): string {
   try {
     return ethers.utils.toUtf8String(
@@ -130,7 +127,6 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
     entryPoint = await EntryPoint.deploy(
-      create2FactoryAddress,
       PAYMASTER_STAKE,
       UNSTAKE_DELAY_SEC
     );

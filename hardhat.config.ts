@@ -127,10 +127,12 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: process.env.GOERLI_URL || "",
-      accounts: walletUtils.makeKeyList(),
       chainId: 5,
-      // gas: 6400000
-    },
+      accounts:
+      process.env.PRIVATE_KEY !== undefined
+        ? [process.env.PRIVATE_KEY]
+        : walletUtils.makeKeyList(),
+  },
     kovan: {
       url: process.env.KOVAN_URL || "",
       accounts:
