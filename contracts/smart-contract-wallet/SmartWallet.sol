@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-//TODO
-//review Base licensing
-//https://spdx.org/licenses/
-
 import "./libs/LibAddress.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./IWallet.sol";
+import "./interfaces/ISmartWallet.sol";
 import "./common/Singleton.sol";
 import "./storage/WalletStorage.sol";
 import "./base/ModuleManager.sol";
@@ -51,6 +47,12 @@ contract SmartWallet is
      */
     modifier onlyOwner {
         require(msg.sender == owner, "Smart Account:: Sender is not authorized");
+        _;
+    }
+
+    // only from Entry Point
+    modifier onlyEntryPoint {
+        require(msg.sender == address(entryPoint) , "Smart Account:: not from EntryPoint");
         _;
     }
 
@@ -444,27 +446,32 @@ contract SmartWallet is
         // @review linter
         (bool success, bytes memory result) = sender.call{value : value}(data);
         if (!success) {
+            //@review
+            emit ExecutionFailure("", 0);
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 revert(add(result,32), mload(result))
             }
         }
-    }
-
-    function _requireFromEntryPoint() internal view {
-        require(msg.sender == address(entryPoint), "wallet: not from EntryPoint");
+        //@review
+        emit ExecutionSuccess("", 0);
     }
 
     //called by entryPoint, only after validateUserOp succeeded.
     // TODO
     // Update this method with possible execute() call and emit geenric event Success or Failure
-    function execFromEntryPoint(address dest, uint value, bytes calldata func) external {
-        _requireFromEntryPoint();
+    function execFromEntryPoint(address dest, uint value, bytes calldata func /*, Enum.Operation operation, uint256 gasLimit*/) external onlyEntryPoint returns (bool success) {
         _call(dest, value, func);
+        
+        /*success = execute(dest, value, func, operation, gasLimit);
+        require(success, "Userop Failed");
+        if (!success) {
+        }
+        else {
+        }*/
     }
 
-    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override {
-        _requireFromEntryPoint();
+    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override onlyEntryPoint {
         _validateSignature(userOp, requestId, aggregator);
         //during construction, the "nonce" field hold the salt.
         // if we assert it is zero, then we allow only a single wallet per owner.

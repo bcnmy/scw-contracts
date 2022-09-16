@@ -9,14 +9,12 @@ pragma solidity ^0.8.0;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
-import "./StakeManager.sol";
-import "./UserOperation.sol";
-import "./IWallet.sol";
-import "./IPaymaster.sol";
+import "../interfaces/IWallet.sol";
+import "../interfaces/IPaymaster.sol";
 
-import "./IAggregatedWallet.sol";
-import "./IEntryPoint.sol";
-import "./utils/Exec.sol";
+import "../interfaces/IAggregatedWallet.sol";
+import "../interfaces/IEntryPoint.sol";
+import "../utils/Exec.sol";
 import "./StakeManager.sol";
 
 contract EntryPoint is IEntryPoint, StakeManager {
@@ -533,3 +531,4 @@ contract EntryPoint is IEntryPoint, StakeManager {
         assembly {mstore(0, number())}
     }
 }
+

@@ -4,64 +4,25 @@ pragma solidity ^0.8.0;
 
 /* solhint-disable reason-string */
 
-import "./IPaymaster.sol";
-import "./IEntryPoint.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "../interfaces/IPaymaster.sol";
+import "../interfaces/IEntryPoint.sol";
 
 /**
  * Helper class for creating a paymaster.
  * provides helper methods for staking.
  * validates that the postOp is called only by the entryPoint
  */
-abstract contract BasePaymaster is IPaymaster {
-
+abstract contract BasePaymaster is IPaymaster, Ownable {
 
     IEntryPoint public entryPoint;
 
-    /**
-    Owner realted function are implemented in this function instead of inheriting Ownable contract from Openzepplin. 
-    cause Ownable contract needs to be inherit and it requires this { BasePaymaster } contract to have constructor
-    So that its constructor can be called but we are deploying this contract using factory pattern that means we 
-    can't create constructor for this contract
-     */
-
-    // maintain owner address
-    address public owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(owner == _msgSender(), "Ownable: caller is not the owner");
-        _;
+    constructor(IEntryPoint _entryPoint) {
+        setEntryPoint(_entryPoint);
     }
 
     function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
         entryPoint = _entryPoint;
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        _transferOwnership(newOwner);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
-     */
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = owner;
-        owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
     }
 
     function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 requestId, uint256 maxCost) external virtual override returns (bytes memory context);

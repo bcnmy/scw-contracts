@@ -2,7 +2,7 @@
 pragma solidity ^0.8.0;
 
 import "./VerifyingPaymasterProxy.sol";
-import "../references/aa-4337/VerifyingPaymaster.sol"; 
+import "./VerifyingPaymaster.sol"; 
 
 contract VerifyingPaymasterFactory {
     // Implementation paymaster contract address 

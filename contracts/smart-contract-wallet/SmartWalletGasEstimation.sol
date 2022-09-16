@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-//TODO
-//review Base licensing
-//https://spdx.org/licenses/
-
 import "./libs/LibAddress.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./IWallet.sol";
+import "./interfaces/ISmartWallet.sol";
 import "./common/Singleton.sol";
 import "./storage/WalletStorage.sol";
 import "./base/ModuleManager.sol";
@@ -20,7 +16,6 @@ import "./common/SecuredTokenTransfer.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import "./libs/ECDSA.sol";
-// import "hardhat/console.sol";
 
 // Hooks not made a base yet
 contract SmartWalletGasEstimation is 
@@ -52,6 +47,12 @@ contract SmartWalletGasEstimation is
      */
     modifier onlyOwner {
         require(msg.sender == owner, "Smart Account:: Sender is not authorized");
+        _;
+    }
+
+    // only from Entry Point
+    modifier onlyEntryPoint {
+        require(msg.sender == address(entryPoint) , "Smart Account:: not from EntryPoint");
         _;
     }
 
@@ -104,6 +105,8 @@ contract SmartWalletGasEstimation is
         return id;
     }
 
+    // TODO 
+    // Review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -134,72 +137,6 @@ contract SmartWalletGasEstimation is
      */
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a >= b ? a : b;
-    }
-
-    // Gnosis style transaction with optional repay in native tokens OR ERC20 
-    /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
-    /// Note: The fees are always transferred, even if the user transaction fails.
-    /// @param _tx Wallet transaction 
-    /// @param batchId batchId key for 2D nonces
-    /// @param refundInfo Required information for gas refunds
-    function execTransactionEstimation(
-        Transaction memory _tx,
-        uint256 batchId,
-        FeeRefund memory refundInfo
-    ) public payable virtual returns (bool success) {
-        // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
-        //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
-        uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
-        //console.log("init %s", 21000 + msg.data.length * 8);
-        bytes32 txHash;
-        // Use scope here to limit variable lifetime and prevent `stack too deep` errors
-        {
-            bytes memory txHashData =
-                encodeTransactionData(
-                    // Transaction info
-                    _tx,
-                    // Payment info
-                    refundInfo,
-                    // Signature info
-                    nonces[batchId]
-                );
-            // Increase nonce and execute transaction.
-            // Default space aka batchId is 0
-            nonces[batchId]++;
-            txHash = keccak256(txHashData);
-            // this is not the one with fake sig verification
-            // checkSignatures(txHash, txHashData, signatures);
-        }
-
-
-        // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
-        // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
-        require(gasleft() >= max((_tx.targetTxGas * 64) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
-        // Use scope here to limit variable lifetime and prevent `stack too deep` errors
-        {
-            // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
-            // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than targetTxGas
-            success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.targetTxGas);
-            // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
-            // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
-            require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
-            // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
-            uint256 payment = 0;
-            // uint256 extraGas;
-            // We may send gasPrice 0
-            if (refundInfo.gasPrice > 0) {
-                //console.log("sent %s", startGas - gasleft());
-                // extraGas = gasleft();
-                payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
-            }
-            if (success) emit ExecutionSuccess(txHash, payment);
-            else emit ExecutionFailure(txHash, payment);
-            // extraGas = extraGas - gasleft();
-            //console.log("extra gas %s ", extraGas);
-            uint256 requiredGas = startGas - gasleft();
-            // Convert response to string and return via error message
-            revert(string(abi.encodePacked(requiredGas)));
-        }
     }
 
     // @review 2D nonces and args as default batchId 0 is always used
@@ -268,6 +205,70 @@ contract SmartWalletGasEstimation is
         }
     }
 
+    // Gnosis style transaction with optional repay in native tokens OR ERC20 
+    /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
+    /// Note: The fees are always transferred, even if the user transaction fails.
+    /// @param _tx Wallet transaction 
+    /// @param batchId batchId key for 2D nonces
+    /// @param refundInfo Required information for gas refunds
+    function execTransactionEstimation(
+        Transaction memory _tx,
+        uint256 batchId,
+        FeeRefund memory refundInfo
+    ) public payable virtual returns (bool success) {
+        // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
+        //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
+        uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
+        //console.log("init %s", 21000 + msg.data.length * 8);
+        bytes32 txHash;
+        // Use scope here to limit variable lifetime and prevent `stack too deep` errors
+        {
+            bytes memory txHashData =
+                encodeTransactionData(
+                    // Transaction info
+                    _tx,
+                    // Payment info
+                    refundInfo,
+                    // Signature info
+                    nonces[batchId]
+                );
+            // Increase nonce and execute transaction.
+            // Default space aka batchId is 0
+            nonces[batchId]++;
+            txHash = keccak256(txHashData);
+            // this is not the one with fake sig verification
+            // checkSignatures(txHash, txHashData, signatures);
+        }
+        // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
+        // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
+        require(gasleft() >= max((_tx.targetTxGas * 64) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
+        // Use scope here to limit variable lifetime and prevent `stack too deep` errors
+        {
+            // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
+            // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than targetTxGas
+            success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.targetTxGas);
+            // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
+            // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
+            require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
+            // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
+            uint256 payment = 0;
+            // uint256 extraGas;
+            // We may send gasPrice 0
+            if (refundInfo.gasPrice > 0) {
+                //console.log("sent %s", startGas - gasleft());
+                // extraGas = gasleft();
+                payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
+            }
+            if (success) emit ExecutionSuccess(txHash, payment);
+            else emit ExecutionFailure(txHash, payment);
+            // extraGas = extraGas - gasleft();
+            //console.log("extra gas %s ", extraGas);
+            uint256 requiredGas = startGas - gasleft();
+            // Convert response to string and return via error message
+            revert(string(abi.encodePacked(requiredGas)));
+        }
+    }
+ 
     function handlePayment(
         uint256 gasUsed,
         uint256 baseGas,
@@ -509,25 +510,25 @@ contract SmartWalletGasEstimation is
         // @review linter
         (bool success, bytes memory result) = sender.call{value : value}(data);
         if (!success) {
+            //@review
+            emit ExecutionFailure("", 0);
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 revert(add(result,32), mload(result))
             }
         }
-    }
-
-    function _requireFromEntryPoint() internal view {
-        require(msg.sender == address(entryPoint), "wallet: not from EntryPoint");
+        //@review
+        emit ExecutionSuccess("", 0);
     }
 
     //called by entryPoint, only after validateUserOp succeeded.
-    function execFromEntryPoint(address dest, uint value, bytes calldata func) external {
-        _requireFromEntryPoint();
+    // TODO
+    // Update this method with possible execute() call and emit geenric event Success or Failure
+    function execFromEntryPoint(address dest, uint value, bytes calldata func) external onlyEntryPoint {
         _call(dest, value, func);
     }
 
-    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override {
-        _requireFromEntryPoint();
+    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override onlyEntryPoint {
         _validateSignature(userOp, requestId, aggregator);
         //during construction, the "nonce" field hold the salt.
         // if we assert it is zero, then we allow only a single wallet per owner.
@@ -568,4 +569,5 @@ contract SmartWalletGasEstimation is
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
+
 }

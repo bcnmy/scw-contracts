@@ -1,15 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-//TODO
-//review Base licensing
-//https://spdx.org/licenses/
-
 import "./libs/LibAddress.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./IWallet.sol";
+import "./interfaces/ISmartWallet.sol";
 import "./common/Singleton.sol";
 import "./storage/WalletStorage.sol";
 import "./base/ModuleManager.sol";
@@ -21,7 +17,7 @@ import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import "./libs/ECDSA.sol";
 
-// TODO
+// Hooks not made a base yet
 // @review the methods used for override-apis
 contract SmartWalletNoAuth is 
      Singleton,
@@ -52,6 +48,12 @@ contract SmartWalletNoAuth is
      */
     modifier onlyOwner {
         require(msg.sender == owner, "Smart Account:: Sender is not authorized");
+        _;
+    }
+
+    // only from Entry Point
+    modifier onlyEntryPoint {
+        require(msg.sender == address(entryPoint) , "Smart Account:: not from EntryPoint");
         _;
     }
 
@@ -104,6 +106,8 @@ contract SmartWalletNoAuth is
         return id;
     }
 
+    // TODO 
+    // Review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -434,25 +438,25 @@ contract SmartWalletNoAuth is
         // @review linter
         (bool success, bytes memory result) = sender.call{value : value}(data);
         if (!success) {
+            //@review
+            emit ExecutionFailure("", 0);
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 revert(add(result,32), mload(result))
             }
         }
-    }
-
-    function _requireFromEntryPoint() internal view {
-        require(msg.sender == address(entryPoint), "wallet: not from EntryPoint");
+        //@review
+        emit ExecutionSuccess("", 0);
     }
 
     //called by entryPoint, only after validateUserOp succeeded.
-    function execFromEntryPoint(address dest, uint value, bytes calldata func) external {
-        _requireFromEntryPoint();
+    // TODO
+    // Update this method with possible execute() call and emit geenric event Success or Failure
+    function execFromEntryPoint(address dest, uint value, bytes calldata func) external onlyEntryPoint {
         _call(dest, value, func);
     }
 
-    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override {
-        _requireFromEntryPoint();
+    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override onlyEntryPoint {
         _validateSignature(userOp, requestId, aggregator);
         //during construction, the "nonce" field hold the salt.
         // if we assert it is zero, then we allow only a single wallet per owner.
@@ -493,4 +497,5 @@ contract SmartWalletNoAuth is
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
+
 }

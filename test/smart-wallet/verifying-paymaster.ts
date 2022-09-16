@@ -47,7 +47,6 @@ describe("EntryPoint with VerifyingPaymaster", function () {
   let proxyPaymaster: Contract;
   let walletAddress: string, paymasterAddress: string;
   let ethersSigner;
-  console.log("ethersSigner ", ethersSigner);
 
   let offchainSigner: Signer, deployer: Signer;
 
