@@ -7,8 +7,8 @@ async function main() {
   );
   const payMasterImp = await VerifyingPaymaster.deploy();
   await payMasterImp.deployed();
-  console.log("payMaster Implementation deployed at: ", payMasterImp.address);
-  await delay(25000);
+  console.log("paymaster Implementation deployed at: ", payMasterImp.address);
+  // await delay(4000);
 
   const VerifyingPayMasterFactory = await ethers.getContractFactory(
     "VerifyingPaymasterFactory"
@@ -18,11 +18,11 @@ async function main() {
   );
   await verifyingPayMasterFactory.deployed();
   console.log(
-    "verifyingPayMasterFactory Implementation deployed at: ",
+    "verifyingPaymasterFactory deployed at: ",
     verifyingPayMasterFactory.address
   );
 
-  await delay(30000);
+  // await delay(4000);
 
   // verifying pay master Implementation
 
