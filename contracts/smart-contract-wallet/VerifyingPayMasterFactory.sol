@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "./VerifyPaymasterProxy.sol";
+import "./VerifyingPaymasterProxy.sol";
 import "../references/aa-4337/VerifyingPaymaster.sol"; 
 
 contract VerifyingPaymasterFactory {
+    // Implementation paymaster contract address 
     address internal payMasterImp; 
 
     event VerifyingPaymasterCreated(address indexed proxy, address payMasterImp, IEntryPoint entryPoint, address indexed owner, address indexed verifyingSigner);
@@ -14,9 +15,9 @@ contract VerifyingPaymasterFactory {
         payMasterImp = _payMasterImp;
     }
     
-    function deployVerifyingPayMaster(address owner, address verifyingSigner, IEntryPoint entryPoint) public returns(address proxy){
+    function deployVerifyingPaymaster(address owner, address verifyingSigner, IEntryPoint entryPoint) public returns(address proxy){
         bytes32 salt = keccak256(abi.encodePacked(verifyingSigner));
-        bytes memory deploymentData = abi.encodePacked(type(VerifyPaymasterProxy).creationCode, uint(uint160(payMasterImp)));
+        bytes memory deploymentData = abi.encodePacked(type(VerifyingPaymasterProxy).creationCode, uint(uint160(payMasterImp)));
         // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
