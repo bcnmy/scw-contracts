@@ -35,48 +35,9 @@ const config: HardhatUserConfig = {
         },
       },
       {
-        version: "0.8.7",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-        },
-      },
-      {
         version: "0.8.12",
         settings: {
           optimizer: { enabled: true, runs: 200 },
-        },
-      },
-      {
-        version: "0.4.23",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-        },
-      },
-      {
-        version: "0.6.2",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-        },
-      },
-      {
-        version: "0.7.6",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-        },
-      },
-      {
-        version: "0.5.12",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-        },
-      },
-      {
-        version: "0.6.12",
-        settings: {
-          optimizer: {
-            enabled: true,
-            runs: 200,
-          },
         },
       },
     ],
@@ -166,10 +127,12 @@ const config: HardhatUserConfig = {
     },
     goerli: {
       url: process.env.GOERLI_URL || "",
-      accounts: walletUtils.makeKeyList(),
       chainId: 5,
-      // gas: 6400000
-    },
+      accounts:
+      process.env.PRIVATE_KEY !== undefined
+        ? [process.env.PRIVATE_KEY]
+        : walletUtils.makeKeyList(),
+  },
     kovan: {
       url: process.env.KOVAN_URL || "",
       accounts:

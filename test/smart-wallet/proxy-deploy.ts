@@ -23,7 +23,6 @@ describe("Wallet Deployment", function () {
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
     const entryPoint = await EntryPoint.deploy(
-      create2FactoryAddress,
       PAYMASTER_STAKE,
       UNSTAKE_DELAY_SEC
     );
@@ -52,7 +51,7 @@ describe("Wallet Deployment", function () {
       )
     )
       .to.emit(walletFactory, "WalletCreated")
-      .withArgs(expected, baseImpl.address, owner);
+      .withArgs(expected, baseImpl.address, owner, "1.0.1", 0);
 
     // const deployed = await walletFactory.deployCounterFactualWallet(owner);
     // console.log("deployed new wallet..address: ", deployed);
