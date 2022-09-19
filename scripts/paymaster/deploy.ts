@@ -8,7 +8,6 @@ async function main() {
   const payMasterImp = await VerifyingPaymaster.deploy();
   await payMasterImp.deployed();
   console.log("paymaster Implementation deployed at: ", payMasterImp.address);
-  // await delay(4000);
 
   const VerifyingPayMasterFactory = await ethers.getContractFactory(
     "VerifyingPaymasterFactory"
@@ -21,14 +20,19 @@ async function main() {
     "verifyingPaymasterFactory deployed at: ",
     verifyingPayMasterFactory.address
   );
+  // Making test Deployment
+  const ownerAddress = '0x2b241cBe6B455e08Ade78a7ccC42DE2403d7b566'
+  const verifySignerAddress = '0x2b241cBe6B455e08Ade78a7ccC42DE2403d7b566'
+  const entryPointAddress = '0x2167fA17BA3c80Adee05D98F0B55b666Be6829d6'
+  await verifyingPayMasterFactory.deployVerifyingPaymaster(ownerAddress, verifySignerAddress, entryPointAddress)
 
-  // await delay(4000);
+  await delay(4000);
 
   // verifying pay master Implementation
 
   await hre.run("verify:verify", {
     contract:
-      "contracts/references/aa-4337/VerifyingPaymaster.sol:VerifyingPaymaster",
+      "contracts/smart-contract-wallet/paymasters/VerifyingPaymaster.sol:VerifyingPaymaster",
     address: payMasterImp.address,
     constructorArguments: [],
   });
@@ -36,7 +40,7 @@ async function main() {
   // verifying pay master factory Implementation
   await hre.run("verify:verify", {
     contract:
-      "contracts/smart-contract-wallet/VerifyingPaymasterFactory.sol:VerifyingPaymasterFactory",
+      "contracts/smart-contract-wallet/paymasters/VerifyingPaymasterFactory.sol:VerifyingPaymasterFactory",
     address: verifyingPayMasterFactory.address,
     constructorArguments: [payMasterImp.address],
   });
