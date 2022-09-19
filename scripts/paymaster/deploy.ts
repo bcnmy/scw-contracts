@@ -30,20 +30,31 @@ async function main() {
 
   // verifying pay master Implementation
 
-  await hre.run("verify:verify", {
-    contract:
-      "contracts/smart-contract-wallet/paymasters/VerifyingPaymaster.sol:VerifyingPaymaster",
-    address: payMasterImp.address,
-    constructorArguments: [],
-  });
+  try{
+    await hre.run("verify:verify", {
+        contract:
+          "contracts/smart-contract-wallet/paymasters/VerifyingPaymaster.sol:VerifyingPaymaster",
+        address: payMasterImp.address,
+        constructorArguments: [],
+      });
+  }catch(err){
+      console.log('error while verifying paymaster contract')
+      console.log(err);
+      
+  }
   
-  // verifying pay master factory Implementation
+  try{
+      // verifying pay master factory Implementation
   await hre.run("verify:verify", {
     contract:
       "contracts/smart-contract-wallet/paymasters/VerifyingPaymasterFactory.sol:VerifyingPaymasterFactory",
     address: verifyingPayMasterFactory.address,
     constructorArguments: [payMasterImp.address],
   });
+  }catch(err){
+    console.log('error while verifying factory contract')
+    console.log(err);
+  }
 }
 
 main().catch((error) => {
