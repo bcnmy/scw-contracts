@@ -1,6 +1,6 @@
 {
   "name": "scw-contracts",
-  "version": "1.0.1",
+  "version": "1.0.7",
   "description": "",
   "main": "index.js",
   "scripts": {
@@ -50,6 +50,7 @@
     "web3": "^1.7.4"
   },
   "dependencies": {
+    "@account-abstraction/contracts": "^0.2.0",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/constants": "^5.6.1",
     "@nomiclabs/hardhat-etherscan": "^2.1.6",

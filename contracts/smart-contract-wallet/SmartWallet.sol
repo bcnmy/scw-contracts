@@ -68,7 +68,7 @@ contract SmartWallet is
 
     function setOwner(address _newOwner) external mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
-         address oldOwner = owner;
+        address oldOwner = owner;
         owner = _newOwner;
         emit EOAChanged(address(this), oldOwner, _newOwner);
     }
