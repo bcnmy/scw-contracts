@@ -3,6 +3,8 @@ pragma solidity ^0.8.0;
 
 import "../aa-4337/interfaces/IWallet.sol";
 
+// TODO
+// Make it abstract contract
 interface ISmartWallet is IWallet {
     function init(address _owner, address _entryPoint, address _handler) external;
     

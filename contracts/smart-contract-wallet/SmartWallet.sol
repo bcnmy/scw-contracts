@@ -20,7 +20,7 @@ import "./libs/ECDSA.sol";
 // Hooks not made a base yet
 contract SmartWallet is 
      Singleton,
-     IWallet,
+     ISmartWallet,
      IERC165,
      WalletStorage,
      ModuleManager,

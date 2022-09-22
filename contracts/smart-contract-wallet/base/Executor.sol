@@ -23,5 +23,8 @@ contract Executor {
                 success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
             }
         }
+        // TODO
+        // Emit events here..
     }
+    
 }

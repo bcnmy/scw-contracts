@@ -40,6 +40,12 @@ const config: HardhatUserConfig = {
           optimizer: { enabled: true, runs: 200 },
         },
       },
+      {
+        version: "0.8.9",
+        settings: {
+          optimizer: { enabled: true, runs: 200 },
+        },
+      },
     ],
   },
   networks: {
@@ -129,10 +135,10 @@ const config: HardhatUserConfig = {
       url: process.env.GOERLI_URL || "",
       chainId: 5,
       accounts:
-      process.env.PRIVATE_KEY !== undefined
-        ? [process.env.PRIVATE_KEY]
-        : walletUtils.makeKeyList(),
-  },
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
     kovan: {
       url: process.env.KOVAN_URL || "",
       accounts:
