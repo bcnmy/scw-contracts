@@ -328,8 +328,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
     const eventLogs = SmartWallet.interface.decodeEventLog(
-      "ExecutionSuccess",
-      receipt.logs[1].data
+      "WalletHandlePayment",
+      receipt.logs[2].data
     );
     const paymentDeducted = eventLogs.payment.toNumber();
 
@@ -497,8 +497,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
     const eventLogs = SmartWallet.interface.decodeEventLog(
-      "ExecutionSuccess",
-      receipt.logs[2].data
+      "WalletHandlePayment",
+      receipt.logs[3].data
     );
     const paymentDeducted = eventLogs.payment; // no of DAI tokens
     console.log("tokens refund ", paymentDeducted);

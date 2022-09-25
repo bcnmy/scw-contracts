@@ -2,44 +2,66 @@
 pragma solidity ^0.8.0;
 
 import "./libs/LibAddress.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "./interfaces/ISmartWallet.sol";
+import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "./BaseSmartWallet.sol";
 import "./common/Singleton.sol";
-import "./storage/WalletStorage.sol";
 import "./base/ModuleManager.sol";
 import "./base/FallbackManager.sol";
 import "./common/SignatureDecoder.sol";
-// import "./common/Hooks.sol";
 import "./common/SecuredTokenTransfer.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import "./libs/ECDSA.sol";
 
-// Hooks not made a base yet
-// @review the methods used for override-apis
 contract SmartWalletNoAuth is 
      Singleton,
-     IWallet,
+     BaseSmartWallet,
      IERC165,
-     WalletStorage,
      ModuleManager,
      SignatureDecoder,
      SecuredTokenTransfer,
      ISignatureValidatorConstants,
      FallbackManager,
-     Initializable     
+     Initializable
     {
     using ECDSA for bytes32;
     using LibAddress for address;
 
+    // Storage
+
+    // Version
+    string public constant VERSION = "1.0.1"; // Forward enabled refund enhancements
+
+    // Domain Seperators
+    // keccak256(
+    //     "EIP712Domain(uint256 chainId,address verifyingContract)"
+    // );
+    bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH = 0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
+
+    // keccak256(
+    //     "WalletTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+    // );
+    bytes32 internal constant WALLET_TX_TYPEHASH = 0xeedfef42e81fe8cd0e4185e4320e9f8d52fd97eb890b85fa9bd7ad97c9a18de2;
+
+    // Owner storage
+    address public owner;
+
+    // @review
+    // uint256 public nonce; //changed to 2D nonce
+    mapping(uint256 => uint256) public nonces;
+
+    // AA storage
+    IEntryPoint private _entryPoint;
+
+    
+    // Events
     // EOA + Version tracking
     event ImplementationUpdated(address _scw, string version, address newImplementation);
-    event ExecutionFailure(bytes32 txHash, uint256 payment);
-    event ExecutionSuccess(bytes32 txHash, uint256 payment);
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
+    event WalletHandlePayment(bytes32 txHash, uint256 payment);
 
     // modifiers
     // onlyOwner
@@ -51,17 +73,25 @@ contract SmartWalletNoAuth is
         _;
     }
 
-    // only from Entry Point
-    modifier onlyEntryPoint {
-        require(msg.sender == address(entryPoint) , "Smart Account:: not from EntryPoint");
-        _;
-    }
-
     // onlyOwner OR self
     modifier mixedAuth {
-    require(msg.sender == owner || msg.sender == address(this),"Only owner or self");
-    _;
+        require(msg.sender == owner || msg.sender == address(this),"Only owner or self");
+        _;
    }
+
+   // only from EntryPoint
+   modifier onlyEntryPoint {
+        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
+        _; 
+   }
+
+   function nonce() public view virtual override returns (uint256) {
+        return nonces[0];
+    }
+
+    function entryPoint() public view virtual override returns (IEntryPoint) {
+        return _entryPoint;
+    }
 
     // @notice authorized modifier (onlySelf) is already inherited
 
@@ -69,8 +99,9 @@ contract SmartWalletNoAuth is
 
     function setOwner(address _newOwner) external mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
+        address oldOwner = owner;
         owner = _newOwner;
-        emit EOAChanged(address(this),owner,_newOwner);
+        emit EOAChanged(address(this), oldOwner, _newOwner);
     }
 
     /**
@@ -84,10 +115,10 @@ contract SmartWalletNoAuth is
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
-    function updateEntryPoint(address _entryPoint) external mixedAuth {
-        require(_entryPoint != address(0), "Smart Account:: new entry point address cannot be zero");
-        emit EntryPointChanged(entryPoint, _entryPoint);
-        entryPoint = _entryPoint;
+    function updateEntryPoint(address _newEntryPoint) external mixedAuth {
+        require(_newEntryPoint != address(0), "Smart Account:: new entry point address cannot be zero");
+        emit EntryPointChanged(address(_entryPoint), _newEntryPoint);
+        _entryPoint = IEntryPoint(payable(_newEntryPoint));
     }
 
     // Getters
@@ -118,17 +149,20 @@ contract SmartWalletNoAuth is
     returns (uint256) {
         return nonces[batchId];
     }
-    
+
+
+    // init
     // Initialize / Setup
     // Used to setup
-    // i. owner ii. entry point iii. handlers
-    function init(address _owner, address _entryPoint, address _handler) public initializer { 
+    // i. owner ii. entry point address iii. handler
+    function init(address _owner, address _entryPointAddress, address _handler) public override initializer { 
         require(owner == address(0), "Already initialized");
-        require(entryPoint == address(0), "Already initialized");
+        require(address(_entryPoint) == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
-        require(_entryPoint != address(0), "Invalid Entrypoint");
+        require(_entryPointAddress != address(0), "Invalid Entrypoint");
+        require(_handler != address(0), "Invalid Entrypoint");
         owner = _owner;
-        entryPoint = _entryPoint;
+        _entryPoint =  IEntryPoint(payable(_entryPointAddress));
         if (_handler != address(0)) internalSetFallbackHandler(_handler);
         setupModules(address(0), bytes(""));
     }
@@ -140,9 +174,8 @@ contract SmartWalletNoAuth is
         return a >= b ? a : b;
     }
 
-    // @review 2D nonces and args as default batchId 0 is always used
-    // TODO : Update description
-    // TODO : Add batchId and update in test cases, utils etc
+
+        // @review 2D nonces and args as default batchId 0 is always used
     // Gnosis style transaction with optional repay in native tokens OR ERC20 
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
@@ -155,7 +188,7 @@ contract SmartWalletNoAuth is
         uint256 batchId,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public payable virtual returns (bool success) {
+    ) public payable virtual override returns (bool success) {
         // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
         //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
         uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
@@ -198,14 +231,13 @@ contract SmartWalletNoAuth is
                 //console.log("sent %s", startGas - gasleft());
                 // extraGas = gasleft();
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
+                emit WalletHandlePayment(txHash, payment);
             }
-            if (success) emit ExecutionSuccess(txHash, payment);
-            else emit ExecutionFailure(txHash, payment);
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }
     }
- 
+
     function handlePayment(
         uint256 gasUsed,
         uint256 baseGas,
@@ -231,6 +263,7 @@ contract SmartWalletNoAuth is
         //console.log("hp %s", requiredGas);
     }
 
+    // @review name
     function handlePaymentRevert(
         uint256 gasUsed,
         uint256 baseGas,
@@ -306,14 +339,13 @@ contract SmartWalletNoAuth is
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
             // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
             _signer = ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", dataHash)), v - 4, r, s);
-            require(_signer == owner || true, "INVALID_SIGNATURE");
+            require(_signer == owner, "INVALID_SIGNATURE");
         } else {
             _signer = ecrecover(dataHash, v, r, s);
-            require(_signer == owner || true, "INVALID_SIGNATURE");
+            require(_signer == owner, "INVALID_SIGNATURE");
         }
     }
 
-    /// review necessity for this method for estimating execute call
     /// @dev Allows to estimate a transaction.
     ///      This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
     ///      Since the `estimateGas` function includes refunds, call this method to get an estimated of the costs that are deducted from the safe with `execTransaction`
@@ -331,7 +363,6 @@ contract SmartWalletNoAuth is
         // We don't provide an error message here, as we use it to return the estimate
         require(execute(to, value, data, operation, gasleft()));
     }
-
 
     /// @dev Returns hash to be signed by owner.
     /// @param to Destination address.
@@ -374,7 +405,6 @@ contract SmartWalletNoAuth is
         });
         return keccak256(encodeTransactionData(_tx, refundInfo, _nonce));
     }
-
 
     /// @dev Returns the bytes that are hashed to be signed by owner.
     /// @param _tx Wallet transaction 
@@ -438,22 +468,19 @@ contract SmartWalletNoAuth is
         // @review linter
         (bool success, bytes memory result) = sender.call{value : value}(data);
         if (!success) {
-            //@review
-            emit ExecutionFailure("", 0);
             // solhint-disable-next-line no-inline-assembly
             assembly {
                 revert(add(result,32), mload(result))
             }
         }
-        //@review
-        emit ExecutionSuccess("", 0);
     }
-
+    
     //called by entryPoint, only after validateUserOp succeeded.
-    // TODO
-    // Update this method with possible execute() call and emit geenric event Success or Failure
-    function execFromEntryPoint(address dest, uint value, bytes calldata func) external onlyEntryPoint {
-        _call(dest, value, func);
+    // @review
+    //Method is updated to instruct delegate call and emit regular events
+    function execFromEntryPoint(address dest, uint value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
+        success = execute(dest, value, func, operation, gasLimit);
+        require(success, "Userop Failed");
     }
 
     function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override onlyEntryPoint {
@@ -466,13 +493,14 @@ contract SmartWalletNoAuth is
         _payPrefund(missingWalletFunds);
     }
 
-    // review nonce conflict with AA userOp nonce
+     // review nonce conflict with AA userOp nonce
     // userOp can omit nonce or have batchId as well!
-    function _validateAndUpdateNonce(UserOperation calldata userOp) internal {
+    function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
         require(nonces[0]++ == userOp.nonce, "wallet: invalid nonce");
     }
 
-    function _payPrefund(uint requiredPrefund) internal {
+
+    function _payPrefund(uint requiredPrefund) internal override {
         if (requiredPrefund != 0) {
             //pay required prefund. make sure NOT to use the "gas" opcode, which is banned during validateUserOp
             // (and used by default by the "call")
@@ -483,12 +511,11 @@ contract SmartWalletNoAuth is
         }
     }
 
-    function _validateSignature(UserOperation calldata userOp, bytes32 requestId, address) internal view {
+    function _validateSignature(UserOperation calldata userOp, bytes32 requestId, address) internal override view {
         bytes32 hash = requestId.toEthSignedMessageHash();
         require(owner == hash.recover(userOp.signature), "wallet: wrong signature");
     }
 
-    
     /**
      * @notice Query if a contract implements an interface
      * @param interfaceId The interface identifier, as specified in ERC165
