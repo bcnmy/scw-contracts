@@ -32,21 +32,25 @@ describe("Lock", function () {
     sessionKeyModule = await sessionKeyModuleFactory.deploy();
   });
 
-  it("Set session with permission", async function () {
+  it("Set and verify session with permission", async function () {
+    const startTimestamp = 1665239610;
+    const endTimestamp = 1665326010;
     const sessionParam = {
-      startTimestamp: "1665239610",
-      endTimestamp: "1665326010",
+      startTimestamp: startTimestamp,
+      endTimestamp: endTimestamp,
       enable: true,
     };
 
-    const ABI = ["function transfer(address to, uint amount)"];
+    const ABI = ["function transfer(address to, uint256 amount)"];
     const iface = new originalEthers.utils.Interface(ABI);
     const encodedData = iface.encodeFunctionData("transfer", [
       "0x1234567890123456789012345678901234567890",
       "10000000000",
     ]);
+
     const transferFunctionSignature = encodedData.slice(0, 10);
 
+    console.log(transferFunctionSignature);
     const permissionParam = {
       whitelistDestination: token.address,
       whitelistMethods: [transferFunctionSignature],
@@ -61,6 +65,16 @@ describe("Lock", function () {
     await session.wait();
 
     const sessionInfo = await sessionKeyModule.getSessionInfo(sessionKey);
+
+    assert(
+      sessionInfo.startTimestamp.toNumber() === startTimestamp,
+      "Start timestamp doesn't match"
+    );
+    assert(
+      sessionInfo.endTimestamp.toNumber() === endTimestamp,
+      "End timestamp doesn't match"
+    );
+    assert(sessionInfo.enable, "Session is not enabled");
     const whitelistedAddress = await sessionKeyModule.getWhitelistDestinations(
       sessionKey
     );
@@ -87,7 +101,7 @@ describe("Lock", function () {
       "Whitelisted Destination contract methods does not match"
     );
 
-    console.log(sessionInfo);
-    console.log(whitelistedAddress);
+    // console.log(sessionInfo);
+    // console.log(whitelistedAddress);
   });
 });
