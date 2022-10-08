@@ -7,6 +7,7 @@ import "../WalletFactory.sol";
 // Deploys a smart account and then calls the appropriate method
 contract GasEstimatorSmartWallet {
   function estimate(
+    address _actualWallet,
     address _factory,
     address _owner,
     address _entryPoint,
@@ -17,7 +18,7 @@ contract GasEstimatorSmartWallet {
     // solhint-disable
     uint256 initialGas = gasleft();
     address _wallet = WalletFactory(_factory).deployCounterFactualWallet(_owner, _entryPoint, _handler, _index);
-    (success, result) = _wallet.call(_data);
+    (success, result) = _actualWallet.call(_data);
     gas = initialGas - gasleft();
     // solhint-enable
   }

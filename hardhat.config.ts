@@ -26,6 +26,7 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
+  // defaultNetwork: "ganache",
   solidity: {
     compilers: [
       {
@@ -49,6 +50,17 @@ const config: HardhatUserConfig = {
     ],
   },
   networks: {
+    ganache: {
+      chainId: 1337,
+      url: "http://localhost:8545",
+      accounts: {
+        mnemonic:
+          "garbage miracle journey siren inch method pulse learn month grid frame business",
+        path: "m/44'/60'/0'/0",
+        initialIndex: 0,
+        count: 20,
+      },
+    },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
       chainId: 3,

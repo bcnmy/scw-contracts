@@ -11,6 +11,7 @@ import {
   DefaultCallbackHandler,
   WhitelistModule,
   StakedTestToken,
+  GasEstimatorSmartWallet,
 } from "../../typechain";
 
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -38,6 +39,12 @@ import { provider } from "ganache";
 import { sign } from "crypto";
 
 const GasEstimatorArtifact = artifacts.require("GasEstimator");
+const GasEstimatorSmartWalletArtifact = artifacts.require(
+  "GasEstimatorSmartWallet"
+);
+const SCWNoAuth = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWalletNoAuth.sol/SmartWalletNoAuth.json");
+const FAKE_SIGNATURE =
+  "0x39f5032f1cd30005aa1e35f04394cabfe7de3b6ae6d95b27edd8556064c287bf61f321fead0cf48ca4405d497cc8fc47fc7ff0b7f5c45baa14090a44f2307d8230";
 
 function tryDecodeError(bytes: BytesLike): string {
   try {
@@ -76,6 +83,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   let multiSend: MultiSendCallOnly;
   let storage: StorageSetter;
   let estimator: GasEstimator;
+  let estimatorSmartwallet: GasEstimatorSmartWallet;
   let whitelistModule: WhitelistModule;
   let owner: string;
   let bob: string;
@@ -126,10 +134,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     console.log("wallet factory deployed at: ", walletFactory.address);
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    entryPoint = await EntryPoint.deploy(
-      PAYMASTER_STAKE,
-      UNSTAKE_DELAY_SEC
-    );
+    entryPoint = await EntryPoint.deploy(PAYMASTER_STAKE, UNSTAKE_DELAY_SEC);
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
@@ -161,6 +166,15 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const Estimator = await ethers.getContractFactory("GasEstimator");
     estimator = await Estimator.deploy();
     console.log("Gas Estimator contract deployed at: ", estimator.address);
+
+    const EstimatorSmartWallet = await ethers.getContractFactory(
+      "GasEstimatorSmartWallet"
+    );
+    estimatorSmartwallet = await EstimatorSmartWallet.deploy();
+    console.log(
+      "Gas Estimator Custom contract deployed at: ",
+      estimatorSmartwallet.address
+    );
 
     const WhitelistModule = await ethers.getContractFactory("WhitelistModule");
     whitelistModule = await WhitelistModule.deploy(charlie);
@@ -286,6 +300,136 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     });
   });
 
+  it("Should estimate gas sending transaction from an undeployed wallet", async function () {
+    const expected = await walletFactory.getAddressForCounterfactualWallet(
+      owner,
+      2
+    );
+    console.log("deploying new wallet..expected address: ", expected);
+
+    await token
+      .connect(accounts[0])
+      .transfer(expected, ethers.utils.parseEther("100"));
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      // value: ethers.utils.parseEther("1"),
+      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+      nonce: 0, // nonce picked 0 for first transaction as we can't read from state yet (?)
+    });
+
+    const Estimator = await ethers.getContractFactory("GasEstimator");
+    const EstimatorSmartWallet = await ethers.getContractFactory(
+      "GasEstimatorSmartWallet"
+    );
+
+    const gasEstimatorInterface = Estimator.interface;
+    const gasEstimatorCustomInterface = EstimatorSmartWallet.interface;
+
+    const chainId = await userSCW.getChainId();
+
+    userSCW = userSCW.attach(expected);
+    /* const { signer, data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx,
+      chainId
+    ); */
+
+    console.log(safeTx);
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    const signature = FAKE_SIGNATURE;
+    // signature += data.slice(2);
+
+    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+
+    /* const targetTx = buildContractCall(
+      userSCW,
+      "execTransaction",
+      [transaction, 1, refundInfo, signature],
+      0
+    ); */
+
+    const txnData = SmartWallet.interface.encodeFunctionData(
+      "execTransaction",
+      [transaction, 1, refundInfo, signature]
+    );
+
+    const encodedEstimate = gasEstimatorCustomInterface.encodeFunctionData(
+      "estimate",
+      [
+        expected,
+        walletFactory.address,
+        owner,
+        entryPoint.address,
+        handler.address,
+        3,
+        txnData,
+      ]
+    );
+
+    const response = await ethers.provider.send("eth_call", [
+      {
+        to: estimatorSmartwallet.address,
+        data: encodedEstimate,
+        from: bob,
+        // gasPrice: ethers.BigNumber.from(100000000000).toHexString(),
+        // gas: "200000",
+      },
+      "latest",
+      {
+        [expected]: {
+          code: SCWNoAuth.deployedBytecode,
+        },
+      },
+    ]);
+
+    const decoded = gasEstimatorCustomInterface.decodeFunctionResult(
+      "estimate",
+      response
+    );
+
+    if (!decoded.success) {
+      throw Error(
+        `Failed gas estimation with ${tryDecodeError(decoded.result)}`
+      );
+    }
+
+    console.log(
+      "estimated gas to be used (deploy + send tx)",
+      ethers.BigNumber.from(decoded.gas).add(txBaseCost(txnData)).toNumber()
+    );
+
+    const tx = await walletFactory.deployCounterFactualWallet(
+      owner,
+      entryPoint.address,
+      handler.address,
+      2
+    );
+
+    const receipt = await tx.wait(1);
+
+    console.log(
+      "Real transaction gas used for just deployment: ",
+      receipt.gasUsed.toNumber()
+    );
+  });
+
   // TODO
   // Review if the first transaction fails
   it("Should estimate wallet deployment and send first transacton", async function () {
@@ -307,6 +451,9 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     });
 
     const Estimator = await ethers.getContractFactory("GasEstimator");
+    const EstimatorCustom = await ethers.getContractFactory(
+      "GasEstimatorSmartWallet"
+    );
     const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
     const gasEstimatorInterface = Estimator.interface;
 
@@ -405,7 +552,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     );
   });
 
-  it("Should estimate wallet deployment and enable module", async function () {
+  /* it("Should estimate wallet deployment and enable module", async function () {
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
       1
@@ -583,7 +730,6 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
     const gasEstimatorInterface = Estimator.interface;
 
-
     // TODO
     // In the sdk relayer sendTransaction (wallet.executeTransaction) check if wallet exits and make helper to prepend the deployment
     // i.e. bundleWithDeploy
@@ -654,5 +800,5 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     expect(await stToken.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
     );
-  });
+  }); */
 });
