@@ -34,6 +34,16 @@ export const EIP712_WALLET_TX_TYPE = {
   ],
 };
 
+export const SESSION_TX_TYPE = {
+  // ALLOWANCE_TRANSFER_TYPEHASH = keccak256( "SessionTransaction(address to,uint256 amount,bytes data,uint256 nonce)" );
+  SessionTransaction: [
+    { type: "address", name: "to" },
+    { type: "uint256", name: "amount" },
+    { type: "bytes", name: "data" },
+    { type: "uint256", name: "nonce" },
+  ],
+};
+
 export const EIP712_SAFE_MESSAGE_TYPE = {
   // "SafeMessage(bytes message)"
   SafeMessage: [{ type: "bytes", name: "message" }],
@@ -54,6 +64,15 @@ export interface SafeTransaction extends MetaTransaction {
   gasToken: string;
   refundReceiver: string;
   nonce: string | number;
+}
+
+export interface SessionTransaction {
+  // sessionKey: string;
+  to: string;
+  amount: string | number | BigNumber;
+  data: string;
+  nonce: number;
+  // signature: string;
 }
 
 export interface Transaction {
@@ -173,6 +192,33 @@ export const safeSignTypedData = async (
       { verifyingContract: safe.address, chainId: cid },
       EIP712_WALLET_TX_TYPE,
       safeTx
+    ),
+  };
+};
+
+export const sessionSignTypedData = async (
+  signer: Signer & TypedDataSigner,
+  sessionModule: Contract,
+  sessionExecuteTx: SessionTransaction,
+  chainId?: BigNumberish
+): Promise<SafeSignature> => {
+  if (!chainId && !signer.provider)
+    throw Error("Provider required to retrieve chainId");
+  console.log("inside signing util for session");
+  const cid = chainId;
+  console.log("chain id");
+  console.log(cid);
+  const signerAddress = await signer.getAddress();
+  console.log("signerAddress");
+  console.log(signerAddress);
+  console.log("sessionModule");
+  console.log(sessionModule.address);
+  return {
+    signer: signerAddress,
+    data: await signer._signTypedData(
+      { verifyingContract: sessionModule.address, chainId: cid },
+      SESSION_TX_TYPE,
+      sessionExecuteTx
     ),
   };
 };

@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity ^0.8.12;
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "../../smart-contract-wallet/base/ModuleManager.sol";
 import "./SignatureDecoder.sol";
 import "../../smart-contract-wallet/common/Enum.sol";
+// import "hardhat/console.sol";
 
 contract SessionKeyModule is SignatureDecoder {
     string public constant NAME = "Session Key Module";
@@ -161,7 +162,8 @@ contract SessionKeyModule is SignatureDecoder {
     }
 
     function getSelector(bytes calldata _data) public pure returns (bytes4) {
-        return bytes4(keccak256(_data));
+        bytes4 selector = bytes4(_data[0 : 4]);
+        return selector;
     }
 
     function executeTransaction(
@@ -194,6 +196,7 @@ contract SessionKeyModule is SignatureDecoder {
         );
 
         bytes4 functionSelector = getSelector(_data);
+        // console.log("function selector %s", functionSelector);
 
         require(
             session.permission.whitelistMethodsMap[_to][functionSelector],
