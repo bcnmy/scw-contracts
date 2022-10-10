@@ -211,8 +211,6 @@ export const sessionSignTypedData = async (
   const signerAddress = await signer.getAddress();
   console.log("signerAddress");
   console.log(signerAddress);
-  console.log("sessionModule");
-  console.log(sessionModule.address);
   return {
     signer: signerAddress,
     data: await signer._signTypedData(

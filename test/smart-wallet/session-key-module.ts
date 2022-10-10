@@ -302,18 +302,20 @@ describe("Session Key Module", function () {
     console.log("signature");
     console.log(signature);
 
-    const tx = await sessionKeyModule
-      .connect(accounts[2])
-      .executeTransaction(
-        sessionKey,
-        token.address,
-        0,
-        encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-        signature
-      );
+    await expect(
+      sessionKeyModule
+        .connect(accounts[2])
+        .executeTransaction(
+          sessionKey,
+          token.address,
+          0,
+          encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+          signature
+        )
+    ).to.emit(userSCW, "ExecutionFromModuleSuccess");
 
-    const receipt = await tx.wait(1);
-    console.log(receipt);
+    // const receipt = await tx.wait(1);
+    // console.log(receipt);
 
     // Can get session info using session key
     // const sessionInfo = await sessionKeyModule.getSessionInfo(sessionKey);
