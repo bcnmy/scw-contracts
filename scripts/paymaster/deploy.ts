@@ -22,13 +22,13 @@ async function main() {
     verifyingPayMasterFactory.address
   );
 
-  // await delay(4000);
+  await delay(4000);
 
   // verifying pay master Implementation
 
   await hre.run("verify:verify", {
     contract:
-      "contracts/references/aa-4337/VerifyingPaymaster.sol:VerifyingPaymaster",
+      "contracts/smart-contract-wallet/paymasters/verifying/VerifyingPaymaster.sol:VerifyingPaymaster",
     address: payMasterImp.address,
     constructorArguments: [],
   });
@@ -36,7 +36,7 @@ async function main() {
   // verifying pay master factory Implementation
   await hre.run("verify:verify", {
     contract:
-      "contracts/smart-contract-wallet/VerifyingPaymasterFactory.sol:VerifyingPaymasterFactory",
+      "contracts/smart-contract-wallet/paymasters/verifying/VerifyingPaymasterFactory.sol:VerifyingPaymasterFactory",
     address: verifyingPayMasterFactory.address,
     constructorArguments: [payMasterImp.address],
   });
