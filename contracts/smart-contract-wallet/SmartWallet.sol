@@ -4,7 +4,7 @@ pragma solidity ^0.8.0;
 import "./libs/LibAddress.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./BaseSmartWallet.sol";
 import "./common/Singleton.sol";
 import "./base/ModuleManager.sol";
@@ -24,7 +24,8 @@ contract SmartWallet is
      SecuredTokenTransfer,
      ISignatureValidatorConstants,
      FallbackManager,
-     Initializable
+     Initializable,
+     ReentrancyGuardUpgradeable
     {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -245,7 +246,7 @@ contract SmartWallet is
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) private returns (uint256 payment) {
+    ) private nonReentrant returns (uint256 payment) {
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -446,7 +447,7 @@ contract SmartWallet is
     // Extra Utils
     
     // Review: low level call value vs transfer // dest.transfer(amount);
-    function transfer(address payable dest, uint amount) external onlyOwner {
+    function transfer(address payable dest, uint amount) external nonReentrant onlyOwner {
         require(dest != address(0), "this action will burn your funds");
         (bool success,) = dest.call{value:amount}("");
         require(success,"transfer failed");
