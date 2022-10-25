@@ -392,11 +392,11 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
         // gas: "200000",
       },
       "latest",
-      {
+      /* {
         [expected]: {
           code: SCWNoAuth.deployedBytecode,
         },
-      },
+      }, */
     ]);
 
     const decoded = gasEstimatorCustomInterface.decodeFunctionResult(

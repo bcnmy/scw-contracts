@@ -42,6 +42,7 @@ abstract contract BasePaymaster is IPaymaster {
     }
 
     function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
+        require(address(_entryPoint) != address(0), "BasePaymaster: new entry point can not be zero address");
         entryPoint = _entryPoint;
     }
 

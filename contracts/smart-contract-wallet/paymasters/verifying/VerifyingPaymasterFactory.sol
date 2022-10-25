@@ -16,6 +16,9 @@ contract VerifyingPaymasterFactory {
     }
     
     function deployVerifyingPaymaster(address owner, address verifyingSigner, IEntryPoint entryPoint) public returns(address proxy){
+        require(owner != address(0), "VerifyingPaymasterFactory: owner can not be zero address");
+        require(verifyingSigner != address(0), "VerifyingPaymasterFactory: verifyingSigner can not be zero address");
+        require(address(entryPoint) != address(0), "VerifyingPaymasterFactory: entryPoint can not be zero address");
         bytes32 salt = keccak256(abi.encodePacked(verifyingSigner));
         bytes memory deploymentData = abi.encodePacked(type(VerifyingPaymasterProxy).creationCode, uint(uint160(payMasterImp)));
         // solhint-disable-next-line no-inline-assembly

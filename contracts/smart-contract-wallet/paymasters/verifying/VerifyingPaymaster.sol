@@ -29,6 +29,8 @@ contract VerifyingPaymaster is BasePaymaster, Initializable {
     */
     function init(IEntryPoint _entryPoint, address _owner, address _verifyingSigner) public initializer {
         require(owner == address(0), "Already initialized");
+        require(_owner != address(0), "VerifyingPaymaster: owner of paymaster can not be zero address");
+        require(_verifyingSigner != address(0), "VerifyingPaymaster: signer of paymaster can not be zero address");
         require(verifyingSigner == address(0), "Already initialized");
         require(address(entryPoint) == address(0), "Already initialized");
         verifyingSigner = _verifyingSigner;
@@ -39,6 +41,7 @@ contract VerifyingPaymaster is BasePaymaster, Initializable {
     this function will let owner change signer
     */
     function setSigner( address _newVerifyingSigner) external onlyOwner{
+        require(_newVerifyingSigner != address(0), "VerifyingPaymaster: new signer can not be zero address");
         verifyingSigner = _newVerifyingSigner;
     }
 
