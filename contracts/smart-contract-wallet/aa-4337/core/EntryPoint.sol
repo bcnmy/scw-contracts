@@ -80,18 +80,14 @@ contract EntryPoint is IEntryPoint, StakeManager {
     unchecked {
         for (uint256 i; i < opslen; ) {
             _validatePrepayment(i, ops[i], opInfos[i], address(0));
-            unchecked {
-                ++i
-            }
+            ++i;
         }
 
         uint256 collected = 0;
 
         for (uint256 i; i < opslen; ) {
             collected += _executeUserOp(i, ops[i], opInfos[i]);
-            unchecked {
-                ++i
-            }
+            ++i;
         }
 
         _compensate(beneficiary, collected);
@@ -113,7 +109,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         for (uint256 i; i < opasLen; ) {
             totalOps += opsPerAggregator[i].userOps.length;
             unchecked {
-                ++i
+                ++i;
             }
         }
 
@@ -129,7 +125,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
                 _validatePrepayment(opIndex, ops[i], opInfos[opIndex], address(aggregator));
                 opIndex++;
                 unchecked {
-                ++i
+                ++i;
                 }
             }
 
@@ -141,7 +137,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
                 }
             }
             unchecked {
-                ++a
+                ++a;
             }
         }
 
@@ -156,11 +152,11 @@ contract EntryPoint is IEntryPoint, StakeManager {
                 collected += _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
                 opIndex++;
                 unchecked {
-                ++i
+                ++i;
                 }
             }
             unchecked {
-                ++a
+                ++a;
             }
         }
 
