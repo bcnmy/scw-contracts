@@ -346,7 +346,6 @@ contract SmartWalletNoAuth is
     /// @param value Ether value of transaction.
     /// @param data Data payload of transaction.
     /// @param operation Operation type of transaction.
-    /// @return Estimate without refunds and overhead fees (base transaction and payload data gas costs).
     function requiredTxGas(
         address to,
         uint256 value,
