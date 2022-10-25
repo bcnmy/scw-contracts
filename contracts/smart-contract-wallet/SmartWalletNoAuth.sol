@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.12;
 
 import "./libs/LibAddress.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./BaseSmartWallet.sol";
 import "./common/Singleton.sol";
 import "./base/ModuleManager.sol";
@@ -24,7 +24,8 @@ contract SmartWalletNoAuth is
      SecuredTokenTransfer,
      ISignatureValidatorConstants,
      FallbackManager,
-     Initializable
+     Initializable,
+     ReentrancyGuardUpgradeable
     {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -48,8 +49,7 @@ contract SmartWalletNoAuth is
     // Owner storage
     address public owner;
 
-    // @review
-    // uint256 public nonce; //changed to 2D nonce
+    // uint256 public nonce; //changed to 2D nonce below
     mapping(uint256 => uint256) public nonces;
 
     // AA storage
@@ -137,8 +137,7 @@ contract SmartWalletNoAuth is
         return id;
     }
 
-    // TODO 
-    // Review getNonce specific to EntryPoint requirements
+    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -174,8 +173,6 @@ contract SmartWalletNoAuth is
         return a >= b ? a : b;
     }
 
-
-        // @review 2D nonces and args as default batchId 0 is always used
     // Gnosis style transaction with optional repay in native tokens OR ERC20 
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
@@ -245,14 +242,13 @@ contract SmartWalletNoAuth is
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) private returns (uint256 payment) {
+    ) private nonReentrant returns (uint256 payment) {
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            // Review: low level call value vs transfer
             (bool success,) = receiver.call{value: payment}("");
             require(success, "BSA011");
         } else {
@@ -263,7 +259,7 @@ contract SmartWalletNoAuth is
         //console.log("hp %s", requiredGas);
     }
 
-    // @review name
+    //@review naming convention
     function handlePaymentRevert(
         uint256 gasUsed,
         uint256 baseGas,
@@ -277,7 +273,6 @@ contract SmartWalletNoAuth is
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            // Review: low level call value vs transfer
             (bool success,) = receiver.call{value: payment}("");
             require(success, "BSA011");
         } else {
@@ -286,7 +281,6 @@ contract SmartWalletNoAuth is
         }
     }
 
-    // @review
     /**
      * @dev Checks whether the signature provided is valid for the provided data, hash. Will revert otherwise.
      * @param dataHash Hash of the data (could be either a message hash or transaction hash)
@@ -303,8 +297,7 @@ contract SmartWalletNoAuth is
         uint256 i = 0;
         address _signer;
         (v, r, s) = signatureSplit(signatures, i);
-        // review if necessary v = 1
-        // review sig verification from other wallets
+        //review
         if(v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the contract is encoded into r
@@ -359,7 +352,7 @@ contract SmartWalletNoAuth is
         uint256 value,
         bytes calldata data,
         Enum.Operation operation
-    ) external returns (uint256) {
+    ) external {
         // We don't provide an error message here, as we use it to return the estimate
         require(execute(to, value, data, operation, gasleft()));
     }
@@ -437,8 +430,7 @@ contract SmartWalletNoAuth is
 
     // Extra Utils
     
-    // Review: low level call value vs transfer // dest.transfer(amount);
-    function transfer(address payable dest, uint amount) external onlyOwner {
+    function transfer(address payable dest, uint amount) external nonReentrant onlyOwner {
         require(dest != address(0), "this action will burn your funds");
         (bool success,) = dest.call{value:amount}("");
         require(success,"transfer failed");
@@ -465,7 +457,6 @@ contract SmartWalletNoAuth is
 
     // AA implementation
     function _call(address sender, uint value, bytes memory data) internal {
-        // @review linter
         (bool success, bytes memory result) = sender.call{value : value}(data);
         if (!success) {
             // solhint-disable-next-line no-inline-assembly
@@ -476,15 +467,15 @@ contract SmartWalletNoAuth is
     }
     
     //called by entryPoint, only after validateUserOp succeeded.
-    // @review
+    //@review
     //Method is updated to instruct delegate call and emit regular events
     function execFromEntryPoint(address dest, uint value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
         success = execute(dest, value, func, operation, gasLimit);
         require(success, "Userop Failed");
     }
 
-    // review nonce conflict with AA userOp nonce
-    // userOp can omit nonce or have batchId as well!
+    // @notice Nonce space is locked to 0 for AA transactions
+    // userOp can omit nonce or have batchId as well
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
         require(nonces[0]++ == userOp.nonce, "wallet: invalid nonce");
     }
