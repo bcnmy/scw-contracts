@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-//import "@openzeppelin/contracts/proxy/Clones.sol";
 import "./Proxy.sol";
 import "./BaseSmartWallet.sol"; 
 
@@ -9,7 +8,7 @@ contract WalletFactory {
     address immutable public _defaultImpl; 
 
     // EOA + Version tracking
-    string public constant VERSION = "1.0.1"; // Forward enabled refund enhancements
+    string public constant VERSION = "1.0.1";
 
     //states : registry
     mapping (address => bool) public isWalletExist;

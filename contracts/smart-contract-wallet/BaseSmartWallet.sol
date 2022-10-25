@@ -15,7 +15,6 @@ struct Transaction {
         bytes data;
         Enum.Operation operation;
         uint256 targetTxGas;
-        // uint256 batchId;
     }
 
 struct FeeRefund {

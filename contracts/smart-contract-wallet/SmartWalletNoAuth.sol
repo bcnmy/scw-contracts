@@ -483,17 +483,7 @@ contract SmartWalletNoAuth is
         require(success, "Userop Failed");
     }
 
-    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override onlyEntryPoint {
-        _validateSignature(userOp, requestId, aggregator);
-        //during construction, the "nonce" field hold the salt.
-        // if we assert it is zero, then we allow only a single wallet per owner.
-        if (userOp.initCode.length == 0) {
-            _validateAndUpdateNonce(userOp);
-        }
-        _payPrefund(missingWalletFunds);
-    }
-
-     // review nonce conflict with AA userOp nonce
+    // review nonce conflict with AA userOp nonce
     // userOp can omit nonce or have batchId as well!
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
         require(nonces[0]++ == userOp.nonce, "wallet: invalid nonce");

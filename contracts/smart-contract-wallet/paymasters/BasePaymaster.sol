@@ -85,7 +85,6 @@ abstract contract BasePaymaster is IPaymaster {
      * @param actualGasCost - actual gas used so far (without this postOp call).
      */
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal virtual {
-
         (mode,context,actualGasCost); // unused params
         // subclass must override this method if validatePaymasterUserOp returns a context
         revert("must override");
