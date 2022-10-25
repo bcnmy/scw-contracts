@@ -6,7 +6,7 @@ import "./Proxy.sol";
 import "./BaseSmartWallet.sol"; 
 
 contract WalletFactory {
-    address internal _defaultImpl; 
+    address immutable public _defaultImpl; 
 
     // EOA + Version tracking
     string public constant VERSION = "1.0.1"; // Forward enabled refund enhancements

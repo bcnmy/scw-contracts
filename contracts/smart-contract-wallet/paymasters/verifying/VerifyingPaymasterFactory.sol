@@ -6,7 +6,7 @@ import "./VerifyingPaymaster.sol";
 
 contract VerifyingPaymasterFactory {
     // Implementation paymaster contract address 
-    address internal payMasterImp; 
+    address immutable public payMasterImp; 
 
     event VerifyingPaymasterCreated(address indexed proxy, address payMasterImp, IEntryPoint entryPoint, address indexed owner, address indexed verifyingSigner);
 
