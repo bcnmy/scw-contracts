@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.12;
 
 // Generic contract for estimating gas on any target and data
 contract GasEstimator {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.0;
+pragma solidity 0.8.12;
 
 contract Decoder {
     function decode(address to, bytes memory data) public returns (bytes memory) {

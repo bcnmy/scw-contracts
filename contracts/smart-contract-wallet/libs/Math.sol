@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // OpenZeppelin Contracts (last updated v4.7.0) (utils/math/Math.sol)
 
-pragma solidity ^0.8.0;
+pragma solidity 0.8.12;
 
 /**
  * @dev Standard math utilities missing in the Solidity language.

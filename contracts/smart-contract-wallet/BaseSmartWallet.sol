@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.0;
+pragma solidity 0.8.12;
 
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
@@ -48,8 +48,8 @@ abstract contract BaseSmartWallet is IWallet {
     /**
      * Validate user's signature and nonce.
      */
-    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external virtual {
-        // _requireFromEntryPoint();
+    function validateUserOp(UserOperation calldata userOp, bytes32 requestId, address aggregator, uint256 missingWalletFunds) external override {
+        _requireFromEntryPoint();
         _validateSignature(userOp, requestId, aggregator);
         //during construction, the "nonce" field hold the salt.
         // if we assert it is zero, then we allow only a single wallet per owner.
@@ -57,6 +57,13 @@ abstract contract BaseSmartWallet is IWallet {
             _validateAndUpdateNonce(userOp);
         }
         _payPrefund(missingWalletFunds);
+    }
+
+    /**
+     * ensure the request comes from the known entrypoint.
+     */
+    function _requireFromEntryPoint() internal virtual view {
+        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
     }
 
     /**
