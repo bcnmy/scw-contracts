@@ -140,6 +140,6 @@ abstract contract BasePaymaster is IPaymaster {
 
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
-        require(msg.sender == address(entryPoint));
+        require(_msgSender() == address(entryPoint));
     }
 }
