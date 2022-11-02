@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.12;
 
-
 /* solhint-disable reason-string */
 
 import "../aa-4337/interfaces/IPaymaster.sol";
@@ -13,8 +12,6 @@ import "../aa-4337/interfaces/IEntryPoint.sol";
  * validates that the postOp is called only by the entryPoint
  */
 abstract contract BasePaymaster is IPaymaster {
-
-
     IEntryPoint public entryPoint;
 
     /**
@@ -27,7 +24,12 @@ abstract contract BasePaymaster is IPaymaster {
     // maintain owner address
     address public owner;
 
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
+    mapping(address => uint256) dappGasTankBalances;
+
+    event OwnershipTransferred(
+        address indexed previousOwner,
+        address indexed newOwner
+    );
 
     function _msgSender() internal view virtual returns (address) {
         return msg.sender;
@@ -42,7 +44,6 @@ abstract contract BasePaymaster is IPaymaster {
     }
 
     function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
-        require(address(_entryPoint) != address(0), "BasePaymaster: new entry point can not be zero address");
         entryPoint = _entryPoint;
     }
 
@@ -51,7 +52,10 @@ abstract contract BasePaymaster is IPaymaster {
      * Can only be called by the current owner.
      */
     function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
+        require(
+            newOwner != address(0),
+            "Ownable: new owner is the zero address"
+        );
         _transferOwnership(newOwner);
     }
 
@@ -65,9 +69,17 @@ abstract contract BasePaymaster is IPaymaster {
         emit OwnershipTransferred(oldOwner, newOwner);
     }
 
-    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 requestId, uint256 maxCost) external virtual override returns (bytes memory context);
+    function validatePaymasterUserOp(
+        UserOperation calldata userOp,
+        bytes32 requestId,
+        uint256 maxCost
+    ) external virtual override returns (bytes memory context);
 
-    function postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) external override {
+    function postOp(
+        PostOpMode mode,
+        bytes calldata context,
+        uint256 actualGasCost
+    ) external override {
         _requireFromEntryPoint();
         _postOp(mode, context, actualGasCost);
     }
@@ -84,8 +96,15 @@ abstract contract BasePaymaster is IPaymaster {
      * @param context - the context value returned by validatePaymasterUserOp
      * @param actualGasCost - actual gas used so far (without this postOp call).
      */
-    function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal virtual {
-        (mode,context,actualGasCost); // unused params
+    function _postOp(
+        PostOpMode mode,
+        bytes calldata context,
+        uint256 actualGasCost
+    ) internal virtual {
+        (mode, context, actualGasCost); // unused params
+        // Extract dappIdentifier from context
+        dappGasTankBalances[dappIdentifier] -= actualGasCost;
+
         // subclass must override this method if validatePaymasterUserOp returns a context
         revert("must override");
     }
@@ -93,8 +112,9 @@ abstract contract BasePaymaster is IPaymaster {
     /**
      * add a deposit for this paymaster, used for paying for transaction fees
      */
-    function deposit() public payable {
-        entryPoint.depositTo{value : msg.value}(address(this));
+    function deposit(address dappIdentifier) public payable {
+        dappGasTankBalances[dappIdentifier] += msg.value;
+        entryPoint.depositTo{value: msg.value}(address(this));
     }
 
     /**
@@ -102,16 +122,23 @@ abstract contract BasePaymaster is IPaymaster {
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
-        entryPoint.withdrawTo(withdrawAddress, amount);
+    function withdrawTo(address payable withdrawAddress, uint256 amount)
+        public
+    {
+        uint256 currentBalance = dappGasTankBalances[msg.sender];
+        require(currentBalance >= amount, "Insufficinet amount to withdraw");
+        entryPoint.withdrawTo(payable(address(this)), amount);
     }
+
     /**
      * add stake for this paymaster.
      * This method can also carry eth value to add to the current stake.
      * @param extraUnstakeDelaySec - set the stake to the entrypoint's default unstakeDelay plus this value.
      */
     function addStake(uint32 extraUnstakeDelaySec) external payable onlyOwner {
-        entryPoint.addStake{value : msg.value}(entryPoint.unstakeDelaySec() + extraUnstakeDelaySec);
+        entryPoint.addStake{value: msg.value}(
+            entryPoint.unstakeDelaySec() + extraUnstakeDelaySec
+        );
     }
 
     /**
