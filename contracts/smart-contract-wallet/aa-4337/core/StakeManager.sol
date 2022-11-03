@@ -123,7 +123,7 @@ abstract contract StakeManager is IStakeManager {
      */
     function withdrawTo(address payable withdrawAddress, uint256 withdrawAmount) external {
         require(withdrawAddress != address(0), "StakeManager: can not withdraw to zero address");
-        DepositInfo memory info = deposits[msg.sender];
+        DepositInfo storage info = deposits[msg.sender];
         require(withdrawAmount <= info.deposit, "Withdraw amount too large");
         info.deposit = uint112(info.deposit - withdrawAmount);
         emit Withdrawn(msg.sender, withdrawAddress, withdrawAmount);
