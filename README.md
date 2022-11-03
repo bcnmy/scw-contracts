@@ -23,8 +23,7 @@ These smart wallets have a single owner (1/1 Multisig) and are designed in such 
 All the contracts in this section are to be reviewed. Any contracts not in this list are to be ignored for this contest.
 
 #### BaseSmartWallet.sol ()
-
-
+Abstract contract that implements EIP4337 IWallet interface 
 
 # How to run the project
 
