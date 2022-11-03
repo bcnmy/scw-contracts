@@ -4,6 +4,6 @@ module.exports = {
   'references', 
   'smart-contract-wallet/test',
   'smart-contract-wallet/SmartWalletNoAuth.sol',
-  'smart-contract-wallet/utils'
+  'smart-contract-wallet/utils',
 ],
 };
