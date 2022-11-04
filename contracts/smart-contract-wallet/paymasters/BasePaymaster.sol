@@ -27,8 +27,6 @@ abstract contract BasePaymaster is IPaymaster {
     // maintain owner address
     address public owner;
 
-    mapping(address => uint256) public dappGasTankBalances;
-
     event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     function _msgSender() internal view virtual returns (address) {
@@ -92,34 +90,7 @@ abstract contract BasePaymaster is IPaymaster {
         revert("must override");
     }
 
-    /**
-     * add a deposit for this paymaster, used for paying for transaction fees
-     */
-    /*function deposit() public payable {
-        entryPoint.depositTo{value : msg.value}(address(this));
-    }*/
 
-    /**
-     * add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
-     */
-    // @review can possibly rename this method to depositFor and keep the above one
-    function deposit(address paymasterId) public payable {
-        require(paymasterId != address(0), "can not be zero address");
-        dappGasTankBalances[paymasterId] += msg.value;
-        entryPoint.depositTo{value : msg.value}(address(this));
-    }
-
-    /**
-     * withdraw value from the deposit
-     * @param withdrawAddress target to send to
-     * @param amount to withdraw
-     */
-    function withdrawTo(address payable withdrawAddress, uint256 amount) public {
-        uint256 currentBalance = dappGasTankBalances[msg.sender];
-        require(amount <= currentBalance, "Insufficinet amount to withdraw");
-        dappGasTankBalances[msg.sender] -= amount;
-        entryPoint.withdrawTo(withdrawAddress, amount);
-    }
     /**
      * add stake for this paymaster.
      * This method can also carry eth value to add to the current stake.

@@ -3,11 +3,9 @@ pragma solidity 0.8.12;
 
 /* solhint-disable reason-string */
 
-import "../BasePaymaster.sol";
+import "../../BasePaymaster.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "../PaymasterHelpers.sol";
-// import "../samples/Signatures.sol";
 
 
 /**
@@ -22,12 +20,7 @@ import "../PaymasterHelpers.sol";
 contract VerifyingPaymaster is BasePaymaster, Initializable {
 
     using ECDSA for bytes32;
-    // possibly //  using Signatures for UserOperation;
     using UserOperationLib for UserOperation;
-    using PaymasterHelpers for UserOperation;
-    using PaymasterHelpers for bytes;
-    using PaymasterHelpers for PaymasterData;
-
 
     address public verifyingSigner;
 
@@ -44,6 +37,23 @@ contract VerifyingPaymaster is BasePaymaster, Initializable {
         entryPoint = _entryPoint;
         owner = _owner;
     }
+
+    /**
+     * add a deposit for this paymaster, used for paying for transaction fees
+     */
+    function deposit() public payable {
+        entryPoint.depositTo{value : msg.value}(address(this));
+    }
+
+    /**
+     * withdraw value from the deposit
+     * @param withdrawAddress target to send to
+     * @param amount to withdraw
+     */
+    function withdrawTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
+        entryPoint.withdrawTo(withdrawAddress, amount);
+    }
+    
     /**
     this function will let owner change signer
     */
@@ -82,53 +92,18 @@ contract VerifyingPaymaster is BasePaymaster, Initializable {
     function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*requestId*/, uint256 requiredPreFund)
     external view override returns (bytes memory context) {
         (requiredPreFund);
+
         bytes32 hash = getHash(userOp);
-
-        
-        // finally sig
-        // get signatureData and make SingatureValue a struct if we use individual signers for paymasterId
-        // bytes memory signatureValue = op.decodePaymasterSignature();
-
-       
         bytes calldata paymasterAndData = userOp.paymasterAndData;
-        // current sig temp 
-        bytes memory currentSig = paymasterAndData[20:];
-
         uint256 sigLength = paymasterAndData.length - 20;
         //ECDSA library supports both 64 and 65-byte long signatures.
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
         require(sigLength == 64 || sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
-        require(verifyingSigner == hash.toEthSignedMessageHash().recover(currentSig), "VerifyingPaymaster: wrong signature");
+        require(verifyingSigner == hash.toEthSignedMessageHash().recover(paymasterAndData[20:]), "VerifyingPaymaster: wrong signature");
 
-        // post signature verification we pass on the context!
-        // todo : uncomment
-        // PaymasterData memory paymasterData = op.decodePaymasterData();
-
-        // final
-        // now we pass on above paymasterData so postOp can make use of it
-        // return op.paymasterContext(paymasterData);
-
-        // current
+        //no need for other on-chain validation: entire UserOp should have been checked
+        // by the external service prior to signing it.
         return "";
     }
-
-    /**
-   * @dev Executes the paymaster's payment conditions
-   * @param mode tells whether the op succeeded, reverted, or if the op succeeded but cause the postOp to revert
-   * @param context payment conditions signed by the paymaster in `validatePaymasterUserOp`
-   * @param actualGasCost amount to be paid to the entry point in wei
-   */
-  function _postOp(
-    PostOpMode mode,
-    bytes calldata context,
-    uint256 actualGasCost
-  ) internal virtual override {
-    (mode);
-    // (mode,context,actualGasCost); // unused params
-    // PaymasterContext memory data = context.decodePaymasterContext();
-    address extractedPaymasterId = address(0); // temp  // should come from data
-    dappGasTankBalances[extractedPaymasterId] -= actualGasCost; // review
-    // gasTankBalances accounting
-  }
 
 }
