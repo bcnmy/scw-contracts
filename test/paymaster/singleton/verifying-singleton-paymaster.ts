@@ -58,6 +58,7 @@ describe("EntryPoint with VerifyingPaymaster", function () {
   let smartWalletImp: SmartWallet;
   let walletFactory: WalletFactory;
   let callBackHandler: DefaultCallbackHandler;
+  const abi = ethers.utils.defaultAbiCoder;
 
   before(async function () {
     ethersSigner = await ethers.getSigners();
@@ -114,40 +115,83 @@ describe("EntryPoint with VerifyingPaymaster", function () {
     console.log("deposited state ", resultSet);
   });
 
+  async function getUserOpWithPaymasterInfo(paymasterId: string) {
+    const userOp1 = await fillAndSign(
+      {
+        sender: walletAddress,
+      },
+      walletOwner,
+      entryPoint
+    );
+
+    const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+    const sig = await offchainSigner.signMessage(arrayify(hash));
+    const paymasterAndData = abi.encode(
+      ["address", "address", "bytes"],
+      [paymasterAddress, paymasterId, sig]
+    );
+    return await fillAndSign(
+      {
+        ...userOp1,
+        paymasterAndData,
+      },
+      walletOwner,
+      entryPoint
+    );
+  }
+
   describe("#validatePaymasterUserOp", () => {
-    it("Should validate user op successfully", async () => {
+    it("Should Fail when there is no deposit for paymaster id", async () => {
       const paymasterId = await depositorSigner.getAddress();
-      console.log("Paymaster ID ", paymasterId);
-
-      const userOp1 = await fillAndSign(
-        {
-          sender: walletAddress,
-        },
-        walletOwner,
-        entryPoint
-      );
-      console.log("user op is ", userOp1);
-      const hash = await verifyingSingletonPaymaster.getHash(userOp1);
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      console.log("signature is ", sig);
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([paymasterAddress, paymasterId, sig]),
-        },
-        walletOwner,
-        entryPoint
-      );
-      await verifyingSingletonPaymaster.validatePaymasterUserOp(
-        userOp,
-        ethers.utils.hexZeroPad("0x1234", 32),
-        1029
-      );
-
-      // take signature of paymaster signer here and prepare the final user OP
-
-      console.log(userOp);
+      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
+      await expect(
+        verifyingSingletonPaymaster.validatePaymasterUserOp(
+          userOp,
+          ethers.utils.hexZeroPad("0x1234", 32),
+          1029
+        )
+      ).to.be.revertedWith("Insufficient balance for paymaster id");
     });
+
+    it("Should Fail when deposit for paymaster id is not enough", async () => {
+      // Do the deposit on behalf of paymaster id
+      const paymasterId = await depositorSigner.getAddress();
+      const depositAmount = 1028;
+      const requiredFundsInPaymaster = 1029;
+      await verifyingSingletonPaymaster.deposit(paymasterId, {
+        value: depositAmount,
+      });
+
+      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
+      await expect(
+        verifyingSingletonPaymaster.validatePaymasterUserOp(
+          userOp,
+          ethers.utils.hexZeroPad("0x1234", 32),
+          requiredFundsInPaymaster
+        )
+      ).to.be.revertedWith("Insufficient balance for paymaster id");
+    });
+
+    it("Should validate user op successfully", async () => {
+      // Do the deposit on behalf of paymaster id
+      const paymasterId = await depositorSigner.getAddress();
+      const depositAmount = 1030;
+      const requiredFundsInPaymaster = 1029;
+      await verifyingSingletonPaymaster.deposit(paymasterId, {
+        value: depositAmount,
+      });
+
+      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
+      const paymasterContext =
+        await verifyingSingletonPaymaster.validatePaymasterUserOp(
+          userOp,
+          ethers.utils.hexZeroPad("0x1234", 32),
+          requiredFundsInPaymaster
+        );
+      const paymasterIdFromContext = abi.decode(["address"], paymasterContext);
+      await expect(paymasterIdFromContext[0]).to.be.eq(paymasterId);
+    });
+
     //   it("should reject on no signature", async () => {
     //     const userOp = await fillAndSign(
     //       {
