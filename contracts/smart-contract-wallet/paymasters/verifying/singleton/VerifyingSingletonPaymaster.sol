@@ -3,6 +3,7 @@ pragma solidity 0.8.12;
 
 /* solhint-disable reason-string */
 
+import "hardhat/console.sol";
 import "../../BasePaymaster.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -98,32 +99,15 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
         (requiredPreFund);
         bytes32 hash = getHash(userOp);
 
-        
-        // finally sig
-        // get signatureData and make SingatureValue a struct if we use individual signers for paymasterId
-        // bytes memory signatureValue = op.decodePaymasterSignature();
+        PaymasterData memory paymasterData = userOp.decodePaymasterData();
+        uint256 sigLength = paymasterData.signatureLength;
 
-       
-        bytes calldata paymasterAndData = userOp.paymasterAndData;
-        // current sig temp 
-        bytes memory currentSig = paymasterAndData[20:];
-
-        uint256 sigLength = paymasterAndData.length - 20;
         //ECDSA library supports both 64 and 65-byte long signatures.
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
         require(sigLength == 64 || sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
-        require(verifyingSigner == hash.toEthSignedMessageHash().recover(currentSig), "VerifyingPaymaster: wrong signature");
-
-        // post signature verification we pass on the context!
-        // todo : uncomment
-        // PaymasterData memory paymasterData = op.decodePaymasterData();
-
-        // final
-        // now we pass on above paymasterData so postOp can make use of it
-        // return op.paymasterContext(paymasterData);
-
-        // current
-        return "";
+        require(verifyingSigner == hash.toEthSignedMessageHash().recover(paymasterData.signature), "VerifyingPaymaster: wrong signature");
+        require(requiredPreFund >= paymasterIdBalances[paymasterData.paymasterId], "Insufficient balance for paymaster id");
+        return userOp.paymasterContext(paymasterData);
     }
 
     /**
@@ -139,10 +123,9 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
   ) internal virtual override {
     (mode);
     // (mode,context,actualGasCost); // unused params
-    // PaymasterContext memory data = context.decodePaymasterContext();
-    address extractedPaymasterId = address(0); // temp  // should come from data
-    paymasterIdBalances[extractedPaymasterId] -= actualGasCost; // review
-    // gasTankBalances accounting
+    PaymasterContext memory data = context.decodePaymasterContext();
+    address extractedPaymasterId = data.paymasterId;
+    paymasterIdBalances[extractedPaymasterId] -= actualGasCost;
   }
 
 }

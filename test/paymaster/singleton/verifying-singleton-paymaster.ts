@@ -119,37 +119,29 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       const paymasterId = await depositorSigner.getAddress();
       console.log("Paymaster ID ", paymasterId);
 
-      const userOp = await fillUserOp(
+      const userOp1 = await fillAndSign(
         {
           sender: walletAddress,
-          paymasterAndData: hexConcat([paymasterAddress, paymasterId]),
         },
+        walletOwner,
         entryPoint
       );
-
-      const messageToSign = ethers.utils.defaultAbiCoder.encode(
-        [
-          "address",
-          "uint256",
-          "bytes",
-          "bytes",
-          "uint256",
-          "uint256",
-          "uint256",
-          "uint256",
-          "uint256",
-        ],
-        [
-          userOp.sender,
-          userOp.nonce,
-          userOp.initCode,
-          userOp.callData,
-          userOp.callGasLimit,
-          userOp.verificationGasLimit,
-          userOp.preVerificationGas,
-          userOp.maxFeePerGas,
-          userOp.maxPriorityFeePerGas,
-        ]
+      console.log("user op is ", userOp1);
+      const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+      const sig = await offchainSigner.signMessage(arrayify(hash));
+      console.log("signature is ", sig);
+      const userOp = await fillAndSign(
+        {
+          ...userOp1,
+          paymasterAndData: hexConcat([paymasterAddress, paymasterId, sig]),
+        },
+        walletOwner,
+        entryPoint
+      );
+      await verifyingSingletonPaymaster.validatePaymasterUserOp(
+        userOp,
+        ethers.utils.hexZeroPad("0x1234", 32),
+        1029
       );
 
       // take signature of paymaster signer here and prepare the final user OP
