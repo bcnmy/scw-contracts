@@ -126,10 +126,8 @@ describe("EntryPoint with VerifyingPaymaster", function () {
 
     const hash = await verifyingSingletonPaymaster.getHash(userOp1);
     const sig = await offchainSigner.signMessage(arrayify(hash));
-    const paymasterAndData = abi.encode(
-      ["address", "address", "bytes"],
-      [paymasterAddress, paymasterId, sig]
-    );
+    const paymasterData = abi.encode(["address", "bytes"], [paymasterId, sig]);
+    const paymasterAndData = hexConcat([paymasterAddress, paymasterData]);
     return await fillAndSign(
       {
         ...userOp1,
@@ -191,6 +189,26 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       const paymasterIdFromContext = abi.decode(["address"], paymasterContext);
       await expect(paymasterIdFromContext[0]).to.be.eq(paymasterId);
     });
+
+    /* it("Should validate simulation from entry point", async () => {
+      // Do the deposit on behalf of paymaster id
+      const paymasterId = await depositorSigner.getAddress();
+      const depositAmount = 1030;
+      const requiredFundsInPaymaster = 1029;
+      await verifyingSingletonPaymaster.deposit(paymasterId, {
+        value: depositAmount,
+      });
+
+      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
+      const paymasterContext =
+        await verifyingSingletonPaymaster.validatePaymasterUserOp(
+          userOp,
+          ethers.utils.hexZeroPad("0x1234", 32),
+          requiredFundsInPaymaster
+        );
+      const paymasterIdFromContext = abi.decode(["address"], paymasterContext);
+      await expect(paymasterIdFromContext[0]).to.be.eq(paymasterId);
+    }); */
 
     //   it("should reject on no signature", async () => {
     //     const userOp = await fillAndSign(
