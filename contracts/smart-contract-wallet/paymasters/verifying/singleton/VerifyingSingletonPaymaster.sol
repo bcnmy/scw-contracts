@@ -2,8 +2,6 @@
 pragma solidity 0.8.12;
 
 /* solhint-disable reason-string */
-
-import "hardhat/console.sol";
 import "../../BasePaymaster.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -106,7 +104,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
         require(sigLength == 64 || sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
         require(verifyingSigner == hash.toEthSignedMessageHash().recover(paymasterData.signature), "VerifyingPaymaster: wrong signature");
-        require(requiredPreFund >= paymasterIdBalances[paymasterData.paymasterId], "Insufficient balance for paymaster id");
+        require(requiredPreFund <= paymasterIdBalances[paymasterData.paymasterId], "Insufficient balance for paymaster id");
         return userOp.paymasterContext(paymasterData);
     }
 
