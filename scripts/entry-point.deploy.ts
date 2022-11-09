@@ -14,8 +14,8 @@ const options = { gasLimit: 7000000, gasPrice: 70000000000 };
 async function main() {
   const provider = ethers.provider;
 
-  const UNSTAKE_DELAY_SEC = 100;
-  const PAYMASTER_STAKE = ethers.utils.parseEther("1");
+  const UNSTAKE_DELAY_SEC = 100; // update to very high value
+  const PAYMASTER_STAKE = ethers.utils.parseEther("1"); // TODO : update to at least 1000$ Note: depends on chain!
 
   const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
   if (!isFactoryDeployed) {
