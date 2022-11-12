@@ -86,23 +86,6 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
     },
-    bsc: {
-      url: process.env.BSC_URL || "",
-      chainId: 56,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
-    bsc_testnet: {
-      url: process.env.BSC_TESTNET_URL || "",
-      chainId: 97,
-      gas: 5000000,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
     polygon_mumbai: {
       url: process.env.POLYGON_MUMBAI_URL || "",
       chainId: 80001,
@@ -127,8 +110,56 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
     },
+    moonbeamTest: {
+      url: "https://rpc.api.moonbase.moonbeam.network",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 1287,
+    },
+    avalancheTest: {
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 43113,
+    },
+    avalancheMain: {
+      url: "https://api.avax.network/ext/bc/C/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 43114,
+    },
+    arbitrumGoerli: {
+      url: "https://goerli-rollup.arbitrum.io/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 421613,
+    },
+    arbitrumTest: {
+      url: "https://rinkeby.arbitrum.io/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 421611,
+    },
+    arbitrumMain: {
+      url: "https://arb1.arbitrum.io/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 42161,
+    },
     bnb_testnet: {
-      url: "https://data-seed-prebsc-1-s1.binance.org:8545/",
+      url: "https://wandering-broken-tree.bsc-testnet.quiknode.pro/7992da20f9e4f97c2a117bea9af37c1c266f63ec/",
       chainId: 97,
       accounts:
         process.env.PRIVATE_KEY !== undefined
