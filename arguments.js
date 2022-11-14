@@ -1,5 +1,5 @@
 // for entrypoint verification
-module.exports = ["1000000000000000000", 100];
+module.exports = ["1000000000000000000", 86400];
 
 // Singleton paymaster
 /* module.exports = [
