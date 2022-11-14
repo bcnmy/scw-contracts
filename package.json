@@ -1,7 +1,7 @@
 {
-  "name": "scw-contracts",
+  "name": "@biconomy/smart-account-contracts",
   "version": "1.0.0",
-  "description": "",
+  "description": "SCW contracts for Biconomy SDK",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
