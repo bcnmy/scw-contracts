@@ -1,5 +1,5 @@
 {
-  "name": "@biconomy/smart-account-contracts",
+  "name": "@biconomy/wallet-contracts",
   "version": "1.0.1",
   "description": "SCW contracts for Biconomy SDK",
   "main": "index.js",
