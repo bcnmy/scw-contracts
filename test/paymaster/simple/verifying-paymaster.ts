@@ -1,4 +1,6 @@
-import { Create2Factory } from "../../src/Create2Factory";
+/* eslint-disable node/no-missing-import */
+/* eslint-disable camelcase */
+import { Create2Factory } from "../../../src/Create2Factory";
 import { expect } from "chai";
 import { ethers } from "hardhat";
 
@@ -15,9 +17,9 @@ import {
   WalletFactory,
   WalletFactory__factory,
   EntryPoint__factory,
-} from "../../typechain";
-import { AddressZero } from "./testutils";
-import { fillAndSign } from "../utils/userOp";
+} from "../../../typechain";
+import { AddressZero } from "../../smart-wallet/testutils";
+import { fillAndSign } from "../../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { BigNumber, BigNumberish, Contract, Signer } from "ethers";
 

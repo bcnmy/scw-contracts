@@ -3,7 +3,7 @@ pragma solidity 0.8.12;
 
 /* solhint-disable reason-string */
 
-import "../BasePaymaster.sol";
+import "../../BasePaymaster.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 
@@ -37,6 +37,23 @@ contract VerifyingPaymaster is BasePaymaster, Initializable {
         entryPoint = _entryPoint;
         owner = _owner;
     }
+
+    /**
+     * add a deposit for this paymaster, used for paying for transaction fees
+     */
+    function deposit() public payable {
+        entryPoint.depositTo{value : msg.value}(address(this));
+    }
+
+    /**
+     * withdraw value from the deposit
+     * @param withdrawAddress target to send to
+     * @param amount to withdraw
+     */
+    function withdrawTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
+        entryPoint.withdrawTo(withdrawAddress, amount);
+    }
+    
     /**
     this function will let owner change signer
     */
