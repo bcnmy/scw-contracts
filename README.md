@@ -67,8 +67,15 @@ Manages hooks to react to receiving tokens
 #### MultiSend.sol (35 sloc)
 Allows to batch multiple transactions into one. Relayer -> Smart Wallet - > MultiSend -> Dapp contract / contracts
 
-#### MultiSendCallOnly.sol ()
+#### MultiSendCallOnly.sol (30 sloc)
 MultiSend functionality but reverts if a transaction tries to do delegatecall
+
+#### VerifyingSingletonPaymaster.sol (74 sloc)
+ A paymaster that uses external service to decide whether to pay for the UserOp. The paymaster trusts an external signer to sign the transaction. The calling user must pass the UserOp to that external signer first, which performs whatever off-chain verification before signing the UserOp. Singleton Paymaster is biconomy Paymaster which can be used by all the Dapps and manages gas accounting for their corresponding paymasterId. 
+
+ #### PaymasterHelpers.sol ()
+ Library useful for decoding paymaster data and context
+
 # How to run the project
 
 This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
