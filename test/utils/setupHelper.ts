@@ -1,6 +1,7 @@
 import hre from "hardhat";
 import { Wallet, Contract } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
+import { SignerWithAddress } from "hardhat-deploy-ethers/signers";
 const solc = require("solc");
 
 export const compile = async (source: string) => {
@@ -36,7 +37,7 @@ export const compile = async (source: string) => {
 };
 
 export const deployContract = async (
-  deployer: Wallet,
+  deployer: Wallet | SignerWithAddress,
   source: string
 ): Promise<Contract> => {
   const output = await compile(source);

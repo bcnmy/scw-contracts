@@ -366,7 +366,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     console.log(requiredTxGasData);
 
-    const [user1] = waffle.provider.getWallets();
+    const [user1] = await ethers.getSigners();
     const decoder = await deployContract(user1, decoderSource);
 
     const result = await decoder.callStatic.decode(
@@ -525,7 +525,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     console.log(requiredTxGasData);
 
-    const [user1] = waffle.provider.getWallets();
+    const [user1] = await ethers.getSigners();
     const decoder = await deployContract(user1, decoderSource);
 
     const result = await decoder.callStatic.decode(

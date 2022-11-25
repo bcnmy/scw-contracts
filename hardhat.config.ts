@@ -26,7 +26,8 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
-  // defaultNetwork: "ganache",
+  // defaultNetwork: "localhost", // ganache
+  // defaultNetwork: "ganache", // localhost
   solidity: {
     compilers: [
       {
@@ -55,11 +56,20 @@ const config: HardhatUserConfig = {
       url: "http://localhost:8545",
       accounts: {
         mnemonic:
-          "garbage miracle journey siren inch method pulse learn month grid frame business",
+          "sheriff creek chronic start chapter normal section home swing busy amount mind",
         path: "m/44'/60'/0'/0",
         initialIndex: 0,
         count: 20,
       },
+    },
+    hardhat: {
+      chainId: 31337,
+    },
+    localhost: {
+      // accounts: {
+      //   mnemonic: MNEMONIC,
+      // },
+      chainId: 31337,
     },
     ropsten: {
       url: process.env.ROPSTEN_URL || "",
@@ -226,7 +236,7 @@ const config: HardhatUserConfig = {
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: process.env.POLYGONSCAN_API_KEY,
   },
 };
 
