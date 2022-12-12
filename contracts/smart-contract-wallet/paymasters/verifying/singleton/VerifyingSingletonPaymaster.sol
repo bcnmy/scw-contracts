@@ -7,7 +7,6 @@ import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
 import "@openzeppelin/contracts/utils/Address.sol";
 import "../../PaymasterHelpers.sol";
-// import "../samples/Signatures.sol";
 
 
 /**
@@ -44,7 +43,11 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      * add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
      */
     function deposit(address paymasterId) public payable {
-        require(!Address.isContract(paymasterId), "Paymaster Id can not be smart contract address");
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            let size := extcodesize(paymasterId)
+            if gt(size, 0) { revert(0, 0) }
+        }
         require(paymasterId != address(0), "Paymaster Id can not be zero address");
         paymasterIdBalances[paymasterId] += msg.value;
         entryPoint.depositTo{value : msg.value}(address(this));
