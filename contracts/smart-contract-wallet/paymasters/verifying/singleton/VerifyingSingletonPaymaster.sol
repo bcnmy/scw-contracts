@@ -34,6 +34,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
     constructor(IEntryPoint _entryPoint, address _owner, address _verifyingSigner) {
         require(_owner != address(0), "VerifyingPaymaster: owner of paymaster can not be zero address");
         require(_verifyingSigner != address(0), "VerifyingPaymaster: signer of paymaster can not be zero address");
+        require(_entryPoint != address(0), "VerifyingPaymaster: Entrypoint can not be zero address");
         verifyingSigner = _verifyingSigner;
         entryPoint = _entryPoint;
         owner = _owner;
