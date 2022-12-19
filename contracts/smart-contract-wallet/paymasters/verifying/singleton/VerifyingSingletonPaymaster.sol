@@ -32,25 +32,23 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
 
     address public verifyingSigner;
 
-    constructor(IEntryPoint _entryPoint, address _owner, address _verifyingSigner) {
-        require(_owner != address(0), "VerifyingPaymaster: owner of paymaster can not be zero address");
+    constructor(IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_entryPoint) {
+        require(address(_entryPoint) != address(0), "VerifyingPaymaster: Entrypoint can not be zero address");
         require(_verifyingSigner != address(0), "VerifyingPaymaster: signer of paymaster can not be zero address");
         verifyingSigner = _verifyingSigner;
-        entryPoint = _entryPoint;
-        owner = _owner;
     }
 
     /**
      * add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
      */
-    function deposit(address paymasterId) public payable {
+    function depositFor(address paymasterId) public payable {
         require(!Address.isContract(paymasterId), "Paymaster Id can not be smart contract address");
         require(paymasterId != address(0), "Paymaster Id can not be zero address");
         paymasterIdBalances[paymasterId] += msg.value;
         entryPoint.depositTo{value : msg.value}(address(this));
     }
 
-    function withdrawTo(address payable withdrawAddress, uint256 amount) public {
+    function withdrawTo(address payable withdrawAddress, uint256 amount) public override {
         uint256 currentBalance = paymasterIdBalances[msg.sender];
         require(amount <= currentBalance, "Insufficient amount to withdraw");
         paymasterIdBalances[msg.sender] -= amount;
@@ -92,8 +90,8 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      * verify our external signer signed this request.
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
      */
-    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*requestId*/, uint256 requiredPreFund)
-    external view override returns (bytes memory context) {
+    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
+    external view override returns (bytes memory context, uint256 deadline) {
         (requiredPreFund);
         bytes32 hash = getHash(userOp);
 
@@ -105,7 +103,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
         require(sigLength == 64 || sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
         require(verifyingSigner == hash.toEthSignedMessageHash().recover(paymasterData.signature), "VerifyingPaymaster: wrong signature");
         require(requiredPreFund <= paymasterIdBalances[paymasterData.paymasterId], "Insufficient balance for paymaster id");
-        return userOp.paymasterContext(paymasterData);
+        return (userOp.paymasterContext(paymasterData), 0);
     }
 
     /**

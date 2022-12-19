@@ -7,7 +7,6 @@ import {
   TestToken,
   MultiSend,
   StorageSetter,
-  WhitelistModule,
   DefaultCallbackHandler,
 } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -39,9 +38,7 @@ describe("Base Wallet Functionality", function () {
   let charlie: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const UNSTAKE_DELAY_SEC = 100;
-  const VERSION = '1.0.1'
-  const PAYMASTER_STAKE = ethers.utils.parseEther("1");
+  const VERSION = '1.0.2'
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 
@@ -62,21 +59,18 @@ describe("Base Wallet Functionality", function () {
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-    const BaseImplementation = await ethers.getContractFactory("SmartWallet");
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy();
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
 
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
+    const WalletFactory = await ethers.getContractFactory("SmartAccountFactory");
     walletFactory = await WalletFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    entryPoint = await EntryPoint.deploy(
-      PAYMASTER_STAKE,
-      UNSTAKE_DELAY_SEC
-    );
+    entryPoint = await EntryPoint.deploy();
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
@@ -120,11 +114,11 @@ describe("Base Wallet Functionality", function () {
         0
       )
     )
-      .to.emit(walletFactory, "WalletCreated")
+      .to.emit(walletFactory, "SmartAccountCreated")
       .withArgs(expected, baseImpl.address, owner, VERSION, 0);
 
     userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartWallet.sol:SmartWallet",
+      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expected
     );
 
@@ -159,7 +153,7 @@ describe("Base Wallet Functionality", function () {
     const data = encodeTransfer(bob, ethers.utils.parseEther("10").toString());
     const tx = await userSCW
       .connect(accounts[0])
-      .exec(token.address, ethers.utils.parseEther("0"), data);
+      .execute(token.address, ethers.utils.parseEther("0"), data);
     const receipt = await tx.wait();
     console.log(receipt.transactionHash);
 
@@ -172,7 +166,7 @@ describe("Base Wallet Functionality", function () {
     );
     await userSCW
       .connect(accounts[0])
-      .execBatch([token.address, token.address], [data, data2]);
+      .executeBatch([token.address, token.address], [data, data2]);
 
     expect(await token.balanceOf(bob)).to.equal(ethers.utils.parseEther("20"));
     expect(await token.balanceOf(charlie)).to.equal(
@@ -382,101 +376,8 @@ describe("Base Wallet Functionality", function () {
   // execTransaction from relayer - personal Sign + EIP712 sign (without refund) -> Done
   // above with refund in eth and in erc20 [ Need gas estimation utils! #Review] -> Done
 
-  it("adding modules in authorised way", async function () {
-    const SampleModule = await ethers.getContractFactory("WhitelistModule");
-    const sampleModule: WhitelistModule = await SampleModule.deploy(owner);
-    console.log("Test module deployed at ", sampleModule.address);
 
-    // Owner itself can not directly add modules
-    await expect(
-      userSCW.connect(accounts[0]).enableModule(sampleModule.address)
-    ).to.be.reverted;
 
-    // Modules can only be enabled via safe transaction
-    await expect(
-      executeContractCallWithSigners(
-        userSCW,
-        userSCW,
-        "enableModule",
-        [sampleModule.address],
-        [accounts[0]]
-      )
-    ).to.emit(userSCW, "ExecutionSuccess");
-
-    // Check if owner with valid signature can change ownership with safe transaction
-    // (setOwner being onlyOwner!) can't
-    // (setOwner being authorised) it can
-    await expect(
-      executeContractCallWithSigners(
-        userSCW,
-        userSCW,
-        "setOwner",
-        [owner],
-        [accounts[0]]
-      )
-    ).to.emit(userSCW, "ExecutionSuccess");
-  });
-
-  it("can enable modules and accept transactions from it", async function () {
-    await token
-      .connect(accounts[0])
-      .transfer(userSCW.address, ethers.utils.parseEther("100"));
-
-    const WhitelistModule = await ethers.getContractFactory("WhitelistModule");
-    const whitelistModule: WhitelistModule = await WhitelistModule.deploy(bob);
-    console.log("Test module deployed at ", whitelistModule.address);
-
-    // whitelisting target contract
-    await whitelistModule
-      .connect(accounts[1])
-      .whitelistDestination(token.address);
-
-    // Owner itself can not directly add modules
-    await expect(
-      userSCW.connect(accounts[0]).enableModule(whitelistModule.address)
-    ).to.be.reverted;
-
-    // Without enabling module one can't send transactions
-    // invoking safe from module without enabling it!
-    await expect(
-      whitelistModule
-        .connect(accounts[2])
-        .authCall(
-          userSCW.address,
-          token.address,
-          ethers.utils.parseEther("0"),
-          encodeTransfer(charlie, ethers.utils.parseEther("10").toString())
-        )
-    ).to.be.reverted;
-
-    // Modules can only be enabled via safe transaction
-    await expect(
-      executeContractCallWithSigners(
-        userSCW,
-        userSCW,
-        "enableModule",
-        [whitelistModule.address],
-        [accounts[0]]
-      )
-    ).to.emit(userSCW, "ExecutionSuccess");
-
-    // TODO
-    // have to write a test to disable a module
-
-    // invoking module!
-    await whitelistModule
-      .connect(accounts[2])
-      .authCall(
-        userSCW.address,
-        token.address,
-        ethers.utils.parseEther("0"),
-        encodeTransfer(charlie, ethers.utils.parseEther("10").toString())
-      );
-
-    expect(await token.balanceOf(charlie)).to.equal(
-      ethers.utils.parseEther("10")
-    );
-  });
 
   it("can send transactions and charge wallet for fees in native tokens", async function () {
     const balanceBefore = await ethers.provider.getBalance(bob);

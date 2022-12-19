@@ -2,7 +2,7 @@
 pragma solidity 0.8.12;
 
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "../aa-4337/interfaces/UserOperation.sol";
+import "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 struct PaymasterData {
     address paymasterId;
