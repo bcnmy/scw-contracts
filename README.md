@@ -22,15 +22,15 @@ These smart wallets have a single owner (1/1 Multisig) and are designed in such 
 ## Smart Contracts
 All the contracts in this section are to be reviewed. Any contracts not in this list are to be ignored for this contest.
 
-#### BaseSmartWallet.sol (48 sloc)
+#### BaseSmartAccount.sol (51 sloc)
 Abstract contract that implements EIP4337 IWallet interface 
 defines set of methods (compatible with EIP and Biconomy SDK) that all Smart Wallets must implement
 
-#### Proxy.sol (27 sloc)
+#### Proxy.sol (26 sloc)
 EIP1167 Proxy
 
-#### WalletFactory.sol (38 sloc)
-Constract responsible for deploying smart wallets using create2 and create
+#### SmartAccountFactory.sol (38 sloc)
+Constract responsible for deploying smart wallets aka accounts using create2 and create
 Has a method to compute conter factual wallet of the address before deploying
 
 function deployCounterFactualWallet(address _owner, address _entryPoint, address _handler, uint _index) public returns(address proxy)
@@ -38,7 +38,7 @@ function deployCounterFactualWallet(address _owner, address _entryPoint, address
 salt consists of _owner and _index. _entryPoint and _handler are required to init the wallet. 
 (contest bonus : showcase any potential front running in wallet deployment)
 
-#### SmartWallet.sol (317 sloc)
+#### SmartAccount.sol (332 sloc)
 Base implementation contract for smart wallet
 reference 1 : https://docs.gnosis-safe.io/contracts
 reference 2 : https://github.com/eth-infinitism/account-abstraction/blob/develop/contracts/samples/SimpleWallet.sol
@@ -48,10 +48,10 @@ notes:
 3) currently 1-1 multisig
 4) ECDSA used ofr signature verification. contract signatures are suppoprted using EIP1271 (not extensively tested on protocols!)
 
-#### EntryPoint.sol (361 sloc)
+#### EntryPoint.sol (344 sloc)
 EIP4337 Entry Point contract (https://blog.openzeppelin.com/eth-foundation-account-abstraction-audit/)
 
-#### StakeManager.sol (79 sloc)
+#### StakeManager.sol (76 sloc)
 Stake Manager for wallet and paymaster deposits / stakes
 https://blog.openzeppelin.com/eth-foundation-account-abstraction-audit/
 
@@ -75,6 +75,48 @@ MultiSend functionality but reverts if a transaction tries to do delegatecall
 
  #### PaymasterHelpers.sol ()
  Library useful for decoding paymaster data and context
+
+
+ ## Total Number of contracts and their respective paths in scope
+ #### Please exclude everything else
+
+ contracts/smart-contract-wallet/aa-4337/core/EntryPoint.sol
+ contracts/smart-contract-wallet/aa-4337/core/SenderCreator.sol
+ contracts/smart-contract-wallet/aa-4337/core/StakeManager.sol
+ contracts/smart-contract-wallet/aa-4337/interfaces/IAccount.sol
+ contracts/smart-contract-wallet/aa-4337/interfaces/IPaymaster.sol
+ contracts/smart-contract-wallet/aa-4337/interfaces/IAggregatedAccount.sol
+ contracts/smart-contract-wallet/aa-4337/interfaces/IEntryPoint.sol
+ contracts/smart-contract-wallet/aa-4337/utils/Exec.sol
+ contracts/smart-contract-wallet/aa-4337/interfaces/IStakeManager.sol 
+ contracts/smart-contract-wallet/aa-4337/interfaces/UserOperation.sol
+ contracts/smart-contract-wallet/aa-4337/interfaces/IAggregator.sol
+ contracts/smart-contract-wallet/BaseSmartAccount.sol
+ contracts/smart-contract-wallet/common/Enum.sol
+ contracts/smart-contract-wallet/Proxy.sol
+ contracts/smart-contract-wallet/SmartAccount.sol
+ contracts/smart-contract-wallet/common/Singleton.sol 
+ contracts/smart-contract-wallet/interfaces/IERC165.sol
+ contracts/smart-contract-wallet/base/ModuleManager.sol
+ contracts/smart-contract-wallet/base/FallbackManager.sol
+ contracts/smart-contract-wallet/common/SignatureDecoder.sol
+ contracts/smart-contract-wallet/common/SecuredTokenTransfer.sol
+ contracts/smart-contract-wallet/interfaces/ISignatureValidator.sol
+ contracts/smart-contract-wallet/SmartAccountFactory.sol
+ contracts/smart-contract-wallet/base/Executor.sol
+ contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol
+ contracts/smart-contract-wallet/interfaces/ERC1155TokenReceiver.sol
+ contracts/smart-contract-wallet/interfaces/ERC721TokenReceiver.sol
+ contracts/smart-contract-wallet/interfaces/ERC777TokensRecipient.sol
+ contracts/smart-contract-wallet/interfaces/IERC1271Wallet.sol
+ contracts/smart-contract-wallet/libs/LibAddress.sol
+ contracts/smart-contract-wallet/libs/Math.sol
+ contracts/smart-contract-wallet/libs/MultiSend.sol
+ contracts/smart-contract-wallet/libs/MultiSendCallOnly.sol
+ contracts/smart-contract-wallet/paymasters/BasePaymaster.sol
+ contracts/smart-contract-wallet/paymasters/PaymasterHelpers.sol
+ contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol
+
 
 # How to run the project
 
