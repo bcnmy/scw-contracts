@@ -22,7 +22,7 @@ async function main() {
     const deployedFactory = await deployFactory(provider);
   }
 
-  const SmartWallet = await ethers.getContractFactory("SmartWallet");
+  const SmartWallet = await ethers.getContractFactory("SmartAccount");
   const smartWalletBytecode = `${SmartWallet.bytecode}`;
   const baseImpComputedAddr = getDeployedAddress(
     smartWalletBytecode,
@@ -58,7 +58,7 @@ async function main() {
     );
     baseImpDeployedAddr = baseImpComputedAddr;
   }
-  const WalletFactory = await ethers.getContractFactory("WalletFactory");
+  const WalletFactory = await ethers.getContractFactory("SmartAccountFactory");
 
   const walletFactoryBytecode = `${WalletFactory.bytecode}${encodeParam(
     "address",

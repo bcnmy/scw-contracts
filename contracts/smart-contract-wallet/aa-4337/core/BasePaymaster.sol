@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.12;
 
-
+// BasePaymaster.sol in paymasters section is in scope for audit
 /* solhint-disable reason-string */
 
 import "@openzeppelin/contracts/access/Ownable.sol";
-import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
-import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import "../interfaces/IPaymaster.sol";
+import "../interfaces/IEntryPoint.sol";
 
 /**
  * Helper class for creating a paymaster.
@@ -55,7 +55,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
     /**
      * add a deposit for this paymaster, used for paying for transaction fees
      */
-    function deposit() public virtual payable {
+    function deposit() public payable {
         entryPoint.depositTo{value : msg.value}(address(this));
     }
 
@@ -64,7 +64,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawTo(address payable withdrawAddress, uint256 amount) public virtual onlyOwner {
+    function withdrawTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
         entryPoint.withdrawTo(withdrawAddress, amount);
     }
     /**

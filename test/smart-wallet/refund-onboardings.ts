@@ -1,15 +1,14 @@
 import { expect } from "chai";
 import { artifacts, web3, ethers, waffle } from "hardhat";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint,
   TestToken,
   MultiSendCallOnly,
   StorageSetter,
   GasEstimator,
   DefaultCallbackHandler,
-  WhitelistModule,
   StakedTestToken,
 } from "../../typechain";
 
@@ -68,22 +67,19 @@ function txBaseCost(data: BytesLike): number {
 }
 
 describe("Wallet deployment cost estimation in various onbaording flows", function () {
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
   let token: TestToken;
   let stToken: StakedTestToken;
   let multiSend: MultiSendCallOnly;
   let storage: StorageSetter;
   let estimator: GasEstimator;
-  let whitelistModule: WhitelistModule;
   let owner: string;
   let bob: string;
   let charlie: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const UNSTAKE_DELAY_SEC = 100;
-  const PAYMASTER_STAKE = ethers.utils.parseEther("1");
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 
@@ -115,21 +111,18 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-    const BaseImplementation = await ethers.getContractFactory("SmartWallet");
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy();
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
 
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
-    walletFactory = await WalletFactory.deploy(baseImpl.address);
+    const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
+    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    entryPoint = await EntryPoint.deploy(
-      PAYMASTER_STAKE,
-      UNSTAKE_DELAY_SEC
-    );
+    entryPoint = await EntryPoint.deploy();
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
@@ -162,13 +155,6 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     estimator = await Estimator.deploy();
     console.log("Gas Estimator contract deployed at: ", estimator.address);
 
-    const WhitelistModule = await ethers.getContractFactory("WhitelistModule");
-    whitelistModule = await WhitelistModule.deploy(charlie);
-    console.log(
-      "Whitelist module contract deployed at: ",
-      whitelistModule.address
-    );
-
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
   });
@@ -182,13 +168,13 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     console.log("deploying new wallet..expected address: ", expected);
 
     const Estimator = await ethers.getContractFactory("GasEstimator");
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
+    const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
     const gasEstimatorInterface = Estimator.interface;
     const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
       "estimate",
       [
         walletFactory.address,
-        WalletFactory.interface.encodeFunctionData(
+        SmartAccountFactory.interface.encodeFunctionData(
           "deployCounterFactualWallet",
           [owner, entryPoint.address, handler.address, 0]
         ),
@@ -202,7 +188,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       (
         await estimate(
           walletFactory.address,
-          WalletFactory.interface.encodeFunctionData(
+          SmartAccountFactory.interface.encodeFunctionData(
             "deployCounterFactualWallet",
             [owner, entryPoint.address, handler.address, 0]
           )
@@ -210,7 +196,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       ).gas
     ).toNumber();
 
-    const txnData = WalletFactory.interface.encodeFunctionData(
+    const txnData = SmartAccountFactory.interface.encodeFunctionData(
       "deployCounterFactualWallet",
       [owner, entryPoint.address, handler.address, 0]
     );
@@ -261,7 +247,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     );
 
     userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartWallet.sol:SmartWallet",
+      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expected
     );
 
@@ -312,20 +298,20 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     console.log(tokenBalanceBefore.toString());
 
     const Estimator = await ethers.getContractFactory("GasEstimator");
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
+    const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
     const gasEstimatorInterface = Estimator.interface;
     const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
       "estimate",
       [
         walletFactory.address,
-        WalletFactory.interface.encodeFunctionData(
+        SmartAccountFactory.interface.encodeFunctionData(
           "deployCounterFactualWallet",
           [owner, entryPoint.address, handler.address, 0]
         ),
       ]
     );
 
-    const txnData = WalletFactory.interface.encodeFunctionData(
+    const txnData = SmartAccountFactory.interface.encodeFunctionData(
       "deployCounterFactualWallet",
       [owner, entryPoint.address, handler.address, 0]
     );
@@ -371,7 +357,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     userSCW = userSCW.attach(expected);
     console.log("expected ", expected);
 
-    // const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    // const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
     safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
     safeTx.gasToken = "0x0000000000000000000000000000000000000000";

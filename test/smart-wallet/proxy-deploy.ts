@@ -7,25 +7,20 @@ describe("Wallet Deployment", function () {
     const owner = await accounts[0].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-    const UNSTAKE_DELAY_SEC = 100;
-    const PAYMASTER_STAKE = ethers.utils.parseEther("1");
     const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartWallet = await ethers.getContractFactory("SmartAccount");
     const baseImpl = await SmartWallet.deploy();
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
 
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
+    const WalletFactory = await ethers.getContractFactory("SmartAccountFactory");
     const walletFactory = await WalletFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    const entryPoint = await EntryPoint.deploy(
-      PAYMASTER_STAKE,
-      UNSTAKE_DELAY_SEC
-    );
+    const entryPoint = await EntryPoint.deploy();
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
@@ -50,8 +45,8 @@ describe("Wallet Deployment", function () {
         0
       )
     )
-      .to.emit(walletFactory, "WalletCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.1", 0);
+      .to.emit(walletFactory, "SmartAccountCreated")
+      .withArgs(expected, baseImpl.address, owner, "1.0.2", 0);
 
     // const deployed = await walletFactory.deployCounterFactualWallet(owner);
     // console.log("deployed new wallet..address: ", deployed);

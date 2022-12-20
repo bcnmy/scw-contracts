@@ -5,17 +5,15 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import {
-  SmartWallet,
-  SmartWallet__factory,
+  SmartAccount,
+  SmartAccount__factory,
   DefaultCallbackHandler,
   DefaultCallbackHandler__factory,
   EntryPoint,
   VerifyingSingletonPaymaster,
   VerifyingSingletonPaymaster__factory,
-  VerifyingPaymasterFactory,
-  VerifyingPaymasterFactory__factory,
-  WalletFactory,
-  WalletFactory__factory,
+  SmartAccountFactory,
+  SmartAccountFactory__factory,
   EntryPoint__factory,
 } from "../../../typechain";
 import { AddressZero } from "../../smart-wallet/testutils";
@@ -24,21 +22,11 @@ import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { BigNumber, BigNumberish, Contract, Signer } from "ethers";
 
 export async function deployEntryPoint(
-  paymasterStake: BigNumberish,
-  unstakeDelaySecs: BigNumberish,
   provider = ethers.provider
 ): Promise<EntryPoint> {
   const create2factory = new Create2Factory(provider);
   const epf = new EntryPoint__factory(provider.getSigner());
-  const ctrParams = ethers.utils.defaultAbiCoder.encode(
-    ["uint256", "uint256"],
-    [paymasterStake, unstakeDelaySecs]
-  );
-
-  const addr = await create2factory.deploy(
-    hexConcat([epf.bytecode, ctrParams]),
-    0
-  );
+  const addr = await create2factory.deploy(epf.bytecode, 0);
   return EntryPoint__factory.connect(addr, provider.getSigner());
 }
 
@@ -60,15 +48,15 @@ describe("EntryPoint with VerifyingPaymaster", function () {
   let callBackHandler: DefaultCallbackHandler;
   const abi = ethers.utils.defaultAbiCoder;
 
-  before(async function () {
+  beforeEach(async function () {
     ethersSigner = await ethers.getSigners();
-    entryPoint = await deployEntryPoint(1, 1);
+    entryPoint = await deployEntryPoint();
     entryPointStatic = entryPoint.connect(AddressZero);
 
     deployer = ethersSigner[0];
     offchainSigner = ethersSigner[1];
     depositorSigner = ethersSigner[2];
-    walletOwner = ethersSigner[3];
+    walletOwner = deployer; // ethersSigner[3];
 
     const offchainSignerAddress = await offchainSigner.getAddress();
     const walletOwnerAddress = await walletOwner.getAddress();
@@ -76,13 +64,12 @@ describe("EntryPoint with VerifyingPaymaster", function () {
     verifyingSingletonPaymaster =
       await new VerifyingSingletonPaymaster__factory(deployer).deploy(
         entryPoint.address,
-        walletOwnerAddress,
         offchainSignerAddress
       );
 
-    smartWalletImp = await new SmartWallet__factory(deployer).deploy();
+    smartWalletImp = await new SmartAccount__factory(deployer).deploy();
 
-    walletFactory = await new WalletFactory__factory(deployer).deploy(
+    walletFactory = await new SmartAccountFactory__factory(deployer).deploy(
       smartWalletImp.address
     );
 
@@ -107,12 +94,15 @@ describe("EntryPoint with VerifyingPaymaster", function () {
     paymasterAddress = verifyingSingletonPaymaster.address;
     console.log("Paymaster address is ", paymasterAddress);
 
-    await verifyingSingletonPaymaster
-      .connect(walletOwner)
+    /* await verifyingSingletonPaymaster
+      .connect(deployer)
       .addStake(0, { value: parseEther("2") });
+    console.log("paymaster staked"); */
+
     await entryPoint.depositTo(paymasterAddress, { value: parseEther("1") });
-    const resultSet = await entryPoint.getDepositInfo(paymasterAddress);
-    console.log("deposited state ", resultSet);
+
+    // const resultSet = await entryPoint.getDepositInfo(paymasterAddress);
+    // console.log("deposited state ", resultSet);
   });
 
   async function getUserOpWithPaymasterInfo(paymasterId: string) {
@@ -151,7 +141,7 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       ).to.be.revertedWith("Insufficient balance for paymaster id");
     });
 
-    it("Should Fail when deposit for paymaster id is not enough", async () => {
+    /* it("Should Fail when deposit for paymaster id is not enough", async () => {
       // Do the deposit on behalf of paymaster id
       const paymasterId = await depositorSigner.getAddress();
       const depositAmount = 1028;
@@ -188,7 +178,7 @@ describe("EntryPoint with VerifyingPaymaster", function () {
         );
       const paymasterIdFromContext = abi.decode(["address"], paymasterContext);
       await expect(paymasterIdFromContext[0]).to.be.eq(paymasterId);
-    });
+    }); */
 
     /* it("Should validate simulation from entry point", async () => {
       // Do the deposit on behalf of paymaster id
