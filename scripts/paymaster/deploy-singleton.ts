@@ -9,7 +9,6 @@ async function main() {
   );
   const singletonPaymster = await VerifyingSingletonPaymaster.deploy(
     entryPoint,
-    owner,
     verifyingSigner
   );
   await singletonPaymster.deployed();
