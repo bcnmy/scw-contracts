@@ -38,6 +38,10 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
         verifyingSigner = _verifyingSigner;
     }
 
+    function deposit() public virtual override payable {
+        revert("Deposit must be for a paymasterId. Use depositFor");
+    }
+
     /**
      * add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
      */
