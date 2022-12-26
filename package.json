@@ -4,7 +4,8 @@
   "description": "SCW contracts for Biconomy SDK",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "coverage": "DISABLE_VIA_IR=true hardhat coverage"
   },
   "keywords": [],
   "author": "",
