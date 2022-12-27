@@ -4,7 +4,7 @@ import {
   SmartAccount,
   SmartAccountFactory,
   EntryPoint,
-  TestToken,
+  MockToken,
   MultiSendCallOnly,
   StorageSetter,
   GasEstimator,
@@ -70,7 +70,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   let baseImpl: SmartAccount;
   let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
-  let token: TestToken;
+  let token: MockToken;
   let stToken: StakedTestToken;
   let multiSend: MultiSendCallOnly;
   let storage: StorageSetter;
@@ -126,8 +126,8 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
-    const TestToken = await ethers.getContractFactory("TestToken");
-    token = await TestToken.deploy();
+    const MockToken = await ethers.getContractFactory("MockToken");
+    token = await MockToken.deploy();
     await token.deployed();
     console.log("Test token deployed at: ", token.address);
 

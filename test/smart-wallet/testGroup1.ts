@@ -4,7 +4,7 @@ import {
   SmartWallet,
   WalletFactory,
   EntryPoint,
-  TestToken,
+  MockToken,
   MultiSend,
   StorageSetter,
   DefaultCallbackHandler,
@@ -30,7 +30,7 @@ describe("Base Wallet Functionality", function () {
   let baseImpl: SmartWallet;
   let walletFactory: WalletFactory;
   let entryPoint: EntryPoint;
-  let token: TestToken;
+  let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
   let owner: string;
@@ -74,8 +74,8 @@ describe("Base Wallet Functionality", function () {
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
-    const TestToken = await ethers.getContractFactory("TestToken");
-    token = await TestToken.deploy();
+    const MockToken = await ethers.getContractFactory("MockToken");
+    token = await MockToken.deploy();
     await token.deployed();
     console.log("Test token deployed at: ", token.address);
 
