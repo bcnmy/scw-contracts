@@ -4,7 +4,7 @@ import {
   SmartAccount,
   SmartAccountFactory,
   EntryPoint,
-  TestToken,
+  MockToken,
   MultiSend,
   StorageSetter,
   GasEstimator,
@@ -69,7 +69,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
   let baseImpl: SmartAccount;
   let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
-  let token: TestToken;
+  let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
   let estimator: GasEstimator;
@@ -126,8 +126,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
-    const TestToken = await ethers.getContractFactory("TestToken");
-    token = await TestToken.deploy();
+    const MockToken = await ethers.getContractFactory("MockToken");
+    token = await MockToken.deploy();
     await token.deployed();
     console.log("Test token deployed at: ", token.address);
 
