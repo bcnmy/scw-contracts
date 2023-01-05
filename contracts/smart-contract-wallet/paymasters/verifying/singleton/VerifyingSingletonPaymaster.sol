@@ -38,6 +38,10 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
         verifyingSigner = _verifyingSigner;
     }
 
+    function getBalance(address paymasterId) external view returns(uint256 balance) {
+        balance = paymasterIdBalances[paymasterId];
+    } 
+
     function deposit() public virtual override payable {
         revert("Deposit must be for a paymasterId. Use depositFor");
     }
@@ -95,7 +99,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
      */
     function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
-    external view override returns (bytes memory context, uint256 deadline) {
+    external view override returns (bytes memory context, uint256 sigTimeRange) {
         (requiredPreFund);
         bytes32 hash = getHash(userOp);
 
@@ -105,7 +109,10 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
         //ECDSA library supports both 64 and 65-byte long signatures.
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
         require(sigLength == 64 || sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
-        require(verifyingSigner == hash.toEthSignedMessageHash().recover(paymasterData.signature), "VerifyingPaymaster: wrong signature");
+        //don't revert on signature failure: return SIG_VALIDATION_FAILED
+        if (verifyingSigner != hash.toEthSignedMessageHash().recover(paymasterData.signature)) {
+            return ("",1);
+        }
         require(requiredPreFund <= paymasterIdBalances[paymasterData.paymasterId], "Insufficient balance for paymaster id");
         return (userOp.paymasterContext(paymasterData), 0);
     }

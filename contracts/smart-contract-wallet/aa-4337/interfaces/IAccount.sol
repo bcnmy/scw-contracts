@@ -2,11 +2,15 @@
 pragma solidity ^0.8.12;
 
 import "./UserOperation.sol";
+
 interface IAccount {
 
     /**
      * Validate user's signature and nonce
      * the entryPoint will make the call to the recipient only if this validation call returns successfully.
+     * signature failure should be reported by returning SIG_VALIDATION_FAILED (1).
+     * This allows making a "simulation call" without a valid signature
+     * Other failures (e.g. nonce mismatch, or invalid signature format) should still revert to signal failure.
      *
      * @dev Must validate caller is the entryPoint.
      *      Must validate the signature and nonce
@@ -18,9 +22,13 @@ interface IAccount {
      *      The excess is left as a deposit in the entrypoint, for future calls.
      *      can be withdrawn anytime using "entryPoint.withdrawTo()"
      *      In case there is a paymaster in the request (or the current deposit is high enough), this value will be zero.
-     * @return deadline the last block timestamp this operation is valid, or zero if it is valid indefinitely.
+     * @return sigTimeRange signature and time-range of this operation
+     *      <byte> sigFailure - (1) to mark signature failure, 0 for valid signature.
+     *      <8-byte> validUntil - last timestamp this operation is valid. 0 for "indefinite"
+     *      <8-byte> validAfter - first timestamp this operation is valid
+     *      The an account doesn't use time-range, it is enough to return SIG_VALIDATION_FAILED value (1) for signature failure.
      *      Note that the validation code cannot use block.timestamp (or block.number) directly.
      */
     function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, address aggregator, uint256 missingAccountFunds)
-    external returns (uint256 deadline);
+    external returns (uint256 sigTimeRange);
 }

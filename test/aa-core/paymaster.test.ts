@@ -1,4 +1,3 @@
-/* eslint-disable camelcase */
 import { Wallet } from "ethers";
 import { ethers } from "hardhat";
 import { expect } from "chai";
@@ -192,7 +191,7 @@ describe("EntryPoint with paymaster", function () {
               accountOwner.address,
               3
             ),
-            verificationGasLimit: 1e7,
+            verificationGasLimit: 2e6,
             paymasterAndData: paymaster.address,
             nonce: 0,
           },

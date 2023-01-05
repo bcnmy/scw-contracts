@@ -33,7 +33,7 @@ contract SmartAccountNoAuth is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.2"; // aa 0.3.0 rebase
+    string public constant VERSION = "1.0.3"; // aa 0.4.0 rebase
 
     // Domain Seperators
     // keccak256(
@@ -494,11 +494,10 @@ contract SmartAccountNoAuth is
 
     /// implement template method of BaseAccount
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
-    internal override virtual returns (uint256 deadline) {
+    internal override virtual returns (uint256 sigTimeRange) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
-        //ignore signature mismatch of from==ZERO_ADDRESS (for eth_callUserOp validation purposes)
-        // solhint-disable-next-line avoid-tx-origin
-        require(owner == hash.recover(userOp.signature) || tx.origin == address(0), "account: wrong signature");
+        if (owner != hash.recover(userOp.signature))
+            return SIG_VALIDATION_FAILED;
         return 0;
     }
 

@@ -51,8 +51,8 @@
     "web3": "^1.7.4"
   },
   "dependencies": {
-    "@account-abstraction/contracts": "^0.3.0",
-    "@account-abstraction/sdk": "^0.3.0",
+    "@account-abstraction/contracts": "^0.4.0",
+    "@account-abstraction/sdk": "^0.4.0",
     "@chainlink/contracts": "^0.4.1",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/constants": "^5.6.1",
