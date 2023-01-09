@@ -1,5 +1,14 @@
-import { BigNumber, BigNumberish, Contract, ethers, Signer } from "ethers";
+import { ethers as hardhatEthersInstance } from "hardhat";
 import {
+  BigNumber,
+  BigNumberish,
+  Contract,
+  ethers,
+  Signer,
+  ContractFactory,
+} from "ethers";
+import {
+  getContractAddress,
   arrayify,
   hexConcat,
   hexlify,
@@ -8,6 +17,7 @@ import {
   Interface,
 } from "ethers/lib/utils";
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
+import { Deployer, Deployer__factory } from "../../typechain";
 
 export const FACTORY_ADDRESS = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
 export const FACTORY_BYTE_CODE =
@@ -20,6 +30,19 @@ export const factoryTxHash =
 
 const factoryDeploymentFee = (0.0247 * 1e18).toString(); // 0.0247
 const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
+
+export enum DEPLOYMENT_SALTS {
+  CALLBACK_HANDLER = "CALLBACK_HANDLER_V1",
+  DECODER = "DECODER_V1",
+  ENTRY_POINT = "ENTRY_POINT_V1",
+  GAS_ESTIMATOR = "GAS_ESTIMATOR_V1",
+  MULTI_SEND = "MULTI_SEND_V1",
+  MULTI_SEND_CALLONLY = "MULTI_SEND_CALLONLY_V1",
+  WALLET_FACTORY = "WALLET_FACTORY_V1",
+  WALLET_FACTORY_IMP="WALLET_FACTORY_IMP_V1",
+  SINGELTON_PAYMASTER="SINGELTON_PAYMASTER_V1"
+
+}
 
 export const factoryAbi = [
   {
@@ -73,6 +96,94 @@ export const getDeployedAddress = (initCode: string, salt: BigNumberish) => {
       hexConcat(["0xff", FACTORY_ADDRESS, saltBytes32, keccak256(initCode)])
     ).slice(-40)
   );
+};
+
+export const getDeployerInstance = async (): Promise<Deployer> => {
+  const metaDeployerPrivateKey = process.env.FACTOR_DEPlOYER_PRIVATE_KEY;
+  if (!metaDeployerPrivateKey) {
+    throw new Error("FACTOR_DEPlOYER_PRIVATE_KEY not set");
+  }
+  const metaDeployer = new ethers.Wallet(
+    metaDeployerPrivateKey,
+    hardhatEthersInstance.provider
+  );
+  const deployerAddress = getContractAddress({
+    from: metaDeployer.address,
+    nonce: 0,
+  });
+
+  const provider = hardhatEthersInstance.provider;
+  const [signer] = await hardhatEthersInstance.getSigners();
+  const chainId = (await provider.getNetwork()).chainId;
+  console.log(`Checking deployer ${deployerAddress} on chain ${chainId}...`);
+  const code = await provider.getCode(deployerAddress);
+  if (code === "0x") {
+    console.log("Deployer not deployed, deploying...");
+    const metaDeployerPrivateKey = process.env.FACTOR_DEPlOYER_PRIVATE_KEY;
+    if (!metaDeployerPrivateKey) {
+      throw new Error("FACTOR_DEPlOYER_PRIVATE_KEY not set");
+    }
+    const metaDeployerSigner = new ethers.Wallet(
+      metaDeployerPrivateKey,
+      provider
+    );
+    const deployer = await new Deployer__factory(metaDeployerSigner).deploy();
+    await deployer.deployed();
+    console.log(`Deployer deployed at ${deployer.address} on chain ${chainId}`);
+  } else {
+    console.log(`Deployer already deployed on chain ${chainId}`);
+  }
+
+  return Deployer__factory.connect(deployerAddress, signer);
+};
+
+export const deployContract = async (
+  name: string,
+  computedContractAddress: string,
+  salt: string,
+  contractByteCode: string,
+  deployerInstance: Deployer
+): Promise<string> => {
+  const {hash, wait} = await (await deployerInstance.deploy(salt, contractByteCode))
+  
+  console.log(`Submitted transaction ${hash} for deployment`);
+
+  const { status, logs, blockNumber } = await wait(2);
+  
+  if (status !== 1) {
+    throw new Error(`Transaction ${hash} failed`);
+  }
+
+  console.log(`Transaction ${hash} is included in block ${blockNumber}`);
+
+  // Get the address of the deployed contract
+  const topicHash = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("ContractDeployed(address)")
+  );
+  const contractDeployedLog = logs.find((log) => log.topics[0] === topicHash);  
+
+  if (!contractDeployedLog) {
+    throw new Error(`Transaction ${hash} did not emit ContractDeployed event`);
+  }
+
+  const deployedContractAddress =
+  deployerInstance.interface.parseLog(contractDeployedLog).args.contractAddress;
+
+  const deploymentStatus =
+  computedContractAddress === deployedContractAddress
+      ? "Deployed Successfully"
+      : false;
+
+  console.log(
+    name,
+    deploymentStatus
+  );
+
+  if (!deploymentStatus) {
+    console.log(`Invalid ${name} Handler Deployment`);
+  }  
+
+  return '0x';
 };
 
 /**
@@ -160,7 +271,10 @@ export const encodeParam = (dataType: any, data: any) => {
 
 export const encodeParams = (dataTypes: any[], data: any[]) => {
   const abiCoder = ethers.utils.defaultAbiCoder;
-  return abiCoder.encode(dataTypes, data);
+  const encodedData = abiCoder.encode(dataTypes, data);
+  console.log('encodedData ', encodedData);
+  
+  return encodedData
 };
 
 export const isContract = async (address: string, provider: Provider) => {

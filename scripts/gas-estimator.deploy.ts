@@ -1,11 +1,8 @@
 import { ethers } from "hardhat";
 import {
-  SALT,
-  FACTORY_ADDRESS,
-  getDeployedAddress,
-  deploy,
-  deployFactory,
-  encodeParam,
+  deployContract,
+  DEPLOYMENT_SALTS,
+  getDeployerInstance,
   isContract,
 } from "./utils";
 
@@ -14,19 +11,15 @@ const options = { gasLimit: 7000000, gasPrice: 70000000000 };
 async function main() {
   const provider = ethers.provider;
 
-  // const singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
-
-  const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
-  if (!isFactoryDeployed) {
-    const deployedFactory = await deployFactory(provider);
-  }
+  const deployerInstance = await getDeployerInstance();
+  const salt = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.GAS_ESTIMATOR)
+  );
 
   const gasEstimator = await ethers.getContractFactory("GasEstimator");
   const gasEstimatorBytecode = `${gasEstimator.bytecode}`;
-  const gasEstimatorComputedAddr = getDeployedAddress(
-    gasEstimatorBytecode,
-    ethers.BigNumber.from(SALT)
-  );
+  const gasEstimatorComputedAddr = await deployerInstance.addressOf(salt);
+
   console.log("gasEstimator Computed Address: ", gasEstimatorComputedAddr);
 
   const isgasEstimatorDeployed = await isContract(
@@ -34,22 +27,13 @@ async function main() {
     provider
   ); // true (deployed on-chain)
   if (!isgasEstimatorDeployed) {
-    const gasEstimatorDeployedAddr = await deploy(
-      provider,
+    await deployContract(
+      DEPLOYMENT_SALTS.GAS_ESTIMATOR,
+      gasEstimatorComputedAddr,
+      salt,
       gasEstimatorBytecode,
-      ethers.BigNumber.from(SALT)
+      deployerInstance
     );
-    console.log("gasEstimatorDeployedAddr ", gasEstimatorDeployedAddr);
-    const gasEstimatorDeploymentStatus =
-      gasEstimatorComputedAddr === gasEstimatorDeployedAddr
-        ? "Deployed Successfully"
-        : false;
-
-    console.log("gasEstimatorDeploymentStatus ", gasEstimatorDeploymentStatus);
-
-    if (!gasEstimatorDeploymentStatus) {
-      console.log("Invalid GasEstimator Deployment");
-    }
   } else {
     console.log(
       "GasEstimator is Already deployed with address ",

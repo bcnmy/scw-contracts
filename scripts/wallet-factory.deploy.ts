@@ -1,11 +1,9 @@
 import { ethers } from "hardhat";
 import {
-  SALT,
-  FACTORY_ADDRESS,
-  getDeployedAddress,
-  deploy,
-  deployFactory,
+  deployContract,
+  DEPLOYMENT_SALTS,
   encodeParam,
+  getDeployerInstance,
   isContract,
 } from "./utils";
 
@@ -14,43 +12,26 @@ const options = { gasLimit: 7000000, gasPrice: 70000000000 };
 async function main() {
   const provider = ethers.provider;
 
-  // const SingletonFactory = await ethers.getContractFactory("SingletonFactory");
-  // const singletonFactory = SingletonFactory.attach(FACTORY_ADDRESS);
-
-  const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
-  if (!isFactoryDeployed) {
-    const deployedFactory = await deployFactory(provider);
-  }
+  const deployerInstance = await getDeployerInstance();
+  const WALLET_FACTORY_IMP_SALT = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_FACTORY_IMP)
+  );
 
   const SmartWallet = await ethers.getContractFactory("SmartWallet");
   const smartWalletBytecode = `${SmartWallet.bytecode}`;
-  const baseImpComputedAddr = getDeployedAddress(
-    smartWalletBytecode,
-    ethers.BigNumber.from(SALT)
-  );
+  const baseImpComputedAddr = await deployerInstance.addressOf(WALLET_FACTORY_IMP_SALT);
   console.log("Base wallet Computed Address: ", baseImpComputedAddr);
 
   let baseImpDeployedAddr;
   const isBaseImpDeployed = await isContract(baseImpComputedAddr, provider); // true (deployed on-chain)
   if (!isBaseImpDeployed) {
-    baseImpDeployedAddr = await deploy(
-      provider,
+    baseImpDeployedAddr = await deployContract(
+      DEPLOYMENT_SALTS.WALLET_FACTORY_IMP,
+      baseImpComputedAddr,
+      WALLET_FACTORY_IMP_SALT,
       smartWalletBytecode,
-      ethers.BigNumber.from(SALT)
-    );
-
-    console.log("baseImpDeployedAddr ", baseImpDeployedAddr);
-    const baseImpDeploymentStatus =
-      baseImpComputedAddr === baseImpDeployedAddr
-        ? "Deployed Successfully"
-        : false;
-
-    console.log("baseImpDeploymentStatus ", baseImpDeploymentStatus);
-
-    if (!baseImpDeploymentStatus) {
-      console.log("Invalid Base Imp Deployment");
-      return;
-    }
+      deployerInstance
+    )
   } else {
     console.log(
       "Base Imp is already deployed with address ",
@@ -60,15 +41,16 @@ async function main() {
   }
   const WalletFactory = await ethers.getContractFactory("WalletFactory");
 
+  const WALLET_FACTORY_SALT = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_FACTORY)
+  );
+
   const walletFactoryBytecode = `${WalletFactory.bytecode}${encodeParam(
     "address",
     baseImpDeployedAddr
   ).slice(2)}`;
 
-  const walletFactoryComputedAddr = getDeployedAddress(
-    walletFactoryBytecode,
-    ethers.BigNumber.from(SALT)
-  );
+  const walletFactoryComputedAddr = await deployerInstance.addressOf(WALLET_FACTORY_SALT);
 
   console.log("Wallet Factory Computed Address: ", walletFactoryComputedAddr);
 
@@ -77,24 +59,13 @@ async function main() {
     provider
   ); // true (deployed on-chain)
   if (!iswalletFactoryDeployed) {
-    const walletFactoryDeployedAddr = await deploy(
-      provider,
+    await deployContract(
+      DEPLOYMENT_SALTS.WALLET_FACTORY,
+      walletFactoryComputedAddr,
+      WALLET_FACTORY_SALT,
       walletFactoryBytecode,
-      ethers.BigNumber.from(SALT)
-    );
-
-    const walletFactoryDeploymentStatus =
-      walletFactoryComputedAddr === walletFactoryDeployedAddr
-        ? "Wallet Factory Deployed Successfully"
-        : false;
-    console.log(
-      "walletFactoryDeploymentStatus ",
-      walletFactoryDeploymentStatus
-    );
-
-    if (!walletFactoryDeploymentStatus) {
-      console.log("Invalid Wallet Factory Deployment");
-    }
+      deployerInstance
+    )
   } else {
     console.log(
       "Wallet Factory is Already Deployed with address ",

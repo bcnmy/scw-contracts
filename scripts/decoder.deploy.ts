@@ -1,11 +1,8 @@
 import { ethers } from "hardhat";
 import {
-  SALT,
-  FACTORY_ADDRESS,
-  getDeployedAddress,
-  deploy,
-  deployFactory,
-  encodeParam,
+  deployContract,
+  DEPLOYMENT_SALTS,
+  getDeployerInstance,
   isContract,
 } from "./utils";
 
@@ -14,19 +11,15 @@ const options = { gasLimit: 7000000, gasPrice: 70000000000 };
 async function main() {
   const provider = ethers.provider;
 
-  // const singletonFactory = await SingletonFactory.attach(FACTORY_ADDRESS);
-
-  const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
-  if (!isFactoryDeployed) {
-    const deployedFactory = await deployFactory(provider);
-  }
+  const deployerInstance = await getDeployerInstance();
+  const salt = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.DECODER)
+  );
 
   const decoder = await ethers.getContractFactory("Decoder");
   const decoderBytecode = `${decoder.bytecode}`;
-  const decoderComputedAddr = getDeployedAddress(
-    decoderBytecode,
-    ethers.BigNumber.from(SALT)
-  );
+  const decoderComputedAddr = await deployerInstance.addressOf(salt);
+
   console.log("decoder Computed Address: ", decoderComputedAddr);
 
   const isdecoderDeployed = await isContract(
@@ -34,22 +27,13 @@ async function main() {
     provider
   ); // true (deployed on-chain)
   if (!isdecoderDeployed) {
-    const decoderDeployedAddr = await deploy(
-      provider,
+    await deployContract(
+      DEPLOYMENT_SALTS.DECODER,
+      decoderComputedAddr,
+      salt,
       decoderBytecode,
-      ethers.BigNumber.from(SALT)
+      deployerInstance
     );
-    console.log("decoderDeployedAddr ", decoderDeployedAddr);
-    const decoderDeploymentStatus =
-      decoderComputedAddr === decoderDeployedAddr
-        ? "Deployed Successfully"
-        : false;
-
-    console.log("decoderDeploymentStatus ", decoderDeploymentStatus);
-
-    if (!decoderDeploymentStatus) {
-      console.log("Invalid decoder Deployment");
-    }
   } else {
     console.log(
       "decoder is Already deployed with address ",
