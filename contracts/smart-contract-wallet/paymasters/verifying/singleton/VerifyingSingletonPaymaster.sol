@@ -32,6 +32,9 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
 
     address public verifyingSigner;
 
+    // paymaster nonce for account 
+    mapping(address => uint256) private paymasterNonces;
+
     constructor(IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_entryPoint) {
         require(address(_entryPoint) != address(0), "VerifyingPaymaster: Entrypoint can not be zero address");
         require(_verifyingSigner != address(0), "VerifyingPaymaster: signer of paymaster can not be zero address");
@@ -79,19 +82,31 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      * which will carry the signature itself.
      */
     function getHash(UserOperation calldata userOp)
-    public pure returns (bytes32) {
+    public view returns (bytes32) {
         //can't use userOp.hash(), since it contains also the paymasterAndData itself.
+        address sender = userOp.getSender();
         return keccak256(abi.encode(
-                userOp.getSender(),
+                sender,
                 userOp.nonce,
+                paymasterNonces[sender],
                 keccak256(userOp.initCode),
                 keccak256(userOp.callData),
                 userOp.callGasLimit,
                 userOp.verificationGasLimit,
                 userOp.preVerificationGas,
                 userOp.maxFeePerGas,
-                userOp.maxPriorityFeePerGas
+                userOp.maxPriorityFeePerGas,
+                block.chainid
             ));
+    }
+
+    function getSenderPaymasterNonce(UserOperation calldata userOp) public view returns (uint256) {
+        address account = userOp.getSender();
+        return paymasterNonces[account];
+    }
+
+    function getSenderPaymasterNonce(address account) public view returns (uint256) {
+        return paymasterNonces[account];
     }
 
     /**
@@ -99,7 +114,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
      */
     function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
-    external view override returns (bytes memory context, uint256 sigTimeRange) {
+    external override returns (bytes memory context, uint256 sigTimeRange) {
         (requiredPreFund);
         bytes32 hash = getHash(userOp);
 
@@ -113,21 +128,27 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
         if (verifyingSigner != hash.toEthSignedMessageHash().recover(paymasterData.signature)) {
             return ("",1);
         }
+        _updateNonce(userOp);
         require(requiredPreFund <= paymasterIdBalances[paymasterData.paymasterId], "Insufficient balance for paymaster id");
         return (userOp.paymasterContext(paymasterData), 0);
     }
 
+    function _updateNonce(UserOperation calldata userOp) internal {
+        uint256 currentNonce = getSenderPaymasterNonce(userOp);
+        paymasterNonces[userOp.sender] = currentNonce + 1;
+    }
+
     /**
-   * @dev Executes the paymaster's payment conditions
-   * @param mode tells whether the op succeeded, reverted, or if the op succeeded but cause the postOp to revert
-   * @param context payment conditions signed by the paymaster in `validatePaymasterUserOp`
-   * @param actualGasCost amount to be paid to the entry point in wei
-   */
-  function _postOp(
-    PostOpMode mode,
-    bytes calldata context,
-    uint256 actualGasCost
-  ) internal virtual override {
+    * @dev Executes the paymaster's payment conditions
+    * @param mode tells whether the op succeeded, reverted, or if the op succeeded but cause the postOp to revert
+    * @param context payment conditions signed by the paymaster in `validatePaymasterUserOp`
+    * @param actualGasCost amount to be paid to the entry point in wei
+    */
+    function _postOp(
+     PostOpMode mode,
+     bytes calldata context,
+     uint256 actualGasCost
+    ) internal virtual override {
     (mode);
     // (mode,context,actualGasCost); // unused params
     PaymasterContext memory data = context.decodePaymasterContext();
