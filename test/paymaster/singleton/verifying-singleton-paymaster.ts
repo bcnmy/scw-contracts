@@ -14,6 +14,8 @@ import {
   VerifyingSingletonPaymaster__factory,
   SmartAccountFactory,
   SmartAccountFactory__factory,
+  MaliciousAccount,
+  MaliciousAccount__factory,
   EntryPoint__factory,
 } from "../../../typechain";
 import { AddressZero } from "../../smart-wallet/testutils";
@@ -24,10 +26,8 @@ import { BigNumber, BigNumberish, Contract, Signer } from "ethers";
 export async function deployEntryPoint(
   provider = ethers.provider
 ): Promise<EntryPoint> {
-  const create2factory = new Create2Factory(provider);
-  const epf = new EntryPoint__factory(provider.getSigner());
-  const addr = await create2factory.deploy(epf.bytecode, 0);
-  return EntryPoint__factory.connect(addr, provider.getSigner());
+  const epf = await (await ethers.getContractFactory("EntryPoint")).deploy();
+  return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
 describe("EntryPoint with VerifyingPaymaster", function () {
@@ -44,6 +44,7 @@ describe("EntryPoint with VerifyingPaymaster", function () {
   let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
   let verifyPaymasterFactory: VerifyingPaymasterFactory;
   let smartWalletImp: SmartWallet;
+  let maliciousWallet: MaliciousAccount;
   let walletFactory: WalletFactory;
   let callBackHandler: DefaultCallbackHandler;
   const abi = ethers.utils.defaultAbiCoder;
@@ -68,6 +69,8 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       );
 
     smartWalletImp = await new SmartAccount__factory(deployer).deploy();
+
+    maliciousWallet = await new MaliciousAccount__factory(deployer).deploy();
 
     walletFactory = await new SmartAccountFactory__factory(deployer).deploy(
       smartWalletImp.address
@@ -141,113 +144,100 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       ).to.be.revertedWith("Insufficient balance for paymaster id");
     });
 
-    /* it("Should Fail when deposit for paymaster id is not enough", async () => {
-      // Do the deposit on behalf of paymaster id
-      const paymasterId = await depositorSigner.getAddress();
-      const depositAmount = 1028;
-      const requiredFundsInPaymaster = 1029;
-      await verifyingSingletonPaymaster.deposit(paymasterId, {
-        value: depositAmount,
-      });
-
-      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
+    it("succeed with valid signature", async () => {
+      await verifyingSingletonPaymaster.depositFor(
+        await offchainSigner.getAddress(),
+        { value: ethers.utils.parseEther("1") }
+      );
+      const userOp1 = await fillAndSign(
+        {
+          sender: walletAddress,
+          verificationGasLimit: 200000,
+        },
+        walletOwner,
+        entryPoint
+      );
+      const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+      const sig = await offchainSigner.signMessage(arrayify(hash));
+      const userOp = await fillAndSign(
+        {
+          ...userOp1,
+          paymasterAndData: hexConcat([
+            paymasterAddress,
+            ethers.utils.defaultAbiCoder.encode(
+              ["address", "bytes"],
+              [await offchainSigner.getAddress(), sig]
+            ),
+          ]),
+        },
+        walletOwner,
+        entryPoint
+      );
+      console.log(userOp);
+      await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
       await expect(
-        verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          requiredFundsInPaymaster
-        )
-      ).to.be.revertedWith("Insufficient balance for paymaster id");
+        entryPoint.handleOps([userOp], await offchainSigner.getAddress())
+      ).to.be.reverted;
     });
 
-    it("Should validate user op successfully", async () => {
-      // Do the deposit on behalf of paymaster id
-      const paymasterId = await depositorSigner.getAddress();
-      const depositAmount = 1030;
-      const requiredFundsInPaymaster = 1029;
-      await verifyingSingletonPaymaster.deposit(paymasterId, {
-        value: depositAmount,
-      });
+    it("signature replay", async () => {
+      console.log("Paymaster Signed for good sender😇");
+      await verifyingSingletonPaymaster.depositFor(
+        await offchainSigner.getAddress(),
+        { value: ethers.utils.parseEther("1") }
+      );
+      const userOp1 = await fillAndSign(
+        {
+          sender: walletAddress,
+          verificationGasLimit: 200000,
+        },
+        walletOwner,
+        entryPoint
+      );
+      const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+      const sig = await offchainSigner.signMessage(arrayify(hash));
+      console.log("offchainSigner : " + (await offchainSigner.getAddress()));
+      console.log("good sender becomes malicious😈");
 
-      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
-      const paymasterContext =
-        await verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          requiredFundsInPaymaster
-        );
-      const paymasterIdFromContext = abi.decode(["address"], paymasterContext);
-      await expect(paymasterIdFromContext[0]).to.be.eq(paymasterId);
-    }); */
+      const upgrader = await (
+        await ethers.getContractFactory("Upgrader")
+      ).deploy();
+      const w = SmartAccount__factory.connect(walletAddress, walletOwner);
 
-    /* it("Should validate simulation from entry point", async () => {
-      // Do the deposit on behalf of paymaster id
-      const paymasterId = await depositorSigner.getAddress();
-      const depositAmount = 1030;
-      const requiredFundsInPaymaster = 1029;
-      await verifyingSingletonPaymaster.deposit(paymasterId, {
-        value: depositAmount,
-      });
-
-      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
-      const paymasterContext =
-        await verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          requiredFundsInPaymaster
-        );
-      const paymasterIdFromContext = abi.decode(["address"], paymasterContext);
-      await expect(paymasterIdFromContext[0]).to.be.eq(paymasterId);
-    }); */
-
-    //   it("should reject on no signature", async () => {
-    //     const userOp = await fillAndSign(
-    //       {
-    //         sender: walletAddress,
-    //         paymasterAndData: hexConcat([paymasterAddress, "0x1234"]),
-    //       },
-    //       walletOwner,
-    //       entryPoint
-    //     );
-    //     await expect(
-    //       entryPointStatic.callStatic.simulateValidation(userOp, false)
-    //     ).to.be.revertedWith("invalid signature length in paymasterAndData");
-    //   });
-    //   it("should reject on invalid signature", async () => {
-    //     const userOp = await fillAndSign(
-    //       {
-    //         sender: walletAddress,
-    //         paymasterAndData: hexConcat([
-    //           paymasterAddress,
-    //           "0x" + "1c".repeat(65),
-    //         ]),
-    //       },
-    //       walletOwner,
-    //       entryPoint
-    //     );
-    //     await expect(
-    //       entryPointStatic.callStatic.simulateValidation(userOp, false)
-    //     ).to.be.revertedWith("ECDSA: invalid signature");
-    //   });
-    //   it("succeed with valid signature", async () => {
-    //     const userOp1 = await fillAndSign(
-    //       {
-    //         sender: walletAddress,
-    //       },
-    //       walletOwner,
-    //       entryPoint
-    //     );
-    //     const hash = await proxyPaymaster.getHash(userOp1);
-    //     const sig = await offchainSigner.signMessage(arrayify(hash));
-    //     const userOp = await fillAndSign(
-    //       {
-    //         ...userOp1,
-    //         paymasterAndData: hexConcat([paymasterAddress, sig]),
-    //       },
-    //       walletOwner,
-    //       entryPoint
-    //     );
-    //     await entryPointStatic.callStatic.simulateValidation(userOp, false);
-    //   });
+      await w.execute(
+        w.address,
+        0,
+        w.interface.encodeFunctionData("enableModule", [
+          await walletOwner.getAddress(),
+        ])
+      );
+      await w.execTransactionFromModule(
+        upgrader.address,
+        0,
+        upgrader.interface.encodeFunctionData("upgrade", [
+          maliciousWallet.address,
+        ]),
+        1
+      );
+      const userOp = await fillAndSign(
+        {
+          ...userOp1,
+          paymasterAndData: hexConcat([
+            paymasterAddress,
+            ethers.utils.defaultAbiCoder.encode(
+              ["address", "bytes"],
+              [await offchainSigner.getAddress(), sig]
+            ),
+          ]),
+        },
+        walletOwner,
+        entryPoint
+      );
+      console.log(userOp);
+      await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+      await expect(
+        entryPoint.handleOps([userOp], await offchainSigner.getAddress())
+      ).to.be.reverted;
+    });
   });
 });

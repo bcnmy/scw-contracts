@@ -6,4 +6,7 @@ module.exports = {
   'smart-contract-wallet/SmartWalletNoAuth.sol',
   'smart-contract-wallet/utils',
 ],
+providerOptions: {
+  allowUnlimitedContractSize: true,
+},
 };

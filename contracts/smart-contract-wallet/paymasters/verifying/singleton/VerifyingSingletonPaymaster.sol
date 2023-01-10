@@ -2,6 +2,7 @@
 pragma solidity 0.8.12;
 
 /* solhint-disable reason-string */
+/* solhint-disable no-inline-assembly */
 import "../../BasePaymaster.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
@@ -83,12 +84,15 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      */
     function getHash(UserOperation calldata userOp)
     public view returns (bytes32) {
+        uint256 id;
+        assembly {
+            id := chainid()
+        }
         //can't use userOp.hash(), since it contains also the paymasterAndData itself.
         address sender = userOp.getSender();
         return keccak256(abi.encode(
                 sender,
                 userOp.nonce,
-                paymasterNonces[sender],
                 keccak256(userOp.initCode),
                 keccak256(userOp.callData),
                 userOp.callGasLimit,
@@ -96,7 +100,9 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
                 userOp.preVerificationGas,
                 userOp.maxFeePerGas,
                 userOp.maxPriorityFeePerGas,
-                block.chainid
+                id,
+                address(this),
+                paymasterNonces[sender]
             ));
     }
 
@@ -134,10 +140,11 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
     }
 
     function _updateNonce(UserOperation calldata userOp) internal {
-        uint256 currentNonce = getSenderPaymasterNonce(userOp);
-        paymasterNonces[userOp.sender] = currentNonce + 1;
+        paymasterNonces[userOp.getSender()]++;
     }
 
+    //todo
+    //add event and emit in the post op with paymaster id, balance deducted (and paymaster address?)
     /**
     * @dev Executes the paymaster's payment conditions
     * @param mode tells whether the op succeeded, reverted, or if the op succeeded but cause the postOp to revert

@@ -55,6 +55,7 @@ const config: HardhatUserConfig = {
         accountsBalance: "10000000000000000000000000",
         //   mnemonic: MNEMONIC,
       },
+      allowUnlimitedContractSize: true,
       chainId: 31337,
     },
     ganache: {
