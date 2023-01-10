@@ -77,6 +77,9 @@ contract SmartAccount is
     event WalletHandlePayment(bytes32 txHash, uint256 payment);
     // nice to have
     // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+    // todo
+    // emit events like executedTransactionFromModule
+    // emit events with whole information of execTransaction (ref Safe L2)
 
     // modifiers
     // onlyOwner
@@ -127,6 +130,9 @@ contract SmartAccount is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
+    // todo: write test case for updating implementation
+    // review: external function becomes invisible from inside the contract
+    // review for all methods to be invoked by smart account to self
     function updateImplementation(address _implementation) external mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         _setImplementation(_implementation);
@@ -192,6 +198,7 @@ contract SmartAccount is
         return a >= b ? a : b;
     }
 
+    // review: batchId should be carefully designed or removed all together (including 2D nonces)
     // Gnosis style transaction with optional repay in native tokens OR ERC20 
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
