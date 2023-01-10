@@ -133,6 +133,11 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     await handler.deployed();
     console.log("Default callback handler deployed at: ", handler.address);
 
+    // Do not leave base implementation contract owner storage initialized with 0 states
+    // Notice: entry point and handler can also be same non-zero address
+    const nonZeroOwner = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+    await baseImpl.init(nonZeroOwner, entryPoint.address, handler.address);
+
     const Storage = await ethers.getContractFactory("StorageSetter");
     storage = await Storage.deploy();
     console.log("storage setter contract deployed at: ", storage.address);

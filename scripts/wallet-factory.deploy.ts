@@ -58,6 +58,16 @@ async function main() {
     );
     baseImpDeployedAddr = baseImpComputedAddr;
   }
+
+  // Do not leave base implementation contract owner storage initialized with 0 states
+  // Notice: entry point and handler can also be same non-zero address
+  const nonZeroOwner = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE";
+  await SmartWallet.attach(baseImpDeployedAddr).init(
+    nonZeroOwner,
+    nonZeroOwner,
+    nonZeroOwner
+  );
+
   const WalletFactory = await ethers.getContractFactory("SmartAccountFactory");
 
   const walletFactoryBytecode = `${WalletFactory.bytecode}${encodeParam(

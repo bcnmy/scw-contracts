@@ -58,6 +58,9 @@ contract SmartAccount is
     // review
     IEntryPoint private _entryPoint;
 
+    // review
+    // Might have a mock constructor to initialise implementation with non-zero owner
+
     
     // Events
     // EOA + Version tracking
