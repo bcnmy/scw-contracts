@@ -55,8 +55,18 @@ contract SmartAccountNoAuth is
     mapping(uint256 => uint256) public nonces;
 
     // AA storage
-    // review
+    // review accounts may also have immutable entry point in the implementation
     IEntryPoint private _entryPoint;
+
+    // review 
+    // mock constructor or use deinitializers
+    // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
+    constructor() {
+        // By setting the owner it is not possible to call init anymore,
+        // so we create an account with fixed non-zero owner.
+        // This is an unusable account, perfect for the singleton
+        owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+    }
 
     
     // Events
