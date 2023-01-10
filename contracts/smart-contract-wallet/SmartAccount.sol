@@ -310,7 +310,7 @@ contract SmartAccount is
         uint256 i = 0;
         address _signer;
         (v, r, s) = signatureSplit(signatures, i);
-        //review
+        //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the contract is encoded into r
@@ -345,11 +345,10 @@ contract SmartAccount is
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
             // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
             _signer = ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", dataHash)), v - 4, r, s);
-            require(_signer == owner, "INVALID_SIGNATURE");
         } else {
             _signer = ecrecover(dataHash, v, r, s);
-            require(_signer == owner, "INVALID_SIGNATURE");
         }
+        require(_signer == owner, "INVALID_SIGNATURE");
     }
 
     /// @dev Allows to estimate a transaction.
