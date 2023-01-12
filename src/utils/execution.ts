@@ -18,9 +18,9 @@ export const EIP_DOMAIN = {
   ],
 };
 
-export const EIP712_WALLET_TX_TYPE = {
-  // "WalletTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
-  WalletTx: [
+export const EIP712_ACCOUNT_TX_TYPE = {
+  // "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+  AccountTx: [
     { type: "address", name: "to" },
     { type: "uint256", name: "value" },
     { type: "bytes", name: "data" },
@@ -101,7 +101,7 @@ export const preimageSafeTransactionHash = (
 ): string => {
   return utils._TypedDataEncoder.encode(
     { verifyingContract: safe.address, chainId },
-    EIP712_WALLET_TX_TYPE,
+    EIP712_ACCOUNT_TX_TYPE,
     safeTx
   );
 };
@@ -113,7 +113,7 @@ export const calculateSafeTransactionHash = (
 ): string => {
   return utils._TypedDataEncoder.hash(
     { verifyingContract: safe.address, chainId },
-    EIP712_WALLET_TX_TYPE,
+    EIP712_ACCOUNT_TX_TYPE,
     safeTx
   );
 };
@@ -171,7 +171,7 @@ export const safeSignTypedData = async (
     signer: signerAddress,
     data: await signer._signTypedData(
       { verifyingContract: safe.address, chainId: cid },
-      EIP712_WALLET_TX_TYPE,
+      EIP712_ACCOUNT_TX_TYPE,
       safeTx
     ),
   };

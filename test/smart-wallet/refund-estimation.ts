@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import { ethers, waffle } from "hardhat";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint,
-  TestToken,
+  MockToken,
   MultiSend,
   StorageSetter,
   GasEstimator,
@@ -66,10 +66,10 @@ function txBaseCost(data: BytesLike): number {
 
 describe("Wallet tx gas estimations with and without refunds", function () {
   // TODO
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
-  let token: TestToken;
+  let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
   let estimator: GasEstimator;
@@ -111,23 +111,23 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-    const BaseImplementation = await ethers.getContractFactory("SmartWallet");
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy();
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
 
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
-    walletFactory = await WalletFactory.deploy(baseImpl.address);
+    const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
+    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    entryPoint = await EntryPoint.deploy(PAYMASTER_STAKE, UNSTAKE_DELAY_SEC);
+    entryPoint = await EntryPoint.deploy();
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
-    const TestToken = await ethers.getContractFactory("TestToken");
-    token = await TestToken.deploy();
+    const MockToken = await ethers.getContractFactory("MockToken");
+    token = await MockToken.deploy();
     await token.deployed();
     console.log("Test token deployed at: ", token.address);
 
@@ -170,11 +170,11 @@ describe("Wallet tx gas estimations with and without refunds", function () {
         0
       )
     )
-      .to.emit(walletFactory, "WalletCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.1", 0);
+      .to.emit(walletFactory, "SmartAccountCreated")
+      .withArgs(expected, baseImpl.address, owner, "1.0.2", 0);
 
     userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartWallet.sol:SmartWallet",
+      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expected
     );
 
@@ -219,9 +219,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     const chainId = await userSCW.getChainId();
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
+    const requiredTxGasData = SmartAccount.interface.encodeFunctionData(
       "requiredTxGas",
       [safeTx.to, safeTx.value, safeTx.data, safeTx.operation]
     );
@@ -254,7 +254,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log(safeTx.gasToken);
     console.log("before handle payment revert");
 
-    const handlePaymentGasData = SmartWallet.interface.encodeFunctionData(
+    const handlePaymentGasData = SmartAccount.interface.encodeFunctionData(
       "handlePaymentRevert",
       [
         safeTx.targetTxGas,
@@ -327,7 +327,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("gasPrice: ", tx.gasPrice);
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
-    const eventLogs = SmartWallet.interface.decodeEventLog(
+    const eventLogs = SmartAccount.interface.decodeEventLog(
       "WalletHandlePayment",
       receipt.logs[2].data
     );
@@ -386,9 +386,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     const chainId = await userSCW.getChainId();
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
+    const requiredTxGasData = SmartAccount.interface.encodeFunctionData(
       "requiredTxGas",
       [safeTx.to, safeTx.value, safeTx.data, safeTx.operation]
     );
@@ -416,7 +416,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     // handlePaymentRevert
 
-    const handlePaymentGasData = SmartWallet.interface.encodeFunctionData(
+    const handlePaymentGasData = SmartAccount.interface.encodeFunctionData(
       "handlePaymentRevert",
       [
         safeTx.targetTxGas,
@@ -500,7 +500,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("gasPrice: ", tx.gasPrice);
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
-    const eventLogs = SmartWallet.interface.decodeEventLog(
+    const eventLogs = SmartAccount.interface.decodeEventLog(
       "WalletHandlePayment",
       receipt.logs[3].data
     );

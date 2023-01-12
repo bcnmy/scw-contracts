@@ -22,10 +22,7 @@ async function main() {
 
   console.log("decoder Computed Address: ", decoderComputedAddr);
 
-  const isdecoderDeployed = await isContract(
-    decoderComputedAddr,
-    provider
-  ); // true (deployed on-chain)
+  const isdecoderDeployed = await isContract(decoderComputedAddr, provider); // true (deployed on-chain)
   if (!isdecoderDeployed) {
     await deployContract(
       DEPLOYMENT_SALTS.DECODER,

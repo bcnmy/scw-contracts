@@ -1,17 +1,16 @@
 import { expect } from "chai";
 import { artifacts, web3, ethers, waffle } from "hardhat";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint,
-  TestToken,
+  MockToken,
   MultiSendCallOnly,
   StorageSetter,
   GasEstimator,
   DefaultCallbackHandler,
-  WhitelistModule,
   StakedTestToken,
-  GasEstimatorSmartWallet,
+  GasEstimatorSmartAccount,
 } from "../../typechain";
 
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -39,10 +38,10 @@ import { provider } from "ganache";
 import { sign } from "crypto";
 
 const GasEstimatorArtifact = artifacts.require("GasEstimator");
+const SCWNoAuth = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartAccountNoAuth.sol/SmartAccountNoAuth.json");
 const GasEstimatorSmartWalletArtifact = artifacts.require(
-  "GasEstimatorSmartWallet"
+  "GasEstimatorSmartAccount"
 );
-const SCWNoAuth = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartWalletNoAuth.sol/SmartWalletNoAuth.json");
 const FAKE_SIGNATURE =
   "0x39f5032f1cd30005aa1e35f04394cabfe7de3b6ae6d95b27edd8556064c287bf61f321fead0cf48ca4405d497cc8fc47fc7ff0b7f5c45baa14090a44f2307d8230";
 
@@ -75,23 +74,20 @@ function txBaseCost(data: BytesLike): number {
 }
 
 describe("Wallet deployment cost estimation in various onbaording flows", function () {
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
-  let token: TestToken;
+  let token: MockToken;
   let stToken: StakedTestToken;
   let multiSend: MultiSendCallOnly;
   let storage: StorageSetter;
   let estimator: GasEstimator;
-  let estimatorSmartwallet: GasEstimatorSmartWallet;
-  let whitelistModule: WhitelistModule;
+  let estimatorSmartwallet: GasEstimatorSmartAccount;
   let owner: string;
   let bob: string;
   let charlie: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const UNSTAKE_DELAY_SEC = 100;
-  const PAYMASTER_STAKE = ethers.utils.parseEther("1");
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 
@@ -123,23 +119,25 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-    const BaseImplementation = await ethers.getContractFactory("SmartWallet");
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy();
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
 
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
-    walletFactory = await WalletFactory.deploy(baseImpl.address);
+    const SmartAccountFactory = await ethers.getContractFactory(
+      "SmartAccountFactory"
+    );
+    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    entryPoint = await EntryPoint.deploy(PAYMASTER_STAKE, UNSTAKE_DELAY_SEC);
+    entryPoint = await EntryPoint.deploy();
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
-    const TestToken = await ethers.getContractFactory("TestToken");
-    token = await TestToken.deploy();
+    const MockToken = await ethers.getContractFactory("MockToken");
+    token = await MockToken.deploy();
     await token.deployed();
     console.log("Test token deployed at: ", token.address);
 
@@ -168,7 +166,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     console.log("Gas Estimator contract deployed at: ", estimator.address);
 
     const EstimatorSmartWallet = await ethers.getContractFactory(
-      "GasEstimatorSmartWallet"
+      "GasEstimatorSmartAccount"
     );
     estimatorSmartwallet = await EstimatorSmartWallet.deploy();
     console.log(
@@ -176,12 +174,12 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       estimatorSmartwallet.address
     );
 
-    const WhitelistModule = await ethers.getContractFactory("WhitelistModule");
+    /* const WhitelistModule = await ethers.getContractFactory("WhitelistModule");
     whitelistModule = await WhitelistModule.deploy(charlie);
     console.log(
       "Whitelist module contract deployed at: ",
       whitelistModule.address
-    );
+    ); */
 
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
@@ -196,13 +194,15 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     console.log("deploying new wallet..expected address: ", expected);
 
     const Estimator = await ethers.getContractFactory("GasEstimator");
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
+    const SmartAccountFactory = await ethers.getContractFactory(
+      "SmartAccountFactory"
+    );
     const gasEstimatorInterface = Estimator.interface;
     const encodedEstimate = gasEstimatorInterface.encodeFunctionData(
       "estimate",
       [
         walletFactory.address,
-        WalletFactory.interface.encodeFunctionData(
+        SmartAccountFactory.interface.encodeFunctionData(
           "deployCounterFactualWallet",
           [owner, entryPoint.address, handler.address, 0]
         ),
@@ -216,7 +216,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       (
         await estimate(
           walletFactory.address,
-          WalletFactory.interface.encodeFunctionData(
+          SmartAccountFactory.interface.encodeFunctionData(
             "deployCounterFactualWallet",
             [owner, entryPoint.address, handler.address, 0]
           )
@@ -224,7 +224,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       ).gas
     ).toNumber();
 
-    const txnData = WalletFactory.interface.encodeFunctionData(
+    const txnData = SmartAccountFactory.interface.encodeFunctionData(
       "deployCounterFactualWallet",
       [owner, entryPoint.address, handler.address, 0]
     );
@@ -275,7 +275,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     );
 
     userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartWallet.sol:SmartWallet",
+      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expected
     );
 
@@ -320,7 +320,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const Estimator = await ethers.getContractFactory("GasEstimator");
     const EstimatorSmartWallet = await ethers.getContractFactory(
-      "GasEstimatorSmartWallet"
+      "GasEstimatorSmartAccount"
     );
 
     const gasEstimatorInterface = Estimator.interface;
@@ -356,7 +356,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const signature = FAKE_SIGNATURE;
     // signature += data.slice(2);
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
     /* const targetTx = buildContractCall(
       userSCW,
@@ -365,7 +365,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       0
     ); */
 
-    const txnData = SmartWallet.interface.encodeFunctionData(
+    const txnData = SmartAccount.interface.encodeFunctionData(
       "execTransaction",
       [transaction, 1, refundInfo, signature]
     );
@@ -452,7 +452,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const Estimator = await ethers.getContractFactory("GasEstimator");
     const EstimatorCustom = await ethers.getContractFactory(
-      "GasEstimatorSmartWallet"
+      "GasEstimatorSmartAccount"
     );
     const MultiSend = await ethers.getContractFactory("MultiSendCallOnly");
     const gasEstimatorInterface = Estimator.interface;
@@ -486,7 +486,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     let signature = "0x";
     signature += data.slice(2);
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
     const txs: MetaTransaction[] = [
       buildContractCall(
@@ -559,12 +559,12 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: expected,
       // value: ethers.utils.parseEther("1"),
-      data: SmartWallet.interface.encodeFunctionData("enableModule", [
+      data: SmartAccount.interface.encodeFunctionData("enableModule", [
         whitelistModule.address,
       ]),
       nonce: 0, // nonce picked 0 for first transaction as we can't read from state yet (?)

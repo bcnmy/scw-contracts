@@ -18,7 +18,9 @@ async function main() {
 
   const multiSend = await ethers.getContractFactory("MultiSend");
   const multiSendBytecode = `${multiSend.bytecode}`;
-  const multiSendComputedAddr = await deployerInstance.addressOf(MULTI_SEND_SALT);
+  const multiSendComputedAddr = await deployerInstance.addressOf(
+    MULTI_SEND_SALT
+  );
 
   console.log("multiSend Computed Address: ", multiSendComputedAddr);
 
@@ -46,7 +48,9 @@ async function main() {
     "MultiSendCallOnly"
   );
   const multiSendCallOnlyBytecode = `${multiSendCallOnly.bytecode}`;
-  const multiSendCallOnlyComputedAddr = await deployerInstance.addressOf(MULTI_SEND_CALLONLY_SALT)
+  const multiSendCallOnlyComputedAddr = await deployerInstance.addressOf(
+    MULTI_SEND_CALLONLY_SALT
+  );
   console.log(
     "multiSend Callonly Computed Address: ",
     multiSendCallOnlyComputedAddr
@@ -63,7 +67,7 @@ async function main() {
       MULTI_SEND_CALLONLY_SALT,
       multiSendCallOnlyBytecode,
       deployerInstance
-    )
+    );
   } else {
     console.log(
       "multiSend Call Only is Already deployed with address ",

@@ -1,71 +1,32 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.12;
+pragma solidity ^0.8.12;
 
 
 /* solhint-disable reason-string */
 
-import "../aa-4337/interfaces/IPaymaster.sol";
-import "../aa-4337/interfaces/IEntryPoint.sol";
+import "@openzeppelin/contracts/access/Ownable.sol";
+import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
+import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 
 /**
  * Helper class for creating a paymaster.
  * provides helper methods for staking.
  * validates that the postOp is called only by the entryPoint
  */
-abstract contract BasePaymaster is IPaymaster {
-
+abstract contract BasePaymaster is IPaymaster, Ownable {
 
     IEntryPoint public entryPoint;
 
-    /**
-    Owner realted function are implemented in this function instead of inheriting Ownable contract from Openzepplin. 
-    cause Ownable contract needs to be inherit and it requires this { BasePaymaster } contract to have constructor
-    So that its constructor can be called but we are deploying this contract using factory pattern that means we 
-    can't create constructor for this contract
-     */
-
-    // maintain owner address
-    address public owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(owner == _msgSender(), "Ownable: caller is not the owner");
-        _;
+    constructor(IEntryPoint _entryPoint) {
+        setEntryPoint(_entryPoint);
     }
 
     function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
-        require(address(_entryPoint) != address(0), "BasePaymaster: new entry point can not be zero address");
         entryPoint = _entryPoint;
     }
 
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        _transferOwnership(newOwner);
-    }
-
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
-     */
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = owner;
-        owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
-    }
-
-    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 requestId, uint256 maxCost) external virtual override returns (bytes memory context);
+    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
+    external virtual override returns (bytes memory context, uint256 sigTimeRange);
 
     function postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) external override {
         _requireFromEntryPoint();
@@ -85,19 +46,34 @@ abstract contract BasePaymaster is IPaymaster {
      * @param actualGasCost - actual gas used so far (without this postOp call).
      */
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal virtual {
+
         (mode,context,actualGasCost); // unused params
         // subclass must override this method if validatePaymasterUserOp returns a context
         revert("must override");
     }
 
+    /**
+     * add a deposit for this paymaster, used for paying for transaction fees
+     */
+    function deposit() public virtual payable {
+        entryPoint.depositTo{value : msg.value}(address(this));
+    }
 
+    /**
+     * withdraw value from the deposit
+     * @param withdrawAddress target to send to
+     * @param amount to withdraw
+     */
+    function withdrawTo(address payable withdrawAddress, uint256 amount) public virtual onlyOwner {
+        entryPoint.withdrawTo(withdrawAddress, amount);
+    }
     /**
      * add stake for this paymaster.
      * This method can also carry eth value to add to the current stake.
-     * @param extraUnstakeDelaySec - set the stake to the entrypoint's default unstakeDelay plus this value.
+     * @param unstakeDelaySec - the unstake delay for this paymaster. Can only be increased.
      */
-    function addStake(uint32 extraUnstakeDelaySec) external payable onlyOwner {
-        entryPoint.addStake{value : msg.value}(entryPoint.unstakeDelaySec() + extraUnstakeDelaySec);
+    function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
+        entryPoint.addStake{value : msg.value}(unstakeDelaySec);
     }
 
     /**
@@ -126,6 +102,17 @@ abstract contract BasePaymaster is IPaymaster {
 
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
-        require(_msgSender() == address(entryPoint));
+        require(msg.sender == address(entryPoint));
+    }
+
+    /**
+     * helper to pack the return value for validatePaymasterUserOp
+     * (copy of same method from BaseAccount)
+     * @param sigFailed true if the signature check failed, false, if it succeeded.
+     * @param validUntil last timestamp this UserOperation is valid (or zero for infinite)
+     * @param validAfter first timestamp this UserOperation is valid
+     */
+    function packSigTimeRange(bool sigFailed, uint256 validUntil, uint256 validAfter) internal pure returns (uint256) {
+        return uint256(sigFailed ? 1 : 0) | uint256(validUntil << 8) | uint256(validAfter << (64 + 8));
     }
 }

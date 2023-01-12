@@ -14,32 +14,33 @@ async function main() {
 
   const deployerInstance = await getDeployerInstance();
   const WALLET_FACTORY_IMP_SALT = ethers.utils.keccak256(
-    ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_FACTORY_IMP)
+    ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_IMP)
   );
 
-  const SmartWallet = await ethers.getContractFactory("SmartWallet");
+  const SmartWallet = await ethers.getContractFactory("SmartAccount");
   const smartWalletBytecode = `${SmartWallet.bytecode}`;
-  const baseImpComputedAddr = await deployerInstance.addressOf(WALLET_FACTORY_IMP_SALT);
+  const baseImpComputedAddr = await deployerInstance.addressOf(
+    WALLET_FACTORY_IMP_SALT
+  );
   console.log("Base wallet Computed Address: ", baseImpComputedAddr);
 
   let baseImpDeployedAddr;
   const isBaseImpDeployed = await isContract(baseImpComputedAddr, provider); // true (deployed on-chain)
   if (!isBaseImpDeployed) {
-    baseImpDeployedAddr = await deployContract(
-      DEPLOYMENT_SALTS.WALLET_FACTORY_IMP,
+    await deployContract(
+      DEPLOYMENT_SALTS.WALLET_IMP,
       baseImpComputedAddr,
       WALLET_FACTORY_IMP_SALT,
       smartWalletBytecode,
       deployerInstance
-    )
+    );
   } else {
     console.log(
       "Base Imp is already deployed with address ",
       baseImpComputedAddr
     );
-    baseImpDeployedAddr = baseImpComputedAddr;
   }
-  const WalletFactory = await ethers.getContractFactory("WalletFactory");
+  const WalletFactory = await ethers.getContractFactory("SmartAccountFactory");
 
   const WALLET_FACTORY_SALT = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_FACTORY)
@@ -47,10 +48,12 @@ async function main() {
 
   const walletFactoryBytecode = `${WalletFactory.bytecode}${encodeParam(
     "address",
-    baseImpDeployedAddr
+    baseImpComputedAddr
   ).slice(2)}`;
 
-  const walletFactoryComputedAddr = await deployerInstance.addressOf(WALLET_FACTORY_SALT);
+  const walletFactoryComputedAddr = await deployerInstance.addressOf(
+    WALLET_FACTORY_SALT
+  );
 
   console.log("Wallet Factory Computed Address: ", walletFactoryComputedAddr);
 
@@ -65,7 +68,7 @@ async function main() {
       WALLET_FACTORY_SALT,
       walletFactoryBytecode,
       deployerInstance
-    )
+    );
   } else {
     console.log(
       "Wallet Factory is Already Deployed with address ",

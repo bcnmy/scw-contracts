@@ -39,9 +39,8 @@ export enum DEPLOYMENT_SALTS {
   MULTI_SEND = "MULTI_SEND_V1",
   MULTI_SEND_CALLONLY = "MULTI_SEND_CALLONLY_V1",
   WALLET_FACTORY = "WALLET_FACTORY_V1",
-  WALLET_FACTORY_IMP="WALLET_FACTORY_IMP_V1",
-  SINGELTON_PAYMASTER="SINGELTON_PAYMASTER_V1"
-
+  WALLET_IMP = "WALLET_IMP_V1",
+  SINGELTON_PAYMASTER = "SINGELTON_PAYMASTER_V1",
 }
 
 export const factoryAbi = [
@@ -99,9 +98,9 @@ export const getDeployedAddress = (initCode: string, salt: BigNumberish) => {
 };
 
 export const getDeployerInstance = async (): Promise<Deployer> => {
-  const metaDeployerPrivateKey = process.env.FACTOR_DEPlOYER_PRIVATE_KEY;
+  const metaDeployerPrivateKey = process.env.FACTORY_DEPlOYER_PRIVATE_KEY;
   if (!metaDeployerPrivateKey) {
-    throw new Error("FACTOR_DEPlOYER_PRIVATE_KEY not set");
+    throw new Error("FACTORY_DEPLOYER_PRIVATE_KEY not set");
   }
   const metaDeployer = new ethers.Wallet(
     metaDeployerPrivateKey,
@@ -119,9 +118,9 @@ export const getDeployerInstance = async (): Promise<Deployer> => {
   const code = await provider.getCode(deployerAddress);
   if (code === "0x") {
     console.log("Deployer not deployed, deploying...");
-    const metaDeployerPrivateKey = process.env.FACTOR_DEPlOYER_PRIVATE_KEY;
+    const metaDeployerPrivateKey = process.env.FACTORY_DEPlOYER_PRIVATE_KEY;
     if (!metaDeployerPrivateKey) {
-      throw new Error("FACTOR_DEPlOYER_PRIVATE_KEY not set");
+      throw new Error("FACTORY_DEPlOYER_PRIVATE_KEY not set");
     }
     const metaDeployerSigner = new ethers.Wallet(
       metaDeployerPrivateKey,
@@ -144,12 +143,12 @@ export const deployContract = async (
   contractByteCode: string,
   deployerInstance: Deployer
 ): Promise<string> => {
-  const {hash, wait} = await (await deployerInstance.deploy(salt, contractByteCode))
-  
+  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode);
+
   console.log(`Submitted transaction ${hash} for deployment`);
 
   const { status, logs, blockNumber } = await wait(2);
-  
+
   if (status !== 1) {
     throw new Error(`Transaction ${hash} failed`);
   }
@@ -160,30 +159,28 @@ export const deployContract = async (
   const topicHash = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes("ContractDeployed(address)")
   );
-  const contractDeployedLog = logs.find((log) => log.topics[0] === topicHash);  
+  const contractDeployedLog = logs.find((log) => log.topics[0] === topicHash);
 
   if (!contractDeployedLog) {
     throw new Error(`Transaction ${hash} did not emit ContractDeployed event`);
   }
 
   const deployedContractAddress =
-  deployerInstance.interface.parseLog(contractDeployedLog).args.contractAddress;
+    deployerInstance.interface.parseLog(contractDeployedLog).args
+      .contractAddress;
 
   const deploymentStatus =
-  computedContractAddress === deployedContractAddress
+    computedContractAddress === deployedContractAddress
       ? "Deployed Successfully"
       : false;
 
-  console.log(
-    name,
-    deploymentStatus
-  );
+  console.log(name, deploymentStatus);
 
   if (!deploymentStatus) {
     console.log(`Invalid ${name} Handler Deployment`);
-  }  
+  }
 
-  return '0x';
+  return "0x";
 };
 
 /**
@@ -272,9 +269,9 @@ export const encodeParam = (dataType: any, data: any) => {
 export const encodeParams = (dataTypes: any[], data: any[]) => {
   const abiCoder = ethers.utils.defaultAbiCoder;
   const encodedData = abiCoder.encode(dataTypes, data);
-  console.log('encodedData ', encodedData);
-  
-  return encodedData
+  console.log("encodedData ", encodedData);
+
+  return encodedData;
 };
 
 export const isContract = async (address: string, provider: Provider) => {

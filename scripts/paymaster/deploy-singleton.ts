@@ -7,13 +7,11 @@ import {
   isContract,
 } from "../utils";
 async function main() {
-
   const provider = ethers.provider;
 
-  
   const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
   const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
-  const entryPoint = "0x119df1582e0dd7334595b8280180f336c959f3bb";
+  const entryPoint = "0x20cfdbcd64cd85fd6af506dda4c12b25379481cf";
 
   const deployerInstance = await getDeployerInstance();
   const salt = ethers.utils.keccak256(
@@ -23,13 +21,15 @@ async function main() {
   const VerifyingSingletonPaymaster = await ethers.getContractFactory(
     "VerifyingSingletonPaymaster"
   );
-  const verifyingSingletonPaymasterBytecode = `${VerifyingSingletonPaymaster.bytecode}${encodeParam(
+  const verifyingSingletonPaymasterBytecode = `${
+    VerifyingSingletonPaymaster.bytecode
+  }${encodeParam("address", entryPoint).slice(2)}${encodeParam(
     "address",
-    entryPoint
-  ).slice(2)}${encodeParam("address", owner).slice(2)}${encodeParam("address", verifyingSigner).slice(2)}`;
+    owner
+  ).slice(2)}${encodeParam("address", verifyingSigner).slice(2)}`;
 
-
-  const verifyingSingletonPaymasterComputedAddr = await deployerInstance.addressOf(salt);
+  const verifyingSingletonPaymasterComputedAddr =
+    await deployerInstance.addressOf(salt);
   console.log(
     "verifyingSingletonPaymaster Handler Computed Address: ",
     verifyingSingletonPaymasterComputedAddr
@@ -51,7 +51,8 @@ async function main() {
       "verifyingSingletonPaymaster is Already deployed with address ",
       verifyingSingletonPaymasterBytecode
     );
-  }}
+  }
+}
 
 main().catch((error) => {
   console.error(error);
