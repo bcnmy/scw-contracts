@@ -8,7 +8,7 @@ contract SmartAccountFactory {
     address immutable public _defaultImpl; 
 
     // EOA + Version tracking
-    string public constant VERSION = "1.0.2";
+    string public constant VERSION = "1.0.4";
 
     //states : registry
     // review need and impact of this update wallet -> account

@@ -33,7 +33,7 @@ contract MaliciousAccount is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.2"; // using AA 0.3.0
+    string public constant VERSION = "1.0.4"; // using AA 0.3.0
 
     // Domain Seperators
     // keccak256(

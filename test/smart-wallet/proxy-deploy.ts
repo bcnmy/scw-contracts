@@ -46,7 +46,7 @@ describe("Wallet Deployment", function () {
       )
     )
       .to.emit(walletFactory, "SmartAccountCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.2", 0);
+      .withArgs(expected, baseImpl.address, owner, "1.0.4", 0);
 
     // const deployed = await walletFactory.deployCounterFactualWallet(owner);
     // console.log("deployed new wallet..address: ", deployed);

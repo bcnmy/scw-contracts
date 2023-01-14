@@ -38,7 +38,7 @@ describe("Base Wallet Functionality", function () {
   let charlie: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const VERSION = '1.0.2'
+  const VERSION = '1.0.4'
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 

@@ -33,7 +33,7 @@ contract SmartAccountNoAuth is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.3"; // aa 0.4.0 rebase
+    string public constant VERSION = "1.0.4"; // aa 0.4.0 rebase
 
     // Domain Seperators
     // keccak256(
