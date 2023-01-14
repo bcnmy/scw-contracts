@@ -127,9 +127,8 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
         PaymasterData memory paymasterData = userOp.decodePaymasterData();
         uint256 sigLength = paymasterData.signatureLength;
 
-        //ECDSA library supports both 64 and 65-byte long signatures.
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
-        require(sigLength == 64 || sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
+        require(sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
         //don't revert on signature failure: return SIG_VALIDATION_FAILED
         if (verifyingSigner != hash.toEthSignedMessageHash().recover(paymasterData.signature)) {
             return ("",1);
