@@ -140,6 +140,7 @@ contract SmartAccount is
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
+    // review : If entry point is immutable we can't update entry point!
     function updateEntryPoint(address _newEntryPoint) external mixedAuth {
         require(_newEntryPoint != address(0), "Smart Account:: new entry point address cannot be zero");
         emit EntryPointChanged(address(_entryPoint), _newEntryPoint);

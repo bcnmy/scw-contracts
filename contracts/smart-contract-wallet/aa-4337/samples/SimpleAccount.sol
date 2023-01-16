@@ -32,6 +32,7 @@ contract SimpleAccount is BaseAccount, UUPSUpgradeable, Initializable {
         return _entryPoint;
     }
 
+    // review
     IEntryPoint private immutable _entryPoint;
 
     event SimpleAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
