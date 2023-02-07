@@ -11,7 +11,7 @@ const options = { gasLimit: 7000000 };
 async function main() {
   const provider = ethers.provider;
 
-  const deployerInstance = await getDeployerInstance();
+  const deployerInstance = await getDeployerInstance(provider);
   const MULTI_SEND_SALT = ethers.utils.keccak256(
     ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.MULTI_SEND)
   );
