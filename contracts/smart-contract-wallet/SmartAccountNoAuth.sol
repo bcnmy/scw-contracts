@@ -219,11 +219,9 @@ contract SmartAccountNoAuth is
                     // Payment info
                     refundInfo,
                     // Signature info
-                    nonces[batchId]
+                    nonces[0]++
                 );
-            // Increase nonce and execute transaction.
-            // Default space aka batchId is 0
-            nonces[batchId]++;
+            // Execute transaction.
             txHash = keccak256(txHashData);
             checkSignatures(txHash, txHashData, signatures);
         }

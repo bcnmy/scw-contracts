@@ -208,15 +208,12 @@ contract MaliciousAccount is
                     // Payment info
                     refundInfo,
                     // Signature info
-                    nonces[0]
+                    nonces[0]++
                 );
-            // Increase nonce and execute transaction.
-            // Default space aka batchId is 0
-            nonces[0]++;
+            // Execute transaction.
             txHash = keccak256(txHashData);
             checkSignatures(txHash, txHashData, signatures);
         }
-
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150

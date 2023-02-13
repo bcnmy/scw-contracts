@@ -318,6 +318,221 @@ describe("Base Wallet Functionality", function () {
     );
   });
 
+  it("Can not execute txn with the wrong nonce", async function () {
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    const wrongNonce = (await userSCW.getNonce(0)).add(1);
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      // value: ethers.utils.parseEther("1"),
+      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+      nonce: wrongNonce,
+    });
+
+    const chainId = await userSCW.getChainId();
+    const { signer, data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx,
+      chainId
+    );
+
+    console.log(safeTx);
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    let signature = "0x";
+    signature += data.slice(2);
+    await expect(
+      userSCW.connect(accounts[0]).execTransaction(
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature
+      )
+    ).to.be.reverted;
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("0")
+    );
+  }); 
+
+  it("Can not execute txn with the same nonce twice", async function () {
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      // value: ethers.utils.parseEther("1"),
+      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+      nonce: await userSCW.getNonce(0),
+    });
+
+    const chainId = await userSCW.getChainId();
+    const { signer, data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx,
+      chainId
+    );
+
+    console.log(safeTx);
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    let signature = "0x";
+    signature += data.slice(2);
+
+    await expect(
+      userSCW.connect(accounts[0]).execTransaction(
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature
+      )
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
+
+    await expect(
+      userSCW.connect(accounts[0]).execTransaction(
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature
+      )
+    ).to.be.reverted;
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
+
+  }); 
+
+  it("should send two consecutive transactions with the correct nonces and they go through)", async function () {
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      // value: ethers.utils.parseEther("1"),
+      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+      nonce: await userSCW.getNonce(0),
+    });
+
+    const chainId = await userSCW.getChainId();
+    let { signer, data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx,
+      chainId
+    );
+
+    //console.log(safeTx);
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    let signature = "0x";
+    signature += data.slice(2);
+    await expect(
+      userSCW.connect(accounts[0]).execTransaction(
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature
+      )
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
+
+    const safeTx2: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      // value: ethers.utils.parseEther("1"),
+      data: encodeTransfer(charlie, ethers.utils.parseEther("11").toString()),
+      nonce: await userSCW.getNonce(0),
+    });
+
+    ( { signer, data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx2,
+      chainId
+    ) );
+
+    const transaction2: Transaction = {
+      to: safeTx2.to,
+      value: safeTx2.value,
+      data: safeTx2.data,
+      operation: safeTx2.operation,
+      targetTxGas: safeTx2.targetTxGas,
+    };
+
+    signature = "0x";
+    signature += data.slice(2);
+
+    await expect(
+      userSCW.connect(accounts[0]).execTransaction(
+        transaction2,
+        0, // batchId
+        refundInfo,
+        signature
+      )
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("21")
+    );
+
+  });
+
   it("should send a single transacton (personal sign)", async function () {
     await token
       .connect(accounts[0])
