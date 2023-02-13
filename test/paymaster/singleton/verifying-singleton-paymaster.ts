@@ -117,7 +117,11 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       entryPoint
     );
 
-    const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+    const hash = await verifyingSingletonPaymaster.getHash(
+      userOp1,
+      0,
+      paymasterId
+    );
     const sig = await offchainSigner.signMessage(arrayify(hash));
     const paymasterData = abi.encode(["address", "bytes"], [paymasterId, sig]);
     const paymasterAndData = hexConcat([paymasterAddress, paymasterData]);
@@ -157,7 +161,11 @@ describe("EntryPoint with VerifyingPaymaster", function () {
         walletOwner,
         entryPoint
       );
-      const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+      const hash = await verifyingSingletonPaymaster.getHash(
+        userOp1,
+        0,
+        await offchainSigner.getAddress()
+      );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       const userOp = await fillAndSign(
         {
@@ -194,7 +202,11 @@ describe("EntryPoint with VerifyingPaymaster", function () {
         walletOwner,
         entryPoint
       );
-      const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+      const hash = await verifyingSingletonPaymaster.getHash(
+        userOp1,
+        0,
+        await offchainSigner.getAddress()
+      );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       console.log("offchainSigner : " + (await offchainSigner.getAddress()));
       console.log("good sender becomes malicious😈");

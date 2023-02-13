@@ -13,6 +13,7 @@ import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
  * provides helper methods for staking.
  * validates that the postOp is called only by the entryPoint
  */
+// Could have Ownable2Step 
 abstract contract BasePaymaster is IPaymaster, Ownable {
 
     IEntryPoint public entryPoint;
