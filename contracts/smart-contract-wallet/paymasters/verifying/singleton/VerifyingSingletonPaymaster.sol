@@ -125,8 +125,8 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
      * verify our external signer signed this request.
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
      */
-    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
-    external override returns (bytes memory context, uint256 sigTimeRange) {
+    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
+    internal override returns (bytes memory context, uint256 sigTimeRange) {
         (requiredPreFund);
         PaymasterData memory paymasterData = userOp.decodePaymasterData();
         bytes32 hash = getHash(userOp, paymasterNonces[userOp.getSender()], paymasterData.paymasterId);

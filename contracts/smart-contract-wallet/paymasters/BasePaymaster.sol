@@ -16,19 +16,23 @@ import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 // Could have Ownable2Step 
 abstract contract BasePaymaster is IPaymaster, Ownable {
 
-    IEntryPoint public entryPoint;
+    IEntryPoint immutable public entryPoint;
 
     constructor(IEntryPoint _entryPoint) {
-        setEntryPoint(_entryPoint);
-    }
-
-    function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
         entryPoint = _entryPoint;
     }
 
+    /// @inheritdoc IPaymaster
     function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
-    external virtual override returns (bytes memory context, uint256 sigTimeRange);
+    external override returns (bytes memory context, uint256 sigTimeRange) {
+         _requireFromEntryPoint();
+        return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
+    }
 
+    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
+    internal virtual returns (bytes memory context, uint256 sigTimeRange);
+
+    /// @inheritdoc IPaymaster
     function postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) external override {
         _requireFromEntryPoint();
         _postOp(mode, context, actualGasCost);
@@ -104,16 +108,5 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
         require(msg.sender == address(entryPoint));
-    }
-
-    /**
-     * helper to pack the return value for validatePaymasterUserOp
-     * (copy of same method from BaseAccount)
-     * @param sigFailed true if the signature check failed, false, if it succeeded.
-     * @param validUntil last timestamp this UserOperation is valid (or zero for infinite)
-     * @param validAfter first timestamp this UserOperation is valid
-     */
-    function packSigTimeRange(bool sigFailed, uint256 validUntil, uint256 validAfter) internal pure returns (uint256) {
-        return uint256(sigFailed ? 1 : 0) | uint256(validUntil << 8) | uint256(validAfter << (64 + 8));
     }
 }

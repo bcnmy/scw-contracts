@@ -140,11 +140,7 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       const paymasterId = await depositorSigner.getAddress();
       const userOp = await getUserOpWithPaymasterInfo(paymasterId);
       await expect(
-        verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          1029
-        )
+        entryPoint.callStatic.simulateValidation(userOp)
       ).to.be.revertedWith("Insufficient balance for paymaster id");
     });
 
