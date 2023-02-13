@@ -204,7 +204,7 @@ contract SmartAccount is
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
     /// @param _tx Wallet transaction 
-    /// @param batchId batchId key for 2D nonces
+    /// @param batchId batchId key for 2D nonces. Not used in this implementation. Left for future interface compatibility.
     /// @param refundInfo Required information for gas refunds
     /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
     function execTransaction(
@@ -227,11 +227,11 @@ contract SmartAccount is
                     // Payment info
                     refundInfo,
                     // Signature info
-                    nonces[batchId]
+                    nonces[0]
                 );
             // Increase nonce and execute transaction.
             // Default space aka batchId is 0
-            nonces[batchId]++;
+            nonces[0]++;
             txHash = keccak256(txHashData);
             checkSignatures(txHash, txHashData, signatures);
         }
