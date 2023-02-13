@@ -57,7 +57,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
     /**
      * add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
      */
-    function depositFor(address paymasterId) external payable {
+    function depositFor(address paymasterId) external payable nonReentrant {
         require(paymasterId != address(0), "Paymaster Id can not be zero");
         require(msg.value != 0, "Zero deposit!");
         paymasterIdBalances[paymasterId] += msg.value;
@@ -65,7 +65,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
         emit GasDeposited(paymasterId, msg.value);
     }
 
-    function withdrawTo(address payable withdrawAddress, uint256 amount) public override {
+    function withdrawTo(address payable withdrawAddress, uint256 amount) public override nonReentrant {
         require(withdrawAddress != address(0), "withdraw to 0 address");
         uint256 currentBalance = paymasterIdBalances[msg.sender];
         require(amount <= currentBalance, "Insufficient amount to withdraw");
