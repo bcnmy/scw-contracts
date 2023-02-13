@@ -66,6 +66,7 @@ contract SmartAccount is
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+        _disableInitializers();
     }
 
     

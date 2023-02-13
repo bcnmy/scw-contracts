@@ -38,7 +38,7 @@ import { provider } from "ganache";
 import { sign } from "crypto";
 
 const GasEstimatorArtifact = artifacts.require("GasEstimator");
-const SCWNoAuth = require("/Users/chirag/work/biconomy/scw-playground/scw-contracts/artifacts/contracts/smart-contract-wallet/SmartAccountNoAuth.sol/SmartAccountNoAuth.json");
+const SCWNoAuth = require("../../artifacts/contracts/smart-contract-wallet/SmartAccountNoAuth.sol/SmartAccountNoAuth.json");
 const GasEstimatorSmartWalletArtifact = artifacts.require(
   "GasEstimatorSmartAccount"
 );
