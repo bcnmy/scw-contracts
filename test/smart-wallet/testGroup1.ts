@@ -304,6 +304,7 @@ describe("Base Wallet Functionality", function () {
 
     let signature = "0x";
     signature += data.slice(2);
+
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction,
@@ -337,7 +338,6 @@ describe("Base Wallet Functionality", function () {
       safeTx,
       chainId
     );
-
     console.log(safeTx);
 
     const transaction: Transaction = {
