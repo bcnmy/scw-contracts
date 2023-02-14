@@ -40,7 +40,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
     event GasBalanceDeducted(address indexed _paymasterId, uint256 indexed _charge);
 
 
-    constructor(IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_entryPoint) {
+    constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) {
         require(address(_entryPoint) != address(0), "can not be 0 address");
         require(_verifyingSigner != address(0), "signer of paymaster can not be 0");
         verifyingSigner = _verifyingSigner;

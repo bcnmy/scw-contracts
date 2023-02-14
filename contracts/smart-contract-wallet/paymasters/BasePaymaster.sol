@@ -18,8 +18,9 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
 
     IEntryPoint immutable public entryPoint;
 
-    constructor(IEntryPoint _entryPoint) {
+    constructor(address _owner, IEntryPoint _entryPoint) {
         entryPoint = _entryPoint;
+        _transferOwnership(_owner);
     }
 
     /// @inheritdoc IPaymaster
