@@ -64,6 +64,7 @@ describe("EntryPoint with VerifyingPaymaster", function () {
 
     verifyingSingletonPaymaster =
       await new VerifyingSingletonPaymaster__factory(deployer).deploy(
+        await deployer.getAddress(),
         entryPoint.address,
         offchainSignerAddress
       );
@@ -148,7 +149,9 @@ describe("EntryPoint with VerifyingPaymaster", function () {
   describe("#validatePaymasterUserOp", () => {
     it("Should Fail when there is no deposit for paymaster id", async () => {
       const paymasterId = await depositorSigner.getAddress();
+      console.log("paymaster Id ", paymasterId);
       const userOp = await getUserOpWithPaymasterInfo(paymasterId);
+      console.log("entrypoint ", entryPoint.address);
       await expect(
         entryPoint.callStatic.simulateValidation(userOp)
       ).to.be.revertedWith("Insufficient balance for paymaster id");

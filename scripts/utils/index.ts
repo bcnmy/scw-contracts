@@ -31,6 +31,8 @@ export const factoryTxHash =
 const factoryDeploymentFee = (0.0247 * 1e18).toString(); // 0.0247
 const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
 
+// TODO
+// append TEST (temporary) for next dev deployment
 export enum DEPLOYMENT_SALTS {
   CALLBACK_HANDLER = "CALLBACK_HANDLER_V2",
   DECODER = "DECODER_V2",
