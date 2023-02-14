@@ -50,7 +50,7 @@ async function main() {
   } else {
     console.log(
       "verifyingSingletonPaymaster is Already deployed with address ",
-      verifyingSingletonPaymasterBytecode
+      verifyingSingletonPaymasterComputedAddr
     );
   }
 }
