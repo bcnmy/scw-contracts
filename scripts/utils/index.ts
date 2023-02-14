@@ -98,7 +98,7 @@ export const getDeployedAddress = (initCode: string, salt: BigNumberish) => {
 };
 
 export const getDeployerInstance = async (): Promise<Deployer> => {
-  const metaDeployerPrivateKey = process.env.FACTORY_DEPlOYER_PRIVATE_KEY;
+  const metaDeployerPrivateKey = process.env.FACTORY_DEPLOYER_PRIVATE_KEY;
   if (!metaDeployerPrivateKey) {
     throw new Error("FACTORY_DEPLOYER_PRIVATE_KEY not set");
   }
@@ -118,9 +118,9 @@ export const getDeployerInstance = async (): Promise<Deployer> => {
   const code = await provider.getCode(deployerAddress);
   if (code === "0x") {
     console.log("Deployer not deployed, deploying...");
-    const metaDeployerPrivateKey = process.env.FACTORY_DEPlOYER_PRIVATE_KEY;
+    const metaDeployerPrivateKey = process.env.FACTORY_DEPLOYER_PRIVATE_KEY;
     if (!metaDeployerPrivateKey) {
-      throw new Error("FACTORY_DEPlOYER_PRIVATE_KEY not set");
+      throw new Error("FACTORY_DEPLOYER_PRIVATE_KEY not set");
     }
     const metaDeployerSigner = new ethers.Wallet(
       metaDeployerPrivateKey,
