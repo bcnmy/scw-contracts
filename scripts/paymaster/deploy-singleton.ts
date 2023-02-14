@@ -12,7 +12,7 @@ async function main() {
 
   const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
   const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
-  const entryPoint = "0xFF95ad8beD219969f608FfF36db647318F4bb4C0";
+  const entryPoint = "0x27a4Db290B89AE3373ce4313cBEaE72112Ae7Da9";
 
   const deployerInstance = await getDeployerInstance();
   const salt = ethers.utils.keccak256(
@@ -24,15 +24,15 @@ async function main() {
   );
   const verifyingSingletonPaymasterBytecode = `${
     VerifyingSingletonPaymaster.bytecode
-  }${encodeParam("address", entryPoint).slice(2)}${encodeParam(
+  }${encodeParam("address", owner).slice(2)}${encodeParam(
     "address",
-    owner
+    entryPoint
   ).slice(2)}${encodeParam("address", verifyingSigner).slice(2)}`;
 
   const verifyingSingletonPaymasterComputedAddr =
     await deployerInstance.addressOf(salt);
   console.log(
-    "verifyingSingletonPaymaster Handler Computed Address: ",
+    "verifyingSingletonPaymaster Computed Address: ",
     verifyingSingletonPaymasterComputedAddr
   );
   const isContractDeployed = await isContract(

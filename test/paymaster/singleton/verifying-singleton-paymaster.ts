@@ -117,7 +117,21 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       entryPoint
     );
 
-    const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+    const nonceFromContract = await verifyingSingletonPaymaster[
+      "getSenderPaymasterNonce(address)"
+    ](walletAddress);
+
+    const nonceFromContract1 = await verifyingSingletonPaymaster[
+      "getSenderPaymasterNonce((address,uint256,bytes,bytes,uint256,uint256,uint256,uint256,uint256,bytes,bytes))"
+    ](userOp1);
+
+    expect(nonceFromContract).to.be.equal(nonceFromContract1);
+
+    const hash = await verifyingSingletonPaymaster.getHash(
+      userOp1,
+      nonceFromContract.toNumber(),
+      paymasterId
+    );
     const sig = await offchainSigner.signMessage(arrayify(hash));
     const paymasterData = abi.encode(["address", "bytes"], [paymasterId, sig]);
     const paymasterAndData = hexConcat([paymasterAddress, paymasterData]);
@@ -136,11 +150,7 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       const paymasterId = await depositorSigner.getAddress();
       const userOp = await getUserOpWithPaymasterInfo(paymasterId);
       await expect(
-        verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          1029
-        )
+        entryPoint.callStatic.simulateValidation(userOp)
       ).to.be.revertedWith("Insufficient balance for paymaster id");
     });
 
@@ -157,7 +167,16 @@ describe("EntryPoint with VerifyingPaymaster", function () {
         walletOwner,
         entryPoint
       );
-      const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+
+      const nonceFromContract = await verifyingSingletonPaymaster[
+        "getSenderPaymasterNonce(address)"
+      ](walletAddress);
+
+      const hash = await verifyingSingletonPaymaster.getHash(
+        userOp1,
+        nonceFromContract.toNumber(),
+        await offchainSigner.getAddress()
+      );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       const userOp = await fillAndSign(
         {
@@ -194,7 +213,15 @@ describe("EntryPoint with VerifyingPaymaster", function () {
         walletOwner,
         entryPoint
       );
-      const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+      const nonceFromContract = await verifyingSingletonPaymaster[
+        "getSenderPaymasterNonce(address)"
+      ](walletAddress);
+
+      const hash = await verifyingSingletonPaymaster.getHash(
+        userOp1,
+        nonceFromContract.toNumber(),
+        await offchainSigner.getAddress()
+      );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       console.log("offchainSigner : " + (await offchainSigner.getAddress()));
       console.log("good sender becomes malicious😈");
