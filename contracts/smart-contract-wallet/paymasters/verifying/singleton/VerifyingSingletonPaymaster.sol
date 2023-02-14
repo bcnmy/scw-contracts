@@ -143,7 +143,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
     }
 
     function _updateNonce(UserOperation calldata userOp) internal {
-        paymasterNonces[userOp.getSender()]++;
+        ++paymasterNonces[userOp.getSender()];
     }
 
     /**
