@@ -1,10 +1,8 @@
 import { ethers } from "hardhat";
 import {
-  SALT,
-  FACTORY_ADDRESS,
-  getDeployedAddress,
-  deploy,
-  deployFactory,
+  deployContract,
+  DEPLOYMENT_SALTS,
+  getDeployerInstance,
   isContract,
 } from "./utils";
 
@@ -13,19 +11,21 @@ const options = { gasLimit: 7000000 };
 async function main() {
   const provider = ethers.provider;
 
-  const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
-  if (!isFactoryDeployed) {
-    const deployedFactory = await deployFactory(provider);
-  }
+  // const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
+  // if (!isFactoryDeployed) {
+  //   const deployedFactory = await deployFactory(provider);
+  // }
+
+  const deployerInstance = await getDeployerInstance();
+  const salt = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.CALLBACK_HANDLER)
+  );
 
   const callBackHandler = await ethers.getContractFactory(
     "DefaultCallbackHandler"
   );
   const callBackHandlerBytecode = `${callBackHandler.bytecode}`;
-  const callBackHandlerComputedAddr = getDeployedAddress(
-    callBackHandlerBytecode,
-    ethers.BigNumber.from(SALT)
-  );
+  const callBackHandlerComputedAddr = await deployerInstance.addressOf(salt);
   console.log(
     "CallBack Handler Computed Address: ",
     callBackHandlerComputedAddr
@@ -36,26 +36,13 @@ async function main() {
     provider
   ); // true (deployed on-chain)
   if (!iscallBackHandlerDeployed) {
-    const callBackHandlerDeployedAddr = await deploy(
-      provider,
+    await deployContract(
+      DEPLOYMENT_SALTS.CALLBACK_HANDLER,
+      callBackHandlerComputedAddr,
+      salt,
       callBackHandlerBytecode,
-      ethers.BigNumber.from(SALT)
+      deployerInstance
     );
-
-    console.log("callBackHandlerDeployedAddr ", callBackHandlerDeployedAddr);
-    const callBackHandlerDeploymentStatus =
-      callBackHandlerComputedAddr === callBackHandlerDeployedAddr
-        ? "Deployed Successfully"
-        : false;
-
-    console.log(
-      "callBackHandlerDeploymentStatus ",
-      callBackHandlerDeploymentStatus
-    );
-
-    if (!callBackHandlerDeploymentStatus) {
-      console.log("Invalid CallBack Handler Deployment");
-    }
   } else {
     console.log(
       "CallBack Handler is Already deployed with address ",

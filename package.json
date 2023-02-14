@@ -51,6 +51,7 @@
     "web3": "^1.7.4"
   },
   "dependencies": {
+    "@0xsequence/create3": "https://github.com/0xsequence/create3",
     "@account-abstraction/contracts": "^0.4.0",
     "@account-abstraction/sdk": "^0.4.0",
     "@chainlink/contracts": "^0.4.1",
