@@ -32,7 +32,7 @@ async function main() {
   const verifyingSingletonPaymasterComputedAddr =
     await deployerInstance.addressOf(salt);
   console.log(
-    "verifyingSingletonPaymaster Handler Computed Address: ",
+    "verifyingSingletonPaymaster Computed Address: ",
     verifyingSingletonPaymasterComputedAddr
   );
   const isContractDeployed = await isContract(
