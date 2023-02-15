@@ -75,6 +75,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
   let charlie: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
+  const ACCOUNT_ABSTRACTION_FLOW = 0;
+  const EOA_CONTROLLED_FLOW = 1;
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 
@@ -179,8 +181,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const walletOwner = await userSCW.owner();
     expect(walletOwner).to.equal(owner);
 
-    const walletNonce1 = await userSCW.getNonce(0); // only 0 space is in the context now
-    const walletNonce2 = await userSCW.getNonce(1);
+    const walletNonce1 = await userSCW.getNonce(ACCOUNT_ABSTRACTION_FLOW);
+    const walletNonce2 = await userSCW.getNonce(EOA_CONTROLLED_FLOW);
     const chainId = await userSCW.getChainId();
 
     console.log("walletNonce1 ", walletNonce1);
@@ -203,7 +205,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       to: token.address,
       // value: ethers.utils.parseEther("1"),
       data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-      nonce: await userSCW.getNonce(0),
+      nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
     });
 
     const chainId = await userSCW.getChainId();
@@ -296,7 +298,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     );
   });
 
-  it("can send transactions and charge wallet for fees in erc20 tokens", async function () {
+  it("can send transactions and charge smart account for fees in erc20 tokens", async function () {
     await token
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
@@ -309,7 +311,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       to: token.address,
       // value: ethers.utils.parseEther("1"),
       data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-      nonce: await userSCW.getNonce(0),
+      nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
     });
 
     const gasEstimate1 = await ethers.provider.estimateGas({
@@ -470,7 +472,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       to: token.address,
       // value: ethers.utils.parseEther("1"),
       data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-      nonce: await userSCW.getNonce(0),
+      nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
     });
 
     const gasEstimate1 = await ethers.provider.estimateGas({

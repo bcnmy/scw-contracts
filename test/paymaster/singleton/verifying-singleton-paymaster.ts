@@ -30,7 +30,7 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
-describe("EntryPoint with VerifyingPaymaster", function () {
+describe("EntryPoint with VerifyingPaymaster Singleton", function () {
   let entryPoint: EntryPoint;
   let entryPointStatic: EntryPoint;
   let depositorSigner: Signer;
