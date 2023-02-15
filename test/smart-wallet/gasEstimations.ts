@@ -340,6 +340,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     let signature = "0x";
     signature += data.slice(2);
 
+    // 2 signatures way : not viable!
+
     const transaction: Transaction = {
       to: safeTx.to,
       value: safeTx.value,
@@ -498,6 +500,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     let signature = "0x";
     signature += data.slice(2);
+
+    // 2 signatures way : Not viable!
 
     const transaction: Transaction = {
       to: safeTx.to,
