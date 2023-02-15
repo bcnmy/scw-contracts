@@ -9,6 +9,14 @@ import {
 
 const options = { gasLimit: 7000000, gasPrice: 70000000000 };
 
+// should come from env
+const entryPointAddress =
+  process.env.ENTRY_POINT_ADDRESS ||
+  "0x27a4Db290B89AE3373ce4313cBEaE72112Ae7Da9";
+const fallbackHandlerAddress =
+  process.env.FALLBACK_HANDLER_ADDRESS ||
+  "0x4a3581e10ac4BDd4Da32dE5eBea80C2840255E7a";
+
 async function main() {
   const provider = ethers.provider;
 
@@ -18,7 +26,10 @@ async function main() {
   );
 
   const SmartWallet = await ethers.getContractFactory("SmartAccount");
-  const smartWalletBytecode = `${SmartWallet.bytecode}`;
+  const smartWalletBytecode = `${SmartWallet.bytecode}${encodeParam(
+    "address",
+    entryPointAddress
+  ).slice(2)}`;
   const baseImpComputedAddr = await deployerInstance.addressOf(
     WALLET_FACTORY_IMP_SALT
   );
@@ -50,7 +61,7 @@ async function main() {
   const walletFactoryBytecode = `${WalletFactory.bytecode}${encodeParam(
     "address",
     baseImpComputedAddr
-  ).slice(2)}`;
+  ).slice(2)}${encodeParam("address", fallbackHandlerAddress).slice(2)}`;
 
   const walletFactoryComputedAddr = await deployerInstance.addressOf(
     WALLET_FACTORY_SALT

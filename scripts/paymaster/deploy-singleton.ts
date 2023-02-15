@@ -12,7 +12,9 @@ async function main() {
 
   const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
   const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
-  const entryPoint = "0x27a4Db290B89AE3373ce4313cBEaE72112Ae7Da9";
+  const entryPoint =
+    process.env.ENTRY_POINT_ADDRESS ||
+    "0x27a4Db290B89AE3373ce4313cBEaE72112Ae7Da9";
 
   const deployerInstance = await getDeployerInstance();
   const salt = ethers.utils.keccak256(

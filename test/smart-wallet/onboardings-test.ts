@@ -119,22 +119,32 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
+    const EntryPoint = await ethers.getContractFactory("EntryPoint");
+    entryPoint = await EntryPoint.deploy();
+    await entryPoint.deployed();
+    console.log("Entry point deployed at: ", entryPoint.address);
+
+    const DefaultHandler = await ethers.getContractFactory(
+      "DefaultCallbackHandler"
+    );
+    handler = await DefaultHandler.deploy();
+    await handler.deployed();
+    console.log("Default callback handler deployed at: ", handler.address);
+
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    baseImpl = await BaseImplementation.deploy();
+    baseImpl = await BaseImplementation.deploy(entryPoint.address);
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
 
     const SmartAccountFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
+    walletFactory = await SmartAccountFactory.deploy(
+      baseImpl.address,
+      handler.address
+    );
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
-
-    const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    entryPoint = await EntryPoint.deploy();
-    await entryPoint.deployed();
-    console.log("Entry point deployed at: ", entryPoint.address);
 
     const MockToken = await ethers.getContractFactory("MockToken");
     token = await MockToken.deploy();
@@ -145,13 +155,6 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     stToken = await StakedTestToken.deploy(token.address);
     await token.deployed();
     console.log("Test token deployed at: ", stToken.address);
-
-    const DefaultHandler = await ethers.getContractFactory(
-      "DefaultCallbackHandler"
-    );
-    handler = await DefaultHandler.deploy();
-    await handler.deployed();
-    console.log("Default callback handler deployed at: ", handler.address);
 
     const Storage = await ethers.getContractFactory("StorageSetter");
     storage = await Storage.deploy();
@@ -204,7 +207,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
         walletFactory.address,
         SmartAccountFactory.interface.encodeFunctionData(
           "deployCounterFactualWallet",
-          [owner, entryPoint.address, handler.address, 0]
+          [owner, 0]
         ),
       ]
     );
@@ -218,7 +221,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
           walletFactory.address,
           SmartAccountFactory.interface.encodeFunctionData(
             "deployCounterFactualWallet",
-            [owner, entryPoint.address, handler.address, 0]
+            [owner, 0]
           )
         ).call()
       ).gas
@@ -226,7 +229,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const txnData = SmartAccountFactory.interface.encodeFunctionData(
       "deployCounterFactualWallet",
-      [owner, entryPoint.address, handler.address, 0]
+      [owner, 0]
     );
 
     console.log("estimated using call() : ", estimated + txBaseCost(txnData));
@@ -258,12 +261,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       .toNumber();
     console.log("estimated gas to be used ", deployTransactionGas);
 
-    const tx = await walletFactory.deployCounterFactualWallet(
-      owner,
-      entryPoint.address,
-      handler.address,
-      0
-    );
+    const tx = await walletFactory.deployCounterFactualWallet(owner, 0);
 
     const receipt = await tx.wait(1);
 
@@ -372,15 +370,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const encodedEstimate = gasEstimatorCustomInterface.encodeFunctionData(
       "estimate",
-      [
-        expected,
-        walletFactory.address,
-        owner,
-        entryPoint.address,
-        handler.address,
-        3,
-        txnData,
-      ]
+      [expected, walletFactory.address, owner, 3, txnData]
     );
 
     const response = await ethers.provider.send("eth_call", [
@@ -415,12 +405,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       ethers.BigNumber.from(decoded.gas).add(txBaseCost(txnData)).toNumber()
     );
 
-    const tx = await walletFactory.deployCounterFactualWallet(
-      owner,
-      entryPoint.address,
-      handler.address,
-      2
-    );
+    const tx = await walletFactory.deployCounterFactualWallet(owner, 2);
 
     const receipt = await tx.wait(1);
 
@@ -492,7 +477,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         walletFactory,
         "deployCounterFactualWallet",
-        [owner, entryPoint.address, handler.address, 1],
+        [owner, 1],
         0
       ),
       buildContractCall(
@@ -607,7 +592,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         walletFactory,
         "deployCounterFactualWallet",
-        [owner, entryPoint.address, handler.address, 1],
+        [owner, 1],
         0
       ),
       buildContractCall(
@@ -738,7 +723,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         walletFactory,
         "deployCounterFactualWallet",
-        [owner, entryPoint.address, handler.address, 1],
+        [owner, 1],
         0
       ),
       buildContractCall(
