@@ -5,10 +5,9 @@ pragma solidity 0.8.12;
 /* solhint-disable no-inline-assembly */
 import "../../BasePaymaster.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/proxy/utils/Initializable.sol";
-import "@openzeppelin/contracts/utils/Address.sol";
+import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import "../../PaymasterHelpers.sol";
-// import "../samples/Signatures.sol";
+
 
 
 /**
@@ -20,10 +19,9 @@ import "../../PaymasterHelpers.sol";
  * - the paymaster signs to agree to PAY for GAS.
  * - the wallet signs to prove identity and wallet ownership.
  */
-contract VerifyingSingletonPaymaster is BasePaymaster {
+contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
 
     using ECDSA for bytes32;
-    // possibly //  using Signatures for UserOperation;
     using UserOperationLib for UserOperation;
     using PaymasterHelpers for UserOperation;
     using PaymasterHelpers for bytes;
@@ -36,9 +34,15 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
     // paymaster nonce for account 
     mapping(address => uint256) private paymasterNonces;
 
-    constructor(IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_entryPoint) {
-        require(address(_entryPoint) != address(0), "VerifyingPaymaster: Entrypoint can not be zero address");
-        require(_verifyingSigner != address(0), "VerifyingPaymaster: signer of paymaster can not be zero address");
+    event VerifyingSignerChanged(address indexed _oldSigner, address indexed _newSigner, address indexed _actor);
+    event GasDeposited(address indexed _paymasterId, uint256 indexed _value);
+    event GasWithdrawn(address indexed _paymasterId, address indexed _to, uint256 indexed _value);
+    event GasBalanceDeducted(address indexed _paymasterId, uint256 indexed _charge);
+
+
+    constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) {
+        require(address(_entryPoint) != address(0), "can not be 0 address");
+        require(_verifyingSigner != address(0), "signer of paymaster can not be 0");
         verifyingSigner = _verifyingSigner;
     }
 
@@ -47,32 +51,37 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
     } 
 
     function deposit() public virtual override payable {
-        revert("Deposit must be for a paymasterId. Use depositFor");
+        revert("user DepositFor instead");
     }
 
     /**
      * add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
      */
-    function depositFor(address paymasterId) public payable {
-        require(!Address.isContract(paymasterId), "Paymaster Id can not be smart contract address");
-        require(paymasterId != address(0), "Paymaster Id can not be zero address");
+    function depositFor(address paymasterId) external payable nonReentrant {
+        require(paymasterId != address(0), "Paymaster Id can not be zero");
+        require(msg.value != 0, "Zero deposit!");
         paymasterIdBalances[paymasterId] += msg.value;
         entryPoint.depositTo{value : msg.value}(address(this));
+        emit GasDeposited(paymasterId, msg.value);
     }
 
-    function withdrawTo(address payable withdrawAddress, uint256 amount) public override {
+    function withdrawTo(address payable withdrawAddress, uint256 amount) public override nonReentrant {
+        require(withdrawAddress != address(0), "withdraw to 0 address");
         uint256 currentBalance = paymasterIdBalances[msg.sender];
         require(amount <= currentBalance, "Insufficient amount to withdraw");
         paymasterIdBalances[msg.sender] -= amount;
         entryPoint.withdrawTo(withdrawAddress, amount);
+        emit GasWithdrawn(msg.sender, withdrawAddress, amount);
     }
     
     /**
     this function will let owner change signer
     */
-    function setSigner( address _newVerifyingSigner) external onlyOwner{
-        require(_newVerifyingSigner != address(0), "VerifyingPaymaster: new signer can not be zero address");
+    function setSigner( address _newVerifyingSigner) external payable onlyOwner{
+        require(_newVerifyingSigner != address(0), "can't be 0 address");
+        address oldSigner = verifyingSigner;
         verifyingSigner = _newVerifyingSigner;
+        emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
     }
 
     /**
@@ -82,12 +91,8 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      * note that this signature covers all fields of the UserOperation, except the "paymasterAndData",
      * which will carry the signature itself.
      */
-    function getHash(UserOperation calldata userOp)
+    function getHash(UserOperation calldata userOp, uint256 senderPaymasterNonce, address paymasterId)
     public view returns (bytes32) {
-        uint256 id;
-        assembly {
-            id := chainid()
-        }
         //can't use userOp.hash(), since it contains also the paymasterAndData itself.
         address sender = userOp.getSender();
         return keccak256(abi.encode(
@@ -100,9 +105,10 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
                 userOp.preVerificationGas,
                 userOp.maxFeePerGas,
                 userOp.maxPriorityFeePerGas,
-                id,
+                block.chainid,
                 address(this),
-                paymasterNonces[sender]
+                paymasterId,
+                senderPaymasterNonce
             ));
     }
 
@@ -119,14 +125,12 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      * verify our external signer signed this request.
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
      */
-    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
-    external override returns (bytes memory context, uint256 sigTimeRange) {
+    function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
+    internal override returns (bytes memory context, uint256 sigTimeRange) {
         (requiredPreFund);
-        bytes32 hash = getHash(userOp);
-
         PaymasterData memory paymasterData = userOp.decodePaymasterData();
+        bytes32 hash = getHash(userOp, paymasterNonces[userOp.getSender()], paymasterData.paymasterId);
         uint256 sigLength = paymasterData.signatureLength;
-
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
         require(sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
         //don't revert on signature failure: return SIG_VALIDATION_FAILED
@@ -139,11 +143,9 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
     }
 
     function _updateNonce(UserOperation calldata userOp) internal {
-        paymasterNonces[userOp.getSender()]++;
+        ++paymasterNonces[userOp.getSender()];
     }
 
-    //todo
-    //add event and emit in the post op with paymaster id, balance deducted (and paymaster address?)
     /**
     * @dev Executes the paymaster's payment conditions
     * @param mode tells whether the op succeeded, reverted, or if the op succeeded but cause the postOp to revert
@@ -156,10 +158,10 @@ contract VerifyingSingletonPaymaster is BasePaymaster {
      uint256 actualGasCost
     ) internal virtual override {
     (mode);
-    // (mode,context,actualGasCost); // unused params
     PaymasterContext memory data = context.decodePaymasterContext();
     address extractedPaymasterId = data.paymasterId;
     paymasterIdBalances[extractedPaymasterId] -= actualGasCost;
+    emit GasBalanceDeducted(extractedPaymasterId, actualGasCost);
   }
 
 }

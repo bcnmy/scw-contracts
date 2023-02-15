@@ -19,7 +19,7 @@ export const EIP_DOMAIN = {
 };
 
 export const EIP712_ACCOUNT_TX_TYPE = {
-  // "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+  // "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
   AccountTx: [
     { type: "address", name: "to" },
     { type: "uint256", name: "value" },
@@ -28,6 +28,7 @@ export const EIP712_ACCOUNT_TX_TYPE = {
     { type: "uint256", name: "targetTxGas" },
     { type: "uint256", name: "baseGas" },
     { type: "uint256", name: "gasPrice" },
+    { type: "uint256", name: "tokenGasPriceFactor" },
     { type: "address", name: "gasToken" },
     { type: "address", name: "refundReceiver" },
     { type: "uint256", name: "nonce" },
