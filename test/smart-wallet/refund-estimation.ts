@@ -22,6 +22,8 @@ import {
   safeSignTypedData,
   buildSafeTransaction,
   executeContractCallWithSigners,
+  ACCOUNT_ABSTRACTION_FLOW,
+  EOA_CONTROLLED_FLOW,
 } from "../../src/utils/execution";
 import { buildMultiSendSafeTx } from "../../src/utils/multisend";
 import { BytesLike } from "ethers";
@@ -80,8 +82,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
   let handler: DefaultCallbackHandler;
   const UNSTAKE_DELAY_SEC = 100;
   const PAYMASTER_STAKE = ethers.utils.parseEther("1");
-  const ACCOUNT_ABSTRACTION_FLOW = 0;
-  const EOA_CONTROLLED_FLOW = 1;
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 

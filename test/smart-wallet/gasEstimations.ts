@@ -22,6 +22,8 @@ import {
   safeSignTypedData,
   buildSafeTransaction,
   executeContractCallWithSigners,
+  ACCOUNT_ABSTRACTION_FLOW,
+  EOA_CONTROLLED_FLOW,
 } from "../../src/utils/execution";
 import { buildMultiSendSafeTx } from "../../src/utils/multisend";
 import { BytesLike } from "ethers";
@@ -75,8 +77,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
   let charlie: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const ACCOUNT_ABSTRACTION_FLOW = 0;
-  const EOA_CONTROLLED_FLOW = 1;
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 

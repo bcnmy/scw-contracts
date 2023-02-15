@@ -26,6 +26,8 @@ import {
   safeSignTypedData,
   buildSafeTransaction,
   executeContractCallWithSigners,
+  ACCOUNT_ABSTRACTION_FLOW,
+  EOA_CONTROLLED_FLOW,
 } from "../../src/utils/execution";
 
 import {
@@ -285,8 +287,8 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const walletOwner = await userSCW.owner();
     expect(walletOwner).to.equal(owner);
 
-    const walletNonce1 = await userSCW.getNonce(0); // only 0 space is in the context now
-    const walletNonce2 = await userSCW.getNonce(1);
+    const walletNonce1 = await userSCW.getNonce(ACCOUNT_ABSTRACTION_FLOW); // only 0 space is in the context now
+    const walletNonce2 = await userSCW.getNonce(EOA_CONTROLLED_FLOW);
     const chainId = await userSCW.getChainId();
 
     console.log("walletNonce1 ", walletNonce1);

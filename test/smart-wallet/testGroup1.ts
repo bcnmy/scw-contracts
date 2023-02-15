@@ -22,6 +22,8 @@ import {
   safeSignMessage,
   buildSafeTransaction,
   executeContractCallWithSigners,
+  ACCOUNT_ABSTRACTION_FLOW,
+  EOA_CONTROLLED_FLOW,
 } from "../../src/utils/execution";
 import { buildMultiSendSafeTx } from "../../src/utils/multisend";
 
@@ -39,8 +41,6 @@ describe("Base Wallet Functionality", function () {
   let userSCW: any;
   let handler: DefaultCallbackHandler;
   const VERSION = '1.0.4'
-  const ACCOUNT_ABSTRACTION_FLOW = 0;
-  const EOA_CONTROLLED_FLOW = 1;
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 
