@@ -54,8 +54,17 @@ contract MaliciousAccount is
     mapping(uint256 => uint256) public nonces;
 
     // AA storage
-    // review
-    IEntryPoint private _entryPoint;
+    IEntryPoint private immutable _entryPoint;
+
+    constructor(IEntryPoint anEntryPoint) {
+        // By setting the owner it is not possible to call init anymore,
+        // so we create an account with fixed non-zero owner.
+        // This is an unusable account, perfect for the singleton
+        owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+        require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
+        _entryPoint = anEntryPoint;
+        _disableInitializers();
+    }
 
     
     // Events
@@ -123,12 +132,6 @@ contract MaliciousAccount is
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
-    function updateEntryPoint(address _newEntryPoint) external mixedAuth {
-        require(_newEntryPoint != address(0), "Smart Account:: new entry point address cannot be zero");
-        emit EntryPointChanged(address(_entryPoint), _newEntryPoint);
-        _entryPoint = IEntryPoint(payable(_newEntryPoint));
-    }
-
     // Getters
 
     function domainSeparator() public view returns (bytes32) {
@@ -159,18 +162,12 @@ contract MaliciousAccount is
 
 
     // init
-    // Initialize / Setup
-    // Used to setup
-    // i. owner ii. entry point address iii. handler
-    function init(address _owner, address _entryPointAddress, address _handler) public override initializer { 
+    function init(address _owner, address _handler) public override initializer { 
         require(owner == address(0), "Already initialized");
-        require(address(_entryPoint) == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
-        require(_entryPointAddress != address(0), "Invalid Entrypoint");
-        require(_handler != address(0), "Invalid Entrypoint"); // not good :( 
+        require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
-        _entryPoint =  IEntryPoint(payable(_entryPointAddress));
-        if (_handler != address(0)) internalSetFallbackHandler(_handler);
+        _setFallbackHandler(_handler);
         setupModules(address(0), bytes(""));
     }
 

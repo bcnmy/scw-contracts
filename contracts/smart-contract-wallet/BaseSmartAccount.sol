@@ -128,7 +128,7 @@ abstract contract BaseSmartAccount is IAccount {
         }
     }
     
-    function init(address _owner, address _entryPointAddress, address _handler) external virtual;
+    function init(address _owner, address _handler) external virtual;
 
     function execTransaction(
         Transaction memory _tx,
