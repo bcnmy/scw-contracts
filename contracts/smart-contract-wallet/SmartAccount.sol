@@ -463,7 +463,11 @@ contract SmartAccount is
         SafeERC20.safeTransfer(tokenContract, dest, amount);
     }
 
-    function executeCall(address dest, uint256 value, bytes calldata func) external {
+    function executeCall(
+        address dest,
+        uint256 value,
+        bytes calldata func
+    ) external nonReentrant {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
@@ -472,7 +476,7 @@ contract SmartAccount is
         address[] calldata dest,
         uint256[] calldata value,
         bytes[] calldata func
-    ) external {
+    ) external nonReentrant {
         _requireFromEntryPointOrOwner();
         require(dest.length == value.length, "wrong array lengths");
         require(value.length == func.length, "wrong array lengths");
