@@ -115,27 +115,10 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    baseImpl = await BaseImplementation.deploy();
-    await baseImpl.deployed();
-    console.log("base wallet impl deployed at: ", baseImpl.address);
-
-    const SmartAccountFactory = await ethers.getContractFactory(
-      "SmartAccountFactory"
-    );
-    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
-    await walletFactory.deployed();
-    console.log("wallet factory deployed at: ", walletFactory.address);
-
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
     entryPoint = await EntryPoint.deploy();
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
-
-    const MockToken = await ethers.getContractFactory("MockToken");
-    token = await MockToken.deploy();
-    await token.deployed();
-    console.log("Test token deployed at: ", token.address);
 
     const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
@@ -143,6 +126,26 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     handler = await DefaultHandler.deploy();
     await handler.deployed();
     console.log("Default callback handler deployed at: ", handler.address);
+
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+    baseImpl = await BaseImplementation.deploy(entryPoint.address);
+    await baseImpl.deployed();
+    console.log("base wallet impl deployed at: ", baseImpl.address);
+
+    const SmartAccountFactory = await ethers.getContractFactory(
+      "SmartAccountFactory"
+    );
+    walletFactory = await SmartAccountFactory.deploy(
+      baseImpl.address,
+      handler.address
+    );
+    await walletFactory.deployed();
+    console.log("wallet factory deployed at: ", walletFactory.address);
+
+    const MockToken = await ethers.getContractFactory("MockToken");
+    token = await MockToken.deploy();
+    await token.deployed();
+    console.log("Test token deployed at: ", token.address);
 
     const Storage = await ethers.getContractFactory("StorageSetter");
     storage = await Storage.deploy();
@@ -162,22 +165,16 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
+    const indexForSalt = 0;
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
-      0
+      indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(
-      walletFactory.deployCounterFactualWallet(
-        owner,
-        entryPoint.address,
-        handler.address,
-        0
-      )
-    )
+    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
       .to.emit(walletFactory, "SmartAccountCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.4", 0);
+      .withArgs(expected, baseImpl.address, owner, "1.0.4", indexForSalt);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -361,7 +358,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     // run this on a fork and maintain config
 
     // review: somehow this does not fit..
-    // this needs review of gas used of whole transaction, what's passed from outside and accounted inside. 
+    // this needs review of gas used of whole transaction, what's passed from outside and accounted inside.
     // could use tenderly with local hardhat
     expect(gasFees.toNumber()).to.approximately(
       paymentDeducted,
