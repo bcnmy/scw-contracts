@@ -179,7 +179,7 @@ contract SmartAccount is
         require(_owner != address(0),"Invalid owner");
         require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
-        internalSetFallbackHandler(_handler);
+        _setFallbackHandler(_handler);
         setupModules(address(0), bytes(""));
     }
 
