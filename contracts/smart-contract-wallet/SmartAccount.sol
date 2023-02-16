@@ -121,7 +121,7 @@ contract SmartAccount is
 
     // Setters
 
-    function setOwner(address _newOwner) external mixedAuth {
+    function setOwner(address _newOwner) public mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
         address oldOwner = owner;
         owner = _newOwner;
@@ -133,9 +133,8 @@ contract SmartAccount is
      * @param _implementation New wallet implementation
      */
     // todo: write test case for updating implementation
-    // review: external function becomes invisible from inside the contract
     // review for all methods to be invoked by smart account to self
-    function updateImplementation(address _implementation) external mixedAuth {
+    function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         _setImplementation(_implementation);
         // EOA + Version tracking
