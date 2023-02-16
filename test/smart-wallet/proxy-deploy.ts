@@ -3,6 +3,7 @@ import { ethers } from "hardhat";
 
 describe("Wallet Deployment", function () {
   it("Should deploy the wallet from proxy as intended", async function () {
+    const indexForSalt = 0;
     const accounts = await ethers.getSigners();
     const owner = await accounts[0].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
@@ -36,11 +37,11 @@ describe("Wallet Deployment", function () {
 
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
-      0
+      indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, 0))
+    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
       .to.emit(walletFactory, "SmartAccountCreated")
       .withArgs(expected, baseImpl.address, owner, "1.0.4", 0);
   });
