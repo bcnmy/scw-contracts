@@ -27,6 +27,10 @@ import { buildMultiSendSafeTx } from "../../src/utils/multisend";
 import { BytesLike } from "ethers";
 import { deployContract } from "../utils/setupHelper";
 import { provider } from "ganache";
+import { sign } from "crypto";
+
+const FAKE_SIGNATURE =
+  "0x39f5032f1cd30005aa1e35f04394cabfe7de3b6ae6d95b27edd8556064c287bf61f321fead0cf48ca4405d497cc8fc47fc7ff0b7f5c45baa14090a44f2307d8230";
 
 // NOTE :
 // things to solve:
@@ -281,7 +285,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       handlePaymentEstimate
     );
 
-    safeTx.baseGas = handlePaymentEstimate + 2360 + 5000; // Add 5000 is offset for delegate call?;
+    safeTx.baseGas = 21000 + 5000 + handlePaymentEstimate + 2360 + 5000; // Add 5000 is offset for delegate call?;
 
     console.log(safeTx);
 
@@ -312,6 +316,19 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     console.log(refundInfo);
 
+    const dataEstimate = SmartAccount.interface.encodeFunctionData(
+      "execTransaction",
+      [
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature,
+      ]
+    );
+
+    const baseGasReal = txBaseCost(dataEstimate);
+    console.log("a little over 21000 ", baseGasReal);
+
     const tx = await userSCW.connect(accounts[1]).execTransaction(
       transaction,
       0, // batchId
@@ -339,10 +356,14 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     // todo
     // review
     // run this on a fork and maintain config
-    /* expect(gasFees.toNumber()).to.approximately(
+
+    // review: somehow this does not fit..
+    // this needs review of gas used of whole transaction, what's passed from outside and accounted inside.
+    // could use tenderly with local hardhat
+    expect(gasFees.toNumber()).to.approximately(
       paymentDeducted,
-      ethers.BigNumber.from(10000).mul(receipt.effectiveGasPrice).toNumber()
-    ); */
+      ethers.BigNumber.from(30000).mul(receipt.effectiveGasPrice).toNumber()
+    );
 
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
@@ -445,17 +466,18 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     // safeTx.baseGas = handlePaymentEstimate + 17100 - 9794 + 2360 + 5000; // add 5000 offset for delegate call?;
 
-    safeTx.baseGas = handlePaymentEstimate + 17100 - 7306 + 2360 + 5000; // add 5000 offset for delegate call?;
+    console.log(safeTx);
+
+    safeTx.gasPrice = 156849;
+    safeTx.tokenGasPriceFactor = 1000000;
+
+    safeTx.baseGas =
+      21000 + 5000 + handlePaymentEstimate + 17100 - 7306 + 2360 + 5000; // add 5000 offset for delegate call?;
     // safeTx.baseGas = handlePaymentEstimate + 17100; // add 5000 offset for delegate call?;
 
     // todo
     // 7306 check later
     // and validate on goerli
-
-    console.log(safeTx);
-
-    safeTx.gasPrice = 156849;
-    safeTx.tokenGasPriceFactor = 1000000;
 
     const transaction: Transaction = {
       to: safeTx.to,
@@ -483,6 +505,19 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     signature += data.slice(2);
 
     console.log(refundInfo);
+
+    const dataEstimate = SmartAccount.interface.encodeFunctionData(
+      "execTransaction",
+      [
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature,
+      ]
+    );
+
+    const baseGasReal = txBaseCost(dataEstimate);
+    console.log("a little over 21000 ", baseGasReal);
 
     // await expect(
     const tx = await userSCW.connect(accounts[1]).execTransaction(
@@ -512,6 +547,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const ethusd = 1902; // fetch
     // const daiusd = 1;
 
+    // does not do justice
     /* expect(gasFees.toNumber()).to.approximately(
       paymentDeducted
         // .div(ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18)))

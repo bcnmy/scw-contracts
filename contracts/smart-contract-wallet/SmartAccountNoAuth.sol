@@ -198,10 +198,7 @@ contract SmartAccountNoAuth is
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual override returns (bool success) {
-        // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
-        //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
-        uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
-        //console.log("init %s", 21000 + msg.data.length * 8);
+        uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
