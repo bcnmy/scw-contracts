@@ -2,7 +2,8 @@
 pragma solidity 0.8.12;
 
 contract FakeSigner {
-    bytes4 internal constant EIP1271_MAGIC_VALUE = 0x20c13b0b;
+    // bytes4(keccak256("isValidSignature(bytes32,bytes)")
+    bytes4 internal constant EIP1271_MAGIC_VALUE = 0x1626ba7e;
 
     function getSignature() public view returns(bytes memory signature) {
         bytes32 fakeSignerPadded = bytes32(uint256(uint160(address(this))));
@@ -12,7 +13,7 @@ contract FakeSigner {
     }
 
     // Always return valid EIP1271_MAGIC_VALUE
-    function isValidSignature(bytes memory data, bytes memory contractSignature) external pure returns (bytes4) {
+    function isValidSignature(bytes32 dataHash, bytes memory contractSignature) external pure returns (bytes4) {
         return EIP1271_MAGIC_VALUE;
     }
 }
