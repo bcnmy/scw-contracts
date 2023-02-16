@@ -234,7 +234,9 @@ contract SmartAccount is
             // Default space aka batchId is 0
             nonces[batchId]++;
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, txHashData, signatures);
+
+            //checkSignatures(txHash, txHashData, signatures);
+            checkSignatures(txHash, signatures);
         }
 
 
@@ -320,7 +322,7 @@ contract SmartAccount is
      */
     function checkSignatures(
         bytes32 dataHash,
-        bytes memory data,
+        //bytes memory data,
         bytes memory signatures
     ) public view virtual {
         uint8 v;
@@ -332,7 +334,7 @@ contract SmartAccount is
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
-            // When handling contract signatures the address of the contract is encoded into r
+            // When handling contract signatures the address of the signer contract is encoded into r
             _signer = address(uint160(uint256(r)));
 
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
