@@ -106,10 +106,6 @@ contract SmartAccountNoAuth is
         return nonces[0];
     }
 
-    function nonce(uint256 _batchId) public view virtual override returns (uint256) {
-        return nonces[_batchId];
-    }
-
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }
@@ -189,12 +185,10 @@ contract SmartAccountNoAuth is
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
     /// @param _tx Wallet transaction 
-    /// @param batchId batchId key for 2D nonces
     /// @param refundInfo Required information for gas refunds
     /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
     function execTransaction(
         Transaction memory _tx,
-        uint256 batchId,
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual override returns (bool success) {
@@ -209,11 +203,9 @@ contract SmartAccountNoAuth is
                     // Payment info
                     refundInfo,
                     // Signature info
-                    nonces[batchId]
+                    nonces[1]++
                 );
-            // Increase nonce and execute transaction.
-            // Default space aka batchId is 0
-            nonces[batchId]++;
+            // Execute transaction.
             txHash = keccak256(txHashData);
             checkSignatures(txHash, txHashData, signatures);
         }

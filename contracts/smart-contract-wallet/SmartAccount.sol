@@ -100,24 +100,6 @@ contract SmartAccount is
         _;
    }
 
-   // only from EntryPoint
-   modifier onlyEntryPoint {
-        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
-        _; 
-   }
-
-   function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
-    function nonce(uint256 _batchId) public view virtual override returns (uint256) {
-        return nonces[_batchId];
-    }
-
-    function entryPoint() public view virtual override returns (IEntryPoint) {
-        return _entryPoint;
-    }
-
     // @notice authorized modifier (onlySelf) is already inherited
 
     // Setters
@@ -171,6 +153,20 @@ contract SmartAccount is
         return nonces[batchId];
     }
 
+    // Standard interface for 1d nonces. Use it for Account Abstraction flow.
+    function nonce() public view virtual override returns (uint256) {
+        return nonces[0];
+    }
+
+    // only from EntryPoint
+    modifier onlyEntryPoint {
+        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
+        _; 
+    }
+
+    function entryPoint() public view virtual override returns (IEntryPoint) {
+        return _entryPoint;
+    }
 
     // init
     // Initialize / Setup
@@ -196,12 +192,10 @@ contract SmartAccount is
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
     /// @param _tx Wallet transaction 
-    /// @param batchId batchId key for 2D nonces
     /// @param refundInfo Required information for gas refunds
     /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
     function execTransaction(
         Transaction memory _tx,
-        uint256 batchId,
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual override returns (bool success) {
@@ -216,11 +210,9 @@ contract SmartAccount is
                     // Payment info
                     refundInfo,
                     // Signature info
-                    nonces[batchId]
+                    nonces[1]++
                 );
-            // Increase nonce and execute transaction.
-            // Default space aka batchId is 0
-            nonces[batchId]++;
+            // Execute transaction.
             txHash = keccak256(txHashData);
             checkSignatures(txHash, txHashData, signatures);
         }

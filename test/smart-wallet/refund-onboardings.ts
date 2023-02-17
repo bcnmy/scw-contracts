@@ -412,7 +412,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         userSCW,
         "execTransaction",
-        [transaction, 1, refundInfo, signature],
+        [transaction, refundInfo, signature],
         0
       ),
     ];
