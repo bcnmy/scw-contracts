@@ -136,11 +136,16 @@ describe("Base Wallet Functionality", function () {
     console.log("walletNonce2 ", walletNonce2);
     console.log("chainId ", chainId);
 
-    await accounts[1].sendTransaction({
+    const tx = await accounts[1].sendTransaction({
       from: bob,
       to: expected,
       value: ethers.utils.parseEther("5"),
     });
+
+    await expect(tx)
+      .to.emit(userSCW, 'SmartAccountReceivedNativeToken')
+      .withArgs(bob, ethers.utils.parseEther("5"));
+
   });
 
   // Transactions
