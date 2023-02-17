@@ -106,10 +106,6 @@ contract SmartAccountNoAuth is
         return nonces[0];
     }
 
-    function nonce(uint256 _batchId) public view virtual override returns (uint256) {
-        return nonces[_batchId];
-    }
-
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }

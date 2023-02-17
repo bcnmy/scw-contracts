@@ -22,7 +22,6 @@ import {
   safeSignMessage,
   buildSafeTransaction,
   executeContractCallWithSigners,
-  ACCOUNT_ABSTRACTION_FLOW,
   EOA_CONTROLLED_FLOW,
 } from "../../src/utils/execution";
 import { buildMultiSendSafeTx } from "../../src/utils/multisend";
@@ -129,12 +128,12 @@ describe("Base Wallet Functionality", function () {
     const walletOwner = await userSCW.owner();
     expect(walletOwner).to.equal(owner);
 
-    const walletNonce1 = await userSCW.getNonce(ACCOUNT_ABSTRACTION_FLOW);
+    const walletNonce1 = await userSCW.nonce();
     const walletNonce2 = await userSCW.getNonce(EOA_CONTROLLED_FLOW);
     const chainId = await userSCW.getChainId();
 
-    console.log("walletNonce1 ", walletNonce1);
-    console.log("walletNonce2 ", walletNonce2);
+    console.log("walletNonce AA flow ", walletNonce1);
+    console.log("walletNonce EOA flow ", walletNonce2);
     console.log("chainId ", chainId);
 
     await accounts[1].sendTransaction({

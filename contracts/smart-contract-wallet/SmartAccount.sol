@@ -99,24 +99,6 @@ contract SmartAccount is
         _;
    }
 
-   // only from EntryPoint
-   modifier onlyEntryPoint {
-        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
-        _; 
-   }
-
-   function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
-    function nonce(uint256 _batchId) public view virtual override returns (uint256) {
-        return nonces[_batchId];
-    }
-
-    function entryPoint() public view virtual override returns (IEntryPoint) {
-        return _entryPoint;
-    }
-
     // @notice authorized modifier (onlySelf) is already inherited
 
     // Setters
@@ -170,6 +152,20 @@ contract SmartAccount is
         return nonces[batchId];
     }
 
+    // Standard interface for 1d nonces. Use it for Account Abstraction flow.
+    function nonce() public view virtual override returns (uint256) {
+        return nonces[0];
+    }
+
+    // only from EntryPoint
+    modifier onlyEntryPoint {
+        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
+        _; 
+    }
+
+    function entryPoint() public view virtual override returns (IEntryPoint) {
+        return _entryPoint;
+    }
 
     // init
     // Initialize / Setup
