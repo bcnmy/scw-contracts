@@ -2,8 +2,6 @@
 pragma solidity 0.8.12;
 
 import "./libs/LibAddress.sol";
-import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
-import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./BaseSmartAccount.sol";
 import "./common/Singleton.sol";
@@ -11,6 +9,7 @@ import "./base/ModuleManager.sol";
 import "./base/FallbackManager.sol";
 import "./common/SignatureDecoder.sol";
 import "./common/SecuredTokenTransfer.sol";
+import {SmartAccountErrors} from "./common/Errors.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -25,7 +24,8 @@ contract MaliciousAccount is
      ISignatureValidatorConstants,
      FallbackManager,
      Initializable,
-     ReentrancyGuardUpgradeable
+     ReentrancyGuardUpgradeable,
+     SmartAccountErrors
     {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -449,8 +449,7 @@ contract MaliciousAccount is
     }
 
     function pullTokens(address token, address dest, uint256 amount) external onlyOwner {
-        IERC20 tokenContract = IERC20(token);
-        SafeERC20.safeTransfer(tokenContract, dest, amount);
+        if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
     function execute(address dest, uint value, bytes calldata func) external onlyOwner{
