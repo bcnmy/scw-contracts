@@ -26,6 +26,7 @@ import {
   safeSignTypedData,
   buildSafeTransaction,
   executeContractCallWithSigners,
+  EOA_CONTROLLED_FLOW,
 } from "../../src/utils/execution";
 
 import {
@@ -119,22 +120,32 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
+    const EntryPoint = await ethers.getContractFactory("EntryPoint");
+    entryPoint = await EntryPoint.deploy();
+    await entryPoint.deployed();
+    console.log("Entry point deployed at: ", entryPoint.address);
+
+    const DefaultHandler = await ethers.getContractFactory(
+      "DefaultCallbackHandler"
+    );
+    handler = await DefaultHandler.deploy();
+    await handler.deployed();
+    console.log("Default callback handler deployed at: ", handler.address);
+
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    baseImpl = await BaseImplementation.deploy();
+    baseImpl = await BaseImplementation.deploy(entryPoint.address);
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
 
     const SmartAccountFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
+    walletFactory = await SmartAccountFactory.deploy(
+      baseImpl.address,
+      handler.address
+    );
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
-
-    const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    entryPoint = await EntryPoint.deploy();
-    await entryPoint.deployed();
-    console.log("Entry point deployed at: ", entryPoint.address);
 
     const MockToken = await ethers.getContractFactory("MockToken");
     token = await MockToken.deploy();
@@ -145,13 +156,6 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     stToken = await StakedTestToken.deploy(token.address);
     await token.deployed();
     console.log("Test token deployed at: ", stToken.address);
-
-    const DefaultHandler = await ethers.getContractFactory(
-      "DefaultCallbackHandler"
-    );
-    handler = await DefaultHandler.deploy();
-    await handler.deployed();
-    console.log("Default callback handler deployed at: ", handler.address);
 
     const Storage = await ethers.getContractFactory("StorageSetter");
     storage = await Storage.deploy();
@@ -187,9 +191,10 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
   // describe("Wallet initialization", function () {
   it("Should estimate wallet deployment", async function () {
+    const indexForSalt = 0;
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
-      0
+      indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
@@ -204,7 +209,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
         walletFactory.address,
         SmartAccountFactory.interface.encodeFunctionData(
           "deployCounterFactualWallet",
-          [owner, entryPoint.address, handler.address, 0]
+          [owner, indexForSalt]
         ),
       ]
     );
@@ -218,7 +223,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
           walletFactory.address,
           SmartAccountFactory.interface.encodeFunctionData(
             "deployCounterFactualWallet",
-            [owner, entryPoint.address, handler.address, 0]
+            [owner, indexForSalt]
           )
         ).call()
       ).gas
@@ -226,7 +231,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const txnData = SmartAccountFactory.interface.encodeFunctionData(
       "deployCounterFactualWallet",
-      [owner, entryPoint.address, handler.address, 0]
+      [owner, indexForSalt]
     );
 
     console.log("estimated using call() : ", estimated + txBaseCost(txnData));
@@ -260,9 +265,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const tx = await walletFactory.deployCounterFactualWallet(
       owner,
-      entryPoint.address,
-      handler.address,
-      0
+      indexForSalt
     );
 
     const receipt = await tx.wait(1);
@@ -285,12 +288,12 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const walletOwner = await userSCW.owner();
     expect(walletOwner).to.equal(owner);
 
-    const walletNonce1 = await userSCW.getNonce(0); // only 0 space is in the context now
-    const walletNonce2 = await userSCW.getNonce(1);
+    const walletNonce1 = await userSCW.nonce();
+    const walletNonce2 = await userSCW.getNonce(EOA_CONTROLLED_FLOW);
     const chainId = await userSCW.getChainId();
 
-    console.log("walletNonce1 ", walletNonce1);
-    console.log("walletNonce2 ", walletNonce2);
+    console.log("walletNonce AA flow ", walletNonce1);
+    console.log("walletNonce EOA flow ", walletNonce2);
     console.log("chainId ", chainId);
 
     await accounts[1].sendTransaction({
@@ -301,9 +304,10 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   });
 
   it("Should estimate gas sending transaction from an undeployed wallet", async function () {
+    const saltForFreshWallet = 1; // we have deployed with salt 0 so far already above.
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
-      2
+      saltForFreshWallet
     );
     console.log("deploying new wallet..expected address: ", expected);
 
@@ -367,20 +371,16 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const txnData = SmartAccount.interface.encodeFunctionData(
       "execTransaction",
-      [transaction, 1, refundInfo, signature]
+      [transaction, refundInfo, signature]
     );
 
+    const saltRandom = 3; // for undeployed wallet just for this exercise on GasEstimation using gasEstimatorCustom contract
+    // check the source code of gasEstimatorCustom for further infromation.
+
+    // we are trying to estimate gas here for deploy wallet and then do a transaction on it
     const encodedEstimate = gasEstimatorCustomInterface.encodeFunctionData(
       "estimate",
-      [
-        expected,
-        walletFactory.address,
-        owner,
-        entryPoint.address,
-        handler.address,
-        3,
-        txnData,
-      ]
+      [expected, walletFactory.address, owner, saltRandom, txnData]
     );
 
     const response = await ethers.provider.send("eth_call", [
@@ -417,9 +417,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const tx = await walletFactory.deployCounterFactualWallet(
       owner,
-      entryPoint.address,
-      handler.address,
-      2
+      saltForFreshWallet
     );
 
     const receipt = await tx.wait(1);
@@ -433,9 +431,10 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   // TODO
   // Review if the first transaction fails
   it("Should estimate wallet deployment and send first transacton", async function () {
+    const saltForFreshWallet = 2; // we have deployed with salt 0 and 1 so far already above.
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
-      1
+      saltForFreshWallet
     );
     console.log("deploying new wallet..expected address: ", expected);
 
@@ -492,13 +491,13 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         walletFactory,
         "deployCounterFactualWallet",
-        [owner, entryPoint.address, handler.address, 1],
+        [owner, saltForFreshWallet],
         0
       ),
       buildContractCall(
         userSCW,
         "execTransaction",
-        [transaction, 1, refundInfo, signature],
+        [transaction, refundInfo, signature],
         0
       ),
     ];
@@ -553,9 +552,10 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   });
 
   /* it("Should estimate wallet deployment and enable module", async function () {
+    const indexForSalt = 1;
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
-      1
+      indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
@@ -607,7 +607,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         walletFactory,
         "deployCounterFactualWallet",
-        [owner, entryPoint.address, handler.address, 1],
+        [owner, indexForSalt],
         0
       ),
       buildContractCall(
@@ -738,7 +738,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         walletFactory,
         "deployCounterFactualWallet",
-        [owner, entryPoint.address, handler.address, 1],
+        [owner, 1],
         0
       ),
       buildContractCall(

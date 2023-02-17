@@ -11,7 +11,7 @@ contract FallbackManager is SelfAuthorized {
     // keccak256("fallback_manager.handler.address")
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT = 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
 
-    function internalSetFallbackHandler(address handler) internal {
+    function _setFallbackHandler(address handler) internal {
         bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {
@@ -24,7 +24,7 @@ contract FallbackManager is SelfAuthorized {
     ///      This can only be done via a Safe transaction.
     /// @param handler contract to handle fallback calls.
     function setFallbackHandler(address handler) public authorized {
-        internalSetFallbackHandler(handler);
+        _setFallbackHandler(handler);
         emit ChangedFallbackHandler(handler);
     }
 
