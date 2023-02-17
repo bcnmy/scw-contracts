@@ -77,6 +77,7 @@ contract SmartAccount is
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 txHash, uint256 payment);
+    event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
     // nice to have
     // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
     // todo
@@ -551,5 +552,7 @@ contract SmartAccount is
     }
 
     // solhint-disable-next-line no-empty-blocks
-    receive() external payable {}
+    receive() external payable {
+        emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
+    }
 }
