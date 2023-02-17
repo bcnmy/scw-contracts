@@ -69,24 +69,24 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
         offchainSignerAddress
       );
 
-    smartWalletImp = await new SmartAccount__factory(deployer).deploy();
-
-    maliciousWallet = await new MaliciousAccount__factory(deployer).deploy();
-
-    walletFactory = await new SmartAccountFactory__factory(deployer).deploy(
-      smartWalletImp.address
-    );
-
     callBackHandler = await new DefaultCallbackHandler__factory(
       deployer
     ).deploy();
 
-    await walletFactory.deployCounterFactualWallet(
-      walletOwnerAddress,
-      entryPoint.address,
-      callBackHandler.address,
-      0
+    smartWalletImp = await new SmartAccount__factory(deployer).deploy(
+      entryPoint.address
     );
+
+    maliciousWallet = await new MaliciousAccount__factory(deployer).deploy(
+      entryPoint.address
+    );
+
+    walletFactory = await new SmartAccountFactory__factory(deployer).deploy(
+      smartWalletImp.address,
+      callBackHandler.address
+    );
+
+    await walletFactory.deployCounterFactualWallet(walletOwnerAddress, 0);
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       walletOwnerAddress,
       0

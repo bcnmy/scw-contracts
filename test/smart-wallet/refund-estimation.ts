@@ -29,6 +29,10 @@ import { buildMultiSendSafeTx } from "../../src/utils/multisend";
 import { BytesLike } from "ethers";
 import { deployContract } from "../utils/setupHelper";
 import { provider } from "ganache";
+import { sign } from "crypto";
+
+const FAKE_SIGNATURE =
+  "0x39f5032f1cd30005aa1e35f04394cabfe7de3b6ae6d95b27edd8556064c287bf61f321fead0cf48ca4405d497cc8fc47fc7ff0b7f5c45baa14090a44f2307d8230";
 
 // NOTE :
 // things to solve:
@@ -113,25 +117,10 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    baseImpl = await BaseImplementation.deploy();
-    await baseImpl.deployed();
-    console.log("base wallet impl deployed at: ", baseImpl.address);
-
-    const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
-    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
-    await walletFactory.deployed();
-    console.log("wallet factory deployed at: ", walletFactory.address);
-
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
     entryPoint = await EntryPoint.deploy();
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
-
-    const MockToken = await ethers.getContractFactory("MockToken");
-    token = await MockToken.deploy();
-    await token.deployed();
-    console.log("Test token deployed at: ", token.address);
 
     const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
@@ -139,6 +128,26 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     handler = await DefaultHandler.deploy();
     await handler.deployed();
     console.log("Default callback handler deployed at: ", handler.address);
+
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+    baseImpl = await BaseImplementation.deploy(entryPoint.address);
+    await baseImpl.deployed();
+    console.log("base wallet impl deployed at: ", baseImpl.address);
+
+    const SmartAccountFactory = await ethers.getContractFactory(
+      "SmartAccountFactory"
+    );
+    walletFactory = await SmartAccountFactory.deploy(
+      baseImpl.address,
+      handler.address
+    );
+    await walletFactory.deployed();
+    console.log("wallet factory deployed at: ", walletFactory.address);
+
+    const MockToken = await ethers.getContractFactory("MockToken");
+    token = await MockToken.deploy();
+    await token.deployed();
+    console.log("Test token deployed at: ", token.address);
 
     const Storage = await ethers.getContractFactory("StorageSetter");
     storage = await Storage.deploy();
@@ -158,22 +167,16 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
+    const indexForSalt = 0;
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
-      0
+      indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(
-      walletFactory.deployCounterFactualWallet(
-        owner,
-        entryPoint.address,
-        handler.address,
-        0
-      )
-    )
+    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
       .to.emit(walletFactory, "SmartAccountCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.4", 0);
+      .withArgs(expected, baseImpl.address, owner, "1.0.4", indexForSalt);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -284,7 +287,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       handlePaymentEstimate
     );
 
-    safeTx.baseGas = handlePaymentEstimate + 2360 + 5000; // Add 5000 is offset for delegate call?;
+    safeTx.baseGas = 21000 + 5000 + handlePaymentEstimate + 2360 + 5000; // Add 5000 is offset for delegate call?;
 
     console.log(safeTx);
 
@@ -315,6 +318,19 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     console.log(refundInfo);
 
+    const dataEstimate = SmartAccount.interface.encodeFunctionData(
+      "execTransaction",
+      [
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature,
+      ]
+    );
+
+    const baseGasReal = txBaseCost(dataEstimate);
+    console.log("a little over 21000 ", baseGasReal);
+
     const tx = await userSCW.connect(accounts[1]).execTransaction(
       transaction,
       0, // batchId
@@ -342,10 +358,14 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     // todo
     // review
     // run this on a fork and maintain config
-    /* expect(gasFees.toNumber()).to.approximately(
+
+    // review: somehow this does not fit..
+    // this needs review of gas used of whole transaction, what's passed from outside and accounted inside.
+    // could use tenderly with local hardhat
+    expect(gasFees.toNumber()).to.approximately(
       paymentDeducted,
-      ethers.BigNumber.from(10000).mul(receipt.effectiveGasPrice).toNumber()
-    ); */
+      ethers.BigNumber.from(30000).mul(receipt.effectiveGasPrice).toNumber()
+    );
 
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
@@ -448,17 +468,18 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     // safeTx.baseGas = handlePaymentEstimate + 17100 - 9794 + 2360 + 5000; // add 5000 offset for delegate call?;
 
-    safeTx.baseGas = handlePaymentEstimate + 17100 - 7306 + 2360 + 5000; // add 5000 offset for delegate call?;
+    console.log(safeTx);
+
+    safeTx.gasPrice = 156849;
+    safeTx.tokenGasPriceFactor = 1000000;
+
+    safeTx.baseGas =
+      21000 + 5000 + handlePaymentEstimate + 17100 - 7306 + 2360 + 5000; // add 5000 offset for delegate call?;
     // safeTx.baseGas = handlePaymentEstimate + 17100; // add 5000 offset for delegate call?;
 
     // todo
     // 7306 check later
     // and validate on goerli
-
-    console.log(safeTx);
-
-    safeTx.gasPrice = 156849;
-    safeTx.tokenGasPriceFactor = 1000000;
 
     const transaction: Transaction = {
       to: safeTx.to,
@@ -486,6 +507,19 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     signature += data.slice(2);
 
     console.log(refundInfo);
+
+    const dataEstimate = SmartAccount.interface.encodeFunctionData(
+      "execTransaction",
+      [
+        transaction,
+        0, // batchId
+        refundInfo,
+        signature,
+      ]
+    );
+
+    const baseGasReal = txBaseCost(dataEstimate);
+    console.log("a little over 21000 ", baseGasReal);
 
     // await expect(
     const tx = await userSCW.connect(accounts[1]).execTransaction(
@@ -515,6 +549,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const ethusd = 1902; // fetch
     // const daiusd = 1;
 
+    // does not do justice
     /* expect(gasFees.toNumber()).to.approximately(
       paymentDeducted
         // .div(ethers.BigNumber.from(10).pow(ethers.BigNumber.from(18)))
