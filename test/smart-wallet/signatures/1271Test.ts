@@ -247,5 +247,10 @@ describe("EIP-1271 Signatures Tests", function () {
     
   });
 
+
+  // Test that demonstrates cross SignerContracts replay attack, 
+  // when hacker manipulates the appended SignerContract address is not possible
+  // or if it is possible, it has almost no harm
+
   
 });
