@@ -21,6 +21,7 @@ import {
 import { EntryPoint, VerifyingPaymaster } from "../../typechain";
 import { UserOperation } from "./userOpetation";
 import { Create2Factory } from "../../src/Create2Factory";
+import { ACCOUNT_ABSTRACTION_FLOW } from "../../src/utils/execution";
 
 function encode(
   typevalues: Array<{ type: string; val: any }>,
@@ -202,7 +203,7 @@ export function fillUserOpDefaults(
 // no initCode:
 //  - update nonce from wallet.nonce()
 // entryPoint param is only required to fill in "sender address when specifying "initCode"
-// nonce: assume contract as "nonce()" function, and fill in.
+// nonce: assume contract as "nonce(uint256)" function, and fill in.
 // sender - only in case of construction: fill sender from initCode.
 // callGasLimit: VERY crude estimation (by estimating call to wallet, and add rough entryPoint overhead
 // verificationGasLimit: hard-code default at 100k. should add "create2" cost
@@ -252,10 +253,10 @@ export async function fillUserOp(
       throw new Error("must have entryPoint to autofill nonce");
     const c = new Contract(
       op.sender!,
-      ["function nonce() view returns(address)"],
+      ["function nonce(uint256) view returns(uint256)"],
       provider
     );
-    op1.nonce = await c.nonce().catch(rethrow());
+    op1.nonce = await c.nonce(ACCOUNT_ABSTRACTION_FLOW).catch(rethrow());
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)

@@ -219,7 +219,7 @@ contract SmartAccountNoAuth is
                     // Payment info
                     refundInfo,
                     // Signature info
-                    nonces[0]++
+                    nonces[1]++
                 );
             // Execute transaction.
             txHash = keccak256(txHashData);
