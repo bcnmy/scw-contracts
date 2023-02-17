@@ -240,7 +240,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature
       )
@@ -309,7 +308,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature
       )
@@ -364,7 +362,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature
       )
@@ -418,7 +415,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature
       )
@@ -431,7 +427,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature
       )
@@ -485,7 +480,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature
       )
@@ -523,7 +517,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction2,
-        0, // batchId
         refundInfo,
         signature
       )
@@ -576,7 +569,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[0]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature
       )
@@ -653,7 +645,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[1]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature,
         { gasPrice: safeTx.gasPrice }
@@ -730,7 +721,6 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW.connect(accounts[1]).execTransaction(
         transaction,
-        0, // batchId
         refundInfo,
         signature,
         { gasPrice: safeTx.gasPrice }

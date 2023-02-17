@@ -372,7 +372,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const txnData = SmartAccount.interface.encodeFunctionData(
       "execTransaction",
-      [transaction, 1, refundInfo, signature]
+      [transaction, refundInfo, signature]
     );
 
     const saltRandom = 3; // for undeployed wallet just for this exercise on GasEstimation using gasEstimatorCustom contract
@@ -498,7 +498,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         userSCW,
         "execTransaction",
-        [transaction, 1, refundInfo, signature],
+        [transaction, refundInfo, signature],
         0
       ),
     ];

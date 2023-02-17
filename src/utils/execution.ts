@@ -256,7 +256,6 @@ export const executeTx = async (
   };
   return safe.execTransaction(
     transaction,
-    0, // batchId. it is ignored by now
     refundInfo,
     signatureBytes,
     overrides || {}
@@ -286,7 +285,6 @@ export const populateExecuteTx = async (
   };
   return safe.populateTransaction.execTransaction(
     transaction,
-    0, // batchId
     refundInfo,
     signatureBytes,
     overrides || {}

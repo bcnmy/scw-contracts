@@ -550,7 +550,6 @@ abstract contract BaseSmartWallet is IWallet {
 
     function execTransaction(
         Transaction memory _tx,
-        uint256 batchId,
         FeeRefund memory refundInfo,
         bytes memory signatures) public payable virtual returns (bool success);
 }

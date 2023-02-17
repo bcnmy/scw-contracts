@@ -322,7 +322,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       "execTransaction",
       [
         transaction,
-        0, // batchId
         refundInfo,
         signature,
       ]
@@ -333,7 +332,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     const tx = await userSCW.connect(accounts[1]).execTransaction(
       transaction,
-      0, // batchId
       refundInfo,
       signature,
       {
@@ -512,7 +510,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       "execTransaction",
       [
         transaction,
-        0, // batchId
         refundInfo,
         signature,
       ]
@@ -524,7 +521,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     // await expect(
     const tx = await userSCW.connect(accounts[1]).execTransaction(
       transaction,
-      0, // batchId
       refundInfo,
       signature,
       {
