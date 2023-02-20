@@ -54,6 +54,10 @@ contract SmartAccount is
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
 
+    // Mapping to keep track of all message hashes that have been approved by the owner
+    // by ALL REQUIRED owners in a multisig flow
+    mapping(bytes32 => uint256) public signedMessages;
+
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
 

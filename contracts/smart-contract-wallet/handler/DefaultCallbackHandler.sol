@@ -14,6 +14,9 @@ contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, 
     string public constant NAME = "Default Callback Handler";
     string public constant VERSION = "1.0.0";
 
+    // Errors
+    error HashNotApproved(address smartAccount, bytes32 messageHash);
+
     /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
      * @dev Should return whether the signature provided is valid for the provided data.
@@ -24,11 +27,15 @@ contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, 
     function isValidSignature(bytes32 _dataHash, bytes memory _signature) public view override returns (bytes4) {
         // Caller should be a SmartAccount
         SmartAccount smartAccount = SmartAccount(payable(msg.sender));
-        
-        try smartAccount.checkSignatures(_dataHash, _signature) {
-            return EIP1271_MAGIC_VALUE;
-        } catch {
-            return bytes4(0);
+
+        if (_signature.length == 0) {
+            return (smartAccount.signedMessages(_dataHash) != 0) ? EIP1271_MAGIC_VALUE : bytes4(0);
+        } else {
+            try smartAccount.checkSignatures(_dataHash, _signature) {
+                return EIP1271_MAGIC_VALUE;
+            } catch {
+                return bytes4(0);
+            }
         }
     }
 
