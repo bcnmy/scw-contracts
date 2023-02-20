@@ -837,10 +837,6 @@ describe("Base Wallet Functionality", function () {
     expect(await userSCW.owner()).to.equal(accounts[0].address);
   });
 
-  it("social recovery module should not be able to call anything else than setOwner()", async function () {
-    expect(await userSCW.owner()).to.equal(accounts[0].address);
-  });
-
   it("should not be able to updateImplementation from any module call, or execute() / execFromEntryPoint() method of AA flow", async function () {
     // deploy new implementation
     const UserSCWImpl2 = await ethers.getContractFactory(
