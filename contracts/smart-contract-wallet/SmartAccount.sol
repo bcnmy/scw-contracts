@@ -478,6 +478,7 @@ contract SmartAccount is
         bytes[] calldata func
     ) external nonReentrant {
         _requireFromEntryPointOrOwner();
+        require(dest.length != 0, "empty array provided");
         require(dest.length == value.length, "wrong array lengths");
         require(value.length == func.length, "wrong array lengths");
         for (uint256 i = 0; i < dest.length; ) {

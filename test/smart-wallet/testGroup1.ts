@@ -202,6 +202,10 @@ describe("Base Wallet Functionality", function () {
     expect(await ethers.provider.getBalance(charlie)).to.equal(
       charlieBalBefore.add(ethers.utils.parseEther("1"))
     );
+
+    // test with empty array data and value
+    tx = userSCW.connect(accounts[0]).executeBatchCall([], [], []);
+    expect(tx).to.be.revertedWith("empty array provided");
   });
 
   it("should send transactions in a batch", async function () {
