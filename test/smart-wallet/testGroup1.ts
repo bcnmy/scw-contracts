@@ -7,6 +7,7 @@ import {
   MockToken,
   MultiSend,
   StorageSetter,
+  SocialRecoveryModule,
   DefaultCallbackHandler,
 } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -34,6 +35,7 @@ describe("Base Wallet Functionality", function () {
   let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
+  let socialRecoveryModule: SocialRecoveryModule;
   let owner: string;
   let bob: string;
   let charlie: string;
@@ -737,5 +739,136 @@ describe("Base Wallet Functionality", function () {
 
     const tokenBalanceAfter = await token.balanceOf(bob);
     console.log(tokenBalanceAfter.toString());
+  });
+
+  // keep mixedAuth for setOwner() and write test cases to update it from owner and from sample social recovery module.
+  it("can update owner by current owner or social recovery module", async function () {
+    /// 1. update setOwner() by social recovery module
+    // current owner - owner accounts[0]
+    const currentOwner = await userSCW.owner();
+    expect(currentOwner).to.equal(accounts[0].address);
+
+    // social recovery module deploy - socialRecoveryModule
+    const SocialRecoveryModule = await ethers.getContractFactory(
+      "SocialRecoveryModule"
+    );
+    socialRecoveryModule = await SocialRecoveryModule.connect(
+      accounts[0]
+    ).deploy();
+    console.log("SocialModule deployed at ", socialRecoveryModule.address);
+
+    // setup social recovery module, set bob, charlie as friends and set threshold as 2
+    await socialRecoveryModule
+      .connect(accounts[0])
+      .setup([bob, charlie], 2, userSCW.address);
+
+    // Owner itself can not directly add modules
+    let tx = userSCW
+      .connect(accounts[0])
+      .enableModule(socialRecoveryModule.address);
+    await expect(tx).to.be.reverted;
+    // without enabling module one can't send transactions invoking safe from module without enabling it!
+    await expect(
+      socialRecoveryModule
+        .connect(charlie)
+        .recoverAccess(userSCW.address, charlie)
+    ).to.be.reverted;
+
+    // Modules can only be enabled via safe transaction
+    tx = executeContractCallWithSigners(
+      userSCW,
+      userSCW,
+      "enableModule",
+      [socialRecoveryModule.address],
+      [accounts[0]]
+    );
+    await expect(tx).to.emit(userSCW, "ExecutionSuccess");
+
+    // creating data and dataHash signed by owner
+    const newOwner = accounts[5];
+    const data = await userSCW.interface.encodeFunctionData("setOwner", [
+      newOwner.address,
+    ]);
+    console.log("data ", data);
+    const dataHash = await socialRecoveryModule
+      .connect(accounts[0])
+      .getDataHash(data);
+    console.log("dataHash ", dataHash);
+
+    // bob confirms transaction for setOwner()
+    tx = await socialRecoveryModule
+      .connect(accounts[1])
+      .confirmTransaction(dataHash);
+    // charlie confirms transaction for setOwner()
+    tx = await socialRecoveryModule
+      .connect(accounts[2])
+      .confirmTransaction(dataHash);
+    // recoverAccess() will be invoked by module
+    tx = await socialRecoveryModule
+      .connect(accounts[1])
+      .recoverAccess(userSCW.address, newOwner.address);
+
+    console.log(
+      "newOner should be",
+      newOwner.address,
+      "and is",
+      await userSCW.owner()
+    );
+    // check if owner is updated
+    expect(await userSCW.owner()).to.equal(newOwner.address);
+
+    /// 2. update setOwner() by current owner
+    await expect(
+      executeContractCallWithSigners(
+        userSCW,
+        userSCW,
+        "setOwner",
+        [accounts[0].address],
+        [accounts[5]]
+      )
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    console.log(
+      "again newOner should be",
+      accounts[0].address,
+      "and is",
+      await userSCW.owner()
+    );
+    expect(await userSCW.owner()).to.equal(accounts[0].address);
+  });
+
+  it("social recovery module should not be able to call anything else than setOwner()", async function () {
+    expect(await userSCW.owner()).to.equal(accounts[0].address);
+  });
+
+  it("should not be able to updateImplementation from any module call, or execute() / execFromEntryPoint() method of AA flow", async function () {
+    // deploy new implementation
+    const UserSCWImpl2 = await ethers.getContractFactory(
+      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount"
+    );
+    const userSCWImpl2: SmartWallet = await UserSCWImpl2.connect(
+      accounts[0]
+    ).deploy(entryPoint.address);
+    console.log("UserSCWImpl2 deployed at ", userSCWImpl2.address);
+
+    /// 1. updateImplementation from social recovery module
+    const data = await userSCW.interface.encodeFunctionData(
+      "updateImplementation",
+      [userSCWImpl2.address] // new implementation
+    );
+
+    await expect(
+      socialRecoveryModule.connect(accounts[0]).authCall(userSCW.address, data)
+    ).to.be.reverted;
+
+    /// 2. updateImplementation from execTransaction for AA flow via owner
+    const tx = executeContractCallWithSigners(
+      userSCW,
+      userSCW,
+      "updateImplementation",
+      [userSCWImpl2.address], // new implementation
+      [accounts[0]]
+    );
+    await expect(tx).to.be.reverted;
   });
 });
