@@ -5,17 +5,21 @@ pragma solidity 0.8.12;
  * @title Proxy // This is the user's wallet
  * @notice Basic proxy that delegates all calls to a fixed implementing contract.
  */
+ interface IProxy {
+    function accountLogic() external view returns (address);
+}
+
 contract Proxy {
+    // no fixed address(0) storage slot
+    // address internal singleton;
 
-    /* This is the keccak-256 hash of "biconomy.scw.proxy.implementation" subtracted by 1, and is validated in the constructor */
-    bytes32 internal constant _IMPLEMENTATION_SLOT = 0x37722d148fb373b961a84120b6c8d209709b45377878a466db32bbc40d95af26;
-
-    event Received(uint indexed value, address indexed sender, bytes data);
+    // uint256[1] private ______gap;
 
     constructor(address _implementation) {
-         assert(_IMPLEMENTATION_SLOT == bytes32(uint256(keccak256("biconomy.scw.proxy.implementation")) - 1));
+         require(_implementation != address(0), "Invalid implementation address");
+         // solhint-disable-next-line no-inline-assembly
          assembly {
-             sstore(_IMPLEMENTATION_SLOT,_implementation) 
+             sstore(address(),_implementation) 
          }
     }
 
@@ -23,7 +27,12 @@ contract Proxy {
         address target;
         // solhint-disable-next-line no-inline-assembly
         assembly {
-            target := sload(_IMPLEMENTATION_SLOT)
+            target := sload(address())
+            // 0xee9118f7 == keccak("accountLogic()"). The value is right padded to 32-bytes with 0s
+            if eq(calldataload(0), 0xee9118f700000000000000000000000000000000000000000000000000000000) {
+                mstore(0, target)
+                return(0, 0x20)
+            }
             calldatacopy(0, 0, calldatasize())
             let result := delegatecall(gas(), target, 0, calldatasize(), 0, 0)
             returndatacopy(0, 0, returndatasize())

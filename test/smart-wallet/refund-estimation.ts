@@ -174,8 +174,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("deploying new wallet..expected address: ", expected);
 
     await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
-      .to.emit(walletFactory, "SmartAccountCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.4", indexForSalt);
+      .to.emit(walletFactory, "AccountCreation")
+      .withArgs(expected, baseImpl.address);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",

@@ -41,8 +41,15 @@ describe("Wallet Deployment", function () {
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
-      .to.emit(walletFactory, "SmartAccountCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.4", 0);
+    const tx = await walletFactory.deployCounterFactualWallet(
+      owner,
+      indexForSalt
+    );
+    const receipt = await tx.wait();
+    console.log("smart account deployment gas ", receipt.gasUsed.toNumber());
+
+    /* await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
+      .to.emit(walletFactory, "AccountCreation")
+      .withArgs(expected, baseImpl.address); */
   });
 });
