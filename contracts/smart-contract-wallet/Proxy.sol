@@ -13,8 +13,6 @@ contract Proxy {
     // no fixed address(0) storage slot
     // address internal singleton;
 
-    // uint256[1] private ______gap;
-
     constructor(address _implementation) {
          require(_implementation != address(0), "Invalid implementation address");
          // solhint-disable-next-line no-inline-assembly
