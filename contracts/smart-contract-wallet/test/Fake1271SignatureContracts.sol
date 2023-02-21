@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 contract FakeSigner {
     bytes4 internal constant EIP1271_MAGIC_VALUE = 0x20c13b0b;

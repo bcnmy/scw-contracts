@@ -3,7 +3,7 @@
 // File contracts/smart-contract-wallet/Proxy.sol
 
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /**
  * @title Proxy // This is the user's wallet
@@ -47,7 +47,7 @@ contract Proxy {
 // File contracts/smart-contract-wallet/aa-4337/interfaces/UserOperation.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /* solhint-disable no-inline-assembly */
 
@@ -131,7 +131,7 @@ library UserOperationLib {
 // File contracts/smart-contract-wallet/aa-4337/interfaces/IStakeManager.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /**
  * manage deposits and stakes.
@@ -242,7 +242,7 @@ interface IStakeManager {
 // File contracts/smart-contract-wallet/aa-4337/interfaces/IAggregator.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /**
  * Aggregated Signatures validator.
@@ -287,7 +287,7 @@ interface IAggregator {
  ** Only one instance required on each chain.
  **/
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
@@ -412,7 +412,7 @@ interface IEntryPoint is IStakeManager {
 // File contracts/smart-contract-wallet/aa-4337/interfaces/IWallet.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 interface IWallet {
 
@@ -438,7 +438,7 @@ interface IWallet {
 // File contracts/smart-contract-wallet/common/Enum.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /// @title Enum - Collection of enums
 contract Enum {
@@ -449,7 +449,7 @@ contract Enum {
 // File contracts/smart-contract-wallet/BaseSmartWallet.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */
@@ -558,7 +558,7 @@ abstract contract BaseSmartWallet is IWallet {
 // File contracts/smart-contract-wallet/WalletFactory.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 
 contract WalletFactory {

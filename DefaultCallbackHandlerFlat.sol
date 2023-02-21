@@ -3,7 +3,7 @@
 // File contracts/smart-contract-wallet/interfaces/ERC777TokensRecipient.sol
 
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 interface ERC777TokensRecipient {
     function tokensReceived(
@@ -20,7 +20,7 @@ interface ERC777TokensRecipient {
 // File contracts/smart-contract-wallet/interfaces/ERC721TokenReceiver.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /// @dev Note: the ERC-165 identifier for this interface is 0x150b7a02.
 interface ERC721TokenReceiver {
@@ -48,7 +48,7 @@ interface ERC721TokenReceiver {
 // File contracts/smart-contract-wallet/interfaces/ERC1155TokenReceiver.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /**
     Note: The ERC-165 identifier for this interface is 0x4e2312e0.
@@ -101,7 +101,7 @@ interface ERC1155TokenReceiver {
 // File contracts/smart-contract-wallet/interfaces/IERC165.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /// @notice More details at https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/introspection/IERC165.sol
 interface IERC165 {
@@ -120,7 +120,7 @@ interface IERC165 {
 // File contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol
 
 
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 
 

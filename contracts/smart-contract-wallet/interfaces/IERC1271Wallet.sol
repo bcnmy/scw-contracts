@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: Apache-2.0
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 // Might not use this interface
 interface IERC1271Wallet {
