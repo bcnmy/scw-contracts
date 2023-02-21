@@ -19,7 +19,8 @@ import {
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
 import { Deployer, Deployer__factory } from "../../typechain";
 
-export const FACTORY_ADDRESS = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
+// { FACTORY_ADDRESS  } is deployed from chirag's private key for nonce 0
+export const FACTORY_ADDRESS = "0x757056493cd5E44e4cFe2719aE05FbcfC1178087";
 export const FACTORY_BYTE_CODE =
   "0x6080604052348015600f57600080fd5b506004361060285760003560e01c80634af63f0214602d575b600080fd5b60cf60048036036040811015604157600080fd5b810190602081018135640100000000811115605b57600080fd5b820183602082011115606c57600080fd5b80359060200191846001830284011164010000000083111715608d57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550509135925060eb915050565b604080516001600160a01b039092168252519081900360200190f35b6000818351602085016000f5939250505056fea26469706673582212206b44f8a82cb6b156bfcc3dc6aadd6df4eefd204bc928a4397fd15dacf6d5320564736f6c63430006020033";
 export const factoryDeployer = "0xBb6e024b9cFFACB947A71991E386681B1Cd1477D";
@@ -34,15 +35,15 @@ const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
 // TODO
 // append TEST (temporary) for next dev deployment
 export enum DEPLOYMENT_SALTS {
-  CALLBACK_HANDLER = "TEST_CALLBACK_HANDLER_V1_1602",
-  DECODER = "TEST_DECODER_V1_1602",
-  ENTRY_POINT = "TEST_ENTRY_POINT_V1_1602",
-  GAS_ESTIMATOR = "TEST_GAS_ESTIMATOR_V1_1602",
-  MULTI_SEND = "TEST_MULTI_SEND_V1_1602",
-  MULTI_SEND_CALLONLY = "TEST_MULTI_SEND_CALLONLY_V1_1602",
-  WALLET_FACTORY = "TEST_WALLET_FACTORY_V1_1602",
-  WALLET_IMP = "TEST_WALLET_IMP_V1_1602",
-  SINGELTON_PAYMASTER = "TEST_SINGELTON_PAYMASTER_V1_1602",
+  FallBACK_HANDLER = "TEST_CALLBACK_HANDLER_V0_2002",
+  DECODER = "TEST_DECODER_V0_2002",
+  ENTRY_POINT = "TEST_ENTRY_POINT_V0_2002",
+  GAS_ESTIMATOR = "TEST_GAS_ESTIMATOR_V0_2002",
+  MULTI_SEND = "TEST_MULTI_SEND_V0_2002",
+  MULTI_SEND_CALLONLY = "TEST_MULTI_SEND_CALLONLY_V0_2002",
+  WALLET_FACTORY = "TEST_WALLET_FACTORY_V0_2002",
+  WALLET_IMP = "TEST_WALLET_IMP_V0_2002",
+  SINGELTON_PAYMASTER = "TEST_SINGELTON_PAYMASTER_V0_2002",
 }
 
 export const factoryAbi = [
@@ -108,16 +109,16 @@ export const getDeployerInstance = async (): Promise<Deployer> => {
     metaDeployerPrivateKey,
     hardhatEthersInstance.provider
   );
-  const deployerAddress = getContractAddress({
-    from: metaDeployer.address,
-    nonce: 0,
-  });
-
+  // const FACTORY_ADDRESS = getContractAddress({
+  //   from: metaDeployer.address,
+  //   nonce: 0,
+  // });
+  
   const provider = hardhatEthersInstance.provider;
   const [signer] = await hardhatEthersInstance.getSigners();
   const chainId = (await provider.getNetwork()).chainId;
-  console.log(`Checking deployer ${deployerAddress} on chain ${chainId}...`);
-  const code = await provider.getCode(deployerAddress);
+  console.log(`Checking deployer ${FACTORY_ADDRESS} on chain ${chainId}...`);
+  const code = await provider.getCode(FACTORY_ADDRESS);
   if (code === "0x") {
     console.log("Deployer not deployed, deploying...");
     const metaDeployerPrivateKey = process.env.FACTORY_DEPLOYER_PRIVATE_KEY;
@@ -135,7 +136,7 @@ export const getDeployerInstance = async (): Promise<Deployer> => {
     console.log(`Deployer already deployed on chain ${chainId}`);
   }
 
-  return Deployer__factory.connect(deployerAddress, signer);
+  return Deployer__factory.connect(FACTORY_ADDRESS, signer);
 };
 
 export const deployContract = async (

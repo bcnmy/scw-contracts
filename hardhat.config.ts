@@ -234,7 +234,23 @@ const config: HardhatUserConfig = {
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY || '',
+      goerli: process.env.ETHERSCAN_API_KEY || '',
+      polygonMumbai: process.env.POLYGONSCAN_API_KEY || '',
+      polygon: process.env.POLYGONSCAN_API_KEY || '',
+      bscTestnet: process.env.BSCSCAN_API_KEY || '',
+      bsc: process.env.BSCSCAN_API_KEY || '',
+      moonbeam: process.env.MOONBEAM_KEY || '',
+      moonbaseAlpha: process.env.MOONBEAM_KEY || '',
+      avalancheFujiTestnet: process.env.AVALANCHE_API_KEY || '',
+      avalanche: process.env.AVALANCHE_API_KEY || '',
+      arbitrumGoerli: process.env.ARBITRUM_API_KEY || '',
+      arbitrumTestnet: process.env.ARBITRUM_API_KEY || '',
+      arbitrumOne: process.env.ARBITRUM_API_KEY || '',
+      optimisticGoerli: process.env.OPTIMISTIC_API_KEY || '',
+      optimisticEthereum: process.env.OPTIMISTIC_API_KEY || '',
+    }
   },
 };
 

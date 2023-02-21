@@ -54,12 +54,6 @@ abstract contract BaseSmartAccount is IAccount {
      */
     function nonce() public view virtual returns (uint256);
 
-     /**
-     * return the account nonce.
-     * subclass should return a nonce value that is used both by _validateAndUpdateNonce, and by the external provider (to read the current nonce)
-     */
-    function nonce(uint256 _batchId) public view virtual returns (uint256);
-
     /**
      * return the entryPoint used by this account.
      * subclass should return the current entryPoint used by this account.
@@ -132,7 +126,6 @@ abstract contract BaseSmartAccount is IAccount {
 
     function execTransaction(
         Transaction memory _tx,
-        uint256 batchId,
         FeeRefund memory refundInfo,
         bytes memory signatures) public payable virtual returns (bool success);
 }

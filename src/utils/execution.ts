@@ -11,6 +11,9 @@ import {
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
 
+export const ACCOUNT_ABSTRACTION_FLOW = 0;
+export const EOA_CONTROLLED_FLOW = 1;
+
 export const EIP_DOMAIN = {
   EIP712Domain: [
     { type: "uint256", name: "chainId" },
@@ -253,7 +256,6 @@ export const executeTx = async (
   };
   return safe.execTransaction(
     transaction,
-    0, // batchId
     refundInfo,
     signatureBytes,
     overrides || {}
@@ -283,7 +285,6 @@ export const populateExecuteTx = async (
   };
   return safe.populateTransaction.execTransaction(
     transaction,
-    0, // batchId
     refundInfo,
     signatureBytes,
     overrides || {}
@@ -337,7 +338,7 @@ export const executeContractCallWithSigners = async (
     contract,
     method,
     params,
-    await safe.getNonce(0),
+    await safe.getNonce(EOA_CONTROLLED_FLOW),
     delegateCall,
     overrides
   );
