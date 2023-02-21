@@ -334,13 +334,7 @@ describe("EIP-1271 Signatures Tests", function () {
     expect(value).to.be.equal(eip1271MagicValue);
 
   });
-
-  // simulate kinda OpenSea flow. 
-  // direct call to isValidSignature from ethers with a correct owner's signature
   
-  
-
-
   // Test that demonstrates cross SignerContracts replay attack, 
   // when hacker manipulates the appended SignerContract address is not possible
   // or if it is possible, it has almost no harm
