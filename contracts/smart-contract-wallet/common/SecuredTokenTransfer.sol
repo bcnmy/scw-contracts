@@ -18,7 +18,7 @@ contract SecuredTokenTransfer {
         // solhint-disable-next-line no-inline-assembly
         assembly {
             // We write the return value to scratch space.
-            // See https://docs.soliditylang.org/en/v0.7.6/internals/layout_in_memory.html#layout-in-memory
+            // See https://docs.soliditylang.org/en/v0.8.17/internals/layout_in_memory.html#layout-in-memory
             let success := call(sub(gas(), 10000), token, 0, add(data, 0x20), mload(data), 0, 0x20)
             switch returndatasize()
                 case 0 {
