@@ -14,8 +14,10 @@ contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, 
     string public constant NAME = "Default Callback Handler";
     string public constant VERSION = "1.0.0";
 
-    // Errors
-    error HashNotApproved(address smartAccount, bytes32 messageHash);
+    //keccak256(
+    //    "SmartAccount(bytes message)"
+    //);
+    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH = 0x28d088124dbd960bc410a6cf97d22994fb361d6b1da504b4751d1589f87720e5;
 
     /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
@@ -37,6 +39,11 @@ contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, 
                 return bytes4(0);
             }
         }
+    }
+
+    function getMessageHash(bytes memory message) public view returns (bytes32) {
+        bytes32 smartAccountMessageHash = keccak256(abi.encode(SMART_ACCOUNT_MSG_TYPEHASH, keccak256(message)));
+        return keccak256(abi.encodePacked(bytes1(0x19), bytes1(0x01), SmartAccount(payable(msg.sender)).domainSeparator(), smartAccountMessageHash));
     }
 
     function onERC1155Received(

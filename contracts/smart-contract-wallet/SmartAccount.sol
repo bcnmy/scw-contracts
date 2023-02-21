@@ -1,31 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./libs/LibAddress.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "./BaseSmartAccount.sol";
 import "./common/Singleton.sol";
+import "./BaseSmartAccount.sol";
 import "./base/ModuleManager.sol";
 import "./base/FallbackManager.sol";
 import "./common/SignatureDecoder.sol";
 import "./common/SecuredTokenTransfer.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
+import "./libs/LibAddress.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
+import {SmartAccountErrors} from "./common/Errors.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 contract SmartAccount is 
      Singleton,
      BaseSmartAccount,
-     IERC165,
      ModuleManager,
+     FallbackManager,
      SignatureDecoder,
      SecuredTokenTransfer,
      ISignatureValidatorConstants,
-     FallbackManager,
+     IERC165,
+     SmartAccountErrors,
      Initializable,
-     ReentrancyGuardUpgradeable,
-     SmartAccountErrors
+     ReentrancyGuardUpgradeable
     {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -82,6 +82,7 @@ contract SmartAccount is
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 txHash, uint256 payment);
     event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
+
     // nice to have
     // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
     // todo
@@ -203,6 +204,7 @@ contract SmartAccount is
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual override returns (bool success) {
+
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -465,6 +467,8 @@ contract SmartAccount is
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
+
+    // use _execute instead of call
 
     function executeBatch(address[] calldata dest, bytes[] calldata func) external onlyOwner{
         _requireFromEntryPointOrOwner();

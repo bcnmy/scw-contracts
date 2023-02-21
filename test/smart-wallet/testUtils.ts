@@ -135,6 +135,12 @@ export const Erc20 = [
 
 export const Erc20Interface = new ethers.utils.Interface(Erc20);
 
+export const SignMessageLib = [
+  "function signMessage(bytes calldata _data) external"
+];
+
+export const SignMessageLibInterface = new ethers.utils.Interface(SignMessageLib);
+
 export const encodeTransfer = (
   target: string,
   amount: string | number
@@ -153,3 +159,9 @@ export const encodeTransferFrom = (
     amount,
   ]);
 };
+
+export const encodeSignMessage = (
+  data: string
+): string => {
+  return SignMessageLibInterface.encodeFunctionData("signMessage", [data]);
+} 

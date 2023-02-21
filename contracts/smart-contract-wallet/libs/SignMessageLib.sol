@@ -12,7 +12,7 @@ contract SignMessageLib is SmartAccountStorage {
     //);
     bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH = 0x28d088124dbd960bc410a6cf97d22994fb361d6b1da504b4751d1589f87720e5;
 
-    event SignMsg(bytes32 indexed msgHash);
+    event MessageSigned(bytes32 indexed messageHash);
 
     /// @dev Marks a message as signed, so that it can be used with EIP-1271
     /// @notice Marks a message (`_data`) as signed.
@@ -20,7 +20,7 @@ contract SignMessageLib is SmartAccountStorage {
     function signMessage(bytes calldata _data) external {
         bytes32 msgHash = getMessageHash(_data);
         signedMessages[msgHash] = 1;
-        emit SignMsg(msgHash);
+        emit MessageSigned(msgHash);
     }
 
     /// @dev Returns hash of a message that can be signed by owners.
