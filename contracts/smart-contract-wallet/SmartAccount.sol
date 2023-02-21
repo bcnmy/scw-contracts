@@ -506,12 +506,18 @@ contract SmartAccount is
     // @notice Nonce space is locked to 0 for AA transactions
     // userOp could have batchId as well
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
+        // bytes calldata userOpData = userOp.callData;
+        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // if(address(modules[_to]) != address(0)) return;
         require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /// implement template method of BaseAccount
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
     internal override virtual returns (uint256 sigTimeRange) {
+        // bytes calldata userOpData = userOp.callData;
+        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // if(address(modules[_to]) != address(0)) return 0;
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
