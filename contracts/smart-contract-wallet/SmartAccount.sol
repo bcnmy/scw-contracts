@@ -119,7 +119,6 @@ contract SmartAccount is
     // review for all methods to be invoked by smart account to self
     function updateImplementation(address _implementation) public {
         _requireFromEntryPointOrOwner();
-    function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         _setImplementation(_implementation);
         // EOA + Version tracking
