@@ -7,7 +7,8 @@ import {
   MockToken,
   MultiSend,
   StorageSetter,
-  SocialRecoveryModule,
+  SampleSocialRecoveryModule,
+  WhitelistModule,
   DefaultCallbackHandler,
 } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -148,6 +149,67 @@ describe("Base Wallet Functionality", function () {
       .to.emit(userSCW, 'SmartAccountReceivedNativeToken')
       .withArgs(bob, ethers.utils.parseEther("5"));
 
+  });
+
+  it("can enable modules and accept transactions from it", async function () {
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    const WhitelistModule = await ethers.getContractFactory("WhitelistModule");
+    const whitelistModule: WhitelistModule = await WhitelistModule.deploy(bob);
+    console.log("Test module deployed at ", whitelistModule.address);
+
+    // whitelisting target contract
+    await whitelistModule
+      .connect(accounts[1])
+      .whitelistDestination(token.address);
+
+    // Owner itself can not directly add modules
+    await expect(
+      userSCW.connect(accounts[0]).enableModule(whitelistModule.address)
+    ).to.be.reverted;
+
+    // Without enabling module one can't send transactions
+    // invoking safe from module without enabling it!
+    await expect(
+      whitelistModule
+        .connect(accounts[2])
+        .authCall(
+          userSCW.address,
+          token.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie, ethers.utils.parseEther("10").toString())
+        )
+    ).to.be.reverted;
+
+    // Modules can only be enabled via safe transaction
+    await expect(
+      executeContractCallWithSigners(
+        userSCW,
+        userSCW,
+        "enableModule",
+        [whitelistModule.address],
+        [accounts[0]]
+      )
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    // TODO
+    // have to write a test to disable a module
+
+    // invoking module!
+    await whitelistModule
+      .connect(accounts[2])
+      .authCall(
+        userSCW.address,
+        token.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie, ethers.utils.parseEther("10").toString())
+      );
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
   });
 
   // Transactions
