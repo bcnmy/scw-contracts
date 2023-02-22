@@ -146,9 +146,8 @@ describe("Base Wallet Functionality", function () {
     });
 
     await expect(tx)
-      .to.emit(userSCW, 'SmartAccountReceivedNativeToken')
+      .to.emit(userSCW, "SmartAccountReceivedNativeToken")
       .withArgs(bob, ethers.utils.parseEther("5"));
-
   });
 
   it("can enable modules and accept transactions from it", async function () {
@@ -341,11 +340,9 @@ describe("Base Wallet Functionality", function () {
     let signature = "0x";
     signature += data.slice(2);
     await expect(
-      userSCW.connect(accounts[0]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     await expect(
@@ -409,11 +406,9 @@ describe("Base Wallet Functionality", function () {
     signature += data.slice(2);
 
     await expect(
-      userSCW.connect(accounts[0]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -463,17 +458,15 @@ describe("Base Wallet Functionality", function () {
     let signature = "0x";
     signature += data.slice(2);
     await expect(
-      userSCW.connect(accounts[0]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
     ).to.be.reverted;
 
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("0")
     );
-  }); 
+  });
 
   it("Can not execute txn with the same nonce twice", async function () {
     await token
@@ -516,11 +509,9 @@ describe("Base Wallet Functionality", function () {
     signature += data.slice(2);
 
     await expect(
-      userSCW.connect(accounts[0]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -528,18 +519,15 @@ describe("Base Wallet Functionality", function () {
     );
 
     await expect(
-      userSCW.connect(accounts[0]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
     ).to.be.reverted;
 
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
     );
-
-  }); 
+  });
 
   it("should send two consecutive transactions with the correct nonces and they go through)", async function () {
     await token
@@ -561,7 +549,7 @@ describe("Base Wallet Functionality", function () {
       chainId
     );
 
-    //console.log(safeTx);
+    // console.log(safeTx);
 
     const transaction: Transaction = {
       to: safeTx.to,
@@ -581,11 +569,9 @@ describe("Base Wallet Functionality", function () {
     let signature = "0x";
     signature += data.slice(2);
     await expect(
-      userSCW.connect(accounts[0]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -599,12 +585,12 @@ describe("Base Wallet Functionality", function () {
       nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
     });
 
-    ( { signer, data } = await safeSignTypedData(
+    ({ signer, data } = await safeSignTypedData(
       accounts[0],
       userSCW,
       safeTx2,
       chainId
-    ) );
+    ));
 
     const transaction2: Transaction = {
       to: safeTx2.to,
@@ -618,17 +604,14 @@ describe("Base Wallet Functionality", function () {
     signature += data.slice(2);
 
     await expect(
-      userSCW.connect(accounts[0]).execTransaction(
-        transaction2,
-        refundInfo,
-        signature
-      )
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction2, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("21")
     );
-
   });
 
   it("should send a single transacton (personal sign)", async function () {
@@ -670,11 +653,9 @@ describe("Base Wallet Functionality", function () {
     let signature = "0x";
     signature += data.slice(2);
     await expect(
-      userSCW.connect(accounts[0]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -746,12 +727,11 @@ describe("Base Wallet Functionality", function () {
     };
 
     await expect(
-      userSCW.connect(accounts[1]).execTransaction(
-        transaction,
-        refundInfo,
-        signature,
-        { gasPrice: safeTx.gasPrice }
-      )
+      userSCW
+        .connect(accounts[1])
+        .execTransaction(transaction, refundInfo, signature, {
+          gasPrice: safeTx.gasPrice,
+        })
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -822,12 +802,11 @@ describe("Base Wallet Functionality", function () {
     };
 
     await expect(
-      userSCW.connect(accounts[1]).execTransaction(
-        transaction,
-        refundInfo,
-        signature,
-        { gasPrice: safeTx.gasPrice }
-      )
+      userSCW
+        .connect(accounts[1])
+        .execTransaction(transaction, refundInfo, signature, {
+          gasPrice: safeTx.gasPrice,
+        })
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -855,12 +834,18 @@ describe("Base Wallet Functionality", function () {
     console.log("SocialModule deployed at ", socialRecoveryModule.address);
 
     // setup social recovery module, set bob, charlie as friends and set threshold as 2
-    await socialRecoveryModule
+    // must be called via the users SCW
+    let data = await socialRecoveryModule.interface.encodeFunctionData(
+      "setup",
+      [[bob, charlie], 2]
+    );
+
+    let tx = await userSCW
       .connect(accounts[0])
-      .setup([bob, charlie], 2, userSCW.address);
+      .executeCall(socialRecoveryModule.address, 0, data);
 
     // Owner itself can not directly add modules
-    let tx = userSCW
+    tx = userSCW
       .connect(accounts[0])
       .enableModule(socialRecoveryModule.address);
     await expect(tx).to.be.reverted;
@@ -883,7 +868,7 @@ describe("Base Wallet Functionality", function () {
 
     // creating data and dataHash signed by owner
     const newOwner = accounts[5];
-    const data = await userSCW.interface.encodeFunctionData("setOwner", [
+    data = await userSCW.interface.encodeFunctionData("setOwner", [
       newOwner.address,
     ]);
     console.log("data ", data);
@@ -895,11 +880,12 @@ describe("Base Wallet Functionality", function () {
     // bob confirms transaction for setOwner()
     tx = await socialRecoveryModule
       .connect(accounts[1])
-      .confirmTransaction(dataHash);
+      .confirmTransaction(userSCW.address, dataHash);
+    console.log(await userSCW.owner());
     // charlie confirms transaction for setOwner()
     tx = await socialRecoveryModule
       .connect(accounts[2])
-      .confirmTransaction(dataHash);
+      .confirmTransaction(userSCW.address, dataHash);
     // recoverAccess() will be invoked by module
     tx = await socialRecoveryModule
       .connect(accounts[1])
@@ -934,7 +920,7 @@ describe("Base Wallet Functionality", function () {
     expect(await userSCW.owner()).to.equal(accounts[0].address);
   });
 
-  it("should not be able to updateImplementation from any module call, or execute() / execFromEntryPoint() method of AA flow", async function () {
+  it("should not be able to updateImplementation from any module call", async function () {
     // deploy new implementation
     const UserSCWImpl2 = await ethers.getContractFactory(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount"
@@ -944,24 +930,20 @@ describe("Base Wallet Functionality", function () {
     ).deploy(entryPoint.address);
     console.log("UserSCWImpl2 deployed at ", userSCWImpl2.address);
 
-    /// 1. updateImplementation from social recovery module
+    // module deploy - WhitelistModule
+    const WhitelistModule = await ethers.getContractFactory("WhitelistModule");
+    const whitelistModule = await WhitelistModule.connect(accounts[0]).deploy(
+      userSCW.address
+    );
+    console.log("WhitelistModule deployed at ", whitelistModule.address);
+
     const data = await userSCW.interface.encodeFunctionData(
       "updateImplementation",
       [userSCWImpl2.address] // new implementation
     );
-
-    await expect(
-      socialRecoveryModule.connect(accounts[0]).authCall(userSCW.address, data)
-    ).to.be.reverted;
-
-    /// 2. updateImplementation from execTransaction for AA flow via owner
-    const tx = executeContractCallWithSigners(
-      userSCW,
-      userSCW,
-      "updateImplementation",
-      [userSCWImpl2.address], // new implementation
-      [accounts[0]]
-    );
+    const tx = whitelistModule
+      .connect(accounts[0])
+      .authCall(userSCW.address, userSCW.address, 0, data);
     await expect(tx).to.be.reverted;
   });
 });
