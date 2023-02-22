@@ -8,7 +8,8 @@ import "hardhat/console.sol";
 contract SmartAccount2 is SmartAccount {
 
     // AA immutable storage
-    // IEntryPoint private immutable _entryPoint;
+    // @review @fil 
+    IEntryPoint private immutable _entryPoint;
 
     // review 
     // mock constructor or use deinitializers
@@ -17,9 +18,10 @@ contract SmartAccount2 is SmartAccount {
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
+        // @review fil
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-        // require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
-        // _entryPoint = anEntryPoint;
+        require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
+        _entryPoint = anEntryPoint;
         _disableInitializers();
     }
 
@@ -67,6 +69,8 @@ contract SmartAccount2 is SmartAccount {
                 payment = handlePaymentV2(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
+            console.log("goes from v2");
+            // console.log("entrypoint address is %s", entryPoint());
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }
