@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 import "../SmartAccount.sol";
-import "hardhat/console.sol";
 
 contract SocialRecoveryModule {
     string public constant NAME = "Social Recovery Module";
@@ -11,13 +10,12 @@ contract SocialRecoveryModule {
         address[] friends; // the list of friends
         uint256 threshold; // minimum number of friends required to recover
     }
-    mapping(address => Friends) internal entries;
+    mapping(address => Friends) internal friendsEntries;
     mapping(address => mapping(address => bool)) public isFriend;
 
-    // map of [dataHash][SCw][friend] to bool
-    mapping(bytes32 => mapping(address => mapping(address => bool)))
-        public isConfirmed;
-    mapping(bytes32 => bool) public isExecuted;
+    // isConfirmed - map of [recoveryHash][friend] to bool
+    mapping(bytes32 => mapping(address => bool)) public isConfirmed;
+    mapping(address => uint256) internal walletsNonces;
 
     /**
      * @dev Setup function sets initial storage of contract. Only by SCW owner.
@@ -28,12 +26,10 @@ contract SocialRecoveryModule {
             "Threshold exceeds friends count"
         );
         require(_threshold >= 2, "At least 2 friends required");
-        console.log("msg.sender", msg.sender);
-        Friends storage entry = entries[msg.sender];
+        Friends storage entry = friendsEntries[msg.sender];
         // check for duplicates in friends list
         for (uint256 i = 0; i < _friends.length; i++) {
             address friend = _friends[i];
-            console.log(friend);
             require(friend != address(0), "Invalid friend address provided");
             require(
                 !isFriend[msg.sender][friend],
@@ -42,73 +38,69 @@ contract SocialRecoveryModule {
             isFriend[msg.sender][friend] = true;
         }
         // update friends list and threshold for smart account
-        console.log(_friends.length);
         entry.friends = _friends;
         entry.threshold = _threshold;
-        console.log(entry.friends.length);
     }
 
     /**
      * @dev Confirm friend recovery transaction. Only by friends.
      */
-    function confirmTransaction(address _smartAccount, bytes32 dataHash)
-        public
-    {
-        console.log(_onlyFriends(_smartAccount, msg.sender));
-        require(_onlyFriends(_smartAccount, msg.sender), "sender not a friend");
-        require(!isExecuted[dataHash], "Recovery already executed");
-        isConfirmed[dataHash][_smartAccount][msg.sender] = true;
+    function confirmTransaction(address _wallet, address _newOwner) public {
+        require(_onlyFriends(_wallet, msg.sender), "sender not a friend");
+        bytes32 recoveryHash = getRecoveryHash(
+            _wallet,
+            _newOwner,
+            walletsNonces[_wallet]
+        );
+        isConfirmed[recoveryHash][msg.sender] = true;
     }
 
-    function recoverAccess(address payable _smartAccount, address newOwner)
-        public
-    {
-        require(_onlyFriends(_smartAccount, msg.sender), "sender not a friend");
-        // TODO: add nonce, salt, chainId to dataHash to prevent replay attacks
-        bytes memory data = abi.encodeWithSignature(
-            "setOwner(address)",
-            newOwner
+    function recoverAccess(address payable _wallet, address _newOwner) public {
+        require(_onlyFriends(_wallet, msg.sender), "sender not a friend");
+        bytes32 recoveryHash = getRecoveryHash(
+            _wallet,
+            _newOwner,
+            walletsNonces[_wallet]
         );
-        bytes32 dataHash = getDataHash(data);
-        require(!isExecuted[dataHash], "Recovery already executed");
         require(
-            isConfirmedByRequiredFriends(dataHash, _smartAccount),
+            isConfirmedByRequiredFriends(recoveryHash, _wallet),
             "Not enough confirmations"
         );
-        isExecuted[dataHash] = true;
-        SmartAccount smartAccount = SmartAccount(payable(_smartAccount));
+        SmartAccount smartAccount = SmartAccount(payable(_wallet));
         require(
             smartAccount.execTransactionFromModule(
-                _smartAccount,
+                _wallet,
                 0,
-                data,
+                // abi.encodeCall("setOwner", (newOwner)),
+                abi.encodeWithSignature("setOwner(address)", _newOwner),
                 Enum.Operation.Call
             ),
             "Could not execute recovery"
         );
+        walletsNonces[_wallet]++;
     }
 
-    function isConfirmedByRequiredFriends(
-        bytes32 dataHash,
-        address _smartAccount
-    ) public view returns (bool) {
+    function isConfirmedByRequiredFriends(bytes32 recoveryHash, address _wallet)
+        public
+        view
+        returns (bool)
+    {
         uint256 confirmationCount;
-        Friends storage entry = entries[_smartAccount];
+        Friends storage entry = friendsEntries[_wallet];
         for (uint256 i = 0; i < entry.friends.length; i++) {
-            if (isConfirmed[dataHash][_smartAccount][entry.friends[i]])
+            if (isConfirmed[recoveryHash][entry.friends[i]])
                 confirmationCount++;
             if (confirmationCount == entry.threshold) return true;
         }
         return false;
     }
 
-    function _onlyFriends(address _smartAccount, address _friend)
+    function _onlyFriends(address _wallet, address _friend)
         public
         view
         returns (bool)
     {
-        Friends storage entry = entries[_smartAccount];
-        console.log(entry.friends.length);
+        Friends storage entry = friendsEntries[_wallet];
         for (uint256 i = 0; i < entry.friends.length; i++) {
             if (entry.friends[i] == _friend) return true;
         }
@@ -116,9 +108,12 @@ contract SocialRecoveryModule {
     }
 
     /// @dev Returns hash of data encoding owner replacement.
-    /// @param data Data payload.
     /// @return Data hash.
-    function getDataHash(bytes memory data) public pure returns (bytes32) {
-        return keccak256(data);
+    function getRecoveryHash(
+        address _wallet,
+        address _newOwner,
+        uint256 _nonce
+    ) public pure returns (bytes32) {
+        return keccak256(abi.encode(_wallet, _newOwner, _nonce));
     }
 }

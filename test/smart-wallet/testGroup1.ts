@@ -835,7 +835,7 @@ describe("Base Wallet Functionality", function () {
 
     // setup social recovery module, set bob, charlie as friends and set threshold as 2
     // must be called via the users SCW
-    let data = await socialRecoveryModule.interface.encodeFunctionData(
+    const data = await socialRecoveryModule.interface.encodeFunctionData(
       "setup",
       [[bob, charlie], 2]
     );
@@ -868,24 +868,25 @@ describe("Base Wallet Functionality", function () {
 
     // creating data and dataHash signed by owner
     const newOwner = accounts[5];
-    data = await userSCW.interface.encodeFunctionData("setOwner", [
-      newOwner.address,
-    ]);
-    console.log("data ", data);
-    const dataHash = await socialRecoveryModule
-      .connect(accounts[0])
-      .getDataHash(data);
-    console.log("dataHash ", dataHash);
+    // no need to create dataHash as it is already created in getRecoveryHash()
+    // data = await userSCW.interface.encodeFunctionData("setOwner", [
+    //   newOwner.address,
+    // ]);
+    // console.log("data ", data);
+    // const dataHash = await socialRecoveryModule
+    //   .connect(accounts[0])
+    //   .getDataHash(data);
+    // console.log("dataHash ", dataHash);
 
     // bob confirms transaction for setOwner()
     tx = await socialRecoveryModule
       .connect(accounts[1])
-      .confirmTransaction(userSCW.address, dataHash);
+      .confirmTransaction(userSCW.address, newOwner.address);
     console.log(await userSCW.owner());
     // charlie confirms transaction for setOwner()
     tx = await socialRecoveryModule
       .connect(accounts[2])
-      .confirmTransaction(userSCW.address, dataHash);
+      .confirmTransaction(userSCW.address, newOwner.address);
     // recoverAccess() will be invoked by module
     tx = await socialRecoveryModule
       .connect(accounts[1])
@@ -899,6 +900,13 @@ describe("Base Wallet Functionality", function () {
     );
     // check if owner is updated
     expect(await userSCW.owner()).to.equal(newOwner.address);
+
+    // will not be able to recoverAccess() again
+    await expect(
+      socialRecoveryModule
+        .connect(accounts[1])
+        .recoverAccess(userSCW.address, newOwner.address)
+    ).to.be.reverted;
 
     /// 2. update setOwner() by current owner
     await expect(
