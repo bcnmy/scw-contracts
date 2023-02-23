@@ -125,6 +125,11 @@ contract SmartAccount is
     }
 
     // Getters
+    
+    // test case aid
+    function accountLogic() public pure returns (address) {
+        return address(0);
+    }
 
     function domainSeparator() public view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), this));
