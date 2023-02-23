@@ -1,31 +1,32 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./common/Singleton.sol";
+import "./libs/LibAddress.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./BaseSmartAccount.sol";
+import "./common/Singleton.sol";
 import "./base/ModuleManager.sol";
 import "./base/FallbackManager.sol";
 import "./common/SignatureDecoder.sol";
 import "./common/SecuredTokenTransfer.sol";
-import "./libs/LibAddress.sol";
+import {SmartAccountErrors} from "./common/Errors.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
+import "hardhat/console.sol";
 
-contract SmartAccount is 
+contract SmartAccount3 is 
      Singleton,
      BaseSmartAccount,
+     IERC165,
      ModuleManager,
-     FallbackManager,
      SignatureDecoder,
      SecuredTokenTransfer,
      ISignatureValidatorConstants,
-     IERC165,
-     SmartAccountErrors,
+     FallbackManager,
      Initializable,
-     ReentrancyGuardUpgradeable
+     ReentrancyGuardUpgradeable,
+     SmartAccountErrors
     {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -54,10 +55,6 @@ contract SmartAccount is
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
 
-    // Mapping to keep track of all message hashes that have been approved by the owner
-    // by ALL REQUIRED owners in a multisig flow
-    mapping(bytes32 => uint256) public signedMessages;
-
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
 
@@ -82,7 +79,6 @@ contract SmartAccount is
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 txHash, uint256 payment);
     event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
-
     // nice to have
     // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
     // todo
@@ -204,7 +200,6 @@ contract SmartAccount is
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual override returns (bool success) {
-
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -220,8 +215,7 @@ contract SmartAccount is
                 );
             // Execute transaction.
             txHash = keccak256(txHashData);
-
-            checkSignatures(txHash, signatures);
+            checkSignatures(txHash, txHashData, signatures);
         }
 
 
@@ -245,6 +239,7 @@ contract SmartAccount is
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
+            console.log("goes from v3");
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }
@@ -307,6 +302,7 @@ contract SmartAccount is
      */
     function checkSignatures(
         bytes32 dataHash,
+        bytes memory data,
         bytes memory signatures
     ) public view virtual {
         uint8 v;
@@ -318,7 +314,7 @@ contract SmartAccount is
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
-            // When handling contract signatures the address of the signer contract is encoded into r
+            // When handling contract signatures the address of the contract is encoded into r
             _signer = address(uint160(uint256(r)));
 
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
@@ -344,7 +340,7 @@ contract SmartAccount is
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                require(ISignatureValidator(_signer).isValidSignature(dataHash, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
+                require(ISignatureValidator(_signer).isValidSignature(data, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
         }
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
@@ -513,12 +509,18 @@ contract SmartAccount is
     // @notice Nonce space is locked to 0 for AA transactions
     // userOp could have batchId as well
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
+        // bytes calldata userOpData = userOp.callData;
+        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // if(address(modules[_to]) != address(0)) return;
         require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /// implement template method of BaseAccount
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
     internal override virtual returns (uint256 sigTimeRange) {
+        // bytes calldata userOpData = userOp.callData;
+        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // if(address(modules[_to]) != address(0)) return 0;
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
