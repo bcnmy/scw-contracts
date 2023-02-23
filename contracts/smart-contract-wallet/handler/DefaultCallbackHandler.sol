@@ -15,9 +15,9 @@ contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, 
     string public constant VERSION = "1.0.0";
 
     //keccak256(
-    //    "SmartAccount(bytes message)"
+    //    "SmartAccountMessage(bytes message)"
     //);
-    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH = 0x28d088124dbd960bc410a6cf97d22994fb361d6b1da504b4751d1589f87720e5;
+    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH = 0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
@@ -31,12 +31,12 @@ contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, 
         SmartAccount smartAccount = SmartAccount(payable(msg.sender));
 
         if (_signature.length == 0) {
-            return (smartAccount.signedMessages(_dataHash) != 0) ? EIP1271_MAGIC_VALUE : bytes4(0);
+            return (smartAccount.signedMessages(_dataHash) != 0) ? EIP1271_MAGIC_VALUE : bytes4(0xffffffff);
         } else {
             try smartAccount.checkSignatures(_dataHash, _signature) {
                 return EIP1271_MAGIC_VALUE;
             } catch {
-                return bytes4(0);
+                return bytes4(0xffffffff);
             }
         }
     }

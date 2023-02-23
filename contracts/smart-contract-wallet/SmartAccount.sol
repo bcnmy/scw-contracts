@@ -220,7 +220,6 @@ contract SmartAccount is
             // Execute transaction.
             txHash = keccak256(txHashData);
 
-            //checkSignatures(txHash, txHashData, signatures);
             checkSignatures(txHash, signatures);
         }
 
@@ -307,7 +306,6 @@ contract SmartAccount is
      */
     function checkSignatures(
         bytes32 dataHash,
-        //bytes memory data,
         bytes memory signatures
     ) public view virtual {
         uint8 v;

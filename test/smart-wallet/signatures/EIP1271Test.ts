@@ -225,7 +225,7 @@ describe("EIP-1271 Signatures Tests", function () {
     await expect(handler.isValidSignature(dataHash, "0x")).to.be.reverted;
   });
 
-  it("Fallback handler returns bytes4(0) if the message has not been signed", async function () { 
+  it("Fallback handler returns 0xffffffff if the message has not been signed", async function () { 
     const dataHash = ethers.utils.keccak256("0xdeafbeef");
     
     let smartAccountWithHandlerInterface = await ethers.getContractAt(
@@ -234,11 +234,11 @@ describe("EIP-1271 Signatures Tests", function () {
     );
           
     let value = await smartAccountWithHandlerInterface.callStatic["isValidSignature(bytes32,bytes)"](dataHash, "0x");
-    let bytes4zero = "0x00000000";
-    expect(value).to.be.equal(bytes4zero);
+    let notMagicValue = "0xffffffff";
+    expect(value).to.be.equal(notMagicValue);
   });
 
-  it("Fallback handler returns bytes4(0) if signature is not valid", async function () { 
+  it("Fallback handler returns 0xffffffff if signature is not valid", async function () { 
     const dataHash = ethers.utils.keccak256("0xdeafbeef");
     const invalidSignature = "0xabcdefdecafcafe0";
     
@@ -248,8 +248,8 @@ describe("EIP-1271 Signatures Tests", function () {
     );
           
     let value = await smartAccountWithHandlerInterface.callStatic["isValidSignature(bytes32,bytes)"](dataHash, invalidSignature);
-    let bytes4zero = "0x00000000";
-    expect(value).to.be.equal(bytes4zero);
+    let notMagicValue = "0xffffffff";
+    expect(value).to.be.equal(notMagicValue);
   });
 
   

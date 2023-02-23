@@ -8,9 +8,9 @@ import "../SmartAccount.sol";
 /// @notice Inspired by Richard Meissner's (richard@gnosis.io) implementation
 contract SignMessageLib is SmartAccountStorage {
     //keccak256(
-    //    "SmartAccount(bytes message)"
+    //    "SmartAccountMessage(bytes message)"
     //);
-    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH = 0x28d088124dbd960bc410a6cf97d22994fb361d6b1da504b4751d1589f87720e5;
+    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH = 0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     event MessageSigned(bytes32 indexed messageHash);
 
