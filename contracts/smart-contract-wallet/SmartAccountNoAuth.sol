@@ -2,9 +2,7 @@
 pragma solidity 0.8.12;
 
 import "./libs/LibAddress.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 import "./BaseSmartAccount.sol";
-import "./common/Singleton.sol";
 import "./base/ModuleManager.sol";
 import "./base/FallbackManager.sol";
 import "./common/SignatureDecoder.sol";
@@ -15,16 +13,13 @@ import "./interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract SmartAccountNoAuth is 
-     Singleton,
      BaseSmartAccount,
-     IERC165,
      ModuleManager,
+     FallbackManager,
      SignatureDecoder,
      SecuredTokenTransfer,
      ISignatureValidatorConstants,
-     FallbackManager,
-     Initializable,
-     ReentrancyGuardUpgradeable,
+     IERC165,
      SmartAccountErrors
     {
     using ECDSA for bytes32;
@@ -67,7 +62,6 @@ contract SmartAccountNoAuth is
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
-        _disableInitializers();
     }
 
     
@@ -127,7 +121,10 @@ contract SmartAccountNoAuth is
      */
     function updateImplementation(address _implementation) external mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
-        _setImplementation(_implementation);
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+             sstore(address(),_implementation) 
+         }
         // EOA + Version tracking
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
@@ -165,7 +162,7 @@ contract SmartAccountNoAuth is
     // Initialize / Setup
     // Used to setup
     // i. owner ii. entry point address iii. handler
-    function init(address _owner, address _handler) public override initializer { 
+    function init(address _owner, address _handler) public override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
         require(_handler != address(0), "Invalid Fallback Handler");
@@ -243,7 +240,7 @@ contract SmartAccountNoAuth is
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) public nonReentrant returns (uint256 payment) {
+    ) public returns (uint256 payment) {
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -427,7 +424,7 @@ contract SmartAccountNoAuth is
     }
 
     // Extra Utils 
-    function transfer(address payable dest, uint amount) external nonReentrant onlyOwner {
+    function transfer(address payable dest, uint amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
         (bool success,) = dest.call{value:amount}("");
         require(success,"transfer failed");
