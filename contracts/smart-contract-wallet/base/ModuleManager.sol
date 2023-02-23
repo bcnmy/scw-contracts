@@ -130,4 +130,6 @@ contract ModuleManager is SelfAuthorized, Executor {
             mstore(array, moduleCount)
         }
     }
+
+    uint256[24] private __gap;
 }

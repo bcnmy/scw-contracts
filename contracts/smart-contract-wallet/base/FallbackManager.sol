@@ -50,4 +50,6 @@ contract FallbackManager is SelfAuthorized {
             return(0, returndatasize())
         }
     }
+
+    uint256[24] private __gap;
 }
