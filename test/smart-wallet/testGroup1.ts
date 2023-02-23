@@ -7,6 +7,7 @@ import {
   MockToken,
   MultiSend,
   StorageSetter,
+  WhitelistModule,
   DefaultCallbackHandler,
 } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -147,35 +148,131 @@ describe("Base Wallet Functionality", function () {
       .withArgs(bob, ethers.utils.parseEther("5"));
   });
 
+  it("can enable modules and accept transactions from it", async function () {
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    const WhitelistModule = await ethers.getContractFactory("WhitelistModule");
+    const whitelistModule: WhitelistModule = await WhitelistModule.deploy(bob);
+    console.log("Test module deployed at ", whitelistModule.address);
+
+    // whitelisting target contract
+    await whitelistModule
+      .connect(accounts[1])
+      .whitelistDestination(token.address);
+
+    // Owner itself can not directly add modules
+    await expect(
+      userSCW.connect(accounts[0]).enableModule(whitelistModule.address)
+    ).to.be.reverted;
+
+    // Without enabling module one can't send transactions
+    // invoking safe from module without enabling it!
+    await expect(
+      whitelistModule
+        .connect(accounts[2])
+        .authCall(
+          userSCW.address,
+          token.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie, ethers.utils.parseEther("10").toString())
+        )
+    ).to.be.reverted;
+
+    // Modules can only be enabled via safe transaction
+    await expect(
+      executeContractCallWithSigners(
+        userSCW,
+        userSCW,
+        "enableModule",
+        [whitelistModule.address],
+        [accounts[0]]
+      )
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    // TODO
+    // have to write a test to disable a module
+
+    // invoking module!
+    await whitelistModule
+      .connect(accounts[2])
+      .authCall(
+        userSCW.address,
+        token.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie, ethers.utils.parseEther("10").toString())
+      );
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
+  });
+
   // Transactions
-  it("Should send basic transactions from SCW to external contracts", async function () {
+  it("Should send basic erc20 transactions from SCW to external contracts", async function () {
     console.log("sending tokens to the safe..");
     await token
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
 
+    // test for executeCall method with erc20 transfer
     const data = encodeTransfer(bob, ethers.utils.parseEther("10").toString());
-    const tx = await userSCW
+    let tx = await userSCW
       .connect(accounts[0])
-      .execute(token.address, ethers.utils.parseEther("0"), data);
-    const receipt = await tx.wait();
-    console.log(receipt.transactionHash);
-
+      .executeCall(token.address, ethers.utils.parseEther("0"), data);
+    await tx.wait();
     expect(await token.balanceOf(bob)).to.equal(ethers.utils.parseEther("10"));
 
-    // executeBatch
+    // test for executeBatchCall method with erc20 transfer
     const data2 = encodeTransfer(
       charlie,
       ethers.utils.parseEther("10").toString()
     );
-    await userSCW
+    tx = await userSCW
       .connect(accounts[0])
-      .executeBatch([token.address, token.address], [data, data2]);
+      .executeBatchCall([token.address, token.address], [0, 0], [data, data2]);
+    await tx.wait();
 
     expect(await token.balanceOf(bob)).to.equal(ethers.utils.parseEther("20"));
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
     );
+  });
+
+  it("Should send basic native eth transactions from SCW to external contracts", async function () {
+    console.log("sending native tokens to bob charlie..");
+
+    // test for executeCall method with native value transfer
+    const bobBalBefore = await ethers.provider.getBalance(bob);
+    let tx = await userSCW
+      .connect(accounts[0])
+      .executeCall(bob, ethers.utils.parseEther("1"), "0x");
+    await tx.wait();
+    expect(await ethers.provider.getBalance(bob)).to.equal(
+      bobBalBefore.add(ethers.utils.parseEther("1"))
+    );
+
+    // executeBatchCall method with native value transfer
+    const charlieBalBefore = await ethers.provider.getBalance(charlie);
+    tx = await userSCW
+      .connect(accounts[0])
+      .executeBatchCall(
+        [bob, charlie],
+        [ethers.utils.parseEther("1"), ethers.utils.parseEther("1")],
+        ["0x", "0x"]
+      );
+    await tx.wait();
+    expect(await ethers.provider.getBalance(bob)).to.equal(
+      bobBalBefore.add(ethers.utils.parseEther("2"))
+    );
+    expect(await ethers.provider.getBalance(charlie)).to.equal(
+      charlieBalBefore.add(ethers.utils.parseEther("1"))
+    );
+
+    // test with empty array data and value
+    tx = userSCW.connect(accounts[0]).executeBatchCall([], [], []);
+    expect(tx).to.be.revertedWith("empty array provided");
   });
 
   it("should send transactions in a batch", async function () {

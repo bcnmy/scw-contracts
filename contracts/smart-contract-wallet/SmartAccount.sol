@@ -104,7 +104,7 @@ contract SmartAccount is
 
     // Setters
 
-    function setOwner(address _newOwner) external mixedAuth {
+    function setOwner(address _newOwner) public mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
         address oldOwner = owner;
         owner = _newOwner;
@@ -116,9 +116,8 @@ contract SmartAccount is
      * @param _implementation New wallet implementation
      */
     // todo: write test case for updating implementation
-    // review: external function becomes invisible from inside the contract
     // review for all methods to be invoked by smart account to self
-    function updateImplementation(address _implementation) external mixedAuth {
+    function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         _setImplementation(_implementation);
         // EOA + Version tracking
@@ -455,16 +454,26 @@ contract SmartAccount is
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
-    function execute(address dest, uint value, bytes calldata func) external onlyOwner{
+    function executeCall(
+        address dest,
+        uint256 value,
+        bytes calldata func
+    ) external nonReentrant {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
 
-    function executeBatch(address[] calldata dest, bytes[] calldata func) external onlyOwner{
+    function executeBatchCall(
+        address[] calldata dest,
+        uint256[] calldata value,
+        bytes[] calldata func
+    ) external nonReentrant {
         _requireFromEntryPointOrOwner();
-        require(dest.length == func.length, "wrong array lengths");
-        for (uint i = 0; i < dest.length;) {
-            _call(dest[i], 0, func[i]);
+        require(dest.length != 0, "empty array provided");
+        require(dest.length == value.length, "wrong array lengths");
+        require(value.length == func.length, "wrong array lengths");
+        for (uint256 i = 0; i < dest.length; ) {
+            _call(dest[i], value[i], func[i]);
             unchecked {
                 ++i;
             }
@@ -480,7 +489,7 @@ contract SmartAccount is
             }
         }
     }
-    
+
     //called by entryPoint, only after validateUserOp succeeded.
     //@review
     //Method is updated to instruct delegate call and emit regular events
