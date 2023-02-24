@@ -29,10 +29,7 @@ contract SmartAccount2 is SmartAccount {
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable override returns (bool success) {
-        // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
-        //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
-        uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
-        //console.log("init %s", 21000 + msg.data.length * 8);
+        uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -48,7 +45,7 @@ contract SmartAccount2 is SmartAccount {
             // Execute transaction.
             txHash = keccak256(txHashData);
             console.log("batchId used is 1");
-            checkSignatures(txHash, txHashData, signatures);
+            checkSignatures(txHash, signatures);
         }
 
 
@@ -72,6 +69,7 @@ contract SmartAccount2 is SmartAccount {
                 payment = handlePaymentV2(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
+            console.log("goes from v2");
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }
@@ -100,6 +98,5 @@ contract SmartAccount2 is SmartAccount {
         // uint256 requiredGas = startGas - gasleft();
         //console.log("hp %s", requiredGas);
     }
-
 } 
     

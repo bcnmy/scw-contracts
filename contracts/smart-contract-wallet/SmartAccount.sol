@@ -7,10 +7,12 @@ import "./base/ModuleManager.sol";
 import "./base/FallbackManager.sol";
 import "./common/SignatureDecoder.sol";
 import "./common/SecuredTokenTransfer.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
+import "./libs/LibAddress.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
+import {SmartAccountErrors} from "./common/Errors.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 contract SmartAccount is 
      BaseSmartAccount,
@@ -48,6 +50,10 @@ contract SmartAccount is
     // uint96 private _nonce; //changed to 2D nonce below
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
+
+    // Mapping to keep track of all message hashes that have been approved by the owner
+    // by ALL REQUIRED owners in a multisig flow
+    mapping(bytes32 => uint256) public signedMessages;
 
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
@@ -90,7 +96,7 @@ contract SmartAccount is
 
     // onlyOwner OR self
     modifier mixedAuth {
-        require(msg.sender == owner || msg.sender == address(this),"Only owner or self");
+        require(msg.sender == owner || msg.sender == address(this), "Only owner or self");
         _;
    }
 
@@ -113,7 +119,8 @@ contract SmartAccount is
     // review for all methods to be invoked by smart account to self
     // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
-    function updateImplementation(address _implementation) public mixedAuth {
+    function updateImplementation(address _implementation) public {
+        _requireFromEntryPointOrOwner();
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         // solhint-disable-next-line no-inline-assembly
         assembly {
@@ -218,7 +225,7 @@ contract SmartAccount is
                 );
             // Execute transaction.
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, txHashData, signatures);
+            checkSignatures(txHash, signatures);
         }
 
 
@@ -304,7 +311,6 @@ contract SmartAccount is
      */
     function checkSignatures(
         bytes32 dataHash,
-        bytes memory data,
         bytes memory signatures
     ) public view virtual {
         uint8 v;
@@ -316,7 +322,7 @@ contract SmartAccount is
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
-            // When handling contract signatures the address of the contract is encoded into r
+            // When handling contract signatures the address of the signer contract is encoded into r
             _signer = address(uint160(uint256(r)));
 
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
@@ -342,7 +348,7 @@ contract SmartAccount is
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                require(ISignatureValidator(_signer).isValidSignature(data, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
+                require(ISignatureValidator(_signer).isValidSignature(dataHash, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
         }
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow

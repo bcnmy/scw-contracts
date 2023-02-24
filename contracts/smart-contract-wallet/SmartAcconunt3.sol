@@ -114,7 +114,8 @@ contract SmartAccount3 is
     // review for all methods to be invoked by smart account to self
     // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
-    function updateImplementation(address _implementation) public mixedAuth {
+    function updateImplementation(address _implementation) public {
+        _requireFromEntryPointOrOwner();
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         // solhint-disable-next-line no-inline-assembly
         assembly {
@@ -219,7 +220,7 @@ contract SmartAccount3 is
                 );
             // Execute transaction.
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, txHashData, signatures);
+            checkSignatures(txHash, signatures);
         }
 
 
@@ -306,7 +307,6 @@ contract SmartAccount3 is
      */
     function checkSignatures(
         bytes32 dataHash,
-        bytes memory data,
         bytes memory signatures
     ) public view virtual {
         uint8 v;
@@ -318,7 +318,7 @@ contract SmartAccount3 is
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
-            // When handling contract signatures the address of the contract is encoded into r
+            // When handling contract signatures the address of the signer contract is encoded into r
             _signer = address(uint160(uint256(r)));
 
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
@@ -344,7 +344,7 @@ contract SmartAccount3 is
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                require(ISignatureValidator(_signer).isValidSignature(data, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
+                require(ISignatureValidator(_signer).isValidSignature(dataHash, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
         }
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
