@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Proxy } from "../../typechain";
 
-describe("Wallet Deployment", function () {
+describe("Proxy Deployment", function () {
   it("Should deploy the wallet from proxy as intended", async function () {
     const indexForSalt = 0;
     const accounts = await ethers.getSigners();

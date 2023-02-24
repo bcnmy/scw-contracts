@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./libs/LibAddress.sol";
-import "./BaseSmartAccount.sol";
-import "./base/ModuleManager.sol";
-import "./base/FallbackManager.sol";
-import "./common/SignatureDecoder.sol";
-import "./common/SecuredTokenTransfer.sol";
-import "./libs/LibAddress.sol";
-import "./interfaces/ISignatureValidator.sol";
-import "./interfaces/IERC165.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
+import "../../libs/LibAddress.sol";
+import "../../BaseSmartAccount.sol";
+import "../../base/ModuleManager.sol";
+import "../../base/FallbackManager.sol";
+import "../../common/SignatureDecoder.sol";
+import "../../common/SecuredTokenTransfer.sol";
+import {SmartAccountErrors} from "../../common/Errors.sol";
+import "../../interfaces/ISignatureValidator.sol";
+import "../../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "hardhat/console.sol";
 
-contract SmartAccount is 
+contract SmartAccount3 is 
      BaseSmartAccount,
      ModuleManager,
      FallbackManager,
@@ -49,10 +49,6 @@ contract SmartAccount is
     // uint96 private _nonce; //changed to 2D nonce below
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
-
-    // Mapping to keep track of all message hashes that have been approved by the owner
-    // by ALL REQUIRED owners in a multisig flow
-    mapping(bytes32 => uint256) public signedMessages;
 
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
@@ -95,7 +91,7 @@ contract SmartAccount is
 
     // onlyOwner OR self
     modifier mixedAuth {
-        require(msg.sender == owner || msg.sender == address(this), "Only owner or self");
+        require(msg.sender == owner || msg.sender == address(this),"Only owner or self");
         _;
    }
 
@@ -248,6 +244,7 @@ contract SmartAccount is
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
+            console.log("goes from v3");
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }

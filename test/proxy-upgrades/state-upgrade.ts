@@ -33,7 +33,7 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
-describe("Base Wallet Functionality", function () {
+describe("Upgradeability", function () {
   // TODO
   let baseImpl: SmartWallet;
   let walletFactory: WalletFactory;
@@ -44,27 +44,17 @@ describe("Base Wallet Functionality", function () {
   let owner: string;
   let bob: string;
   let charlie: string;
+  let habibi: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const VERSION = "1.0.4";
-  const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 
-  /* const domainType = [
-      { name: "name", type: "string" },
-      { name: "version", type: "string" },
-      { name: "verifyingContract", type: "address" },
-      { name: "salt", type: "bytes32" },
-    ]; */
-
-  beforeEach(async () => {
+  before(async () => {
     accounts = await ethers.getSigners();
-    const addresses = await ethers.provider.listAccounts();
-    const ethersSigner = ethers.provider.getSigner();
-
     owner = await accounts[0].getAddress();
     bob = await accounts[1].getAddress();
     charlie = await accounts[2].getAddress();
+    habibi = await accounts[3].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
@@ -111,8 +101,7 @@ describe("Base Wallet Functionality", function () {
     await token.mint(owner, ethers.utils.parseEther("1000000"));
   });
 
-  // describe("Wallet initialization", function () {
-  it("Should set the correct states on proxy", async function () {
+  it("Should deploy a wallet and validate entrypoint", async function () {
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       owner,
       0
@@ -131,17 +120,6 @@ describe("Base Wallet Functionality", function () {
     const entryPointAddress = await userSCW.entryPoint();
     expect(entryPointAddress).to.equal(entryPoint.address);
 
-    const walletOwner = await userSCW.owner();
-    expect(walletOwner).to.equal(owner);
-
-    const walletNonce1 = await userSCW.getNonce(0); // only 0 space is in the context now
-    const walletNonce2 = await userSCW.getNonce(1);
-    const chainId = await userSCW.getChainId();
-
-    console.log("walletNonce1 ", walletNonce1);
-    console.log("walletNonce2 ", walletNonce2);
-    console.log("chainId ", chainId);
-
     await accounts[1].sendTransaction({
       from: bob,
       to: expected,
@@ -149,70 +127,33 @@ describe("Base Wallet Functionality", function () {
     });
   });
 
-  it("should deploy new implementation and upgrade", async function () {
-    const priorEntryPoint = await userSCW.entryPoint();
-    console.log("prior entrypoint ", priorEntryPoint);
-
-    console.log(entryPoint.address);
-
-    const newEntryPoint = await deployEntryPoint();
-
-    console.log("deployed entrypoint again ", newEntryPoint.address);
-
-    const BaseImplementation2 = await ethers.getContractFactory(
-      "SmartAccount2"
+  it("Should deploy new implementation and upgrade", async function () {
+    // Note that -> To upgrade an entry point we need to deploy new implementation
+    // but to update implementation previous entry point can use in it's constructor.
+    const BaseImplementation6 = await ethers.getContractFactory(
+      "SmartAccount6"
     );
-    const baseImpl2 = await BaseImplementation2.deploy(newEntryPoint.address);
-    await baseImpl2.deployed();
-    console.log("base wallet upgraded impl deployed at: ", baseImpl2.address);
+    const baseImpl6 = await BaseImplementation6.deploy(entryPoint.address);
+    await baseImpl6.deployed();
+    console.log("base wallet upgraded impl deployed at: ", baseImpl6.address);
 
     await expect(
-      userSCW.connect(accounts[0]).updateImplementation(baseImpl2.address)
+      userSCW.connect(accounts[0]).updateImplementation(baseImpl6.address)
     ).to.emit(userSCW, "ImplementationUpdated");
 
-    // Shouldn't we have to initialise again?
-    // Gnosis example to upgrade using this contract
-    // https://github.com/safe-global/safe-contracts/blob/main/contracts/examples/libraries/Migrate_1_3_0_to_1_2_0.sol
-
     userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartAccount2.sol:SmartAccount2",
+      "contracts/smart-contract-wallet/test/upgrades/SmartAccount6.sol:SmartAccount6",
       userSCW.address
     );
-  });
 
-  // Transactions
-  it("Should send basic transactions from SCW to external contracts", async function () {
-    console.log("sending tokens to the safe..");
-    await token
-      .connect(accounts[0])
-      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+    // must reinit asap!
+    await userSCW.reinit(habibi);
 
-    const data = encodeTransfer(bob, ethers.utils.parseEther("10").toString());
-    const tx = await userSCW
-      .connect(accounts[0])
-      .executeCall(token.address, ethers.utils.parseEther("0"), data);
-    const receipt = await tx.wait();
-    console.log(receipt.transactionHash);
+    const entryPointAddress = await userSCW.entryPoint();
+    expect(entryPointAddress).to.equal(entryPoint.address);
 
-    expect(await token.balanceOf(bob)).to.equal(ethers.utils.parseEther("10"));
-
-    // executeBatch
-    const data2 = encodeTransfer(
-      charlie,
-      ethers.utils.parseEther("10").toString()
-    );
-    await userSCW
-      .connect(accounts[0])
-      .executeBatchCall(
-        [token.address, token.address],
-        [ethers.utils.parseEther("0"), ethers.utils.parseEther("0")],
-        [data, data2]
-      );
-
-    expect(await token.balanceOf(bob)).to.equal(ethers.utils.parseEther("20"));
-    expect(await token.balanceOf(charlie)).to.equal(
-      ethers.utils.parseEther("10")
-    );
+    const friend = await userSCW.friend();
+    expect(friend).to.equal(habibi);
   });
 
   it("should send a single transacton (EIP712 sign)", async function () {
@@ -263,5 +204,29 @@ describe("Base Wallet Functionality", function () {
     expect(await token.balanceOf(charlie)).to.equal(
       ethers.utils.parseEther("10")
     );
+  });
+
+  it("should enable only friend to transfer limited eth once", async function () {
+    await expect(
+      userSCW
+        .connect(accounts[1])
+        .transferByFriend(bob, ethers.utils.parseEther("1"))
+    ).to.be.revertedWith("only friend!");
+
+    await expect(
+      userSCW
+        .connect(accounts[3])
+        .transferByFriend(bob, ethers.utils.parseEther("2"))
+    ).to.be.revertedWith("can't exceed");
+
+    await userSCW
+      .connect(accounts[3])
+      .transferByFriend(bob, ethers.utils.parseEther("1"));
+
+    await expect(
+      userSCW
+        .connect(accounts[3])
+        .transferByFriend(bob, ethers.utils.parseEther("0.5"))
+    ).to.be.revertedWith("only once during urgency");
   });
 });

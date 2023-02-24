@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./libs/LibAddress.sol";
-import "./BaseSmartAccount.sol";
-import "./base/ModuleManager.sol";
-import "./base/FallbackManager.sol";
-import "./common/SignatureDecoder.sol";
-import "./common/SecuredTokenTransfer.sol";
-import "./libs/LibAddress.sol";
-import "./interfaces/ISignatureValidator.sol";
-import "./interfaces/IERC165.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
+import "../../libs/LibAddress.sol";
+import "../../BaseSmartAccount.sol";
+import "./ModuleManagerNew.sol";
+import "../../base/FallbackManager.sol";
+import "../../common/SignatureDecoder.sol";
+import "../../common/SecuredTokenTransfer.sol";
+import {SmartAccountErrors} from "../../common/Errors.sol";
+import "../../interfaces/ISignatureValidator.sol";
+import "../../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "hardhat/console.sol";
 
-contract SmartAccount is 
+contract SmartAccount7 is 
      BaseSmartAccount,
-     ModuleManager,
+     ModuleManagerNew,
      FallbackManager,
      SignatureDecoder,
      SecuredTokenTransfer,
@@ -65,6 +65,7 @@ contract SmartAccount is
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+        isActive = false;
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
     }
@@ -178,9 +179,13 @@ contract SmartAccount is
         return _entryPoint;
     }
 
-    // init
-    // Initialize / Setup
-    // Used to setup
+    function isActiveModuleManager() public view virtual returns (bool) {
+        return isActive;
+    }
+
+    // Note: just because of interface as we're not inherting from previous base!
+    // Todo: Make it easier to inherit from previous base contracts. Make methods internal virtual where it makes sense
+    // @review: abstract contracts and necessary interfaces which might change 
     function init(address _owner, address _handler) public override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
@@ -188,6 +193,11 @@ contract SmartAccount is
         owner = _owner;
         _setFallbackHandler(_handler);
         setupModules(address(0), bytes(""));
+    }
+
+    function reinit(bool _isMMActive) public { 
+        require(isActive == false,"Already initialised");
+        isActive = _isMMActive;
     }
 
     /**
@@ -248,6 +258,7 @@ contract SmartAccount is
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
+            console.log("has to go through new v4 implementation");
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }

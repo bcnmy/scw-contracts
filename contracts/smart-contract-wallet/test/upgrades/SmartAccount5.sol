@@ -1,20 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./libs/LibAddress.sol";
-import "./BaseSmartAccount.sol";
-import "./base/ModuleManager.sol";
-import "./base/FallbackManager.sol";
-import "./common/SignatureDecoder.sol";
-import "./common/SecuredTokenTransfer.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
-import "./interfaces/ISignatureValidator.sol";
-import "./interfaces/IERC165.sol";
+import "../../libs/LibAddress.sol";
+import "./BaseSmartAccountNew.sol";
+import "../../base/ModuleManager.sol";
+import "../../base/FallbackManager.sol";
+import "../../common/SignatureDecoder.sol";
+import "../../common/SecuredTokenTransfer.sol";
+import {SmartAccountErrors} from "../../common/Errors.sol";
+import "../../interfaces/ISignatureValidator.sol";
+import "../../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "hardhat/console.sol";
 
-contract SmartAccount3 is 
-     BaseSmartAccount,
+contract SmartAccount5 is 
+     BaseSmartAccountNew,
      ModuleManager,
      FallbackManager,
      SignatureDecoder,
@@ -39,9 +39,9 @@ contract SmartAccount3 is
 
     // review? if rename wallet to account is must
     // keccak256(
-    //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
+    //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 batchId,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
     // );
-    bytes32 internal constant ACCOUNT_TX_TYPEHASH = 0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
+    bytes32 internal constant ACCOUNT_TX_TYPEHASH = 0x5e7f7628b678f3ed2ecfee8c3d502052c40afd7f3777b130d92e34f67c612aad;
 
     // Owner storage
     address public owner;
@@ -49,6 +49,10 @@ contract SmartAccount3 is
     // uint96 private _nonce; //changed to 2D nonce below
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
+
+    // Mapping to keep track of all message hashes that have been approved by the owner
+    // by ALL REQUIRED owners in a multisig flow
+    mapping(bytes32 => uint256) public signedMessages;
 
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
@@ -91,7 +95,7 @@ contract SmartAccount3 is
 
     // onlyOwner OR self
     modifier mixedAuth {
-        require(msg.sender == owner || msg.sender == address(this),"Only owner or self");
+        require(msg.sender == owner || msg.sender == address(this), "Only owner or self");
         _;
    }
 
@@ -202,6 +206,7 @@ contract SmartAccount3 is
     /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
     function execTransaction(
         Transaction memory _tx,
+        uint256 _batchId,
         FeeRefund memory refundInfo,
         bytes memory signatures
     ) public payable virtual override returns (bool success) {
@@ -213,17 +218,16 @@ contract SmartAccount3 is
                 encodeTransactionData(
                     // Transaction info
                     _tx,
+                    // 2D nonce info
+                    _batchId,
                     // Payment info
-                    refundInfo,
-                    // Signature info
-                    nonces[1]++
+                    refundInfo
                 );
             // Execute transaction.
+            nonces[_batchId]++;
             txHash = keccak256(txHashData);
             checkSignatures(txHash, signatures);
         }
-
-
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
         require(gasleft() >= max((_tx.targetTxGas * 64) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
@@ -244,7 +248,7 @@ contract SmartAccount3 is
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
-            console.log("goes from v3");
+            console.log("has to go through new v5 implementation");
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }
@@ -384,11 +388,11 @@ contract SmartAccount3 is
     /// @param data Data payload.
     /// @param operation Operation type.
     /// @param targetTxGas Fas that should be used for the safe transaction.
+    /// @param _batchId nonce space
     /// @param baseGas Gas costs for data used to trigger the safe transaction.
     /// @param gasPrice Maximum gas price that should be used for this transaction.
     /// @param gasToken Token address (or 0 if ETH) that is used for the payment.
     /// @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
-    /// @param _nonce Transaction nonce.
     /// @return Transaction hash.
     function getTransactionHash(
         address to,
@@ -396,12 +400,12 @@ contract SmartAccount3 is
         bytes calldata data,
         Enum.Operation operation,
         uint256 targetTxGas,
+        uint256 _batchId,
         uint256 baseGas,
         uint256 gasPrice,
         uint256 tokenGasPriceFactor,
         address gasToken,
-        address payable refundReceiver,
-        uint256 _nonce
+        address payable refundReceiver
     ) public view returns (bytes32) {
         Transaction memory _tx = Transaction({
             to: to,
@@ -417,19 +421,20 @@ contract SmartAccount3 is
             gasToken: gasToken,
             refundReceiver: refundReceiver
         });
-        return keccak256(encodeTransactionData(_tx, refundInfo, _nonce));
+        return keccak256(encodeTransactionData(_tx, _batchId, refundInfo));
     }
 
     /// @dev Returns the bytes that are hashed to be signed by owner.
     /// @param _tx Wallet transaction 
+    /// @param _batchId nonce space
     /// @param refundInfo Required information for gas refunds
-    /// @param _nonce Transaction nonce.
     /// @return Transaction hash bytes.
     function encodeTransactionData(
         Transaction memory _tx,
-        FeeRefund memory refundInfo,
-        uint256 _nonce
+        uint256 _batchId,
+        FeeRefund memory refundInfo
     ) public view returns (bytes memory) {
+        uint256 _nonce = nonces[_batchId];
         bytes32 safeTxHash =
             keccak256(
                 abi.encode(
@@ -439,6 +444,7 @@ contract SmartAccount3 is
                     keccak256(_tx.data),
                     _tx.operation,
                     _tx.targetTxGas,
+                    _batchId,
                     refundInfo.baseGas,
                     refundInfo.gasPrice,
                     refundInfo.tokenGasPriceFactor,
