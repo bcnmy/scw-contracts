@@ -19,6 +19,7 @@ library PaymasterHelpers {
     using ECDSA for bytes32;
 
     /**
+     * review update description
      * @dev Encodes the paymaster context: sender, token, rate, and fee
      */
     function paymasterContext(

@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.12;
 
-import "../interfaces/ERC1155TokenReceiver.sol";
-import "../interfaces/ERC721TokenReceiver.sol";
-import "../interfaces/ERC777TokensRecipient.sol";
+import "../interfaces/IERC1155TokenReceiver.sol";
+import "../interfaces/IERC721TokenReceiver.sol";
+import "../interfaces/IERC777TokensRecipient.sol";
 import "../interfaces/IERC165.sol";
 import "../interfaces/ISignatureValidator.sol";
 import "../SmartAccount.sol";
 
 /// @title Default Callback Handler - returns true for known token callbacks
 /// @author Richard Meissner - <richard@gnosis.pm>
-contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, ERC721TokenReceiver, IERC165, ISignatureValidator {
+contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient, IERC721TokenReceiver, IERC165, ISignatureValidator {
     string public constant NAME = "Default Callback Handler";
     string public constant VERSION = "1.0.0";
 
@@ -88,8 +88,8 @@ contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, 
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return
-            interfaceId == type(ERC1155TokenReceiver).interfaceId ||
-            interfaceId == type(ERC721TokenReceiver).interfaceId ||
+            interfaceId == type(IERC1155TokenReceiver).interfaceId ||
+            interfaceId == type(IERC721TokenReceiver).interfaceId ||
             interfaceId == type(IERC165).interfaceId;
     }
 }

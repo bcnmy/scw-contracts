@@ -94,7 +94,7 @@ contract SmartAccountFactory {
        bytes memory code = abi.encodePacked(type(Proxy).creationCode, uint256(uint160(_implementation)));
        bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code)));
-        _wallet = address(uint160(uint(hash)));
+        _wallet = address(uint160(uint256(hash)));
     }
 
 }

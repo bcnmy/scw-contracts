@@ -33,7 +33,7 @@ EIP1167 Proxy
 Constract responsible for deploying smart wallets aka accounts using create2 and create
 Has a method to compute conter factual wallet of the address before deploying
 
-function deployCounterFactualWallet(address _owner, address _entryPoint, address _handler, uint _index) public returns(address proxy)
+function deployCounterFactualWallet(address _owner, address _entryPoint, address _handler, uint256 _index) public returns(address proxy)
 
 salt consists of _owner and _index. _entryPoint and _handler are required to init the wallet. 
 (contest bonus : showcase any potential front running in wallet deployment)
@@ -105,10 +105,9 @@ MultiSend functionality but reverts if a transaction tries to do delegatecall
  contracts/smart-contract-wallet/SmartAccountFactory.sol
  contracts/smart-contract-wallet/base/Executor.sol
  contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol
- contracts/smart-contract-wallet/interfaces/ERC1155TokenReceiver.sol
- contracts/smart-contract-wallet/interfaces/ERC721TokenReceiver.sol
- contracts/smart-contract-wallet/interfaces/ERC777TokensRecipient.sol
- contracts/smart-contract-wallet/interfaces/IERC1271Wallet.sol
+ contracts/smart-contract-wallet/interfaces/IERC1155TokenReceiver.sol
+ contracts/smart-contract-wallet/interfaces/IERC721TokenReceiver.sol
+ contracts/smart-contract-wallet/interfaces/IERC777TokensRecipient.sol
  contracts/smart-contract-wallet/libs/LibAddress.sol
  contracts/smart-contract-wallet/libs/Math.sol
  contracts/smart-contract-wallet/libs/MultiSend.sol

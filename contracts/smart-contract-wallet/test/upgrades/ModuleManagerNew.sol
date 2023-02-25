@@ -51,7 +51,7 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         require(module != address(0) && module != SENTINEL_MODULES, "BSA101");
         require(modules[prevModule] == module, "BSA103");
         modules[prevModule] = modules[module];
-        modules[module] = address(0);
+        delete modules[module];
         emit DisabledModule(module);
     }
 

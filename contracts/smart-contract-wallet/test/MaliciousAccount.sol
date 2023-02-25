@@ -73,7 +73,7 @@ contract MaliciousAccount is
     // modifiers
     // onlyOwner
     /**
-     * @notice Throws if the sender is not an the owner.
+     * @notice Throws error if the sender is not an owner.
      */
     modifier onlyOwner {
         require(msg.sender == owner, "Smart Account:: Sender is not authorized");
@@ -128,7 +128,7 @@ contract MaliciousAccount is
     // Getters
 
     function domainSeparator() public view returns (bytes32) {
-        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), this));
+        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), address(this)));
     }
 
     /// @dev Returns the chain id used by this contract.
@@ -410,7 +410,7 @@ contract MaliciousAccount is
         FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
-        bytes32 safeTxHash =
+        bytes32 walletTxHash =
             keccak256(
                 abi.encode(
                     ACCOUNT_TX_TYPEHASH,
@@ -426,11 +426,11 @@ contract MaliciousAccount is
                     _nonce
                 )
             );
-        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), safeTxHash);
+        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
     }
 
     // Extra Utils 
-    function transfer(address payable dest, uint amount) external onlyOwner {
+    function transfer(address payable dest, uint256 amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
         (bool success,) = dest.call{value:amount}("");
         require(success,"transfer failed");
@@ -440,7 +440,7 @@ contract MaliciousAccount is
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
-    function execute(address dest, uint value, bytes calldata func) external {
+    function execute(address dest, uint256 value, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
@@ -448,7 +448,7 @@ contract MaliciousAccount is
     function executeBatch(address[] calldata dest, bytes[] calldata func) external {
         _requireFromEntryPointOrOwner();
         require(dest.length == func.length, "wrong array lengths");
-        for (uint i = 0; i < dest.length;) {
+        for (uint256 i = 0; i < dest.length;) {
             _call(dest[i], 0, func[i]);
             unchecked {
                 ++i;
@@ -469,7 +469,7 @@ contract MaliciousAccount is
     //called by entryPoint, only after validateUserOp succeeded.
     //@review
     //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(address dest, uint value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
+    function execFromEntryPoint(address dest, uint256 value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
         success = execute(dest, value, func, operation, gasLimit);
         require(success, "Userop Failed");
     }
@@ -486,7 +486,7 @@ contract MaliciousAccount is
         //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
 
         // bytes calldata userOpData = userOp.callData;
-        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // (address _to, uint256 _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint256, bytes));
         // if(address(modules[_to]) != address(0)) return;
     }
 
@@ -494,7 +494,7 @@ contract MaliciousAccount is
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
     internal override virtual returns (uint256 deadline) {
         // bytes calldata userOpData = userOp.callData;
-        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // (address _to, uint256 _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint256, bytes));
         // if(address(modules[_to]) != address(0)) return 0;
 
         bytes32 hash = userOpHash.toEthSignedMessageHash();

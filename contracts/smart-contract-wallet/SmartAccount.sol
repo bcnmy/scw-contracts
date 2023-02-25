@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./libs/LibAddress.sol";
 import "./BaseSmartAccount.sol";
 import "./base/ModuleManager.sol";
 import "./base/FallbackManager.sol";
@@ -31,10 +30,7 @@ contract SmartAccount is
     // Version
     string public constant VERSION = "1.0.4"; // using AA 0.4.0
 
-    // Domain Seperators
-    // keccak256(
-    //     "EIP712Domain(uint256 chainId,address verifyingContract)"
-    // );
+    // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH = 0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
     // review? if rename wallet to account is must
@@ -72,7 +68,7 @@ contract SmartAccount is
     
     // Events
     // EOA + Version tracking
-    event ImplementationUpdated(address _scw, string version, address newImplementation);
+    event ImplementationUpdated(address indexed _scw, string version, address newImplementation);
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 txHash, uint256 payment);
@@ -86,7 +82,7 @@ contract SmartAccount is
     // modifiers
     // onlyOwner
     /**
-     * @notice Throws if the sender is not an the owner.
+     * @notice Throws if the sender is not the owner.
      */
     modifier onlyOwner {
         require(msg.sender == owner, "Smart Account:: Sender is not authorized");
@@ -105,6 +101,7 @@ contract SmartAccount is
 
     function setOwner(address _newOwner) public mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
+        require(_newOwner != address(this), "Smart Account:: new Signatory address cannot be self");
         address oldOwner = owner;
         owner = _newOwner;
         emit EOAChanged(address(this), oldOwner, _newOwner);
@@ -119,6 +116,7 @@ contract SmartAccount is
     // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
     function updateImplementation(address _implementation) public {
+        require(_implementation != address(0), "Address cannot be zero");
         _requireFromEntryPointOrOwner();
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         // solhint-disable-next-line no-inline-assembly
@@ -138,7 +136,7 @@ contract SmartAccount is
     }
 
     function domainSeparator() public view returns (bytes32) {
-        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), this));
+        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), address(this)));
     }
 
     /// @dev Returns the chain id used by this contract.
@@ -155,7 +153,7 @@ contract SmartAccount is
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
-     * @return nonce : the number of transaction made within said batch
+     * @return nonce : the number of transactions made within said batch
      */
     function getNonce(uint256 batchId)
     public view
@@ -190,6 +188,7 @@ contract SmartAccount is
         setupModules(address(0), bytes(""));
     }
 
+    // @review: max and min use from Math.sol instead of re-implemented in the contracts
     /**
      * @dev Returns the largest of two numbers.
      */
@@ -325,7 +324,7 @@ contract SmartAccount is
             _signer = address(uint160(uint256(r)));
 
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
-                // This check is not completely accurate, since it is possible that more signatures than the threshold are send.
+                // This check is not completely accurate, since it is possible that more signatures than the threshold are sent.
                 // Here we only check that the pointer is not pointing inside the part that is being processed
                 require(uint256(s) >= uint256(1) * 65, "BSA021");
 
@@ -433,7 +432,7 @@ contract SmartAccount is
         FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
-        bytes32 safeTxHash =
+        bytes32 walletTxHash =
             keccak256(
                 abi.encode(
                     ACCOUNT_TX_TYPEHASH,
@@ -450,17 +449,20 @@ contract SmartAccount is
                     _nonce
                 )
             );
-        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), safeTxHash);
+        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
     }
 
     // Extra Utils 
-    function transfer(address payable dest, uint amount) external onlyOwner {
+    function transfer(address payable dest, uint256 amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
-        (bool success,) = dest.call{value:amount}("");
-        require(success,"transfer failed");
+        // @review: should we check isContract here?
+        // require(dest.isContract(), "INVALID_IMPLEMENTATION");
+        (bool success, ) = dest.call{value: amount}("");
+        require(success, "transfer failed");
     }
 
     function pullTokens(address token, address dest, uint256 amount) external onlyOwner {
+        require(dest != address(0), "this action will burn your funds");
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
@@ -503,7 +505,7 @@ contract SmartAccount is
     //called by entryPoint, only after validateUserOp succeeded.
     //@review
     //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(address dest, uint value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
+    function execFromEntryPoint(address dest, uint256 value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
         success = execute(dest, value, func, operation, gasLimit);
         require(success, "Userop Failed");
     }
@@ -555,11 +557,11 @@ contract SmartAccount is
 
     /**
      * @notice Query if a contract implements an interface
-     * @param interfaceId The interface identifier, as specified in ERC165
+     * @param _interfaceId The interface identifier, as specified in ERC165
      * @return `true` if the contract implements `_interfaceID`
     */
-    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
-        return interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
+    function supportsInterface(bytes4 _interfaceId) external view virtual override returns (bool) {
+        return _interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
 
     // solhint-disable-next-line no-empty-blocks

@@ -14,7 +14,7 @@ contract Proxy {
     /* This is the keccak-256 hash of "biconomy.scw.proxy.implementation" subtracted by 1, and is validated in the constructor */
     bytes32 internal constant _IMPLEMENTATION_SLOT = 0x37722d148fb373b961a84120b6c8d209709b45377878a466db32bbc40d95af26;
 
-    event Received(uint indexed value, address indexed sender, bytes data);
+    event Received(uint256 indexed value, address indexed sender, bytes data);
 
     constructor(address _implementation) {
          assert(_IMPLEMENTATION_SLOT == bytes32(uint256(keccak256("biconomy.scw.proxy.implementation")) - 1));
@@ -258,7 +258,7 @@ interface IAggregator {
     /**
      * validate signature of a single userOp
      * This method is called by EntryPoint.simulateUserOperation() if the wallet has an aggregator.
-     * First it validates the signature over the userOp. then it return data to be used when creating the handleOps:
+     * First it validates the signature over the userOp. then it returns data to be used when creating the handleOps:
      * @param userOp the userOperation received from the user.
      * @param offChainSigCheck if true, don't check signature, and leave it for the Bundler to use an off-chain native library.
      * @return sigForUserOp the value to put into the signature field of the userOp when calling handleOps.
@@ -586,9 +586,9 @@ contract WalletFactory {
      * @param _handler fallback handler address
      * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
      */
-    function deployCounterFactualWallet(address _owner, address _entryPoint, address _handler, uint _index) public returns(address proxy){
+    function deployCounterFactualWallet(address _owner, address _entryPoint, address _handler, uint256 _index) public returns(address proxy){
         bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
-        bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint(uint160(_defaultImpl)));
+        bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint256(uint160(_defaultImpl)));
         // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
@@ -607,7 +607,7 @@ contract WalletFactory {
      * @param _handler fallback handler address
     */ 
     function deployWallet(address _owner, address _entryPoint, address _handler) public returns(address proxy){ 
-        bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint(uint160(_defaultImpl)));
+        bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint256(uint160(_defaultImpl)));
         // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create(0x0, add(0x20, deploymentData), mload(deploymentData))
@@ -621,11 +621,11 @@ contract WalletFactory {
      * @param _owner EOA signatory of the wallet
      * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
     */
-    function getAddressForCounterfactualWallet(address _owner, uint _index) external view returns (address _wallet) {
-       bytes memory code = abi.encodePacked(type(Proxy).creationCode, uint(uint160(_defaultImpl)));
+    function getAddressForCounterfactualWallet(address _owner, uint256 _index) external view returns (address _wallet) {
+       bytes memory code = abi.encodePacked(type(Proxy).creationCode, uint256(uint160(_defaultImpl)));
        bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code)));
-        _wallet = address(uint160(uint(hash)));
+        _wallet = address(uint160(uint256(hash)));
     }
 
 }

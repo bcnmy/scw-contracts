@@ -86,7 +86,7 @@ contract SmartAccount5 is
     // modifiers
     // onlyOwner
     /**
-     * @notice Throws if the sender is not an the owner.
+     * @notice Throws error if the sender is not an owner.
      */
     modifier onlyOwner {
         require(msg.sender == owner, "Smart Account:: Sender is not authorized");
@@ -435,7 +435,7 @@ contract SmartAccount5 is
         FeeRefund memory refundInfo
     ) public view returns (bytes memory) {
         uint256 _nonce = nonces[_batchId];
-        bytes32 safeTxHash =
+        bytes32 walletTxHash =
             keccak256(
                 abi.encode(
                     ACCOUNT_TX_TYPEHASH,
@@ -453,7 +453,7 @@ contract SmartAccount5 is
                     _nonce
                 )
             );
-        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), safeTxHash);
+        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
     }
 
     // Extra Utils 

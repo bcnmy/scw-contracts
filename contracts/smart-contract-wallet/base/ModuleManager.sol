@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.12;
 
-import "../common/Enum.sol";
 import "../common/SelfAuthorized.sol";
 import "./Executor.sol";
 
@@ -25,7 +24,7 @@ contract ModuleManager is SelfAuthorized, Executor {
             require(execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()), "BSA000");
     }
 
-    /// @dev Allows to add a module to the whitelist.
+    /// @dev Allows to add a module to the allowlist.
     ///      This can only be done via a Safe transaction.
     /// @notice Enables the module `module` for the Safe.
     /// @param module Module to be whitelisted.
@@ -49,7 +48,9 @@ contract ModuleManager is SelfAuthorized, Executor {
         require(module != address(0) && module != SENTINEL_MODULES, "BSA101");
         require(modules[prevModule] == module, "BSA103");
         modules[prevModule] = modules[module];
-        modules[module] = address(0);
+        // review if we should delete the module or just set it to address(0)
+        delete modules[module];
+        // modules[module] = address(0);
         emit DisabledModule(module);
     }
 

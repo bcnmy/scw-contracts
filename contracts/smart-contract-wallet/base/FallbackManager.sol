@@ -6,7 +6,7 @@ import "../common/SelfAuthorized.sol";
 /// @title Fallback Manager - A contract that manages fallback calls made to this contract
 /// @author Richard Meissner - <richard@gnosis.pm>
 contract FallbackManager is SelfAuthorized {
-    event ChangedFallbackHandler(address handler);
+    event ChangedFallbackHandler(address previousHandler, address handler);
 
     // keccak256("fallback_manager.handler.address")
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT = 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
@@ -24,8 +24,14 @@ contract FallbackManager is SelfAuthorized {
     ///      This can only be done via a Safe transaction.
     /// @param handler contract to handle fallback calls.
     function setFallbackHandler(address handler) public authorized {
+        // review - check if this is loading the correct slot, for previousHandler indexing
+        address previousHandler;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            previousHandler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
+        }
         _setFallbackHandler(handler);
-        emit ChangedFallbackHandler(handler);
+        emit ChangedFallbackHandler(previousHandler, handler);
     }
 
     // solhint-disable-next-line payable-fallback,no-complex-fallback

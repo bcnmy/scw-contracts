@@ -7,7 +7,7 @@ pragma solidity 0.8.12;
 
 import "@account-abstraction/contracts/interfaces/IAccount.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import "./common/Enum.sol";
+import {Enum} from "./common/Enum.sol";
 
 struct Transaction {
         address to;

@@ -10,7 +10,7 @@ contract GasEstimatorSmartAccount {
     address _actualWallet,
     address _factory,
     address _owner,
-    uint _index,
+    uint256 _index,
     bytes calldata _data // execTransaction data // counterFactual wallet should have assets if required
   ) external returns (bool success, bytes memory result, uint256 gas) {
     // solhint-disable
