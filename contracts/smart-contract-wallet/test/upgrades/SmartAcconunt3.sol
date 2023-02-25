@@ -138,13 +138,11 @@ contract SmartAccount3 is
     }
 
     /// @dev Returns the chain id used by this contract.
-    function getChainId() public view returns (uint256) {
-        uint256 id;
+    function getChainId() public view returns (uint256 id) {
         // solhint-disable-next-line no-inline-assembly
         assembly {
             id := chainid()
         }
-        return id;
     }
 
     //@review getNonce specific to EntryPoint requirements
