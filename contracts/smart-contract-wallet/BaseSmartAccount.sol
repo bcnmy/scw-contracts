@@ -127,5 +127,5 @@ abstract contract BaseSmartAccount is IAccount {
     function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
-        bytes memory signatures) public payable virtual returns (bool success);
+        bytes memory signatures) external payable virtual returns (bool success);
 }

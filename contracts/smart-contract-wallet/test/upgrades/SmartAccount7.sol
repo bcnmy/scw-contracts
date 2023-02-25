@@ -186,7 +186,7 @@ contract SmartAccount7 is
     // Note: just because of interface as we're not inherting from previous base!
     // Todo: Make it easier to inherit from previous base contracts. Make methods internal virtual where it makes sense
     // @review: abstract contracts and necessary interfaces which might change 
-    function init(address _owner, address _handler) public override { 
+    function init(address _owner, address _handler) external override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
         require(_handler != address(0), "Invalid Fallback Handler");
@@ -218,7 +218,7 @@ contract SmartAccount7 is
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public payable virtual override returns (bool success) {
+    ) external payable virtual override returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -549,7 +549,7 @@ contract SmartAccount7 is
     /**
      * deposit more funds for this account in the entryPoint
      */
-    function addDeposit() public payable {
+    function addDeposit() external payable {
 
         (bool req,) = address(entryPoint()).call{value : msg.value}("");
         require(req,"Account deposit failed");
@@ -560,7 +560,7 @@ contract SmartAccount7 is
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
+    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) external onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 

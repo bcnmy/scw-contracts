@@ -586,7 +586,7 @@ contract WalletFactory {
      * @param _handler fallback handler address
      * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
      */
-    function deployCounterFactualWallet(address _owner, address _entryPoint, address _handler, uint256 _index) public returns(address proxy){
+    function deployCounterFactualWallet(address _owner, address _entryPoint, address _handler, uint256 _index) external returns(address proxy){
         bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
         bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint256(uint160(_defaultImpl)));
         // solhint-disable-next-line no-inline-assembly
@@ -606,7 +606,7 @@ contract WalletFactory {
      * @param _entryPoint AA 4337 entry point address
      * @param _handler fallback handler address
     */ 
-    function deployWallet(address _owner, address _entryPoint, address _handler) public returns(address proxy){ 
+    function deployWallet(address _owner, address _entryPoint, address _handler) external returns(address proxy){ 
         bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint256(uint160(_defaultImpl)));
         // solhint-disable-next-line no-inline-assembly
         assembly {

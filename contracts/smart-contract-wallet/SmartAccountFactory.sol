@@ -42,7 +42,7 @@ contract SmartAccountFactory {
      * @param _owner EOA signatory of the wallet
      * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
      */
-    function deployCounterFactualWallet(address _owner, uint256 _index) public returns(address proxy){
+    function deployCounterFactualWallet(address _owner, uint256 _index) external returns(address proxy){
         // check optimisation scope in creating salt...
         bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
 
@@ -69,7 +69,7 @@ contract SmartAccountFactory {
      * @notice Deploys wallet using create and points it to _implementation
      * @param _owner EOA signatory of the wallet
     */ 
-    function deployWallet(address _owner) public returns(address proxy){ 
+    function deployWallet(address _owner) external returns(address proxy){ 
         bytes memory deploymentData = abi.encodePacked(type(Proxy).creationCode, uint256(uint160(_implementation)));
         // solhint-disable-next-line no-inline-assembly
         assembly {
