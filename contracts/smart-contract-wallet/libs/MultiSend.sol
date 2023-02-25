@@ -23,7 +23,7 @@ contract MultiSend {
     ///                     see abi.encodePacked for more information on packed encoding
     /// @notice This method is payable as delegatecalls keep the msg.value from the previous call
     ///         If the calling method (e.g. execTransaction) received ETH this would revert otherwise
-    function multiSend(bytes memory transactions) external payable {
+    function multiSend(bytes memory transactions) external {
         require(address(this) != multisendSingleton, "MultiSend should only be called via delegatecall");
         // solhint-disable-next-line no-inline-assembly
         assembly {
