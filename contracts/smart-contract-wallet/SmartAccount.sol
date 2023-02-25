@@ -68,11 +68,11 @@ contract SmartAccount is
     
     // Events
     // EOA + Version tracking
-    event ImplementationUpdated(address indexed _scw, string version, address newImplementation);
+    event ImplementationUpdated(address indexed _scw, string indexed version, address indexed newImplementation);
     
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
-    event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
+    event SmartAccountReceivedNativeToken(address indexed sender, uint256 indexed value);
     // nice to have
     // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
     // todo
