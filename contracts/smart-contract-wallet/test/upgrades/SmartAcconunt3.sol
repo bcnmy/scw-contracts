@@ -68,10 +68,10 @@ contract SmartAccount3 is
     
     // Events
     // EOA + Version tracking
-    event ImplementationUpdated(address _scw, string version, address newImplementation);
-    event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
+    event ImplementationUpdated(address indexed _scw, string indexed version, address indexed newImplementation);
+    
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
-    event WalletHandlePayment(bytes32 txHash, uint256 payment);
+    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
     // nice to have
     // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
@@ -538,7 +538,7 @@ contract SmartAccount3 is
     function addDeposit() public payable {
 
         (bool req,) = address(entryPoint()).call{value : msg.value}("");
-        require(req);
+        require(req,"Account deposit failed");
     }
 
     /**
