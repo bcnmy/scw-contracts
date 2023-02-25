@@ -29,6 +29,7 @@ contract SmartAccount6 is SmartAccount {
         friend = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
+        // _chainId = block.chainid;
     }
 
     function reinit(address _friend) public { 

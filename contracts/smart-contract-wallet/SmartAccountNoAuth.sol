@@ -52,6 +52,8 @@ contract SmartAccountNoAuth is
     // AA storage
     IEntryPoint private immutable _entryPoint;
 
+    uint256 public immutable _chainId;
+
     // review 
     // mock constructor or use deinitializers
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
@@ -62,6 +64,7 @@ contract SmartAccountNoAuth is
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
+        _chainId = block.chainid;
     }
 
     
@@ -136,11 +139,8 @@ contract SmartAccountNoAuth is
     }
 
     /// @dev Returns the chain id used by this contract.
-    function getChainId() public view returns (uint256 id) {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            id := chainid()
-        }
+    function getChainId() public view returns (uint256) {
+        return _chainId;
     }
 
     //@review getNonce specific to EntryPoint requirements

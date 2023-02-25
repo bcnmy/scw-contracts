@@ -22,6 +22,7 @@ contract SmartAccount2 is SmartAccount {
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
+        // _chainId = block.chainid;
     }
 
     function execTransaction(

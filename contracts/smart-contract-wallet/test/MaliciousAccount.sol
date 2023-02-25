@@ -51,6 +51,8 @@ contract MaliciousAccount is
     // AA storage
     IEntryPoint private immutable _entryPoint;
 
+    uint256 public immutable _chainId;
+
     constructor(IEntryPoint anEntryPoint) {
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
@@ -58,6 +60,7 @@ contract MaliciousAccount is
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
+        _chainId = block.chainid;
     }
 
     
@@ -132,11 +135,8 @@ contract MaliciousAccount is
     }
 
     /// @dev Returns the chain id used by this contract.
-    function getChainId() public view returns (uint256 id) {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            id := chainid()
-        }
+    function getChainId() public view returns (uint256) {
+        return _chainId;
     }
 
     //@review getNonce specific to EntryPoint requirements
