@@ -238,15 +238,10 @@ contract SmartAccount is
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
-            // uint256 extraGas;
             if (refundInfo.gasPrice > 0) {
-                //console.log("sent %s", startGas - gasleft());
-                // extraGas = gasleft();
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
-            // extraGas = extraGas - gasleft();
-            //console.log("extra gas %s ", extraGas);
         }
     }
 
