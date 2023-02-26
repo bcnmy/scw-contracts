@@ -253,7 +253,6 @@ contract SmartAccount is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
-        // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
         if (gasToken == address(0)) {
@@ -265,8 +264,6 @@ contract SmartAccount is
             payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
-        // uint256 requiredGas = startGas - gasleft();
-        //console.log("hp %s", requiredGas);
     }
 
     function handlePaymentRevert(
@@ -290,8 +287,6 @@ contract SmartAccount is
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
         uint256 requiredGas = startGas - gasleft();
-        //console.log("hpr %s", requiredGas);
-        // Convert response to string and return via error message
         revert(string(abi.encodePacked(requiredGas)));
     }
 
