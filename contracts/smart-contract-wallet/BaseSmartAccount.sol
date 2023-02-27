@@ -49,7 +49,7 @@ abstract contract BaseSmartAccount is IAccount {
 
 
     /**
-     * return the account nonce.
+     * @return nonce the account nonce.
      * subclass should return a nonce value that is used both by _validateAndUpdateNonce, and by the external provider (to read the current nonce)
      */
     function nonce() public view virtual returns (uint256);
@@ -122,8 +122,22 @@ abstract contract BaseSmartAccount is IAccount {
         }
     }
     
+    /**
+     * @dev Initialize the Smart Account with required states
+     * @param _owner Signatory of the Smart Account
+     * @param _handler Default fallback handler provided in Smart Account
+     * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
+     */
     function init(address _owner, address _handler) external virtual;
 
+    /**
+     * @dev Gnosis style transaction with optional repay in native tokens OR ERC20 
+     * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
+     * @notice The fees are always transferred, even if the user transaction fails.
+     * @param _tx Smart Account transaction 
+     * @param refundInfo Required information for gas refunds
+     * @param signatures Packed signature/s data ({bytes32 r}{bytes32 s}{uint8 v})
+     */
     function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,

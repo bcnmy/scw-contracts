@@ -53,7 +53,7 @@ contract SmartAccount is
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
 
-    uint256 public immutable _chainId;
+    uint256 private immutable _chainId;
 
     // review 
     // mock constructor or use deinitializers
@@ -102,6 +102,10 @@ contract SmartAccount is
 
     // Setters
 
+    /**
+     * @dev Allows to change the owner of the smart account by current owner or self-call (modules) 
+     * @param _newOwner Address of the new signatory 
+     */
     function setOwner(address _newOwner) public mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
         require(_newOwner != address(this), "Smart Account:: new Signatory address cannot be self");
@@ -137,12 +141,19 @@ contract SmartAccount is
     function accountLogic() public pure returns (address) {
         return address(0);
     }
-
+    
+    /**
+     * @dev Returns the domain separator for this contract, as defined in the EIP-712 standard.
+     * @return bytes32 The domain separator hash.
+     */
     function domainSeparator() public view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), address(this)));
     }
 
-    /// @dev Returns the chain id used by this contract.
+    /**
+     * @notice Returns the ID of the chain the contract is currently deployed on.
+     * @return _chainId The ID of the current chain as a uint256.
+     */
     function getChainId() public view returns (uint256) {
         return _chainId;
     }
@@ -159,7 +170,10 @@ contract SmartAccount is
         return nonces[batchId];
     }
 
-    // Standard interface for 1d nonces. Use it for Account Abstraction flow.
+    
+    /**
+     * @dev Standard interface for 1d nonces. Use it for Account Abstraction flow.
+     */
     function nonce() public view virtual override returns (uint256) {
         return nonces[0];
     }
@@ -170,13 +184,22 @@ contract SmartAccount is
         _; 
     }
 
+    /**
+     * return the entryPoint used by this account.
+     * subclass should return the current entryPoint used by this account.
+     */
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }
 
-    // init
-    // Initialize / Setup
-    // Used to setup
+    /**
+     * @dev Initialize the Smart Account with required states
+     * @param _owner Signatory of the Smart Account
+     * @param _handler Default fallback handler provided in Smart Account
+     * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
+     * @notice any further implementations that introduces a new state must have a reinit method
+     * @notice init is prevented here by setting owner in the constructor and checking here for address(0) 
+     */
     function init(address _owner, address _handler) external override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
@@ -196,13 +219,14 @@ contract SmartAccount is
         return a >= b ? a : b;
     }
 
-    // review: batchId should be carefully designed or removed all together (including 2D nonces)
-    // Gnosis style transaction with optional repay in native tokens OR ERC20 
-    /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
-    /// Note: The fees are always transferred, even if the user transaction fails.
-    /// @param _tx Wallet transaction 
-    /// @param refundInfo Required information for gas refunds
-    /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
+    /**
+     * @dev Gnosis style transaction with optional repay in native tokens OR ERC20 
+     * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
+     * @notice The fees are always transferred, even if the user transaction fails.
+     * @param _tx Smart Account transaction 
+     * @param refundInfo Required information for gas refunds
+     * @param signatures Packed signature/s data ({bytes32 r}{bytes32 s}{uint8 v})
+     */
     function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
@@ -247,6 +271,17 @@ contract SmartAccount is
         }
     }
 
+    /**
+     * @dev Handles the payment for a transaction refund from Smart Account to Relayer.
+     * @param gasUsed Gas used by the transaction.
+     * @param baseGas Gas costs that are independent of the transaction execution 
+     * (e.g. base transaction fee, signature check, payment of the refund, emitted events).
+     * @param gasPrice Gas price / TokenGasPrice (gas price in the context of token using offchain price feeds) 
+     * that should be used for the payment calculation.
+     * @param tokenGasPriceFactor factor by which calculated token gas price is already multiplied.
+     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
+     * @return payment The amount of payment made in the specified token.
+     */
     function handlePayment(
         uint256 gasUsed,
         uint256 baseGas,
@@ -268,7 +303,20 @@ contract SmartAccount is
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
     }
-
+    
+    /**
+     * @dev Allows to estimate a transaction.
+     * @notice This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
+     * @notice Call this method to get an estimate of the handlePayment costs that are deducted with `execTransaction`
+     * @param gasUsed Gas used by the transaction.
+     * @param baseGas Gas costs that are independent of the transaction execution 
+     * (e.g. base transaction fee, signature check, payment of the refund, emitted events).
+     * @param gasPrice Gas price / TokenGasPrice (gas price in the context of token using offchain price feeds) 
+     * that should be used for the payment calculation.
+     * @param tokenGasPriceFactor factor by which calculated token gas price is already multiplied.
+     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
+     * @return requiredGas Estimate of refunds
+     */
     function handlePaymentRevert(
         uint256 gasUsed,
         uint256 baseGas,
@@ -276,21 +324,21 @@ contract SmartAccount is
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) external returns (uint256 payment) {
+    ) external returns (uint256 requiredGas) {
         require(tokenGasPriceFactor != 0, "invalid stokenGasPriceFactor");
         uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
-            payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
+            uint256 payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
             (bool success,) = receiver.call{value: payment}("");
             require(success, "BSA011");
         } else {
-            payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
+            uint256 payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
-        uint256 requiredGas = startGas - gasleft();
+        requiredGas = startGas - gasleft();
         revert(string(abi.encodePacked(requiredGas)));
     }
 
@@ -372,18 +420,21 @@ contract SmartAccount is
         revert(string(abi.encodePacked(requiredGas)));
     }
 
-    /// @dev Returns hash to be signed by owner.
-    /// @param to Destination address.
-    /// @param value Ether value.
-    /// @param data Data payload.
-    /// @param operation Operation type.
-    /// @param targetTxGas Fas that should be used for the safe transaction.
-    /// @param baseGas Gas costs for data used to trigger the safe transaction.
-    /// @param gasPrice Maximum gas price that should be used for this transaction.
-    /// @param gasToken Token address (or 0 if ETH) that is used for the payment.
-    /// @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
-    /// @param _nonce Transaction nonce.
-    /// @return Transaction hash.
+    /**
+     * @dev Returns hash to be signed by owner.
+     * @param to Destination address.
+     * @param value Ether value.
+     * @param data Data payload.
+     * @param operation Operation type.
+     * @param targetTxGas Fas that should be used for the internal Smart Account transaction.
+     * @param baseGas Additional Gas costs for data used to trigger the transaction.
+     * @param gasPrice Maximum gas price/ token gas price that should be used for this transaction.
+     * @param tokenGasPriceFactor factor by which calculated token gas price is already multiplied.
+     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
+     * @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
+     * @param _nonce Transaction nonce.
+     * @return Transaction hash.
+     */
     function getTransactionHash(
         address to,
         uint256 value,
@@ -444,20 +495,35 @@ contract SmartAccount is
         return bytes.concat(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
     }
 
-    // Extra Utils 
+    /**
+     * @dev Utility method to be able to transfer native tokens out of Smart Account
+     * @notice only owner/ signatory of Smart Account with enough gas to spend can call this method
+     * @notice While enabling multisig module and renouncing ownership this will not work
+     * @param dest Destination address
+     * @param amount Amount of native tokens
+     */
     function transfer(address payable dest, uint256 amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
-        // @review: should we check isContract here?
-        // require(dest.isContract(), "INVALID_IMPLEMENTATION");
         (bool success, ) = dest.call{value: amount}("");
         require(success, "transfer failed");
     }
-
+    
+    /**
+     * @dev Utility method to be able to transfer ERC20 tokens out of Smart Account
+     * @notice only owner/ signatory of Smart Account with enough gas to spend can call this method
+     * @notice While enabling multisig module and renouncing ownership this will not work
+     * @param token Token address
+     * @param dest Destination/ Receiver address
+     * @param amount Amount of tokens
+     */
     function pullTokens(address token, address dest, uint256 amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
+    /**
+     * execute a transaction (called directly from owner, or by entryPoint)
+     */
     function executeCall(
         address dest,
         uint256 value,
@@ -466,7 +532,10 @@ contract SmartAccount is
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
-
+    
+    /**
+     * execute a sequence of transactions
+     */
     function executeBatchCall(
         address[] calldata dest,
         uint256[] calldata value,
@@ -483,8 +552,14 @@ contract SmartAccount is
             }
         }
     }
-
-    // AA implementation
+    
+    /**
+     * @dev internal method that fecilitates the extenral calls from SmartAccount
+     * @dev similar to execute() of Executor.sol
+     * @param target destination address contract/non-contract
+     * @param value amount of native tokens
+     * @param data function singature of destination 
+     */
     function _call(address target, uint256 value, bytes memory data) internal {
         (bool success, bytes memory result) = target.call{value : value}(data);
         if (!success) {
@@ -494,8 +569,7 @@ contract SmartAccount is
         }
     }
 
-    //called by entryPoint, only after validateUserOp succeeded.
-    //@review
+    //@todo marked for deletion
     //Method is updated to instruct delegate call and emit regular events
     function execFromEntryPoint(address dest, uint256 value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
         success = execute(dest, value, func, operation, gasLimit);
@@ -506,14 +580,18 @@ contract SmartAccount is
         require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
     }
 
-    /// implement template method of BaseAccount
-    // @notice Nonce space is locked to 0 for AA transactions
-    // userOp could have batchId as well
+
+    /** 
+     * @dev implement template method of BaseAccount
+     * @notice Nonce space is locked to 0 for AA transactions
+     */
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
         require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
-    /// implement template method of BaseAccount
+    /**
+     * @dev implement template method of BaseAccount
+     */
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
     internal override virtual returns (uint256 sigTimeRange) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();

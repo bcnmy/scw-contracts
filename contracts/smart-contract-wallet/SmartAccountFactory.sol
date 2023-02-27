@@ -35,7 +35,7 @@ contract SmartAccountFactory {
     }
 
     /**
-     * @notice Deploys wallet using create2 and points it to _implementation
+     * @dev Deploys wallet using create2 and points it to _implementation
      * @param _owner EOA signatory of the wallet
      * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
      */
@@ -62,7 +62,7 @@ contract SmartAccountFactory {
     }
 
     /**
-     * @notice Deploys wallet using create and points it to _implementation
+     * @dev Deploys wallet using create and points it to _implementation
      * @param _owner EOA signatory of the wallet
     */ 
     function deployWallet(address _owner) external returns(address proxy){ 
@@ -80,7 +80,7 @@ contract SmartAccountFactory {
     }
 
     /**
-     * @notice Allows to find out wallet address prior to deployment
+     * @dev Allows to find out wallet address prior to deployment
      * @param _owner EOA signatory of the wallet
      * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
     */
