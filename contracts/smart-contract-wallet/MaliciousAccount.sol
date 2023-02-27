@@ -187,7 +187,7 @@ contract MaliciousAccount is
     ) public payable virtual override returns (bool success) {
         // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
         //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
-        uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
+        uint256 startGas = gasleft() + 21000 + msg.data.length << 3; // << 3 means * 8
         //console.log("init %s", 21000 + msg.data.length * 8);
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -208,7 +208,8 @@ contract MaliciousAccount is
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
-        require(gasleft() >= max((_tx.targetTxGas * 64) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
+        // Bitshift left 6 bits means multiplying by 64, just more gas efficient
+        require(gasleft() >= max((_tx.targetTxGas << 6) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
