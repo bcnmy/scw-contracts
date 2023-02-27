@@ -99,7 +99,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         uint256 collected = 0;
 
         for (uint256 i = 0; i < opslen; i++) {
-            collected += _executeUserOp(i, ops[i], opInfos[i]);
+            collected = collected + _executeUserOp(i, ops[i], opInfos[i]);
         }
 
         _compensate(beneficiary, collected);
@@ -119,7 +119,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         uint256 opasLen = opsPerAggregator.length;
         uint256 totalOps = 0;
         for (uint256 i = 0; i < opasLen; i++) {
-            totalOps += opsPerAggregator[i].userOps.length;
+            totalOps = totalOps + opsPerAggregator[i].userOps.length;
         }
 
         UserOpInfo[] memory opInfos = new UserOpInfo[](totalOps);
@@ -155,7 +155,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
             uint256 opslen = ops.length;
 
             for (uint256 i = 0; i < opslen; i++) {
-                collected += _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
+                collected = collected + _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
                 opIndex++;
             }
         }
@@ -552,7 +552,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
                 }
             }
         }
-        actualGas += preGas - gasleft();
+        actualGas = actualGas + preGas - gasleft();
         actualGasCost = actualGas * gasPrice;
         if (opInfo.prefund < actualGasCost) {
             revert FailedOp(opIndex, paymaster, "A51 prefund below actualGasCost");

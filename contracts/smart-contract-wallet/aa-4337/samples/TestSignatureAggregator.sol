@@ -17,7 +17,7 @@ contract TestSignatureAggregator is IAggregator {
         uint sum = 0;
         for (uint i = 0; i < userOps.length; i++) {
             uint nonce = userOps[i].nonce;
-            sum += nonce;
+            sum = sum + nonce;
         }
         require(signature.length == 32, "TestSignatureValidator: sig must be uint");
         (uint sig) = abi.decode(signature, (uint));
@@ -35,7 +35,7 @@ contract TestSignatureAggregator is IAggregator {
     function aggregateSignatures(UserOperation[] calldata userOps) external pure returns (bytes memory aggregatesSignature) {
         uint sum = 0;
         for (uint i = 0; i < userOps.length; i++) {
-            sum += userOps[i].nonce;
+            sum = sum + userOps[i].nonce;
         }
         return abi.encode(sum);
     }

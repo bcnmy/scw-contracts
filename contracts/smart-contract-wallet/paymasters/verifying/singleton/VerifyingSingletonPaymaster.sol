@@ -60,7 +60,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
     function depositFor(address paymasterId) external payable nonReentrant {
         require(paymasterId != address(0), "Paymaster Id can not be zero");
         require(msg.value != 0, "Zero deposit!");
-        paymasterIdBalances[paymasterId] += msg.value;
+        paymasterIdBalances[paymasterId] = paymasterIdBalances[paymasterId] + msg.value;
         entryPoint.depositTo{value : msg.value}(address(this));
         emit GasDeposited(paymasterId, msg.value);
     }
@@ -69,7 +69,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
         require(withdrawAddress != address(0), "withdraw to 0 address");
         uint256 currentBalance = paymasterIdBalances[msg.sender];
         require(amount <= currentBalance, "Insufficient amount to withdraw");
-        paymasterIdBalances[msg.sender] -= amount;
+        paymasterIdBalances[msg.sender] = paymasterIdBalances[msg.sender] - amount;
         entryPoint.withdrawTo(withdrawAddress, amount);
         emit GasWithdrawn(msg.sender, withdrawAddress, amount);
     }
@@ -160,7 +160,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
     (mode);
     PaymasterContext memory data = context.decodePaymasterContext();
     address extractedPaymasterId = data.paymasterId;
-    paymasterIdBalances[extractedPaymasterId] -= actualGasCost;
+    paymasterIdBalances[extractedPaymasterId] = paymasterIdBalances[extractedPaymasterId] - actualGasCost;
     emit GasBalanceDeducted(extractedPaymasterId, actualGasCost);
   }
 
