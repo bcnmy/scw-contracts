@@ -76,8 +76,8 @@ contract SmartAccount is
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(address indexed sender, uint256 indexed value);
-    // nice to have
-    // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+    event SmartAccountInitialized(address indexed _owner, address indexed _handler);
+
     // todo
     // emit events like executedTransactionFromModule
     // emit events with whole information of execTransaction (ref Safe L2)
@@ -183,6 +183,7 @@ contract SmartAccount is
         require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
         _setFallbackHandler(_handler);
+        emit SmartAccountInitialized(_owner,_handler);
         setupModules(address(0), bytes(""));
     }
 

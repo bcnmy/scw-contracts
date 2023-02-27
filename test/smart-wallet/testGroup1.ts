@@ -116,14 +116,16 @@ describe("Base Wallet Functionality", function () {
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
-      .to.emit(walletFactory, "AccountCreation")
-      .withArgs(expected, baseImpl.address);
-
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expected
     );
+
+    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
+      .to.emit(walletFactory, "AccountCreation")
+      .withArgs(expected, baseImpl.address)
+      .to.emit(userSCW, "SmartAccountInitialized")
+      .withArgs(owner, handler.address);
 
     const entryPointAddress = await userSCW.entryPoint();
     expect(entryPointAddress).to.equal(entryPoint.address);

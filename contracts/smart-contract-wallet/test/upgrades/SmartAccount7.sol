@@ -81,8 +81,8 @@ contract SmartAccount7 is
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
-    // nice to have
-    // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+    event SmartAccountInitialized(address indexed _owner, address indexed _handler);
+    
     // todo
     // emit events like executedTransactionFromModule
     // emit events with whole information of execTransaction (ref Safe L2)
