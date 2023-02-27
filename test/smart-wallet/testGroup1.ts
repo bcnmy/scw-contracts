@@ -274,7 +274,7 @@ describe("Base Wallet Functionality", function () {
 
     // test with empty array data and value
     tx = userSCW.connect(accounts[0]).executeBatchCall([], [], []);
-    expect(tx).to.be.revertedWith("empty array provided");
+    expect(tx).to.be.revertedWith("WrongBatchProvided");
   });
 
   it("should send transactions in a batch", async function () {

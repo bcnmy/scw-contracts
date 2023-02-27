@@ -428,7 +428,7 @@ describe("EIP-1271 Signatures Tests", function () {
         refundInfo,
         manipulatedSignature
       )
-    ).to.be.revertedWith("BSA024");
+    ).to.be.revertedWith("WrongContractSignature");
 
     expect(await token.balanceOf(charlie)).to.equal(0);
 
