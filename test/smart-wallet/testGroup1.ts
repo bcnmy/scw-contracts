@@ -125,7 +125,7 @@ describe("Base Wallet Functionality", function () {
       .to.emit(walletFactory, "AccountCreation")
       .withArgs(expected, baseImpl.address)
       .to.emit(userSCW, "SmartAccountInitialized")
-      .withArgs(owner, handler.address);
+      .withArgs(owner, handler.address, VERSION, entryPoint.address);
 
     const entryPointAddress = await userSCW.entryPoint();
     expect(entryPointAddress).to.equal(entryPoint.address);
