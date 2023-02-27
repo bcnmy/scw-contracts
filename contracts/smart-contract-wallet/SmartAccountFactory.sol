@@ -54,14 +54,11 @@ contract SmartAccountFactory {
         }
         require(address(proxy) != address(0), "Create2 call failed");
 
-        // EOA + Version tracking
-        // emit SmartAccountCreated(proxy,_defaultImpl,_owner, VERSION, _index);
+        // emit SmartAccountCreated(proxy,_defaultImpl,_owner,_index);
 
         // you can pass initializer data but then that it also needs to be part of salt
         // init method name subject to change
         BaseSmartAccount(proxy).init(_owner, _defaultFallbackHandler);
-
-        // isAccountExist[proxy] = true;
         emit AccountCreation(proxy, _implementation);
     }
 
@@ -80,8 +77,6 @@ contract SmartAccountFactory {
         // you can pass initializer data but then that it also needs to be part of salt
         // init method name subject to change
         BaseSmartAccount(proxy).init(_owner, _defaultFallbackHandler);
-        // isAccountExist[proxy] = true;
-
         emit AccountCreation(proxy, _implementation);
     }
 
