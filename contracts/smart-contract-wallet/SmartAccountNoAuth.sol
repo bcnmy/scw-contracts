@@ -225,7 +225,7 @@ contract SmartAccountNoAuth is
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
             // uint256 extraGas;
-            if (refundInfo.gasPrice > 0) {
+            if (refundInfo.gasPrice != 0) {
                 //console.log("sent %s", startGas - gasleft());
                 // extraGas = gasleft();
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);

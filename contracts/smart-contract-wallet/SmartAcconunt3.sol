@@ -233,7 +233,7 @@ contract SmartAccount3 is
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
             // uint256 extraGas;
-            if (refundInfo.gasPrice > 0) {
+            if (refundInfo.gasPrice != 0) {
                 //console.log("sent %s", startGas - gasleft());
                 // extraGas = gasleft();
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
@@ -340,7 +340,7 @@ contract SmartAccount3 is
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                require(ISignatureValidator(_signer).isValidSignature(data, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
+                require(ISignatureValidator(_signer).isValidSignature(dataHash, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
         }
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow

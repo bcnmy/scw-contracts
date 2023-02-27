@@ -28,7 +28,7 @@ contract SimpleAccountFactory {
     function createAccount(address owner, uint salt) public returns (SimpleAccount ret) {
         address addr = getAddress(owner, salt);
         uint codeSize = addr.code.length;
-        if (codeSize > 0) {
+        if (codeSize != 0) {
             return SimpleAccount(payable(addr));
         }
         ret = SimpleAccount(payable(new ERC1967Proxy{salt : bytes32(salt)}(
