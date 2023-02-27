@@ -420,7 +420,7 @@ contract SmartAccountNoAuth is
                     _nonce
                 )
             );
-        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
+        return bytes.concat(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
     }
 
     // Extra Utils 

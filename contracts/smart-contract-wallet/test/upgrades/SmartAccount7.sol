@@ -82,7 +82,7 @@ contract SmartAccount7 is
     event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
     event SmartAccountInitialized(address indexed _owner, address indexed _handler);
-    
+
     // todo
     // emit events like executedTransactionFromModule
     // emit events with whole information of execTransaction (ref Safe L2)
@@ -456,7 +456,7 @@ contract SmartAccount7 is
                     _nonce
                 )
             );
-        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
+        return bytes.concat(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
     }
 
     // Extra Utils 
