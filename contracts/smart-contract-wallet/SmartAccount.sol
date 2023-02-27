@@ -314,7 +314,7 @@ contract SmartAccount is
         uint8 v;
         bytes32 r;
         bytes32 s;
-        uint256 i = 0;
+        uint256 i;
         address _signer;
         (v, r, s) = signatureSplit(signatures, i);
         //todo add the test case for contract signature
@@ -481,7 +481,7 @@ contract SmartAccount is
         require(dest.length != 0, "empty array provided");
         require(dest.length == value.length, "wrong array lengths");
         require(value.length == func.length, "wrong array lengths");
-        for (uint256 i = 0; i < dest.length; ) {
+        for (uint256 i; i < dest.length; ) {
             _call(dest[i], value[i], func[i]);
             unchecked {
                 ++i;
