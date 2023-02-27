@@ -234,6 +234,7 @@ contract MaliciousAccount is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
+        require(tokenGasPriceFactor != 0, "invalid stokenGasPriceFactor");
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -258,6 +259,7 @@ contract MaliciousAccount is
         address gasToken,
         address payable refundReceiver
     ) external returns (uint256 payment) {
+        require(tokenGasPriceFactor != 0, "invalid stokenGasPriceFactor");
         uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
