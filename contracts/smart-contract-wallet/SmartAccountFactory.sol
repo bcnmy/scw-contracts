@@ -17,9 +17,6 @@ contract SmartAccountFactory {
     // should be needed to emit from accountLogic : SmartAccountInitialized
     // string public constant VERSION = "1.0.4";
 
-    // Review event
-    // event SmartAccountCreated(address indexed _proxy, address indexed _implementation, address indexed _owner, string version, uint256 _index);
-
      event AccountCreation(address indexed account, address indexed accountLogic);
 
     // not to check if address is a contract but if it's deployed from this proxy
@@ -54,11 +51,13 @@ contract SmartAccountFactory {
         }
         require(address(proxy) != address(0), "Create2 call failed");
 
-        // emit SmartAccountCreated(proxy,_defaultImpl,_owner,_index);
+        // can be emitted owner, index, handler, _defaultImpl
+        // emit...
 
         // you can pass initializer data but then that it also needs to be part of salt
         // init method name subject to change
         BaseSmartAccount(proxy).init(_owner, _defaultFallbackHandler);
+        // above emit.. can be mixed with AccountCreation
         emit AccountCreation(proxy, _implementation);
     }
 
