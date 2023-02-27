@@ -8,6 +8,7 @@ pragma solidity 0.8.12;
 import "@account-abstraction/contracts/interfaces/IAccount.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import "./common/Enum.sol";
+import {BaseSmartAccountErrors} from "./common/Errors.sol";
 
 struct Transaction {
         address to;
@@ -30,7 +31,7 @@ struct FeeRefund {
  * this contract provides the basic logic for implementing the IAccount interface  - validateUserOp
  * specific account implementation should inherit it and provide the account-specific logic
  */
-abstract contract BaseSmartAccount is IAccount {
+abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     using UserOperationLib for UserOperation;
 
     //return value in case of signature failure, with no time-range.
@@ -79,7 +80,7 @@ abstract contract BaseSmartAccount is IAccount {
      * ensure the request comes from the known entrypoint.
      */
     function _requireFromEntryPoint() internal virtual view {
-        require(msg.sender == address(entryPoint()), "account: not from EntryPoint");
+        if(msg.sender != address(entryPoint())) revert CallerIsNotAnEntryPoint(msg.sender);
     }
 
     /**

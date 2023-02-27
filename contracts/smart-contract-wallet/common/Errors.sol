@@ -1,7 +1,17 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.12;
 
-contract SmartAccountErrors {
+contract BaseSmartAccountErrors {
+
+    /**
+     * @notice Throws at onlyEntryPoint when msg.sender is not an EntryPoint set for this Smart Account
+     * @param caller address that tried to call onlyEntryPoint-protected method
+     */
+    error CallerIsNotAnEntryPoint(address caller);
+
+}
+
+contract SmartAccountErrors is BaseSmartAccountErrors {
     
     /**
      * @notice Throws if zero address has been provided as Entry Point address
@@ -38,12 +48,6 @@ contract SmartAccountErrors {
      * @param caller address that tried to call onlyOwner method
      */
     error CallerIsNotOwner(address caller);
-
-    /**
-     * @notice Throws at onlyEntryPoint when msg.sender is not an EntryPoint set for this Smart Account
-     * @param caller address that tried to call onlyEntryPoint-protected method
-     */
-    error CallerIsNotAnEntryPoint(address caller);
 
     /**
      * @notice Throws at _requireFromEntryPointOrOwner when msg.sender is not an EntryPoint neither an owner
