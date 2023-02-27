@@ -16,7 +16,7 @@ contract ModuleManager is SelfAuthorized, Executor {
 
     mapping(address => address) internal modules;
 
-    function setupModules(address to, bytes memory data) internal {
+    function _setupModules(address to, bytes memory data) internal {
         require(modules[SENTINEL_MODULES] == address(0), "BSA100");
         modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         if (to != address(0))

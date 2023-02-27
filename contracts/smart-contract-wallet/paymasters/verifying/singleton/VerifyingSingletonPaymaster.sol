@@ -128,7 +128,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
     internal override returns (bytes memory context, uint256 sigTimeRange) {
         (requiredPreFund);
-        PaymasterData memory paymasterData = userOp.decodePaymasterData();
+        PaymasterData memory paymasterData = userOp._decodePaymasterData();
         bytes32 hash = getHash(userOp, paymasterNonces[userOp.getSender()], paymasterData.paymasterId);
         uint256 sigLength = paymasterData.signatureLength;
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
@@ -158,7 +158,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
      uint256 actualGasCost
     ) internal virtual override {
     (mode);
-    PaymasterContext memory data = context.decodePaymasterContext();
+    PaymasterContext memory data = context._decodePaymasterContext();
     address extractedPaymasterId = data.paymasterId;
     paymasterIdBalances[extractedPaymasterId] -= actualGasCost;
     emit GasBalanceDeducted(extractedPaymasterId, actualGasCost);

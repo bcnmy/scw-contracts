@@ -184,7 +184,7 @@ contract SmartAccount is
         owner = _owner;
         _setFallbackHandler(_handler);
         emit SmartAccountInitialized(_owner,_handler);
-        setupModules(address(0), bytes(""));
+        _setupModules(address(0), bytes(""));
     }
 
     // @review: max and min use from Math.sol instead of re-implemented in the contracts

@@ -159,7 +159,7 @@ contract MaliciousAccount is
         require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
         _setFallbackHandler(_handler);
-        setupModules(address(0), bytes(""));
+        _setupModules(address(0), bytes(""));
     }
 
     /**
