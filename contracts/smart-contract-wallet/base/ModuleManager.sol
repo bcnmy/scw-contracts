@@ -117,7 +117,7 @@ contract ModuleManager is SelfAuthorized, Executor {
         array = new address[](pageSize);
 
         // Populate return array
-        uint256 moduleCount = 0;
+        uint256 moduleCount;
         address currentModule = modules[start];
         while (currentModule != address(0x0) && currentModule != SENTINEL_MODULES && moduleCount < pageSize) {
             array[moduleCount] = currentModule;

@@ -218,7 +218,7 @@ contract SmartAccountNoAuth is
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
-            uint256 payment = 0;
+            uint256 payment;
             // uint256 extraGas;
             if (refundInfo.gasPrice > 0) {
                 //console.log("sent %s", startGas - gasleft());
@@ -291,7 +291,7 @@ contract SmartAccountNoAuth is
         uint8 v;
         bytes32 r;
         bytes32 s;
-        uint256 i = 0;
+        uint256 i;
         address _signer;
         (v, r, s) = signatureSplit(signatures, i);
         //todo add the test case for contract signature
