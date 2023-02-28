@@ -39,7 +39,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
     event GasBalanceDeducted(address indexed _paymasterId, uint256 indexed _charge);
 
 
-    constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) {
+    constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) payable {
         if(address(_entryPoint) == address(0)) revert EntryPointCannotBeZero();
         if(_verifyingSigner == address(0)) revert VerifyingSignerCannotBeZero();
         verifyingSigner = _verifyingSigner;

@@ -12,7 +12,7 @@ contract Proxy {
 
     event Received(uint indexed value, address indexed sender, bytes data);
 
-    constructor(address _implementation) {
+    constructor(address _implementation) payable {
          assert(_IMPLEMENTATION_SLOT == bytes32(uint256(keccak256("biconomy.scw.proxy.implementation")) - 1));
          assembly {
              sstore(_IMPLEMENTATION_SLOT,_implementation) 
