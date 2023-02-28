@@ -70,8 +70,6 @@ contract MaliciousAccount is
     
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
-    // nice to have
-    // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
 
     // modifiers
     // onlyOwner

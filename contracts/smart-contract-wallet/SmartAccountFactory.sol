@@ -29,11 +29,6 @@ contract SmartAccountFactory {
         _defaultFallbackHandler = _handler;
     }
 
-    /// @dev Allows to retrieve the creation code used for the Proxy deployment.
-    function accountCreationCode() public pure returns (bytes memory) {
-        return type(Proxy).creationCode;
-    }
-
     /**
      * @dev Deploys wallet using create2 and points it to _implementation
      * @param _owner EOA signatory of the wallet
@@ -89,6 +84,11 @@ contract SmartAccountFactory {
        bytes32 salt = keccak256(abi.encodePacked(_owner, address(uint160(_index))));
        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code)));
         _wallet = address(uint160(uint256(hash)));
+    }
+
+    /// @dev Allows to retrieve the creation code used for the Proxy deployment.
+    function accountCreationCode() public pure returns (bytes memory) {
+        return type(Proxy).creationCode;
     }
 
 }

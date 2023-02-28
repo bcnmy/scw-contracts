@@ -46,16 +46,9 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
         verifyingSigner = _verifyingSigner;
     }
 
-    function getBalance(address paymasterId) external view returns(uint256 balance) {
-        balance = paymasterIdBalances[paymasterId];
-    } 
-
-    function deposit() public virtual override payable {
-        revert("user DepositFor instead");
-    }
-
     /**
-     * add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
+     * @dev add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
+     * @param paymasterId dapp identifier for which deposit is being made
      */
     function depositFor(address paymasterId) external payable nonReentrant {
         require(paymasterId != address(0), "Paymaster Id can not be zero");
@@ -63,6 +56,28 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
         paymasterIdBalances[paymasterId] += msg.value;
         entryPoint.depositTo{value : msg.value}(address(this));
         emit GasDeposited(paymasterId, msg.value);
+    }
+    
+    /**
+     * @dev get the current deposit for paymasterId (Dapp Depositor address)
+     * @param paymasterId dapp identifier
+     */
+    function getBalance(address paymasterId) external view returns(uint256 balance) {
+        balance = paymasterIdBalances[paymasterId];
+    } 
+
+    /**
+    this function will let owner change signer
+    */
+    function setSigner( address _newVerifyingSigner) external payable onlyOwner{
+        require(_newVerifyingSigner != address(0), "can't be 0 address");
+        address oldSigner = verifyingSigner;
+        verifyingSigner = _newVerifyingSigner;
+        emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
+    }
+
+    function deposit() public virtual override payable {
+        revert("user DepositFor instead");
     }
 
     function withdrawTo(address payable withdrawAddress, uint256 amount) public override nonReentrant {
@@ -74,16 +89,6 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
         emit GasWithdrawn(msg.sender, withdrawAddress, amount);
     }
     
-    /**
-    this function will let owner change signer
-    */
-    function setSigner( address _newVerifyingSigner) external payable onlyOwner{
-        require(_newVerifyingSigner != address(0), "can't be 0 address");
-        address oldSigner = verifyingSigner;
-        verifyingSigner = _newVerifyingSigner;
-        emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
-    }
-
     /**
      * return the hash we're going to sign off-chain (and validate on-chain)
      * this method is called by the off-chain service, to sign the request.
@@ -135,10 +140,12 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
         require(sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
         //don't revert on signature failure: return SIG_VALIDATION_FAILED
         if (verifyingSigner != hash.toEthSignedMessageHash().recover(paymasterData.signature)) {
+            // empty context and sigTimeRange 1
             return ("",1);
         }
         _updateNonce(userOp);
         require(requiredPreFund <= paymasterIdBalances[paymasterData.paymasterId], "Insufficient balance for paymaster id");
+        // context and sigTimeRange 0
         return (userOp.paymasterContext(paymasterData), 0);
     }
 
