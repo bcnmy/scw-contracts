@@ -94,7 +94,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      * unlock the stake, in order to withdraw it.
      * The paymaster can't serve requests once unlocked, until it calls addStake again
      */
-    function unlockStake() external onlyOwner {
+    function unlockStake() external payable onlyOwner {
         entryPoint.unlockStake();
     }
 
@@ -103,7 +103,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      * stake must be unlocked first (and then wait for the unstakeDelay to be over)
      * @param withdrawAddress the address to send withdrawn value.
      */
-    function withdrawStake(address payable withdrawAddress) external onlyOwner {
+    function withdrawStake(address payable withdrawAddress) external payable onlyOwner {
         entryPoint.withdrawStake(withdrawAddress);
     }
 

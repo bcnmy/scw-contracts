@@ -457,13 +457,13 @@ contract SmartAccount is
     }
 
     // Extra Utils 
-    function transfer(address payable dest, uint amount) external nonReentrant onlyOwner {
+    function transfer(address payable dest, uint amount) external payable nonReentrant onlyOwner {
         if(dest == address(0)) revert TransferToZeroAddressAttempt();
         (bool success,) = dest.call{value:amount}("");
         if (!success) revert TokenTransferFailed(address(0), dest, amount);
     }
 
-    function pullTokens(address token, address dest, uint256 amount) external onlyOwner {
+    function pullTokens(address token, address dest, uint256 amount) external payable onlyOwner {
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
@@ -550,7 +550,7 @@ contract SmartAccount is
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
+    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public payable onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 
