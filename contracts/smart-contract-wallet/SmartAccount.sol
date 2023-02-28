@@ -573,8 +573,7 @@ contract SmartAccount is
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
-
-    // solhint-disable-next-line no-empty-blocks
+    
     receive() external payable {
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
