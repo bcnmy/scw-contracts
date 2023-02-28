@@ -7,6 +7,7 @@ pragma solidity ^0.8.12;
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
 import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {BaseSmartAccountErrors} from "../common/Errors.sol"; 
 
 /**
  * Helper class for creating a paymaster.
@@ -14,7 +15,7 @@ import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
  * validates that the postOp is called only by the entryPoint
  */
 // Could have Ownable2Step 
-abstract contract BasePaymaster is IPaymaster, Ownable {
+abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
 
     IEntryPoint immutable public entryPoint;
 
@@ -108,6 +109,6 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
 
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
-        require(msg.sender == address(entryPoint));
+        if(msg.sender != address(entryPoint)) revert CallerIsNotAnEntryPoint(msg.sender);
     }
 }
