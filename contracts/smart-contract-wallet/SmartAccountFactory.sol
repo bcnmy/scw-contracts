@@ -2,9 +2,10 @@
 pragma solidity 0.8.12;
 
 import "./Proxy.sol";
-import "./BaseSmartAccount.sol"; 
+import "./BaseSmartAccount.sol";
+import {SmartAccountFactoryErrors} from "./common/Errors.sol"; 
 
-contract SmartAccountFactory {
+contract SmartAccountFactory is SmartAccountFactoryErrors {
     address immutable public _defaultImpl;
     address immutable public _defaultFallbackHandler; 
 
@@ -16,9 +17,9 @@ contract SmartAccountFactory {
     mapping (address => bool) public isAccountExist;
 
     constructor(address _baseImpl, address _handler) {
-        require(_baseImpl != address(0), "base wallet address 0");
+        if(_baseImpl == address(0)) revert BaseImplementationCannotBeZero();
         _defaultImpl = _baseImpl;
-        require(_handler != address(0), "default fallback handler 0");
+        if(_handler == address(0)) revert HandlerCannotBeZero();
         _defaultFallbackHandler = _handler;
     }
 
@@ -37,7 +38,7 @@ contract SmartAccountFactory {
         assembly {
             proxy := create2(0x0, add(0x20, deploymentData), mload(deploymentData), salt)
         }
-        require(address(proxy) != address(0), "Create2 call failed");
+        if(address(proxy) == address(0)) revert ProxyDeploymentFailed(_owner, _index);
         // EOA + Version tracking
         emit SmartAccountCreated(proxy,_defaultImpl,_owner, VERSION, _index);
         BaseSmartAccount(proxy).init(_owner, _defaultFallbackHandler);

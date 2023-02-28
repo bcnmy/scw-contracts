@@ -4,9 +4,10 @@ pragma solidity 0.8.12;
 import "../common/Enum.sol";
 import "../common/SelfAuthorized.sol";
 import "./Executor.sol";
+import {ModuleManagerErrors} from "../common/Errors.sol"; 
 
 /// @title Module Manager - A contract that manages modules that can execute transactions via this contract
-contract ModuleManager is SelfAuthorized, Executor {    
+contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {    
     // Events
     event EnabledModule(address module);
     event DisabledModule(address module);
@@ -18,11 +19,11 @@ contract ModuleManager is SelfAuthorized, Executor {
     mapping(address => address) internal modules;
 
     function setupModules(address to, bytes memory data) internal {
-        require(modules[SENTINEL_MODULES] == address(0), "BSA100");
+        if(modules[SENTINEL_MODULES] != address(0)) revert ModulesAlreadyInitialized();
         modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         if (to != address(0))
             // Setup has to complete successfully or transaction fails.
-            require(execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()), "BSA000");
+            if(!execute(to, 0, data, Enum.Operation.DelegateCall, gasleft())) revert ModulesSetupExecutionFailed();
     }
 
     /// @dev Allows to add a module to the whitelist.
@@ -31,9 +32,9 @@ contract ModuleManager is SelfAuthorized, Executor {
     /// @param module Module to be whitelisted.
     function enableModule(address module) public authorized {
         // Module address cannot be null or sentinel.
-        require(module != address(0) && module != SENTINEL_MODULES, "BSA101");
+        if (module == address(0) || module == SENTINEL_MODULES) revert ModuleCannotBeZeroOrSentinel(module);
         // Module cannot be added twice.
-        require(modules[module] == address(0), "BSA102");
+        if(modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
         modules[module] = modules[SENTINEL_MODULES];
         modules[SENTINEL_MODULES] = module;
         emit EnabledModule(module);
@@ -46,8 +47,8 @@ contract ModuleManager is SelfAuthorized, Executor {
     /// @param module Module to be removed.
     function disableModule(address prevModule, address module) public authorized {
         // Validate module address and check that it corresponds to module index.
-        require(module != address(0) && module != SENTINEL_MODULES, "BSA101");
-        require(modules[prevModule] == module, "BSA103");
+        if (module == address(0) || module == SENTINEL_MODULES) revert ModuleCannotBeZeroOrSentinel(module);
+        if(modules[prevModule] != module) revert ModuleAndPrevModuleMismatch(module, modules[prevModule], prevModule);
         modules[prevModule] = modules[module];
         modules[module] = address(0);
         emit DisabledModule(module);
@@ -65,7 +66,7 @@ contract ModuleManager is SelfAuthorized, Executor {
         Enum.Operation operation
     ) public virtual returns (bool success) {
         // Only whitelisted modules are allowed.
-        require(msg.sender != SENTINEL_MODULES && modules[msg.sender] != address(0), "BSA104");
+        if(msg.sender == SENTINEL_MODULES || modules[msg.sender] == address(0)) revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
         success = execute(to, value, data, operation, gasleft());
         if (success) emit ExecutionFromModuleSuccess(msg.sender);

@@ -38,6 +38,16 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
     error OwnerCannotBeZero();
 
     /**
+     * @notice Throws if zero address has been provided as Fallback Handler address
+     */
+    error HandlerCannotBeZero();
+
+    /**
+     * @notice Throws if zero address has been provided as Base Implementation address
+     */
+    error BaseImplementationCannotBeZero();
+
+    /**
      * @notice Throws if there is no code at implementationAddress
      * @param implementationAddress implementation address provided
      */
@@ -60,11 +70,6 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
      * @param smartAccount Smart Account Address
      */
     error AlreadyInitialized(address smartAccount);
-
-    /**
-     * @notice Throws if zero address has been provided as Fallback Handler address
-     */
-    error HandlerCannotBeZero();
 
     /**
      * @notice Throws if not if enough gas is left at some point
@@ -131,6 +136,56 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
     error InvalidUserOpNonceProvided(uint256 nonceProvided, uint256 nonceExpected);
 
 }
+
+contract SmartAccountFactoryErrors is SmartAccountErrors {
+    /**
+     * @notice Throws when data for executeBatchCall provided in wrong format (i.e. empty array or lengths mismatch)
+     * @param owner Owner of a Proxy (Smart Account)
+     * @param index Deployment index
+     */
+    error ProxyDeploymentFailed(address owner, uint256 index);
+}
+
+contract ModuleManagerErrors {
+    /**
+     * @notice Throws when trying to initialize module manager that already been initialized
+     */
+    error ModulesAlreadyInitialized();
+
+    /**
+     * @notice Throws when a delegatecall in course of module manager initialization has failed
+     */
+    error ModulesSetupExecutionFailed();
+
+    /**
+     * @notice Throws when address(0) or SENTINEL_MODULES constant has been provided as a module address
+     * @param module Module address provided
+     */
+    error ModuleCannotBeZeroOrSentinel(address module);
+
+    /**
+     * @notice Throws when trying to enable module that has already been enabled
+     * @param module Module address provided
+     */
+    error ModuleAlreadyEnabled(address module);
+
+    /**
+     * @notice Throws when module and previous module mismatch 
+     * @param expectedModule expected module at modules[prevModule]
+     * @param returnedModule the module that has been found at modules[prevModule]
+     * @param prevModule previous module address provided at call
+     */
+    error ModuleAndPrevModuleMismatch(address expectedModule, address returnedModule, address prevModule);
+
+    /**
+     * @notice Throws when trying to execute transaction from module that is not enabled
+     * @param module Module address provided
+     */
+    error ModuleNotEnabled(address module);
+
+}
+
+
 
 
 //
