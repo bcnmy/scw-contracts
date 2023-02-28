@@ -187,7 +187,6 @@ contract SmartAccount7 is
     function init(address _owner, address _handler) external override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
-        require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
         _setFallbackHandler(_handler);
         _setupModules(address(0), bytes(""));

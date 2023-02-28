@@ -55,6 +55,8 @@ contract SmartAccount is
 
     uint256 private immutable _chainId;
 
+    address private immutable _self;
+
     // review 
     // mock constructor or use deinitializers
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
@@ -62,6 +64,7 @@ contract SmartAccount is
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
+        _self = address(this);
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
@@ -109,6 +112,7 @@ contract SmartAccount is
     function setOwner(address _newOwner) public mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
         require(_newOwner != address(this), "Smart Account:: new Signatory address cannot be self");
+        require(_newOwner != owner,"new Signatory address cannot be same as old one");
         address oldOwner = owner;
         owner = _newOwner;
         emit EOAChanged(address(this), oldOwner, _newOwner);
@@ -203,7 +207,6 @@ contract SmartAccount is
     function init(address _owner, address _handler) external override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
-        require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
         _setFallbackHandler(_handler);
         address factory = msg.sender;
@@ -637,6 +640,7 @@ contract SmartAccount is
 
     // solhint-disable-next-line no-empty-blocks
     receive() external payable {
+        require(address(this) != _self, "only allowed via delegateCall");
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
 }
