@@ -12,9 +12,9 @@ import {BaseSmartAccountErrors} from "./common/Errors.sol";
 
 struct Transaction {
         address to;
+        Enum.Operation operation;
         uint256 value;
         bytes data;
-        Enum.Operation operation;
         uint256 targetTxGas;
     }
 
