@@ -444,6 +444,8 @@ contract MaliciousAccount is
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
+    //  MaliciousAccount             ·  execute                     ·      33345  ·      87142  ·      62963  ·            4  ·          -  │
+    //  MaliciousAccount             ·  execute                     ·      33345  ·      87142  ·      62963  ·            4  ·          -  
     function execute(address dest, uint value, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
@@ -462,10 +464,12 @@ contract MaliciousAccount is
 
     // AA implementation
     function _call(address target, uint256 value, bytes memory data) internal {
-        (bool success, bytes memory result) = target.call{value : value}(data);
-        if (!success) {
-            assembly {
-                revert(add(result, 32), mload(result))
+        assembly {
+            let success := call(gas(), target, value, add(data, 0x20), mload(data), 0, 0)
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
             }
         }
     }

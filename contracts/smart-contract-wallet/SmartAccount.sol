@@ -267,7 +267,10 @@ contract SmartAccount is
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            (bool success,) = receiver.call{value: payment}("");
+            bool success;                                 
+            assembly {                                    
+                success := call(gas(), receiver, payment, 0, 0, 0, 0)
+            }
             if(!success) revert TokenTransferFailed(address(0), receiver, payment);
         } else {
             payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
@@ -291,7 +294,10 @@ contract SmartAccount is
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            (bool success,) = receiver.call{value: payment}("");
+            bool success;                                 
+            assembly {                                    
+                success := call(gas(), receiver, payment, 0, 0, 0, 0)
+            }
             if(!success) revert TokenTransferFailed(address(0), receiver, payment);
         } else {
             payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
@@ -459,7 +465,10 @@ contract SmartAccount is
     // Extra Utils 
     function transfer(address payable dest, uint amount) external payable nonReentrant onlyOwner {
         if(dest == address(0)) revert TransferToZeroAddressAttempt();
-        (bool success,) = dest.call{value:amount}("");
+        bool success;
+        assembly {
+            success := call(gas(), dest, amount, 0, 0, 0, 0)
+        }
         if (!success) revert TokenTransferFailed(address(0), dest, amount);
     }
 
@@ -494,10 +503,12 @@ contract SmartAccount is
 
     // AA implementation
     function _call(address target, uint256 value, bytes memory data) internal {
-        (bool success, bytes memory result) = target.call{value : value}(data);
-        if (!success) {
-            assembly {
-                revert(add(result, 32), mload(result))
+        assembly {
+            let success := call(gas(), target, value, add(data, 0x20), mload(data), 0, 0)
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
             }
         }
     }
