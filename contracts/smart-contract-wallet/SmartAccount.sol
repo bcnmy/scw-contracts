@@ -297,7 +297,10 @@ contract SmartAccount is
             payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
             if(!transferToken(gasToken, receiver, payment)) revert TokenTransferFailed(gasToken, receiver, payment);
         }
-        uint256 requiredGas = startGas - gasleft();
+        uint256 requiredGas;
+        unchecked { 
+            requiredGas = startGas - gasleft();
+        }
         //console.log("hpr %s", requiredGas);
         // Convert response to string and return via error message
         revert(string(abi.encodePacked(requiredGas)));
@@ -373,7 +376,10 @@ contract SmartAccount is
         uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
         if(!execute(to, value, data, operation, gasleft())) revert ExecutionFailed();
-        uint256 requiredGas = startGas - gasleft();
+        uint256 requiredGas;
+        unchecked { 
+            requiredGas = startGas - gasleft();
+        }
         // Convert response to string and return via error message
         revert(string(abi.encodePacked(requiredGas)));
     }
