@@ -42,7 +42,9 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
     constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) payable {
         if(address(_entryPoint) == address(0)) revert EntryPointCannotBeZero();
         if(_verifyingSigner == address(0)) revert VerifyingSignerCannotBeZero();
-        verifyingSigner = _verifyingSigner;
+        assembly {
+            sstore(verifyingSigner.slot, _verifyingSigner)
+        }
     }
 
     function getBalance(address paymasterId) external view returns(uint256 balance) {
@@ -79,7 +81,9 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
     function setSigner( address _newVerifyingSigner) external payable onlyOwner{
         if(_newVerifyingSigner == address(0)) revert VerifyingSignerCannotBeZero();
         address oldSigner = verifyingSigner;
-        verifyingSigner = _newVerifyingSigner;
+        assembly {
+            sstore(verifyingSigner.slot, _newVerifyingSigner)
+        }
         emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
     }
 

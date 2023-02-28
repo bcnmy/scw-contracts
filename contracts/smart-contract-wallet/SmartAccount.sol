@@ -112,7 +112,9 @@ contract SmartAccount is
     function setOwner(address _newOwner) public mixedAuth {
         if(_newOwner == address(0)) revert OwnerCannotBeZero();
         address oldOwner = owner;
-        owner = _newOwner;
+        assembly {
+            sstore(owner.slot, _newOwner)
+        }
         emit EOAChanged(address(this), oldOwner, _newOwner);
     }
 
@@ -180,7 +182,9 @@ contract SmartAccount is
         if(owner != address(0)) revert AlreadyInitialized(address(this));
         if(_owner == address(0)) revert OwnerCannotBeZero();
         if(_handler == address(0)) revert HandlerCannotBeZero();
-        owner = _owner;
+        assembly {
+            sstore(owner.slot, _owner)
+        }
         _setFallbackHandler(_handler);
         setupModules(address(0), bytes(""));
     }
