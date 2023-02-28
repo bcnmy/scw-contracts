@@ -8,7 +8,7 @@ contract FallbackManager is SelfAuthorized {
     // keccak-256 hash of "fallback_manager.handler.address" subtracted by 1
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT = 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d4;
 
-    event ChangedFallbackHandler(address previousHandler, address handler);
+    event ChangedFallbackHandler(address indexed previousHandler, address indexed handler);
 
     // solhint-disable-next-line payable-fallback,no-complex-fallback
     fallback() external {

@@ -33,7 +33,6 @@ contract SmartAccount is
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH = 0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
-    // review? if rename wallet to account is must
     // keccak256(
     //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
     // );
@@ -42,7 +41,7 @@ contract SmartAccount is
     // Owner storage
     address public owner;
 
-    // uint96 private _nonce; //changed to 2D nonce below
+    // changed to 2D nonce below
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
 
@@ -57,14 +56,12 @@ contract SmartAccount is
 
     address private immutable _self;
 
-    // review 
-    // mock constructor or use deinitializers
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
     constructor(IEntryPoint anEntryPoint) {
+        _self = address(this);
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
-        _self = address(this);
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
@@ -355,6 +352,7 @@ contract SmartAccount is
         bytes32 dataHash,
         bytes memory signatures
     ) public view virtual {
+        require(signatures.length >= 65, "Invalid signatures length");
         uint8 v;
         bytes32 r;
         bytes32 s;
@@ -419,9 +417,8 @@ contract SmartAccount is
         uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
         require(execute(to, value, data, operation, gasleft()));
-        uint256 requiredGas = startGas - gasleft();
         // Convert response to string and return via error message
-        revert(string(abi.encodePacked(requiredGas)));
+        revert(string(abi.encodePacked(startGas - gasleft())));
     }
 
     /**

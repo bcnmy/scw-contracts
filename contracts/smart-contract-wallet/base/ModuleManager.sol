@@ -48,7 +48,7 @@ contract ModuleManager is SelfAuthorized, Executor {
      * @dev Allows to add a module to the allowlist.
      * @notice This can only be done via a Safe transaction.
      * @notice Enables the module `module` for the Safe.
-     * @param module Module to be whitelisted.
+     * @param module Module to be allow-listed.
      */
     function enableModule(address module) public authorized {
         // Module address cannot be null or sentinel.
@@ -61,7 +61,7 @@ contract ModuleManager is SelfAuthorized, Executor {
     }
 
     /**
-     * @dev Allows to remove a module from the whitelist.
+     * @dev Allows to remove a module from the allowlist.
      * @notice This can only be done via a Safe transaction.
      * @notice Disables the module `module` for the Safe.
      * @param prevModule Module that pointed to the module to be removed in the linked list
@@ -91,7 +91,7 @@ contract ModuleManager is SelfAuthorized, Executor {
         bytes memory data,
         Enum.Operation operation
     ) public virtual returns (bool success) {
-        // Only whitelisted modules are allowed.
+        // Only allow-listed modules are allowed.
         require(msg.sender != SENTINEL_MODULES && modules[msg.sender] != address(0), "BSA104");
         // Execute transaction without further confirmations.
         success = execute(to, value, data, operation, gasleft());

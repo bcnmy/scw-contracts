@@ -4,7 +4,7 @@ pragma solidity 0.8.12;
 import "../common/Enum.sol";
 
 /// @title Executor - A contract that can execute transactions
-contract Executor {
+abstract contract Executor {
     // Could add a flag fromEntryPoint for AA txn
     event ExecutionFailure(address indexed to, uint256 indexed value, bytes indexed data, Enum.Operation operation, uint256 txGas);
     event ExecutionSuccess(address indexed to, uint256 indexed value, bytes indexed data, Enum.Operation operation, uint256 txGas);
