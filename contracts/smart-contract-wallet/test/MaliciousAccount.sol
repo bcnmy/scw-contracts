@@ -325,12 +325,11 @@ contract MaliciousAccount is
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
             // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
-            _signer = ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", dataHash)), v - 4, r, s);
-            require(_signer == owner, "INVALID_SIGNATURE");
+            (_signer, ) = dataHash.toEthSignedMessageHash().tryRecover(v - 4, r, s);
         } else {
-            _signer = ecrecover(dataHash, v, r, s);
-            require(_signer == owner, "INVALID_SIGNATURE");
+            (_signer, ) = dataHash.tryRecover(v, r, s);
         }
+        require(_signer == owner, "INVALID_SIGNATURE");
     }
 
     /// @dev Allows to estimate a transaction.

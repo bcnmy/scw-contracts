@@ -701,7 +701,7 @@ describe("Base Wallet Functionality", function () {
     safeTx.targetTxGas = gasEstimate1.toNumber();
     safeTx.baseGas = 21000 + 21000; // base plus eth transfer
 
-    const { signer, data } = await safeSignTypedData(
+    const { signer, data } = await safeSignMessage(
       accounts[0],
       userSCW,
       safeTx,
