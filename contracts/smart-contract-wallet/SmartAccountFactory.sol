@@ -14,7 +14,7 @@ contract SmartAccountFactory is SmartAccountFactoryErrors {
 
     //states : registry
     // review need and impact of this update wallet -> account
-    mapping (address => bool) public isAccountExist;
+    mapping (address => uint256) public isAccountExist;
 
     constructor(address _baseImpl, address _handler) {
         if(_baseImpl == address(0)) revert BaseImplementationCannotBeZero();
@@ -42,7 +42,7 @@ contract SmartAccountFactory is SmartAccountFactoryErrors {
         // EOA + Version tracking
         emit SmartAccountCreated(proxy,_defaultImpl,_owner, VERSION, _index);
         BaseSmartAccount(proxy).init(_owner, _defaultFallbackHandler);
-        isAccountExist[proxy] = true;
+        isAccountExist[proxy] = 1;
     }
 
     /**
@@ -56,7 +56,7 @@ contract SmartAccountFactory is SmartAccountFactoryErrors {
             proxy := create(0x0, add(0x20, deploymentData), mload(deploymentData))
         }
         BaseSmartAccount(proxy).init(_owner, _defaultFallbackHandler);
-        isAccountExist[proxy] = true;
+        isAccountExist[proxy] = 1;
     }
 
     /**
