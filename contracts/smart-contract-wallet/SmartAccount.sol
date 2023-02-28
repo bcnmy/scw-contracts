@@ -492,7 +492,8 @@ contract SmartAccount is
         _requireFromEntryPointOrOwner();
         if(dest.length == 0 || dest.length != value.length || value.length != func.length) 
             revert WrongBatchProvided (dest.length, value.length, func.length);
-        for (uint256 i; i < dest.length; ) {
+        uint256 arraysLength = dest.length;
+        for (uint256 i; i < arraysLength; ) {
             _call(dest[i], value[i], func[i]);
             unchecked {
                 ++i;
