@@ -11,7 +11,7 @@ import "./libs/LibAddress.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
 
 contract SmartAccount is 

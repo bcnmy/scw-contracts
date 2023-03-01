@@ -68,19 +68,12 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     // review virtual 
     function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, address aggregator, uint256 missingAccountFunds)
     external override virtual returns (uint256 sigTimeRange) {
-        _requireFromEntryPoint();
+        if(msg.sender != address(entryPoint())) revert CallerIsNotAnEntryPoint(msg.sender);
         sigTimeRange = _validateSignature(userOp, userOpHash, aggregator);
         if (userOp.initCode.length == 0) {
             _validateAndUpdateNonce(userOp);
         }
         _payPrefund(missingAccountFunds);
-    }
-
-    /**
-     * ensure the request comes from the known entrypoint.
-     */
-    function _requireFromEntryPoint() internal virtual view {
-        if(msg.sender != address(entryPoint())) revert CallerIsNotAnEntryPoint(msg.sender);
     }
 
     /**

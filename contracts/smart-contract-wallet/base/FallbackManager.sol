@@ -12,10 +12,9 @@ contract FallbackManager is SelfAuthorized {
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT = 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
 
     function _setFallbackHandler(address handler) internal {
-        bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {
-            sstore(slot, handler)
+            sstore(FALLBACK_HANDLER_STORAGE_SLOT, handler)
         }
     }
 
