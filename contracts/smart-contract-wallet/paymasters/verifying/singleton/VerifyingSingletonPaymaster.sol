@@ -3,12 +3,11 @@ pragma solidity 0.8.12;
 
 /* solhint-disable reason-string */
 /* solhint-disable no-inline-assembly */
-import "../../BasePaymaster.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@openzeppelin/contracts/security/ReentrancyGuard.sol";
-import "../../PaymasterHelpers.sol";
-
-
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
+import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {BasePaymaster, IEntryPoint} from "../../BasePaymaster.sol";
+import {PaymasterHelpers, PaymasterData, PaymasterContext} from "../../PaymasterHelpers.sol";
 
 /**
  * A sample paymaster that uses external service to decide whether to pay for the UserOp.

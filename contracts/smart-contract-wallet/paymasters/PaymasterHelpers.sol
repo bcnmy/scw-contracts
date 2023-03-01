@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.12;
 
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 struct PaymasterData {
     address paymasterId;

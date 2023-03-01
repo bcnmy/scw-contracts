@@ -5,8 +5,9 @@ pragma solidity 0.8.12;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
-import "@account-abstraction/contracts/interfaces/IAccount.sol";
-import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
+import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {Enum} from "./common/Enum.sol";
 
 struct Transaction {
