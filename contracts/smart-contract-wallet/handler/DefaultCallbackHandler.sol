@@ -12,7 +12,7 @@ import "../SmartAccount.sol";
 /// @author Richard Meissner - <richard@gnosis.pm>
 contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, ERC721TokenReceiver, IERC165, ISignatureValidator {
     bytes32 public constant NAME = "Default Callback Handler";
-    bytes32 public constant VERSION = "1.0.0";
+    string public constant VERSION = "1.0.0";
 
     //keccak256(
     //    "SmartAccountMessage(bytes message)"

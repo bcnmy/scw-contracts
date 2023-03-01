@@ -29,7 +29,7 @@ contract SmartAccount is
     // Storage
 
     // Version
-    bytes32 public constant VERSION = "1.0.4"; // using AA 0.4.0
+    string public constant VERSION = "1.0.4"; // using AA 0.4.0
 
     // Domain Seperators
     // keccak256(
@@ -72,7 +72,7 @@ contract SmartAccount is
     
     // Events
     // EOA + Version tracking
-    event ImplementationUpdated(address _scw, bytes32 version, address newImplementation);
+    event ImplementationUpdated(address _scw, string version, address newImplementation);
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 txHash, uint256 payment);
@@ -126,6 +126,7 @@ contract SmartAccount is
              sstore(address(),_implementation) 
          }
         // EOA + Version tracking
+        // review here the second argument it emits is: VERSION upgraded from but not the VERSION it's upgraded to
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 

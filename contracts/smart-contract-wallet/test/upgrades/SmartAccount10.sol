@@ -1,18 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./libs/LibAddress.sol";
-import "./BaseSmartAccount.sol";
-import "./base/ModuleManager.sol";
-import "./base/FallbackManager.sol";
-import "./common/SignatureDecoder.sol";
-import "./common/SecuredTokenTransfer.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
-import "./interfaces/ISignatureValidator.sol";
-import "./interfaces/IERC165.sol";
+import "../../libs/LibAddress.sol";
+import "../../BaseSmartAccount.sol";
+import "../../base/ModuleManager.sol";
+import "../../base/FallbackManager.sol";
+import "../../common/SignatureDecoder.sol";
+import "../../common/SecuredTokenTransfer.sol";
+import {SmartAccountErrors} from "../../common/Errors.sol";
+import "../../interfaces/ISignatureValidator.sol";
+import "../../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "hardhat/console.sol";
 
-contract SmartAccountNoAuth is 
+contract SmartAccount10 is 
      BaseSmartAccount,
      ModuleManager,
      FallbackManager,
@@ -28,7 +29,7 @@ contract SmartAccountNoAuth is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.4"; // aa 0.4.0 rebase
+    string public constant VERSION = "1.0.10"; // using AA 0.4.0
 
     // Domain Seperators
     // keccak256(
@@ -36,11 +37,11 @@ contract SmartAccountNoAuth is
     // );
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH = 0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
-    // todo? rename wallet to account
+    // review? if rename wallet to account is must
     // keccak256(
-    //     "WalletTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
+    //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
     // );
-    bytes32 internal constant ACCOUNT_TX_TYPEHASH = 0xeedfef42e81fe8cd0e4185e4320e9f8d52fd97eb890b85fa9bd7ad97c9a18de2;
+    bytes32 internal constant ACCOUNT_TX_TYPEHASH = 0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     // Owner storage
     address public owner;
@@ -49,7 +50,11 @@ contract SmartAccountNoAuth is
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
 
-    // AA storage
+    // Mapping to keep track of all message hashes that have been approved by the owner
+    // by ALL REQUIRED owners in a multisig flow
+    mapping(bytes32 => uint256) public signedMessages;
+
+    // AA immutable storage
     IEntryPoint private immutable _entryPoint;
 
     // review 
@@ -67,14 +72,16 @@ contract SmartAccountNoAuth is
     
     // Events
     // EOA + Version tracking
-    // Review when you keep it bytes32 it doesn't match with string value in testCase emit.withArgs
     event ImplementationUpdated(address _scw, string version, address newImplementation);
-
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 txHash, uint256 payment);
+    event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
     // nice to have
     // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+    // todo
+    // emit events like executedTransactionFromModule
+    // emit events with whole information of execTransaction (ref Safe L2)
 
     // modifiers
     // onlyOwner
@@ -88,29 +95,15 @@ contract SmartAccountNoAuth is
 
     // onlyOwner OR self
     modifier mixedAuth {
-        require(msg.sender == owner || msg.sender == address(this),"Only owner or self");
+        require(msg.sender == owner || msg.sender == address(this), "Only owner or self");
         _;
    }
-
-   // only from EntryPoint
-   modifier onlyEntryPoint {
-        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
-        _; 
-   }
-
-   function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
-    function entryPoint() public view virtual override returns (IEntryPoint) {
-        return _entryPoint;
-    }
 
     // @notice authorized modifier (onlySelf) is already inherited
 
     // Setters
 
-    function setOwner(address _newOwner) external mixedAuth {
+    function setOwner(address _newOwner) public mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
         address oldOwner = owner;
         owner = _newOwner;
@@ -121,7 +114,12 @@ contract SmartAccountNoAuth is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    function updateImplementation(address _implementation) external mixedAuth {
+    // todo: write test case for updating implementation
+    // review for all methods to be invoked by smart account to self
+    // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
+    // all the new implementations MUST have this method!
+    function updateImplementation(address _implementation) public {
+        _requireFromEntryPointOrOwner();
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         // solhint-disable-next-line no-inline-assembly
         assembly {
@@ -132,6 +130,12 @@ contract SmartAccountNoAuth is
     }
 
     // Getters
+    
+    // @review: test case aid
+    // perhaps marked for deletion
+    function accountLogic() public pure returns (address) {
+        return address(0);
+    }
 
     function domainSeparator() public view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), this));
@@ -159,11 +163,24 @@ contract SmartAccountNoAuth is
         return nonces[batchId];
     }
 
+    // Standard interface for 1d nonces. Use it for Account Abstraction flow.
+    function nonce() public view virtual override returns (uint256) {
+        return nonces[0];
+    }
+
+    // only from EntryPoint
+    modifier onlyEntryPoint {
+        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
+        _; 
+    }
+
+    function entryPoint() public view virtual override returns (IEntryPoint) {
+        return _entryPoint;
+    }
 
     // init
     // Initialize / Setup
     // Used to setup
-    // i. owner ii. entry point address iii. handler
     function init(address _owner, address _handler) public override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
@@ -180,6 +197,7 @@ contract SmartAccountNoAuth is
         return a >= b ? a : b;
     }
 
+    // review: batchId should be carefully designed or removed all together (including 2D nonces)
     // Gnosis style transaction with optional repay in native tokens OR ERC20 
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
@@ -206,7 +224,7 @@ contract SmartAccountNoAuth is
                 );
             // Execute transaction.
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, txHashData, signatures);
+            checkSignatures(txHash, signatures);
         }
 
 
@@ -230,6 +248,7 @@ contract SmartAccountNoAuth is
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
+            console.log("goes through 10");
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }
@@ -242,7 +261,7 @@ contract SmartAccountNoAuth is
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) public returns (uint256 payment) {
+    ) private returns (uint256 payment) {
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -267,6 +286,7 @@ contract SmartAccountNoAuth is
         address gasToken,
         address payable refundReceiver
     ) external returns (uint256 payment) {
+        uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
         if (gasToken == address(0)) {
@@ -278,6 +298,10 @@ contract SmartAccountNoAuth is
             payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
+        uint256 requiredGas = startGas - gasleft();
+        //console.log("hpr %s", requiredGas);
+        // Convert response to string and return via error message
+        revert(string(abi.encodePacked(requiredGas)));
     }
 
     /**
@@ -287,7 +311,6 @@ contract SmartAccountNoAuth is
      */
     function checkSignatures(
         bytes32 dataHash,
-        bytes memory data,
         bytes memory signatures
     ) public view virtual {
         uint8 v;
@@ -299,7 +322,7 @@ contract SmartAccountNoAuth is
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
-            // When handling contract signatures the address of the contract is encoded into r
+            // When handling contract signatures the address of the signer contract is encoded into r
             _signer = address(uint160(uint256(r)));
 
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
@@ -334,7 +357,7 @@ contract SmartAccountNoAuth is
         } else {
             _signer = ecrecover(dataHash, v, r, s);
         }
-        require(_signer == owner || true, "INVALID_SIGNATURE");
+        require(_signer == owner, "INVALID_SIGNATURE");
     }
 
     /// @dev Allows to estimate a transaction.
@@ -344,14 +367,19 @@ contract SmartAccountNoAuth is
     /// @param value Ether value of transaction.
     /// @param data Data payload of transaction.
     /// @param operation Operation type of transaction.
+    /// @return Estimate without refunds and overhead fees (base transaction and payload data gas costs).
     function requiredTxGas(
         address to,
         uint256 value,
         bytes calldata data,
         Enum.Operation operation
-    ) external {
+    ) external returns (uint256) {
+        uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
         require(execute(to, value, data, operation, gasleft()));
+        uint256 requiredGas = startGas - gasleft();
+        // Convert response to string and return via error message
+        revert(string(abi.encodePacked(requiredGas)));
     }
 
     /// @dev Returns hash to be signed by owner.
@@ -417,6 +445,7 @@ contract SmartAccountNoAuth is
                     _tx.targetTxGas,
                     refundInfo.baseGas,
                     refundInfo.gasPrice,
+                    refundInfo.tokenGasPriceFactor,
                     refundInfo.gasToken,
                     refundInfo.refundReceiver,
                     _nonce
@@ -436,16 +465,26 @@ contract SmartAccountNoAuth is
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
-    function execute(address dest, uint value, bytes calldata func) external {
+    function executeCall(
+        address dest,
+        uint256 value,
+        bytes calldata func
+    ) external {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
 
-    function executeBatch(address[] calldata dest, bytes[] calldata func) external {
+    function executeBatchCall(
+        address[] calldata dest,
+        uint256[] calldata value,
+        bytes[] calldata func
+    ) external {
         _requireFromEntryPointOrOwner();
-        require(dest.length == func.length, "wrong array lengths");
-        for (uint i = 0; i < dest.length;) {
-            _call(dest[i], 0, func[i]);
+        require(dest.length != 0, "empty array provided");
+        require(dest.length == value.length, "wrong array lengths");
+        require(value.length == func.length, "wrong array lengths");
+        for (uint256 i = 0; i < dest.length; ) {
+            _call(dest[i], value[i], func[i]);
             unchecked {
                 ++i;
             }
@@ -461,7 +500,7 @@ contract SmartAccountNoAuth is
             }
         }
     }
-    
+
     //called by entryPoint, only after validateUserOp succeeded.
     //@review
     //Method is updated to instruct delegate call and emit regular events
@@ -525,5 +564,7 @@ contract SmartAccountNoAuth is
     }
 
     // solhint-disable-next-line no-empty-blocks
-    receive() external payable {}
+    receive() external payable {
+        emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
+    }
 }
