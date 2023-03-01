@@ -33,7 +33,6 @@ contract SmartAccount is
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH = 0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
-    // review? if rename wallet to account is must
     // keccak256(
     //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
     // );
@@ -42,7 +41,7 @@ contract SmartAccount is
     // Owner storage
     address public owner;
 
-    // uint96 private _nonce; //changed to 2D nonce below
+    // changed to 2D nonce below
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
 
@@ -53,28 +52,32 @@ contract SmartAccount is
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
 
-    // review 
-    // mock constructor or use deinitializers
+    uint256 private immutable _chainId;
+
+    address private immutable _self;
+
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
     constructor(IEntryPoint anEntryPoint) {
+        _self = address(this);
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
+        _chainId = block.chainid;
     }
 
     
     // Events
     // EOA + Version tracking
-    event ImplementationUpdated(address indexed _scw, string version, address newImplementation);
-    event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
+    event ImplementationUpdated(address indexed _scw, string indexed version, address indexed newImplementation);
+    
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
-    event WalletHandlePayment(bytes32 txHash, uint256 payment);
-    event SmartAccountReceivedNativeToken(address indexed sender, uint256 value);
-    // nice to have
-    // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
+    event SmartAccountReceivedNativeToken(address indexed sender, uint256 indexed value);
+    event SmartAccountInitialized(address indexed _owner, address indexed _handler, string indexed _version, address _entryPoint);
+
     // todo
     // emit events like executedTransactionFromModule
     // emit events with whole information of execTransaction (ref Safe L2)
@@ -99,9 +102,14 @@ contract SmartAccount is
 
     // Setters
 
+    /**
+     * @dev Allows to change the owner of the smart account by current owner or self-call (modules) 
+     * @param _newOwner Address of the new signatory 
+     */
     function setOwner(address _newOwner) public mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
         require(_newOwner != address(this), "Smart Account:: new Signatory address cannot be self");
+        require(_newOwner != owner,"new Signatory address cannot be same as old one");
         address oldOwner = owner;
         owner = _newOwner;
         emit EOAChanged(address(this), oldOwner, _newOwner);
@@ -134,19 +142,21 @@ contract SmartAccount is
     function accountLogic() public pure returns (address) {
         return address(0);
     }
-
+    
+    /**
+     * @dev Returns the domain separator for this contract, as defined in the EIP-712 standard.
+     * @return bytes32 The domain separator hash.
+     */
     function domainSeparator() public view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), address(this)));
     }
 
-    /// @dev Returns the chain id used by this contract.
+    /**
+     * @notice Returns the ID of the chain the contract is currently deployed on.
+     * @return _chainId The ID of the current chain as a uint256.
+     */
     function getChainId() public view returns (uint256) {
-        uint256 id;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            id := chainid()
-        }
-        return id;
+        return _chainId;
     }
 
     //@review getNonce specific to EntryPoint requirements
@@ -161,7 +171,10 @@ contract SmartAccount is
         return nonces[batchId];
     }
 
-    // Standard interface for 1d nonces. Use it for Account Abstraction flow.
+    
+    /**
+     * @dev Standard interface for 1d nonces. Use it for Account Abstraction flow.
+     */
     function nonce() public view virtual override returns (uint256) {
         return nonces[0];
     }
@@ -172,20 +185,31 @@ contract SmartAccount is
         _; 
     }
 
+    /**
+     * return the entryPoint used by this account.
+     * subclass should return the current entryPoint used by this account.
+     */
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }
 
-    // init
-    // Initialize / Setup
-    // Used to setup
-    function init(address _owner, address _handler) public override { 
+    /**
+     * @dev Initialize the Smart Account with required states
+     * @param _owner Signatory of the Smart Account
+     * @param _handler Default fallback handler provided in Smart Account
+     * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
+     * @notice any further implementations that introduces a new state must have a reinit method
+     * @notice init is prevented here by setting owner in the constructor and checking here for address(0) 
+     */
+    function init(address _owner, address _handler) external override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
-        require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
         _setFallbackHandler(_handler);
-        setupModules(address(0), bytes(""));
+        address factory = msg.sender;
+        // can be emitted owner, entryPoint, VERSION, handler
+        emit SmartAccountInitialized(_owner,_handler,VERSION,address(_entryPoint));
+        _setupModules(address(0), bytes(""));
     }
 
     // @review: max and min use from Math.sol instead of re-implemented in the contracts
@@ -196,18 +220,19 @@ contract SmartAccount is
         return a >= b ? a : b;
     }
 
-    // review: batchId should be carefully designed or removed all together (including 2D nonces)
-    // Gnosis style transaction with optional repay in native tokens OR ERC20 
-    /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
-    /// Note: The fees are always transferred, even if the user transaction fails.
-    /// @param _tx Wallet transaction 
-    /// @param refundInfo Required information for gas refunds
-    /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
+    /**
+     * @dev Gnosis style transaction with optional repay in native tokens OR ERC20 
+     * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
+     * @notice The fees are always transferred, even if the user transaction fails.
+     * @param _tx Smart Account transaction 
+     * @param refundInfo Required information for gas refunds
+     * @param signatures Packed signature/s data ({bytes32 r}{bytes32 s}{uint8 v})
+     */
     function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public payable virtual override returns (bool success) {
+    ) external payable virtual override returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -239,19 +264,25 @@ contract SmartAccount is
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
-            uint256 payment = 0;
-            // uint256 extraGas;
+            uint256 payment;
             if (refundInfo.gasPrice > 0) {
-                //console.log("sent %s", startGas - gasleft());
-                // extraGas = gasleft();
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
-            // extraGas = extraGas - gasleft();
-            //console.log("extra gas %s ", extraGas);
         }
     }
 
+    /**
+     * @dev Handles the payment for a transaction refund from Smart Account to Relayer.
+     * @param gasUsed Gas used by the transaction.
+     * @param baseGas Gas costs that are independent of the transaction execution 
+     * (e.g. base transaction fee, signature check, payment of the refund, emitted events).
+     * @param gasPrice Gas price / TokenGasPrice (gas price in the context of token using offchain price feeds) 
+     * that should be used for the payment calculation.
+     * @param tokenGasPriceFactor factor by which calculated token gas price is already multiplied.
+     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
+     * @return payment The amount of payment made in the specified token.
+     */
     function handlePayment(
         uint256 gasUsed,
         uint256 baseGas,
@@ -260,7 +291,7 @@ contract SmartAccount is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
-        // uint256 startGas = gasleft();
+        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
         if (gasToken == address(0)) {
@@ -272,10 +303,21 @@ contract SmartAccount is
             payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
-        // uint256 requiredGas = startGas - gasleft();
-        //console.log("hp %s", requiredGas);
     }
-
+    
+    /**
+     * @dev Allows to estimate a transaction.
+     * @notice This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
+     * @notice Call this method to get an estimate of the handlePayment costs that are deducted with `execTransaction`
+     * @param gasUsed Gas used by the transaction.
+     * @param baseGas Gas costs that are independent of the transaction execution 
+     * (e.g. base transaction fee, signature check, payment of the refund, emitted events).
+     * @param gasPrice Gas price / TokenGasPrice (gas price in the context of token using offchain price feeds) 
+     * that should be used for the payment calculation.
+     * @param tokenGasPriceFactor factor by which calculated token gas price is already multiplied.
+     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
+     * @return requiredGas Estimate of refunds
+     */
     function handlePaymentRevert(
         uint256 gasUsed,
         uint256 baseGas,
@@ -283,22 +325,21 @@ contract SmartAccount is
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) external returns (uint256 payment) {
+    ) external returns (uint256 requiredGas) {
+        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
-            payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
+            uint256 payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
             (bool success,) = receiver.call{value: payment}("");
             require(success, "BSA011");
         } else {
-            payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
+            uint256 payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
             require(transferToken(gasToken, receiver, payment), "BSA012");
         }
-        uint256 requiredGas = startGas - gasleft();
-        //console.log("hpr %s", requiredGas);
-        // Convert response to string and return via error message
+        requiredGas = startGas - gasleft();
         revert(string(abi.encodePacked(requiredGas)));
     }
 
@@ -311,10 +352,11 @@ contract SmartAccount is
         bytes32 dataHash,
         bytes memory signatures
     ) public view virtual {
+        require(signatures.length >= 65, "Invalid signatures length");
         uint8 v;
         bytes32 r;
         bytes32 s;
-        uint256 i = 0;
+        uint256 i;
         address _signer;
         (v, r, s) = signatureSplit(signatures, i);
         //todo add the test case for contract signature
@@ -351,9 +393,9 @@ contract SmartAccount is
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
             // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
-            _signer = ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", dataHash)), v - 4, r, s);
+            (_signer, ) = dataHash.toEthSignedMessageHash().tryRecover(v - 4, r, s);
         } else {
-            _signer = ecrecover(dataHash, v, r, s);
+            (_signer, ) = dataHash.tryRecover(v, r, s);
         }
         require(_signer == owner, "INVALID_SIGNATURE");
     }
@@ -375,23 +417,25 @@ contract SmartAccount is
         uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
         require(execute(to, value, data, operation, gasleft()));
-        uint256 requiredGas = startGas - gasleft();
         // Convert response to string and return via error message
-        revert(string(abi.encodePacked(requiredGas)));
+        revert(string(abi.encodePacked(startGas - gasleft())));
     }
 
-    /// @dev Returns hash to be signed by owner.
-    /// @param to Destination address.
-    /// @param value Ether value.
-    /// @param data Data payload.
-    /// @param operation Operation type.
-    /// @param targetTxGas Fas that should be used for the safe transaction.
-    /// @param baseGas Gas costs for data used to trigger the safe transaction.
-    /// @param gasPrice Maximum gas price that should be used for this transaction.
-    /// @param gasToken Token address (or 0 if ETH) that is used for the payment.
-    /// @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
-    /// @param _nonce Transaction nonce.
-    /// @return Transaction hash.
+    /**
+     * @dev Returns hash to be signed by owner.
+     * @param to Destination address.
+     * @param value Ether value.
+     * @param data Data payload.
+     * @param operation Operation type.
+     * @param targetTxGas Fas that should be used for the internal Smart Account transaction.
+     * @param baseGas Additional Gas costs for data used to trigger the transaction.
+     * @param gasPrice Maximum gas price/ token gas price that should be used for this transaction.
+     * @param tokenGasPriceFactor factor by which calculated token gas price is already multiplied.
+     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
+     * @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
+     * @param _nonce Transaction nonce.
+     * @return Transaction hash.
+     */
     function getTransactionHash(
         address to,
         uint256 value,
@@ -449,23 +493,38 @@ contract SmartAccount is
                     _nonce
                 )
             );
-        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
+        return bytes.concat(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
     }
 
-    // Extra Utils 
+    /**
+     * @dev Utility method to be able to transfer native tokens out of Smart Account
+     * @notice only owner/ signatory of Smart Account with enough gas to spend can call this method
+     * @notice While enabling multisig module and renouncing ownership this will not work
+     * @param dest Destination address
+     * @param amount Amount of native tokens
+     */
     function transfer(address payable dest, uint256 amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
-        // @review: should we check isContract here?
-        // require(dest.isContract(), "INVALID_IMPLEMENTATION");
         (bool success, ) = dest.call{value: amount}("");
         require(success, "transfer failed");
     }
-
+    
+    /**
+     * @dev Utility method to be able to transfer ERC20 tokens out of Smart Account
+     * @notice only owner/ signatory of Smart Account with enough gas to spend can call this method
+     * @notice While enabling multisig module and renouncing ownership this will not work
+     * @param token Token address
+     * @param dest Destination/ Receiver address
+     * @param amount Amount of tokens
+     */
     function pullTokens(address token, address dest, uint256 amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
+    /**
+     * execute a transaction (called directly from owner, or by entryPoint)
+     */
     function executeCall(
         address dest,
         uint256 value,
@@ -474,7 +533,10 @@ contract SmartAccount is
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
-
+    
+    /**
+     * execute a sequence of transactions
+     */
     function executeBatchCall(
         address[] calldata dest,
         uint256[] calldata value,
@@ -491,8 +553,14 @@ contract SmartAccount is
             }
         }
     }
-
-    // AA implementation
+    
+    /**
+     * @dev internal method that fecilitates the extenral calls from SmartAccount
+     * @dev similar to execute() of Executor.sol
+     * @param target destination address contract/non-contract
+     * @param value amount of native tokens
+     * @param data function singature of destination 
+     */
     function _call(address target, uint256 value, bytes memory data) internal {
         (bool success, bytes memory result) = target.call{value : value}(data);
         if (!success) {
@@ -502,8 +570,7 @@ contract SmartAccount is
         }
     }
 
-    //called by entryPoint, only after validateUserOp succeeded.
-    //@review
+    //@todo marked for deletion
     //Method is updated to instruct delegate call and emit regular events
     function execFromEntryPoint(address dest, uint256 value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
         success = execute(dest, value, func, operation, gasLimit);
@@ -514,14 +581,18 @@ contract SmartAccount is
         require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
     }
 
-    /// implement template method of BaseAccount
-    // @notice Nonce space is locked to 0 for AA transactions
-    // userOp could have batchId as well
+
+    /** 
+     * @dev implement template method of BaseAccount
+     * @notice Nonce space is locked to 0 for AA transactions
+     */
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
         require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
-    /// implement template method of BaseAccount
+    /**
+     * @dev implement template method of BaseAccount
+     */
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
     internal override virtual returns (uint256 sigTimeRange) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
@@ -540,10 +611,10 @@ contract SmartAccount is
     /**
      * deposit more funds for this account in the entryPoint
      */
-    function addDeposit() public payable {
+    function addDeposit() external payable {
 
         (bool req,) = address(entryPoint()).call{value : msg.value}("");
-        require(req);
+        require(req,"Account deposit failed");
     }
 
     /**
@@ -551,7 +622,7 @@ contract SmartAccount is
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
+    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) external onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 
@@ -566,6 +637,7 @@ contract SmartAccount is
 
     // solhint-disable-next-line no-empty-blocks
     receive() external payable {
+        require(address(this) != _self, "only allowed via delegateCall");
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
 }

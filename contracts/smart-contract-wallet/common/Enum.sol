@@ -2,6 +2,6 @@
 pragma solidity 0.8.12;
 
 /// @title Enum - Collection of enums
-contract Enum {
+abstract contract Enum {
     enum Operation {Call, DelegateCall}
 }

@@ -90,6 +90,7 @@ contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient
         return
             interfaceId == type(IERC1155TokenReceiver).interfaceId ||
             interfaceId == type(IERC721TokenReceiver).interfaceId ||
+            interfaceId == type(IERC777TokensRecipient).interfaceId ||
             interfaceId == type(IERC165).interfaceId;
     }
 }

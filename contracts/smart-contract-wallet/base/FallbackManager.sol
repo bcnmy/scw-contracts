@@ -4,35 +4,11 @@ pragma solidity 0.8.12;
 import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 
 /// @title Fallback Manager - A contract that manages fallback calls made to this contract
-/// @author Richard Meissner - <richard@gnosis.pm>
 contract FallbackManager is SelfAuthorized {
-    event ChangedFallbackHandler(address previousHandler, address handler);
+    // keccak-256 hash of "fallback_manager.handler.address" subtracted by 1
+    bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT = 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d4;
 
-    // keccak256("fallback_manager.handler.address")
-    bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT = 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d5;
-
-    function _setFallbackHandler(address handler) internal {
-        bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            sstore(slot, handler)
-        }
-    }
-
-    /// @dev Allows to add a contract to handle fallback calls.
-    ///      Only fallback calls without value and with data will be forwarded.
-    ///      This can only be done via a Safe transaction.
-    /// @param handler contract to handle fallback calls.
-    function setFallbackHandler(address handler) public authorized {
-        // review - check if this is loading the correct slot, for previousHandler indexing
-        address previousHandler;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            previousHandler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
-        }
-        _setFallbackHandler(handler);
-        emit ChangedFallbackHandler(previousHandler, handler);
-    }
+    event ChangedFallbackHandler(address indexed previousHandler, address indexed handler);
 
     // solhint-disable-next-line payable-fallback,no-complex-fallback
     fallback() external {
@@ -54,6 +30,30 @@ contract FallbackManager is SelfAuthorized {
                 revert(0, returndatasize())
             }
             return(0, returndatasize())
+        }
+    }
+
+    /// @dev Allows to add a contract to handle fallback calls.
+    ///      Only fallback calls without value and with data will be forwarded.
+    ///      This can only be done via a Safe transaction.
+    /// @param handler contract to handle fallback calls.
+    function setFallbackHandler(address handler) public authorized {
+        // review - check if this is loading the correct slot, for previousHandler indexing
+        address previousHandler;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            previousHandler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
+        }
+        _setFallbackHandler(handler);
+        emit ChangedFallbackHandler(previousHandler, handler);
+    }
+
+    function _setFallbackHandler(address handler) internal {
+        require(handler != address(0), "Invalid Fallback Handler");
+        bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            sstore(slot, handler)
         }
     }
 
