@@ -249,7 +249,7 @@ contract SmartAccount3 is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
-        require(tokenGasPriceFactor != 0, "invalid stokenGasPriceFactor");
+        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -274,7 +274,7 @@ contract SmartAccount3 is
         address gasToken,
         address payable refundReceiver
     ) external returns (uint256 payment) {
-        require(tokenGasPriceFactor != 0, "invalid stokenGasPriceFactor");
+        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
