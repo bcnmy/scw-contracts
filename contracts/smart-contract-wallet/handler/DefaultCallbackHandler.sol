@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.12;
 
-import "../interfaces/IERC1155TokenReceiver.sol";
-import "../interfaces/IERC721TokenReceiver.sol";
-import "../interfaces/IERC777TokensRecipient.sol";
-import "../interfaces/IERC165.sol";
-import "../interfaces/ISignatureValidator.sol";
-import "../SmartAccount.sol";
+import {IERC1155TokenReceiver} from "../interfaces/IERC1155TokenReceiver.sol";
+import {IERC721TokenReceiver} from "../interfaces/IERC721TokenReceiver.sol";
+import {IERC777TokensRecipient} from "../interfaces/IERC777TokensRecipient.sol";
+import {IERC165} from "../interfaces/IERC165.sol";
+import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
+import {SmartAccount} from "../SmartAccount.sol";
 
 /// @title Default Callback Handler - returns true for known token callbacks
 /// @author Richard Meissner - <richard@gnosis.pm>

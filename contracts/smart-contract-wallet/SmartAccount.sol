@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./BaseSmartAccount.sol";
-import "./base/ModuleManager.sol";
-import "./base/FallbackManager.sol";
-import "./common/SignatureDecoder.sol";
-import "./common/SecuredTokenTransfer.sol";
-import "./libs/LibAddress.sol";
-import "./interfaces/ISignatureValidator.sol";
-import "./interfaces/IERC165.sol";
+import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccount.sol";
+import {ModuleManager} from "./base/ModuleManager.sol";
+import {FallbackManager} from "./base/FallbackManager.sol";
+import {SignatureDecoder} from "./common/SignatureDecoder.sol";
+import {SecuredTokenTransfer} from "./common/SecuredTokenTransfer.sol";
+import {LibAddress} from "./libs/LibAddress.sol";
+import {IERC165} from "./interfaces/IERC165.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
+import {ISignatureValidator, ISignatureValidatorConstants} from "./interfaces/ISignatureValidator.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract SmartAccount is 

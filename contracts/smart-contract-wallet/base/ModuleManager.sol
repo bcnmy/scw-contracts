@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.12;
 
-import "../common/SelfAuthorized.sol";
-import "./Executor.sol";
+import {SelfAuthorized} from "../common/SelfAuthorized.sol";
+import {Executor, Enum} from "./Executor.sol";
 
 /// @title Module Manager - A contract that manages modules that can execute transactions via this contract
 contract ModuleManager is SelfAuthorized, Executor {    
