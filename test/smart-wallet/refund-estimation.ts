@@ -319,34 +319,30 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     const dataEstimate = SmartAccount.interface.encodeFunctionData(
       "execTransaction",
-      [
-        transaction,
-        refundInfo,
-        signature,
-      ]
+      [transaction, refundInfo, signature]
     );
 
     const baseGasReal = txBaseCost(dataEstimate);
     console.log("a little over 21000 ", baseGasReal);
 
-    const tx = await userSCW.connect(accounts[1]).execTransaction(
-      transaction,
-      refundInfo,
-      signature,
-      {
+    const tx = await userSCW
+      .connect(accounts[1])
+      .execTransaction(transaction, refundInfo, signature, {
         gasPrice: 20000000000,
-      }
-    );
+      });
 
     const receipt = await tx.wait(1);
     console.log("gasPrice: ", tx.gasPrice);
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
-    const eventLogs = SmartAccount.interface.decodeEventLog(
+    /* const eventLogs = SmartAccount.interface.decodeEventLog(
       "WalletHandlePayment",
       receipt.logs[2].data
-    );
-    const paymentDeducted = eventLogs.payment.toNumber();
+    ); */
+    // eventLogs.payment.toNumber();
+    const paymentDeducted = ethers.BigNumber.from(
+      receipt.logs[2].topics[2]
+    ).toNumber();
     console.log("payment deducted ", paymentDeducted);
 
     const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);
@@ -507,35 +503,31 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     const dataEstimate = SmartAccount.interface.encodeFunctionData(
       "execTransaction",
-      [
-        transaction,
-        refundInfo,
-        signature,
-      ]
+      [transaction, refundInfo, signature]
     );
 
     const baseGasReal = txBaseCost(dataEstimate);
     console.log("a little over 21000 ", baseGasReal);
 
     // await expect(
-    const tx = await userSCW.connect(accounts[1]).execTransaction(
-      transaction,
-      refundInfo,
-      signature,
-      {
+    const tx = await userSCW
+      .connect(accounts[1])
+      .execTransaction(transaction, refundInfo, signature, {
         gasPrice: 20000000000,
-      }
-    );
+      });
 
     const receipt = await tx.wait(1);
     console.log("gasPrice: ", tx.gasPrice);
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
-    const eventLogs = SmartAccount.interface.decodeEventLog(
+    /* const eventLogs = SmartAccount.interface.decodeEventLog(
       "WalletHandlePayment",
       receipt.logs[3].data
-    );
-    const paymentDeducted = eventLogs.payment; // no of DAI tokens
+    ); */
+    // ventLogs.payment
+    const paymentDeducted = ethers.BigNumber.from(
+      receipt.logs[3].topics[2]
+    ).toNumber(); // no of DAI tokens
     console.log("tokens refund ", paymentDeducted);
 
     const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);

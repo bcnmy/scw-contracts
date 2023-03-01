@@ -32,7 +32,7 @@ library PaymasterHelpers {
     /**
      * @dev Decodes paymaster data assuming it follows PaymasterData
      */
-    function decodePaymasterData(UserOperation calldata op) internal pure returns (PaymasterData memory) {
+    function _decodePaymasterData(UserOperation calldata op) internal pure returns (PaymasterData memory) {
         bytes calldata paymasterAndData = op.paymasterAndData;
         (address paymasterId, bytes memory signature) = abi.decode(paymasterAndData[20:], (address, bytes));
         return PaymasterData(paymasterId, signature, signature.length);
@@ -41,7 +41,7 @@ library PaymasterHelpers {
     /**
      * @dev Decodes paymaster context assuming it follows PaymasterContext
      */
-    function decodePaymasterContext(bytes memory context) internal pure returns (PaymasterContext memory) {
+    function _decodePaymasterContext(bytes memory context) internal pure returns (PaymasterContext memory) {
         (address paymasterId) = abi.decode(context, (address));
         return PaymasterContext(paymasterId);
     }
