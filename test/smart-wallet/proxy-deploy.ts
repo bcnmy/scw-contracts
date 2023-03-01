@@ -28,20 +28,21 @@ describe("Wallet Deployment", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    const walletFactory = await WalletFactory.deploy(
-      baseImpl.address,
-      handler.address
-    );
+    const walletFactory = await WalletFactory.deploy();
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
     const expected = await walletFactory.getAddressForCounterfactualWallet(
+      baseImpl.address,
+      handler.address,
       owner,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
     const tx = await walletFactory.deployCounterFactualWallet(
+      baseImpl.address,
+      handler.address,
       owner,
       indexForSalt
     );
@@ -50,6 +51,6 @@ describe("Wallet Deployment", function () {
 
     /* await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
       .to.emit(walletFactory, "AccountCreation")
-      .withArgs(expected, baseImpl.address); */
+      .withArgs(expected, baseImpl.address, handler.address, owner, indexForSalt); */
   });
 });

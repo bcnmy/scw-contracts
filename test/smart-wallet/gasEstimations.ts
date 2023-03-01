@@ -127,10 +127,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const SmartAccountFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await SmartAccountFactory.deploy(
-      baseImpl.address,
-      handler.address
-    );
+    walletFactory = await SmartAccountFactory.deploy();
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -159,14 +156,29 @@ describe("Wallet tx gas estimations with and without refunds", function () {
   it("Should set the correct states on proxy", async function () {
     const indexForSalt = 0;
     const expected = await walletFactory.getAddressForCounterfactualWallet(
+      baseImpl.address,
+      handler.address,
       owner,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
+    await expect(
+      walletFactory.deployCounterFactualWallet(
+        baseImpl.address,
+        handler.address,
+        owner,
+        indexForSalt
+      )
+    )
       .to.emit(walletFactory, "AccountCreation")
-      .withArgs(expected, baseImpl.address);
+      .withArgs(
+        expected,
+        baseImpl.address,
+        handler.address,
+        owner,
+        indexForSalt
+      );
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -280,11 +292,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     );
 
     // await expect(
-    const txn = await userSCW.connect(accounts[0]).execTransaction(
-      transaction,
-      refundInfo,
-      signature
-    );
+    const txn = await userSCW
+      .connect(accounts[0])
+      .execTransaction(transaction, refundInfo, signature);
 
     const receipt = await txn.wait(1);
     console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
@@ -435,11 +445,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       console.log(refundInfo);
 
       // await expect(
-      const tx = await userSCW.connect(accounts[1]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      );
+      const tx = await userSCW
+        .connect(accounts[1])
+        .execTransaction(transaction, refundInfo, signature);
 
       const receipt = await tx.wait(1);
       console.log("gasPrice: ", tx.gasPrice);
@@ -593,11 +601,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
       console.log(refundInfo);
 
-      const tx = await userSCW.connect(accounts[1]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      );
+      const tx = await userSCW
+        .connect(accounts[1])
+        .execTransaction(transaction, refundInfo, signature);
 
       const receipt = await tx.wait(1);
       console.log("gasPrice: ", tx.gasPrice);

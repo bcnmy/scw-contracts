@@ -29,14 +29,13 @@ describe("Proxy Deployment", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    const walletFactory = await WalletFactory.deploy(
-      baseImpl.address,
-      handler.address
-    );
+    const walletFactory = await WalletFactory.deploy();
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
     const expected = await walletFactory.getAddressForCounterfactualWallet(
+      baseImpl.address,
+      handler.address,
       owner,
       indexForSalt
     );
@@ -49,9 +48,22 @@ describe("Proxy Deployment", function () {
     const receipt = await tx.wait();
     console.log("smart account deployment gas ", receipt.gasUsed.toNumber()); */
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
+    await expect(
+      walletFactory.deployCounterFactualWallet(
+        baseImpl.address,
+        handler.address,
+        owner,
+        indexForSalt
+      )
+    )
       .to.emit(walletFactory, "AccountCreation")
-      .withArgs(expected, baseImpl.address);
+      .withArgs(
+        expected,
+        baseImpl.address,
+        handler.address,
+        owner,
+        indexForSalt
+      );
 
     const userSCW: any = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",

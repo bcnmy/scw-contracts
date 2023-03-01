@@ -77,10 +77,7 @@ describe("Upgradeability", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy(
-      baseImpl.address,
-      handler.address
-    );
+    walletFactory = await WalletFactory.deploy();
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -103,14 +100,23 @@ describe("Upgradeability", function () {
 
   it("Should deploy a wallet and validate entrypoint", async function () {
     const expected = await walletFactory.getAddressForCounterfactualWallet(
+      baseImpl.address,
+      handler.address,
       owner,
       0
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, 0))
+    await expect(
+      walletFactory.deployCounterFactualWallet(
+        baseImpl.address,
+        handler.address,
+        owner,
+        0
+      )
+    )
       .to.emit(walletFactory, "AccountCreation")
-      .withArgs(expected, baseImpl.address);
+      .withArgs(expected, baseImpl.address, handler.address, owner, 0);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
