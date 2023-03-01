@@ -10,7 +10,7 @@ import {LibAddress} from "./libs/LibAddress.sol";
 import {IERC165} from "./interfaces/IERC165.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
 import {ISignatureValidator, ISignatureValidatorConstants} from "./interfaces/ISignatureValidator.sol";
-import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract SmartAccount is 
      BaseSmartAccount,
