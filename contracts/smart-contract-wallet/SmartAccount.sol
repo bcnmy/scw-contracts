@@ -222,12 +222,9 @@ contract SmartAccount is
                     // Signature info
                     nonces[1]++
                 );
-            // Execute transaction.
             txHash = keccak256(txHashData);
-
             checkSignatures(txHash, signatures);
         }
-
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
@@ -385,12 +382,10 @@ contract SmartAccount is
         uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
         if(!execute(to, value, data, operation, gasleft())) revert ExecutionFailed();
-        uint256 requiredGas;
-        unchecked { 
-            requiredGas = startGas - gasleft();
-        }
         // Convert response to string and return via error message
-        revert(string(abi.encodePacked(requiredGas)));
+        unchecked { 
+            revert(string(abi.encodePacked(startGas - gasleft())));
+        }
     }
 
     /// @dev Returns hash to be signed by owner.
@@ -542,7 +537,6 @@ contract SmartAccount is
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
-        return 0;
     }
 
     /**
