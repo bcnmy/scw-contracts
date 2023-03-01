@@ -28,7 +28,7 @@ contract SmartAccountNoAuth is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.4"; // aa 0.4.0 rebase
+    bytes32 public constant VERSION = "1.0.4"; // aa 0.4.0 rebase
 
     // Domain Seperators
     // keccak256(
@@ -67,7 +67,7 @@ contract SmartAccountNoAuth is
     
     // Events
     // EOA + Version tracking
-    event ImplementationUpdated(address _scw, string version, address newImplementation);
+    event ImplementationUpdated(address _scw, bytes32 version, address newImplementation);
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
     event WalletHandlePayment(bytes32 txHash, uint256 payment);

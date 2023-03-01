@@ -15,10 +15,10 @@ contract SmartAccountFactory {
     // defaultFallbackHandler changes = version update only in factory?!
 
     // should be needed to emit from accountLogic : SmartAccountInitialized
-    // string public constant VERSION = "1.0.4";
+    // bytes32 public constant VERSION = "1.0.4";
 
     // Review event
-    // event SmartAccountCreated(address indexed _proxy, address indexed _implementation, address indexed _owner, string version, uint256 _index);
+    // event SmartAccountCreated(address indexed _proxy, address indexed _implementation, address indexed _owner, bytes32 version, uint256 _index);
 
      event AccountCreation(address indexed account, address indexed accountLogic);
 
