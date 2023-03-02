@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./SmartAccount.sol";
+import "../../SmartAccount.sol";
 import "hardhat/console.sol";
 
 
@@ -22,14 +22,14 @@ contract SmartAccount2 is SmartAccount {
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
-        _disableInitializers();
+        // _chainId = block.chainid;
     }
 
-      function execTransaction(
+    function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public payable virtual override returns (bool success) {
+    ) public payable override returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -45,7 +45,8 @@ contract SmartAccount2 is SmartAccount {
                 );
             // Execute transaction.
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, txHashData, signatures);
+            console.log("batchId used is 1");
+            checkSignatures(txHash, signatures);
         }
 
 
@@ -61,18 +62,12 @@ contract SmartAccount2 is SmartAccount {
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
-            uint256 payment = 0;
-            // uint256 extraGas;
+            uint256 payment;
             if (refundInfo.gasPrice > 0) {
-                //console.log("sent %s", startGas - gasleft());
-                // extraGas = gasleft();
                 payment = handlePaymentV2(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
             console.log("goes from v2");
-            // console.log("entrypoint address is %s", entryPoint());
-            // extraGas = extraGas - gasleft();
-            //console.log("extra gas %s ", extraGas);
         }
     }
 
@@ -83,7 +78,8 @@ contract SmartAccount2 is SmartAccount {
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) private nonReentrant returns (uint256 payment) {
+    ) private returns (uint256 payment) {
+        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -99,5 +95,5 @@ contract SmartAccount2 is SmartAccount {
         // uint256 requiredGas = startGas - gasleft();
         //console.log("hp %s", requiredGas);
     }
-
 } 
+    

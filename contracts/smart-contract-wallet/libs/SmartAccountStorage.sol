@@ -8,18 +8,13 @@ contract SmartAccountStorage {
     // ModuleManager storage
     mapping(address => address) internal modules;
 
-    // Initializable
-    // Most probably will be removed in the further branches
-    uint8 internal _initialized;
-    bool internal _initializing;
+    uint256[24] private __moduleManagerGap;
 
-    // ReentrancyGuardUpgradeable 
-    // Most probably will be removed in the further branches
-    uint256 internal _status;
-    uint256[49] internal __gap;
+    uint256[24] private __fallbackManagerGap;
 
     // Smart Account Storage
     address internal owner;
+
     mapping(uint256 => uint256) internal nonces;
     mapping(bytes32 => uint256) internal signedMessages;
 }
