@@ -123,10 +123,7 @@ describe("Base Wallet Functionality", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy(
-      baseImpl.address,
-      handler.address
-    );
+    walletFactory = await WalletFactory.deploy();
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -146,9 +143,19 @@ describe("Base Wallet Functionality", function () {
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
 
-    await walletFactory.deployCounterFactualWallet(walletOwnerAddress, 0);
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
+    const implIface = BaseImplementation.interface;
+    const initializer = implIface.encodeFunctionData("init", [
       walletOwnerAddress,
+      handler.address,
+    ]);
+    await walletFactory.deployCounterFactualWallet(
+      baseImpl.address,
+      initializer,
+      0
+    );
+    const expected = await walletFactory.getAddressForCounterfactualWallet(
+      baseImpl.address,
+      initializer,
       0
     );
 

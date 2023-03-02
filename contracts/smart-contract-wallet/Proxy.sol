@@ -5,10 +5,6 @@ pragma solidity 0.8.12;
  * @title Proxy // This is the user's wallet
  * @notice Basic proxy that delegates all calls to a fixed implementing contract.
  */
- interface IProxy {
-    function accountLogic() external view returns (address);
-}
-
 contract Proxy {
     // no fixed address(0) storage slot
     // address internal singleton;
@@ -21,16 +17,18 @@ contract Proxy {
          }
     }
 
+    function getImplementation() external view returns (address _implementation) {
+         // solhint-disable-next-line no-inline-assembly
+         assembly {
+             _implementation := sload(address())
+         }
+    }
+
     fallback() external payable {
         address target;
         // solhint-disable-next-line no-inline-assembly
         assembly {
             target := sload(address())
-            // 0xee9118f7 == keccak("accountLogic()"). The value is right padded to 32-bytes with 0s
-            if eq(calldataload(0), 0xee9118f700000000000000000000000000000000000000000000000000000000) {
-                mstore(0, target)
-                return(0, 0x20)
-            }
             calldatacopy(0, 0, calldatasize())
             let result := delegatecall(gas(), target, 0, calldatasize(), 0, 0)
             returndatacopy(0, 0, returndatasize())

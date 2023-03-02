@@ -132,6 +132,7 @@ contract SmartAccount is
              sstore(address(),_implementation) 
          }
         // EOA + Version tracking
+        // review here the second argument it emits is: VERSION upgraded from but not the VERSION it's upgraded to
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 

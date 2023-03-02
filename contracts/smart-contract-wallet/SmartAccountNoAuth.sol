@@ -70,6 +70,7 @@ contract SmartAccountNoAuth is
     
     // Events
     // EOA + Version tracking
+    // Review when you keep it bytes32 it doesn't match with string value in testCase emit.withArgs
     event ImplementationUpdated(address indexed _scw, string indexed version, address indexed newImplementation);
     
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);

@@ -132,12 +132,6 @@ contract SmartAccount5 is
     }
 
     // Getters
-    
-    // @review: test case aid
-    // perhaps marked for deletion
-    function accountLogic() public pure returns (address) {
-        return address(0);
-    }
 
     function domainSeparator() public view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), this));
