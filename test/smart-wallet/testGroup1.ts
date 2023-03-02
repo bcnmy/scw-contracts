@@ -83,10 +83,7 @@ describe("Base Wallet Functionality", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy(
-      baseImpl.address,
-      handler.address
-    );
+    walletFactory = await WalletFactory.deploy();
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -110,15 +107,27 @@ describe("Base Wallet Functionality", function () {
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
     const indexForSalt = 0;
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+    const initializer = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [owner, handler.address]
+    );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      owner,
+      baseImpl.address,
+      initializer,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
+    await expect(
+      walletFactory.deployCounterFactualWallet(
+        baseImpl.address,
+        initializer,
+        indexForSalt
+      )
+    )
       .to.emit(walletFactory, "AccountCreation")
-      .withArgs(expected, baseImpl.address);
+      .withArgs(expected, baseImpl.address, initializer, indexForSalt);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",

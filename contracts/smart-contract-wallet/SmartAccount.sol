@@ -126,17 +126,12 @@ contract SmartAccount is
              sstore(address(),_implementation) 
          }
         // EOA + Version tracking
+        // review here the second argument it emits is: VERSION upgraded from but not the VERSION it's upgraded to
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
     // Getters
     
-    // @review: test case aid
-    // perhaps marked for deletion
-    function accountLogic() public pure returns (address) {
-        return address(0);
-    }
-
     function domainSeparator() public view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), this));
     }
