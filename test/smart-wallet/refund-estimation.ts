@@ -344,11 +344,14 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("gasPrice: ", tx.gasPrice);
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
-    const eventLogs = SmartAccount.interface.decodeEventLog(
+    /* const eventLogs = SmartAccount.interface.decodeEventLog(
       "WalletHandlePayment",
       receipt.logs[2].data
-    );
-    const paymentDeducted = eventLogs.payment.toNumber();
+    ); */
+    // eventLogs.payment.toNumber();
+    const paymentDeducted = ethers.BigNumber.from(
+      receipt.logs[2].topics[2]
+    ).toNumber();
     console.log("payment deducted ", paymentDeducted);
 
     const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);
@@ -526,11 +529,14 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("gasPrice: ", tx.gasPrice);
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
-    const eventLogs = SmartAccount.interface.decodeEventLog(
+    /* const eventLogs = SmartAccount.interface.decodeEventLog(
       "WalletHandlePayment",
       receipt.logs[3].data
-    );
-    const paymentDeducted = eventLogs.payment; // no of DAI tokens
+    ); */
+    // ventLogs.payment
+    const paymentDeducted = ethers.BigNumber.from(
+      receipt.logs[3].topics[2]
+    ).toNumber(); // no of DAI tokens
     console.log("tokens refund ", paymentDeducted);
 
     const gasFees = receipt.gasUsed.mul(receipt.effectiveGasPrice);

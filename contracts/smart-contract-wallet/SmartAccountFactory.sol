@@ -83,7 +83,12 @@ contract SmartAccountFactory {
        bytes memory code = abi.encodePacked(type(Proxy).creationCode, uint256(uint160(_implementation)));
        bytes32 salt = keccak256(abi.encodePacked(initializer, address(uint160(_index))));
        bytes32 hash = keccak256(abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code)));
-        _wallet = address(uint160(uint(hash)));
+        _wallet = address(uint160(uint256(hash)));
+    }
+
+    /// @dev Allows to retrieve the creation code used for the Proxy deployment.
+    function accountCreationCode() public pure returns (bytes memory) {
+        return type(Proxy).creationCode;
     }
 
     // off-chain calculation

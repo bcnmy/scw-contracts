@@ -51,6 +51,8 @@ contract MaliciousAccount is
     // AA storage
     IEntryPoint private immutable _entryPoint;
 
+    uint256 public immutable _chainId;
+
     constructor(IEntryPoint anEntryPoint) {
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
@@ -58,22 +60,21 @@ contract MaliciousAccount is
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
+        _chainId = block.chainid;
     }
 
     
     // Events
     // EOA + Version tracking
-    event ImplementationUpdated(address _scw, string version, address newImplementation);
-    event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
+    event ImplementationUpdated(address indexed _scw, string indexed version, address indexed newImplementation);
+    
     event EOAChanged(address indexed _scw, address indexed _oldEOA, address indexed _newEOA);
-    event WalletHandlePayment(bytes32 txHash, uint256 payment);
-    // nice to have
-    // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
 
     // modifiers
     // onlyOwner
     /**
-     * @notice Throws if the sender is not an the owner.
+     * @notice Throws error if the sender is not an owner.
      */
     modifier onlyOwner {
         require(msg.sender == owner, "Smart Account:: Sender is not authorized");
@@ -104,7 +105,7 @@ contract MaliciousAccount is
 
     // Setters
 
-    function setOwner(address _newOwner) external mixedAuth {
+    function setOwner(address _newOwner) public mixedAuth {
         require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
         address oldOwner = owner;
         owner = _newOwner;
@@ -128,17 +129,12 @@ contract MaliciousAccount is
     // Getters
 
     function domainSeparator() public view returns (bytes32) {
-        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), this));
+        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), address(this)));
     }
 
     /// @dev Returns the chain id used by this contract.
     function getChainId() public view returns (uint256) {
-        uint256 id;
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            id := chainid()
-        }
-        return id;
+        return _chainId;
     }
 
     //@review getNonce specific to EntryPoint requirements
@@ -155,13 +151,12 @@ contract MaliciousAccount is
 
 
     // init
-    function init(address _owner, address _handler) public override { 
+    function init(address _owner, address _handler) external override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
-        require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
         _setFallbackHandler(_handler);
-        setupModules(address(0), bytes(""));
+        _setupModules(address(0), bytes(""));
     }
 
     /**
@@ -181,11 +176,8 @@ contract MaliciousAccount is
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public payable virtual override returns (bool success) {
-        // initial gas = 21k + non_zero_bytes * 16 + zero_bytes * 4
-        //            ~= 21k + calldata.length * [1/3 * 16 + 2/3 * 4]
-        uint256 startGas = gasleft() + 21000 + msg.data.length * 8;
-        //console.log("init %s", 21000 + msg.data.length * 8);
+    ) external payable virtual override returns (bool success) {
+        uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -215,7 +207,7 @@ contract MaliciousAccount is
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
-            uint256 payment = 0;
+            uint256 payment;
             // uint256 extraGas;
             if (refundInfo.gasPrice > 0) {
                 //console.log("sent %s", startGas - gasleft());
@@ -236,6 +228,7 @@ contract MaliciousAccount is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
+        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -260,6 +253,7 @@ contract MaliciousAccount is
         address gasToken,
         address payable refundReceiver
     ) external returns (uint256 payment) {
+        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -291,7 +285,7 @@ contract MaliciousAccount is
         uint8 v;
         bytes32 r;
         bytes32 s;
-        uint256 i = 0;
+        uint256 i;
         address _signer;
         (v, r, s) = signatureSplit(signatures, i);
         //review
@@ -328,12 +322,11 @@ contract MaliciousAccount is
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
             // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
-            _signer = ecrecover(keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n32", dataHash)), v - 4, r, s);
-            require(_signer == owner, "INVALID_SIGNATURE");
+            (_signer, ) = dataHash.toEthSignedMessageHash().tryRecover(v - 4, r, s);
         } else {
-            _signer = ecrecover(dataHash, v, r, s);
-            require(_signer == owner, "INVALID_SIGNATURE");
+            (_signer, ) = dataHash.tryRecover(v, r, s);
         }
+        require(_signer == owner, "INVALID_SIGNATURE");
     }
 
     /// @dev Allows to estimate a transaction.
@@ -410,7 +403,7 @@ contract MaliciousAccount is
         FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
-        bytes32 safeTxHash =
+        bytes32 walletTxHash =
             keccak256(
                 abi.encode(
                     ACCOUNT_TX_TYPEHASH,
@@ -426,11 +419,11 @@ contract MaliciousAccount is
                     _nonce
                 )
             );
-        return abi.encodePacked(bytes1(0x19), bytes1(0x01), domainSeparator(), safeTxHash);
+        return bytes.concat(bytes1(0x19), bytes1(0x01), domainSeparator(), walletTxHash);
     }
 
     // Extra Utils 
-    function transfer(address payable dest, uint amount) external onlyOwner {
+    function transfer(address payable dest, uint256 amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
         (bool success,) = dest.call{value:amount}("");
         require(success,"transfer failed");
@@ -440,7 +433,7 @@ contract MaliciousAccount is
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
-    function execute(address dest, uint value, bytes calldata func) external {
+    function execute(address dest, uint256 value, bytes calldata func) external {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
@@ -448,7 +441,7 @@ contract MaliciousAccount is
     function executeBatch(address[] calldata dest, bytes[] calldata func) external {
         _requireFromEntryPointOrOwner();
         require(dest.length == func.length, "wrong array lengths");
-        for (uint i = 0; i < dest.length;) {
+        for (uint256 i = 0; i < dest.length;) {
             _call(dest[i], 0, func[i]);
             unchecked {
                 ++i;
@@ -469,7 +462,7 @@ contract MaliciousAccount is
     //called by entryPoint, only after validateUserOp succeeded.
     //@review
     //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(address dest, uint value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
+    function execFromEntryPoint(address dest, uint256 value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
         success = execute(dest, value, func, operation, gasLimit);
         require(success, "Userop Failed");
     }
@@ -486,7 +479,7 @@ contract MaliciousAccount is
         //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
 
         // bytes calldata userOpData = userOp.callData;
-        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // (address _to, uint256 _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint256, bytes));
         // if(address(modules[_to]) != address(0)) return;
     }
 
@@ -494,7 +487,7 @@ contract MaliciousAccount is
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
     internal override virtual returns (uint256 deadline) {
         // bytes calldata userOpData = userOp.callData;
-        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
+        // (address _to, uint256 _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint256, bytes));
         // if(address(modules[_to]) != address(0)) return 0;
 
         bytes32 hash = userOpHash.toEthSignedMessageHash();
@@ -516,10 +509,10 @@ contract MaliciousAccount is
     /**
      * deposit more funds for this account in the entryPoint
      */
-    function addDeposit() public payable {
+    function addDeposit() external payable {
 
         (bool req,) = address(entryPoint()).call{value : msg.value}("");
-        require(req);
+        require(req,"Account deposit failed");
     }
 
     /**
@@ -527,7 +520,7 @@ contract MaliciousAccount is
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public onlyOwner {
+    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) external onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 

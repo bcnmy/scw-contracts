@@ -22,6 +22,7 @@ contract SmartAccount2 is SmartAccount {
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
+        // _chainId = block.chainid;
     }
 
     function execTransaction(
@@ -61,17 +62,12 @@ contract SmartAccount2 is SmartAccount {
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
             require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
-            uint256 payment = 0;
-            // uint256 extraGas;
+            uint256 payment;
             if (refundInfo.gasPrice > 0) {
-                //console.log("sent %s", startGas - gasleft());
-                // extraGas = gasleft();
                 payment = handlePaymentV2(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
             console.log("goes from v2");
-            // extraGas = extraGas - gasleft();
-            //console.log("extra gas %s ", extraGas);
         }
     }
 
@@ -83,6 +79,7 @@ contract SmartAccount2 is SmartAccount {
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
+        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;

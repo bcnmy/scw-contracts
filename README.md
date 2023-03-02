@@ -105,10 +105,9 @@ MultiSend functionality but reverts if a transaction tries to do delegatecall
  contracts/smart-contract-wallet/SmartAccountFactory.sol
  contracts/smart-contract-wallet/base/Executor.sol
  contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol
- contracts/smart-contract-wallet/interfaces/ERC1155TokenReceiver.sol
- contracts/smart-contract-wallet/interfaces/ERC721TokenReceiver.sol
- contracts/smart-contract-wallet/interfaces/ERC777TokensRecipient.sol
- contracts/smart-contract-wallet/interfaces/IERC1271Wallet.sol
+ contracts/smart-contract-wallet/interfaces/IERC1155TokenReceiver.sol
+ contracts/smart-contract-wallet/interfaces/IERC721TokenReceiver.sol
+ contracts/smart-contract-wallet/interfaces/IERC777TokensRecipient.sol
  contracts/smart-contract-wallet/libs/LibAddress.sol
  contracts/smart-contract-wallet/libs/Math.sol
  contracts/smart-contract-wallet/libs/MultiSend.sol

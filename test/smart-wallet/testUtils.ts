@@ -126,7 +126,7 @@ export function callDataCost(data: string): number {
 
 export const Erc20 = [
   "function transfer(address _receiver, uint256 _value) public returns (bool success)",
-  "function transferFrom(address, address, uint) public returns (bool)",
+  "function transferFrom(address, address, uint256) public returns (bool)",
   "function approve(address _spender, uint256 _value) public returns (bool success)",
   "function allowance(address _owner, address _spender) public view returns (uint256 remaining)",
   "function balanceOf(address _owner) public view returns (uint256 balance)",
@@ -136,10 +136,12 @@ export const Erc20 = [
 export const Erc20Interface = new ethers.utils.Interface(Erc20);
 
 export const SignMessageLib = [
-  "function signMessage(bytes calldata _data) external"
+  "function signMessage(bytes calldata _data) external",
 ];
 
-export const SignMessageLibInterface = new ethers.utils.Interface(SignMessageLib);
+export const SignMessageLibInterface = new ethers.utils.Interface(
+  SignMessageLib
+);
 
 export const encodeTransfer = (
   target: string,
@@ -160,8 +162,6 @@ export const encodeTransferFrom = (
   ]);
 };
 
-export const encodeSignMessage = (
-  data: string
-): string => {
+export const encodeSignMessage = (data: string): string => {
   return SignMessageLibInterface.encodeFunctionData("signMessage", [data]);
-} 
+};

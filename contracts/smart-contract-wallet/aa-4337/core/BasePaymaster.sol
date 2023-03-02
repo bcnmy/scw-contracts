@@ -22,6 +22,9 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
     }
 
     function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
+        // review - 0 address check required?
+        require(address(_entryPoint) != address(0), "entryPoint cannot be 0");
+        // also missing events? setSigner have the event
         entryPoint = _entryPoint;
     }
 
