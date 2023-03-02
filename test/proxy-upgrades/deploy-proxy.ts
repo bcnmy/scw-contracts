@@ -33,16 +33,22 @@ describe("Proxy Deployment", function () {
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
+    const implIface = SmartWallet.interface;
+    const initializer = implIface.encodeFunctionData("init", [
+      owner,
+      handler.address,
+    ]);
+
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       baseImpl.address,
-      handler.address,
-      owner,
+      initializer,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
     /* const tx = await walletFactory.deployCounterFactualWallet(
-      owner,
+      baseImpl.address,
+      initializer,
       indexForSalt
     );
     const receipt = await tx.wait();
@@ -51,19 +57,12 @@ describe("Proxy Deployment", function () {
     await expect(
       walletFactory.deployCounterFactualWallet(
         baseImpl.address,
-        handler.address,
-        owner,
+        initializer,
         indexForSalt
       )
     )
       .to.emit(walletFactory, "AccountCreation")
-      .withArgs(
-        expected,
-        baseImpl.address,
-        handler.address,
-        owner,
-        indexForSalt
-      );
+      .withArgs(expected, baseImpl.address, initializer, indexForSalt);
 
     const userSCW: any = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",

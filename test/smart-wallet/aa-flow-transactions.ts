@@ -125,16 +125,19 @@ describe("Account Functionality: 4337", function () {
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
 
+    const initializer = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [walletOwnerAddress, handler.address]
+    );
+
     await walletFactory.deployCounterFactualWallet(
       baseImpl.address,
-      handler.address,
-      walletOwnerAddress,
+      initializer,
       0
     );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       baseImpl.address,
-      handler.address,
-      walletOwnerAddress,
+      initializer,
       0
     );
 

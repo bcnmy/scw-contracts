@@ -110,24 +110,23 @@ describe("Upgradeability", function () {
 
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+    const initializer = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [owner, handler.address]
+    );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       baseImpl.address,
-      handler.address,
-      owner,
+      initializer,
       0
     );
     console.log("deploying new wallet..expected address: ", expected);
 
     await expect(
-      walletFactory.deployCounterFactualWallet(
-        baseImpl.address,
-        handler.address,
-        owner,
-        0
-      )
+      walletFactory.deployCounterFactualWallet(baseImpl.address, initializer, 0)
     )
       .to.emit(walletFactory, "AccountCreation")
-      .withArgs(expected, baseImpl.address, handler.address, owner, 0);
+      .withArgs(expected, baseImpl.address, initializer, 0);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",

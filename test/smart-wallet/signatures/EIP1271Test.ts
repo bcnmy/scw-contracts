@@ -115,21 +115,23 @@ describe("EIP-1271 Signatures Tests", function () {
 
     const deployWalletIndex = 0;
 
-    // console.log("Owner of Signer Smart Account is ", owner);
+    const initializer = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [owner, handler.address]
+    );
 
+    // console.log("Owner of Signer Smart Account is ", owner);
     // Deploy Signer Smart Account owned by Owner
     const signerSmartAccountAddress =
       await walletFactory.getAddressForCounterfactualWallet(
         baseImpl.address,
-        handler.address,
-        owner,
+        initializer,
         deployWalletIndex
       );
 
     await walletFactory.deployCounterFactualWallet(
       baseImpl.address,
-      handler.address,
-      owner,
+      initializer,
       deployWalletIndex
     );
 
@@ -138,19 +140,22 @@ describe("EIP-1271 Signatures Tests", function () {
       signerSmartAccountAddress
     );
 
+    const initializer2 = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [signerSmartAccountAddress, handler.address]
+    );
+
     // Deploy Main Smart Account owned by SignerSmartAccount
     const mainSmartAccountAddress =
       await walletFactory.getAddressForCounterfactualWallet(
         baseImpl.address,
-        handler.address,
-        signerSmartAccountAddress,
+        initializer2,
         deployWalletIndex
       );
 
     await walletFactory.deployCounterFactualWallet(
       baseImpl.address,
-      handler.address,
-      signerSmartAccountAddress,
+      initializer2,
       deployWalletIndex
     );
 
@@ -350,20 +355,23 @@ describe("EIP-1271 Signatures Tests", function () {
 
   it("Wont let the transaction to go through with manipulated signer contract address", async function () {
     const deployWalletIndex = 1;
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+    const initializer = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [owner, handler.address]
+    );
 
     // Deploy Signer Smart Account 2 owned by Owner
     const signerSmartAccount2Address =
       await walletFactory.getAddressForCounterfactualWallet(
         baseImpl.address,
-        handler.address,
-        owner,
+        initializer,
         deployWalletIndex
       );
 
     await walletFactory.deployCounterFactualWallet(
       baseImpl.address,
-      handler.address,
-      owner,
+      initializer,
       deployWalletIndex
     );
 
@@ -372,19 +380,22 @@ describe("EIP-1271 Signatures Tests", function () {
       signerSmartAccount2Address
     );
 
+    const initializer2 = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [signerSmartAccount2Address, handler.address]
+    );
+
     // Deploy Main Smart Account 2 owned by SignerSmartAccount 2
     const mainSmartAccount2Address =
       await walletFactory.getAddressForCounterfactualWallet(
         baseImpl.address,
-        handler.address,
-        signerSmartAccount2Address,
+        initializer2,
         deployWalletIndex
       );
 
     await walletFactory.deployCounterFactualWallet(
       baseImpl.address,
-      handler.address,
-      signerSmartAccount2Address,
+      initializer2,
       deployWalletIndex
     );
 
@@ -520,6 +531,7 @@ describe("EIP-1271 Signatures Tests", function () {
 
   it("0x exploit 1271 | Reverts if isValidSignature changes the state", async function () {
     const deployWalletIndex = 0;
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
 
     const source = `
             contract Test {
@@ -539,19 +551,22 @@ describe("EIP-1271 Signatures Tests", function () {
     const testValidator = await deployContract(accounts[0], source);
     await testValidator.shouldChangeState(true);
 
+    const initializer = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [testValidator.address, handler.address]
+    );
+
     // Deploy Main Smart Account 2 owned by testValidator
     const mainSmartAccount2Address =
       await walletFactory.getAddressForCounterfactualWallet(
         baseImpl.address,
-        handler.address,
-        testValidator.address,
+        initializer,
         deployWalletIndex
       );
 
     await walletFactory.deployCounterFactualWallet(
       baseImpl.address,
-      handler.address,
-      testValidator.address,
+      initializer,
       deployWalletIndex
     );
 

@@ -83,16 +83,20 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
 
     walletFactory = await new SmartAccountFactory__factory(deployer).deploy();
 
+    const implIface = smartWalletImp.interface;
+    const initializer = implIface.encodeFunctionData("init", [
+      walletOwnerAddress,
+      callBackHandler.address,
+    ]);
+
     await walletFactory.deployCounterFactualWallet(
       smartWalletImp.address,
-      callBackHandler.address,
-      walletOwnerAddress,
+      initializer,
       0
     );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       smartWalletImp.address,
-      callBackHandler.address,
-      walletOwnerAddress,
+      initializer,
       0
     );
 

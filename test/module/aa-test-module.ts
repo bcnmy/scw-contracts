@@ -143,16 +143,19 @@ describe("Base Wallet Functionality", function () {
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
 
+    const implIface = BaseImplementation.interface;
+    const initializer = implIface.encodeFunctionData("init", [
+      walletOwnerAddress,
+      handler.address,
+    ]);
     await walletFactory.deployCounterFactualWallet(
       baseImpl.address,
-      handler.address,
-      walletOwnerAddress,
+      initializer,
       0
     );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
       baseImpl.address,
-      handler.address,
-      walletOwnerAddress,
+      initializer,
       0
     );
 
