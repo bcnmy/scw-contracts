@@ -65,11 +65,11 @@ describe("Proxy Deployment", function () {
       .withArgs(expected, baseImpl.address, initializer, indexForSalt);
 
     const userSCW: any = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
+      "contracts/smart-contract-wallet/Proxy.sol:Proxy",
       expected
     );
 
-    const queryImplementation = await userSCW.accountLogic();
+    const queryImplementation = await userSCW.getImplementation();
     expect(queryImplementation).to.be.equal(baseImpl.address);
   });
 });
