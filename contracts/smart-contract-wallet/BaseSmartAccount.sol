@@ -5,9 +5,10 @@ pragma solidity 0.8.12;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
-import "@account-abstraction/contracts/interfaces/IAccount.sol";
-import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import "./common/Enum.sol";
+import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
+import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {Enum} from "./common/Enum.sol";
 import {BaseSmartAccountErrors} from "./common/Errors.sol";
 
 struct Transaction {
@@ -50,7 +51,7 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
 
 
     /**
-     * return the account nonce.
+     * @return nonce the account nonce.
      * subclass should return a nonce value that is used both by _validateAndUpdateNonce, and by the external provider (to read the current nonce)
      */
     function nonce() public view virtual returns (uint256);
@@ -115,10 +116,24 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
         }
     }
     
+    /**
+     * @dev Initialize the Smart Account with required states
+     * @param _owner Signatory of the Smart Account
+     * @param _handler Default fallback handler provided in Smart Account
+     * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
+     */
     function init(address _owner, address _handler) external virtual;
 
+    /**
+     * @dev Gnosis style transaction with optional repay in native tokens OR ERC20 
+     * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
+     * @notice The fees are always transferred, even if the user transaction fails.
+     * @param _tx Smart Account transaction 
+     * @param refundInfo Required information for gas refunds
+     * @param signatures Packed signature/s data ({bytes32 r}{bytes32 s}{uint8 v})
+     */
     function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
-        bytes memory signatures) public payable virtual returns (bool success);
+        bytes memory signatures) external payable virtual returns (bool success);
 }

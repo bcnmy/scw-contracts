@@ -1,11 +1,11 @@
 // Sources flattened with hardhat v2.11.1 https://hardhat.org
 
-// File contracts/smart-contract-wallet/interfaces/ERC777TokensRecipient.sol
+// File contracts/smart-contract-wallet/interfaces/IERC777TokensRecipient.sol
 
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.12;
 
-interface ERC777TokensRecipient {
+interface IERC777TokensRecipient {
     function tokensReceived(
         address operator,
         address from,
@@ -17,13 +17,13 @@ interface ERC777TokensRecipient {
 }
 
 
-// File contracts/smart-contract-wallet/interfaces/ERC721TokenReceiver.sol
+// File contracts/smart-contract-wallet/interfaces/IERC721TokenReceiver.sol
 
 
 pragma solidity 0.8.12;
 
 /// @dev Note: the ERC-165 identifier for this interface is 0x150b7a02.
-interface ERC721TokenReceiver {
+interface IERC721TokenReceiver {
     /// @notice Handle the receipt of an NFT
     /// @dev The ERC721 smart contract calls this function on the recipient
     ///  after a `transfer`. This function MAY throw to revert and reject the
@@ -45,7 +45,7 @@ interface ERC721TokenReceiver {
 }
 
 
-// File contracts/smart-contract-wallet/interfaces/ERC1155TokenReceiver.sol
+// File contracts/smart-contract-wallet/interfaces/IERC1155TokenReceiver.sol
 
 
 pragma solidity 0.8.12;
@@ -53,7 +53,7 @@ pragma solidity 0.8.12;
 /**
     Note: The ERC-165 identifier for this interface is 0x4e2312e0.
 */
-interface ERC1155TokenReceiver {
+interface IERC1155TokenReceiver {
     /**
         @notice Handle the receipt of a single ERC1155 token type.
         @dev An ERC1155-compliant smart contract MUST call this function on the token recipient contract, at the end of a `safeTransferFrom` after the balance has been updated.        
@@ -127,7 +127,7 @@ pragma solidity 0.8.12;
 
 /// @title Default Callback Handler - returns true for known token callbacks
 /// @author Richard Meissner - <richard@gnosis.pm>
-contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, ERC721TokenReceiver, IERC165 {
+contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient, IERC721TokenReceiver, IERC165 {
     string public constant NAME = "Default Callback Handler";
     string public constant VERSION = "1.0.0";
 
@@ -173,8 +173,8 @@ contract DefaultCallbackHandler is ERC1155TokenReceiver, ERC777TokensRecipient, 
 
     function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
         return
-            interfaceId == type(ERC1155TokenReceiver).interfaceId ||
-            interfaceId == type(ERC721TokenReceiver).interfaceId ||
+            interfaceId == type(IERC1155TokenReceiver).interfaceId ||
+            interfaceId == type(IERC721TokenReceiver).interfaceId ||
             interfaceId == type(IERC165).interfaceId;
     }
 }

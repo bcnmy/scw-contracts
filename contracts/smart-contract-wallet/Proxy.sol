@@ -6,16 +6,14 @@ pragma solidity 0.8.12;
  * @notice Basic proxy that delegates all calls to a fixed implementing contract.
  */
 contract Proxy {
+    // no fixed address(0) storage slot
+    // address internal singleton;
 
-    /* This is the keccak-256 hash of "biconomy.scw.proxy.implementation" subtracted by 1, and is validated in the constructor */
-    bytes32 internal constant _IMPLEMENTATION_SLOT = 0x37722d148fb373b961a84120b6c8d209709b45377878a466db32bbc40d95af26;
-
-    event Received(uint indexed value, address indexed sender, bytes data);
-
-    constructor(address _implementation) payable {
-         assert(_IMPLEMENTATION_SLOT == bytes32(uint256(keccak256("biconomy.scw.proxy.implementation")) - 1));
+    constructor(address _implementation) {
+         require(_implementation != address(0), "Invalid implementation address");
+         // solhint-disable-next-line no-inline-assembly
          assembly {
-             sstore(_IMPLEMENTATION_SLOT,_implementation) 
+             sstore(address(),_implementation) 
          }
     }
 
@@ -23,7 +21,7 @@ contract Proxy {
         address target;
         // solhint-disable-next-line no-inline-assembly
         assembly {
-            target := sload(_IMPLEMENTATION_SLOT)
+            target := sload(address())
             calldatacopy(0, 0, calldatasize())
             let result := delegatecall(gas(), target, 0, calldatasize(), 0, 0)
             returndatacopy(0, 0, returndatasize())

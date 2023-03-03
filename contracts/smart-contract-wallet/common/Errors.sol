@@ -11,6 +11,13 @@ contract BaseSmartAccountErrors {
 
 }
 
+contract FallbackManagerErrors {
+    /**
+     * @notice Throws if zero address has been provided as Fallback Handler address
+     */
+    error HandlerCannotBeZero();
+}
+
 contract SmartAccountErrors is BaseSmartAccountErrors {
     
     /**
@@ -36,11 +43,6 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
      * @notice Throws if trying to change an owner of a SmartAccount to the zero address
      */
     error OwnerCannotBeZero();
-
-    /**
-     * @notice Throws if zero address has been provided as Fallback Handler address
-     */
-    error HandlerCannotBeZero();
 
     /**
      * @notice Throws if zero address has been provided as Base Implementation address
@@ -234,8 +236,6 @@ contract SingletonPaymasterErrors {
      * @param sigLength length oif the signature provided
      */
     error InvalidPaymasterSignatureLength(uint256 sigLength);
-
-    error Error2();
 
 }
 

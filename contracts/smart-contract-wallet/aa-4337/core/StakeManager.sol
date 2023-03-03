@@ -46,6 +46,7 @@ abstract contract StakeManager is IStakeManager {
      * add to the deposit of the given account
      */
     function depositTo(address account) public payable {
+        require(account != address(0), "SM: Invalid account");
         internalIncrementDeposit(account, msg.value);
         DepositInfo storage info = deposits[account];
         emit Deposited(account, info.deposit);
@@ -61,8 +62,13 @@ abstract contract StakeManager is IStakeManager {
         require(_unstakeDelaySec != 0, "must specify unstake delay");
         require(_unstakeDelaySec >= info.unstakeDelaySec, "cannot decrease unstake time");
         uint256 stake = info.stake + msg.value;
+<<<<<<< HEAD
         require(stake != 0, "no stake specified");
         require(stake < type(uint112).max, "stake overflow");
+=======
+        require(stake > 0, "no stake specified");
+        require(stake <= type(uint112).max, "stake overflow");
+>>>>>>> c4-remediations
         deposits[msg.sender] = DepositInfo(
             info.deposit,
             true,
@@ -94,6 +100,7 @@ abstract contract StakeManager is IStakeManager {
      * @param withdrawAddress the address to send withdrawn value.
      */
     function withdrawStake(address payable withdrawAddress) external {
+        // require(withdrawAddress != address(0), "SM: Invalid withdraw address");
         DepositInfo storage info = deposits[msg.sender];
         uint256 stake = info.stake;
         require(stake != 0, "No stake to withdraw");
@@ -102,9 +109,9 @@ abstract contract StakeManager is IStakeManager {
         info.unstakeDelaySec = 0;
         info.withdrawTime = 0;
         info.stake = 0;
-        emit StakeWithdrawn(msg.sender, withdrawAddress, stake);
         (bool success,) = withdrawAddress.call{value : stake}("");
         require(success, "failed to withdraw stake");
+        emit StakeWithdrawn(msg.sender, withdrawAddress, stake);
     }
 
     /**
@@ -113,11 +120,13 @@ abstract contract StakeManager is IStakeManager {
      * @param withdrawAmount the amount to withdraw.
      */
     function withdrawTo(address payable withdrawAddress, uint256 withdrawAmount) external {
+        // require(withdrawAddress != address(0), "SM: Invalid withdraw address");
         DepositInfo storage info = deposits[msg.sender];
         require(withdrawAmount <= info.deposit, "Withdraw amount too large");
+        // review - should we use SafeMath here?
         info.deposit = uint112(info.deposit - withdrawAmount);
-        emit Withdrawn(msg.sender, withdrawAddress, withdrawAmount);
         (bool success,) = withdrawAddress.call{value : withdrawAmount}("");
         require(success, "failed to withdraw");
+        emit Withdrawn(msg.sender, withdrawAddress, withdrawAmount);
     }
 }

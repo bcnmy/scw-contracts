@@ -32,7 +32,7 @@ contract TokenPaymaster is BasePaymaster, ERC20 {
         _mint(address(this), 1);
 
         //owner is allowed to withdraw tokens from the paymaster's balance
-        _approve(address(this), msg.sender, type(uint).max);
+        _approve(address(this), msg.sender, type(uint256).max);
     }
 
 
@@ -51,7 +51,7 @@ contract TokenPaymaster is BasePaymaster, ERC20 {
         _approve(address(this), owner(), 0);
         super.transferOwnership(newOwner);
         // new owner is allowed to withdraw tokens from the paymaster's balance
-        _approve(address(this), newOwner, type(uint).max);
+        _approve(address(this), newOwner, type(uint256).max);
     }
 
     //TODO: this method assumes a fixed ratio of token-to-eth. subclass should override to supply oracle

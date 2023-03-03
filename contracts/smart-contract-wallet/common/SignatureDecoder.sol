@@ -2,7 +2,7 @@
 pragma solidity 0.8.12;
 
 /// @title SignatureDecoder - Decodes signatures that a encoded as bytes
-contract SignatureDecoder {
+abstract contract SignatureDecoder {
     /// @dev divides bytes signature into `uint8 v, bytes32 r, bytes32 s`.
     /// @param signature concatenated rsv signatures
     function signatureSplit(bytes memory signature)
@@ -24,7 +24,7 @@ contract SignatureDecoder {
             // Here we are loading the last 32 bytes, including 31 bytes
             // of 's'. There is no 'mload8' to do this.
             //
-            // 'byte' is not working due to the Solidity parser, so lets
+            // 'byte' is not working due to the Solidity parser, so let's
             // use the second best option, 'and'
             v := and(mload(add(signature, 0x41)), 0xff)
         }

@@ -25,10 +25,15 @@ contract SimpleAccountFactory {
      * Note that during UserOperation execution, this method is called only if the account is not deployed.
      * This method returns an existing account address so that entryPoint.getSenderAddress() would work even after account creation
      */
-    function createAccount(address owner, uint salt) public returns (SimpleAccount ret) {
+    function createAccount(address owner, uint256 salt) public returns (SimpleAccount ret) {
         address addr = getAddress(owner, salt);
+<<<<<<< HEAD
         uint codeSize = addr.code.length;
         if (codeSize != 0) {
+=======
+        uint256 codeSize = addr.code.length;
+        if (codeSize > 0) {
+>>>>>>> c4-remediations
             return SimpleAccount(payable(addr));
         }
         ret = SimpleAccount(payable(new ERC1967Proxy{salt : bytes32(salt)}(
@@ -40,7 +45,7 @@ contract SimpleAccountFactory {
     /**
      * calculate the counterfactual address of this account as it would be returned by createAccount()
      */
-    function getAddress(address owner, uint salt) public view returns (address) {
+    function getAddress(address owner, uint256 salt) public view returns (address) {
         return Create2.computeAddress(bytes32(salt), keccak256(abi.encodePacked(
                 type(ERC1967Proxy).creationCode,
                 abi.encode(

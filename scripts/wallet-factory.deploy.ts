@@ -58,10 +58,7 @@ async function main() {
     ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_FACTORY)
   );
 
-  const walletFactoryBytecode = `${WalletFactory.bytecode}${encodeParam(
-    "address",
-    baseImpComputedAddr
-  ).slice(2)}${encodeParam("address", fallbackHandlerAddress).slice(2)}`;
+  const walletFactoryBytecode = `${WalletFactory.bytecode}`;
 
   const walletFactoryComputedAddr = await deployerInstance.addressOf(
     WALLET_FACTORY_SALT

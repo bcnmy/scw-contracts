@@ -1,31 +1,26 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.12;
 
-import "./libs/LibAddress.sol";
-import "@openzeppelin/contracts-upgradeable/security/ReentrancyGuardUpgradeable.sol";
-import "./BaseSmartAccount.sol";
-import "./common/Singleton.sol";
-import "./base/ModuleManager.sol";
-import "./base/FallbackManager.sol";
-import "./common/SignatureDecoder.sol";
-import "./common/SecuredTokenTransfer.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
-import "./interfaces/ISignatureValidator.sol";
-import "./interfaces/IERC165.sol";
+import "../../libs/LibAddress.sol";
+import "../../BaseSmartAccount.sol";
+import "../../base/ModuleManager.sol";
+import "../../base/FallbackManager.sol";
+import "../../common/SignatureDecoder.sol";
+import "../../common/SecuredTokenTransfer.sol";
+import {SmartAccountErrors} from "../../common/Errors.sol";
+import "../../interfaces/ISignatureValidator.sol";
+import "../../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "hardhat/console.sol";
 
-contract SmartAccount3 is 
-     Singleton,
+contract SmartAccount9 is 
      BaseSmartAccount,
-     IERC165,
      ModuleManager,
+     FallbackManager,
      SignatureDecoder,
      SecuredTokenTransfer,
      ISignatureValidatorConstants,
-     FallbackManager,
-     Initializable,
-     ReentrancyGuardUpgradeable,
+     IERC165,
      SmartAccountErrors
     {
     using ECDSA for bytes32;
@@ -34,7 +29,7 @@ contract SmartAccount3 is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.4"; // using AA 0.4.0
+    string public constant VERSION = "1.0.9"; // using AA 0.4.0
 
     // Domain Seperators
     // keccak256(
@@ -55,6 +50,10 @@ contract SmartAccount3 is
     // @notice there is no _nonce 
     mapping(uint256 => uint256) public nonces;
 
+    // Mapping to keep track of all message hashes that have been approved by the owner
+    // by ALL REQUIRED owners in a multisig flow
+    mapping(bytes32 => uint256) public signedMessages;
+
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
 
@@ -68,7 +67,6 @@ contract SmartAccount3 is
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
-        _disableInitializers();
     }
 
     
@@ -118,16 +116,21 @@ contract SmartAccount3 is
      */
     // todo: write test case for updating implementation
     // review for all methods to be invoked by smart account to self
+    // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
+    // all the new implementations MUST have this method!
     function updateImplementation(address _implementation) public {
         _requireFromEntryPointOrOwner();
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
-        _setImplementation(_implementation);
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+             sstore(address(),_implementation) 
+         }
         // EOA + Version tracking
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
     // Getters
-
+    
     function domainSeparator() public view returns (bytes32) {
         return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), this));
     }
@@ -172,13 +175,13 @@ contract SmartAccount3 is
     // init
     // Initialize / Setup
     // Used to setup
-    function init(address _owner, address _handler) public override initializer { 
+    function init(address _owner, address _handler) public override { 
         require(owner == address(0), "Already initialized");
         require(_owner != address(0),"Invalid owner");
         require(_handler != address(0), "Invalid Fallback Handler");
         owner = _owner;
         _setFallbackHandler(_handler);
-        setupModules(address(0), bytes(""));
+        _setupModules(address(0), bytes(""));
     }
 
     /**
@@ -215,14 +218,13 @@ contract SmartAccount3 is
                 );
             // Execute transaction.
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, txHashData, signatures);
+            checkSignatures(txHash, signatures);
         }
 
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
-        // Bitshift left 6 bits means multiplying by 64, just more gas efficient
-        require(gasleft() >= max((_tx.targetTxGas << 6) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
+        require(gasleft() >= max((_tx.targetTxGas * 64) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
@@ -234,13 +236,13 @@ contract SmartAccount3 is
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment = 0;
             // uint256 extraGas;
-            if (refundInfo.gasPrice != 0) {
+            if (refundInfo.gasPrice > 0) {
                 //console.log("sent %s", startGas - gasleft());
                 // extraGas = gasleft();
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
-            console.log("goes from v3");
+            console.log("goes through 9");
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
         }
@@ -253,7 +255,7 @@ contract SmartAccount3 is
         uint256 tokenGasPriceFactor,
         address gasToken,
         address payable refundReceiver
-    ) private nonReentrant returns (uint256 payment) {
+    ) private returns (uint256 payment) {
         // uint256 startGas = gasleft();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0) ? payable(tx.origin) : refundReceiver;
@@ -303,18 +305,18 @@ contract SmartAccount3 is
      */
     function checkSignatures(
         bytes32 dataHash,
-        bytes memory data,
         bytes memory signatures
     ) public view virtual {
         uint8 v;
         bytes32 r;
         bytes32 s;
+        uint256 i = 0;
         address _signer;
-        (v, r, s) = signatureSplit(signatures);
+        (v, r, s) = signatureSplit(signatures, i);
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
-            // When handling contract signatures the address of the contract is encoded into r
+            // When handling contract signatures the address of the signer contract is encoded into r
             _signer = address(uint160(uint256(r)));
 
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
@@ -447,7 +449,7 @@ contract SmartAccount3 is
     }
 
     // Extra Utils 
-    function transfer(address payable dest, uint amount) external nonReentrant onlyOwner {
+    function transfer(address payable dest, uint amount) external onlyOwner {
         require(dest != address(0), "this action will burn your funds");
         (bool success,) = dest.call{value:amount}("");
         require(success,"transfer failed");
@@ -461,7 +463,7 @@ contract SmartAccount3 is
         address dest,
         uint256 value,
         bytes calldata func
-    ) external nonReentrant {
+    ) external {
         _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
@@ -470,7 +472,7 @@ contract SmartAccount3 is
         address[] calldata dest,
         uint256[] calldata value,
         bytes[] calldata func
-    ) external nonReentrant {
+    ) external {
         _requireFromEntryPointOrOwner();
         require(dest.length != 0, "empty array provided");
         require(dest.length == value.length, "wrong array lengths");
@@ -484,7 +486,7 @@ contract SmartAccount3 is
     }
 
     // AA implementation
-    function _call(address target, uint256 value, bytes memory data) internal {   
+    function _call(address target, uint256 value, bytes memory data) internal {
         (bool success, bytes memory result) = target.call{value : value}(data);
         if (!success) {
             assembly {
@@ -509,18 +511,12 @@ contract SmartAccount3 is
     // @notice Nonce space is locked to 0 for AA transactions
     // userOp could have batchId as well
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
-        // bytes calldata userOpData = userOp.callData;
-        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
-        // if(address(modules[_to]) != address(0)) return;
         require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /// implement template method of BaseAccount
     function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
     internal override virtual returns (uint256 sigTimeRange) {
-        // bytes calldata userOpData = userOp.callData;
-        // (address _to, uint _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint, bytes));
-        // if(address(modules[_to]) != address(0)) return 0;
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;

@@ -1,8 +1,8 @@
+// SPDX-License-Identifier: GPL-3.0
 /**
  ** Account-Abstraction (EIP-4337) singleton EntryPoint implementation.
  ** Only one instance required on each chain.
  **/
-// SPDX-License-Identifier: GPL-3.0
 pragma solidity ^0.8.12;
 
 /* solhint-disable avoid-low-level-calls */
@@ -47,7 +47,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
 
     /**
      * execute a user op
-     * @param opIndex into into the opInfo array
+     * @param opIndex into the opInfo array
      * @param userOp the userOp to execute
      * @param opInfo the opInfo filled by validatePrepayment for this userOp.
      * @return collected the total amount this userOp paid.
@@ -206,7 +206,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         require(msg.sender == address(this), "AA92 internal call only");
         MemoryUserOp memory mUserOp = opInfo.mUserOp;
 
-        uint callGasLimit = mUserOp.callGasLimit;
+        uint256 callGasLimit = mUserOp.callGasLimit;
     unchecked {
         // handleOps was called with gas limit too low. abort entire bundle.
         if (gasleft() < callGasLimit + mUserOp.verificationGasLimit + 5000) {
@@ -297,7 +297,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
 
     function _getRequiredPrefund(MemoryUserOp memory mUserOp) internal pure returns (uint256 requiredPrefund) {
     unchecked {
-        //when using a Paymaster, the verificationGasLimit is used also to as a limit for the postOp call.
+        //when using a Paymaster, the verificationGasLimit is used to as a limit for the postOp call.
         // our security model might call postOp eventually twice
         uint256 mul = mUserOp.paymaster != address(0) ? 3 : 1;
         uint256 requiredGas = mUserOp.callGasLimit + mUserOp.verificationGasLimit * mul + mUserOp.preVerificationGas;
@@ -439,12 +439,12 @@ contract EntryPoint is IEntryPoint, StakeManager {
         }
     }
 
-    function _getSigTimeRange(uint sigTimeRange) internal view returns (bool sigFailed, bool outOfTimeRange) {
+    function _getSigTimeRange(uint256 sigTimeRange) internal view returns (bool sigFailed, bool outOfTimeRange) {
         if (sigTimeRange == 0) {
             return (false, false);
         }
-        uint validAfter;
-        uint validUntil;
+        uint256 validAfter;
+        uint256 validUntil;
         (sigFailed, validAfter, validUntil) = _parseSigTimeRange(sigTimeRange);
         // solhint-disable-next-line not-rely-on-time
         outOfTimeRange = block.timestamp > validUntil || block.timestamp < validAfter;
@@ -452,7 +452,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
 
     //extract sigFailed, validAfter, validUntil.
     // also convert zero validUntil to type(uint64).max
-    function _parseSigTimeRange(uint sigTimeRange) internal pure returns (bool sigFailed, uint64 validAfter, uint64 validUntil) {
+    function _parseSigTimeRange(uint256 sigTimeRange) internal pure returns (bool sigFailed, uint64 validAfter, uint64 validUntil) {
         sigFailed = uint8(sigTimeRange) != 0;
         // subtract one, to explicitly treat zero as max-value
         validUntil = uint64(int64(int(sigTimeRange >> 8) - 1));
@@ -460,7 +460,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
     }
 
     // intersect account and paymaster ranges.
-    function _intersectTimeRange(uint sigTimeRange, uint paymasterTimeRange) internal pure returns (bool sigFailed, uint64 validAfter, uint64 validUntil) {
+    function _intersectTimeRange(uint256 sigTimeRange, uint256 paymasterTimeRange) internal pure returns (bool sigFailed, uint64 validAfter, uint64 validUntil) {
         (sigFailed, validAfter, validUntil) = _parseSigTimeRange(sigTimeRange);
         (bool pmSigFailed, uint64 pmValidAfter, uint64 pmValidUntil) = _parseSigTimeRange(paymasterTimeRange);
         sigFailed = sigFailed || pmSigFailed;
