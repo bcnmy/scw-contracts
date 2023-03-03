@@ -13,11 +13,11 @@ contract StakedTestToken is ERC20 {
         STAKED_TOKEN = _token;
     }
 
-    function mint(address sender, uint amount) external {
+    function mint(address sender, uint256 amount) external {
         _mint(sender, amount);
     }
 
-    function stake(address _for, uint amount) external {
+    function stake(address _for, uint256 amount) external {
         IERC20(STAKED_TOKEN).transferFrom(msg.sender, address(this), amount);
         _mint(_for, amount);
     }

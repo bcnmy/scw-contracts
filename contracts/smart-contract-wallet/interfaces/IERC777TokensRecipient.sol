@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.17;
 
-interface ERC777TokensRecipient {
+interface IERC777TokensRecipient {
     function tokensReceived(
         address operator,
         address from,

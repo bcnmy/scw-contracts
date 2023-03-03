@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 /// @title SecuredTokenTransfer - Secure token transfer
-contract SecuredTokenTransfer {
+abstract contract SecuredTokenTransfer {
     /// @dev Transfers a token and returns if it was a success
     /// @param token Token that should be transferred
     /// @param receiver Receiver to whom the token should be transferred
@@ -12,6 +12,8 @@ contract SecuredTokenTransfer {
         address receiver,
         uint256 amount
     ) internal returns (bool transferred) {
+        require(token != address(0), "token can not be zero address");
+        require(token.code.length > 0, "token contract doesn't exist");
         // 0xa9059cbb - keccack("transfer(address,uint256)")
         // Review for sig collision and HAL-04 report i
         bytes memory data = abi.encodeWithSelector(0xa9059cbb, receiver, amount);

@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0
 /**
  ** Account-Abstraction (EIP-4337) singleton EntryPoint implementation.
  ** Only one instance required on each chain.
@@ -47,7 +48,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
 
     /**
      * execute a user op
-     * @param opIndex into into the opInfo array
+     * @param opIndex into the opInfo array
      * @param userOp the userOp to execute
      * @param opInfo the opInfo filled by validatePrepayment for this userOp.
      * @return collected the total amount this userOp paid.
@@ -99,7 +100,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         uint256 collected = 0;
 
         for (uint256 i = 0; i < opslen; i++) {
-            collected += _executeUserOp(i, ops[i], opInfos[i]);
+            collected = collected + _executeUserOp(i, ops[i], opInfos[i]);
         }
 
         _compensate(beneficiary, collected);
@@ -119,7 +120,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         uint256 opasLen = opsPerAggregator.length;
         uint256 totalOps = 0;
         for (uint256 i = 0; i < opasLen; i++) {
-            totalOps += opsPerAggregator[i].userOps.length;
+            totalOps = totalOps + opsPerAggregator[i].userOps.length;
         }
 
         UserOpInfo[] memory opInfos = new UserOpInfo[](totalOps);
@@ -155,7 +156,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
             uint256 opslen = ops.length;
 
             for (uint256 i = 0; i < opslen; i++) {
-                collected += _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
+                collected = collected + _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
                 opIndex++;
             }
         }
@@ -206,7 +207,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         require(msg.sender == address(this), "AA92 internal call only");
         MemoryUserOp memory mUserOp = opInfo.mUserOp;
 
-        uint callGasLimit = mUserOp.callGasLimit;
+        uint256 callGasLimit = mUserOp.callGasLimit;
     unchecked {
         // handleOps was called with gas limit too low. abort entire bundle.
         if (gasleft() < callGasLimit + mUserOp.verificationGasLimit + 5000) {
@@ -218,11 +219,11 @@ contract EntryPoint is IEntryPoint, StakeManager {
     }
 
         IPaymaster.PostOpMode mode = IPaymaster.PostOpMode.opSucceeded;
-        if (callData.length > 0) {
+        if (callData.length != 0) {
 
             (bool success,bytes memory result) = address(mUserOp.sender).call{gas : callGasLimit}(callData);
             if (!success) {
-                if (result.length > 0) {
+                if (result.length != 0) {
                     emit UserOperationRevertReason(opInfo.userOpHash, mUserOp.sender, mUserOp.nonce, result);
                 }
                 mode = IPaymaster.PostOpMode.opReverted;
@@ -256,7 +257,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         mUserOp.maxFeePerGas = userOp.maxFeePerGas;
         mUserOp.maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
         bytes calldata paymasterAndData = userOp.paymasterAndData;
-        if (paymasterAndData.length > 0) {
+        if (paymasterAndData.length != 0) {
             require(paymasterAndData.length >= 20, "AA93 invalid paymasterAndData");
             mUserOp.paymaster = address(bytes20(paymasterAndData[: 20]));
         } else {
@@ -297,7 +298,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
 
     function _getRequiredPrefund(MemoryUserOp memory mUserOp) internal pure returns (uint256 requiredPrefund) {
     unchecked {
-        //when using a Paymaster, the verificationGasLimit is used also to as a limit for the postOp call.
+        //when using a Paymaster, the verificationGasLimit is used to as a limit for the postOp call.
         // our security model might call postOp eventually twice
         uint256 mul = mUserOp.paymaster != address(0) ? 3 : 1;
         uint256 requiredGas = mUserOp.callGasLimit + mUserOp.verificationGasLimit * mul + mUserOp.preVerificationGas;
@@ -439,12 +440,12 @@ contract EntryPoint is IEntryPoint, StakeManager {
         }
     }
 
-    function _getSigTimeRange(uint sigTimeRange) internal view returns (bool sigFailed, bool outOfTimeRange) {
+    function _getSigTimeRange(uint256 sigTimeRange) internal view returns (bool sigFailed, bool outOfTimeRange) {
         if (sigTimeRange == 0) {
             return (false, false);
         }
-        uint validAfter;
-        uint validUntil;
+        uint256 validAfter;
+        uint256 validUntil;
         (sigFailed, validAfter, validUntil) = _parseSigTimeRange(sigTimeRange);
         // solhint-disable-next-line not-rely-on-time
         outOfTimeRange = block.timestamp > validUntil || block.timestamp < validAfter;
@@ -452,7 +453,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
 
     //extract sigFailed, validAfter, validUntil.
     // also convert zero validUntil to type(uint64).max
-    function _parseSigTimeRange(uint sigTimeRange) internal pure returns (bool sigFailed, uint64 validAfter, uint64 validUntil) {
+    function _parseSigTimeRange(uint256 sigTimeRange) internal pure returns (bool sigFailed, uint64 validAfter, uint64 validUntil) {
         sigFailed = uint8(sigTimeRange) != 0;
         // subtract one, to explicitly treat zero as max-value
         validUntil = uint64(int64(int(sigTimeRange >> 8) - 1));
@@ -460,7 +461,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
     }
 
     // intersect account and paymaster ranges.
-    function _intersectTimeRange(uint sigTimeRange, uint paymasterTimeRange) internal pure returns (bool sigFailed, uint64 validAfter, uint64 validUntil) {
+    function _intersectTimeRange(uint256 sigTimeRange, uint256 paymasterTimeRange) internal pure returns (bool sigFailed, uint64 validAfter, uint64 validUntil) {
         (sigFailed, validAfter, validUntil) = _parseSigTimeRange(sigTimeRange);
         (bool pmSigFailed, uint64 pmValidAfter, uint64 pmValidUntil) = _parseSigTimeRange(paymasterTimeRange);
         sigFailed = sigFailed || pmSigFailed;
@@ -536,7 +537,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
             refundAddress = mUserOp.sender;
         } else {
             refundAddress = paymaster;
-            if (context.length > 0) {
+            if (context.length != 0) {
                 actualGasCost = actualGas * gasPrice;
                 if (mode != IPaymaster.PostOpMode.postOpReverted) {
                     IPaymaster(paymaster).postOp{gas : mUserOp.verificationGasLimit}(mode, context, actualGasCost);
@@ -552,7 +553,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
                 }
             }
         }
-        actualGas += preGas - gasleft();
+        actualGas = actualGas + preGas - gasleft();
         actualGasCost = actualGas * gasPrice;
         if (opInfo.prefund < actualGasCost) {
             revert FailedOp(opIndex, paymaster, "A51 prefund below actualGasCost");

@@ -3,16 +3,15 @@ import { ethers } from "hardhat";
 import {
   SmartWallet,
   WalletFactory,
+  EntryPoint__factory,
   EntryPoint,
   MockToken,
   MultiSend,
   StorageSetter,
   DefaultCallbackHandler,
-  FakeSigner,
-  SelfDestructingContract,
 } from "../../typechain";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { encodeTransfer, encodeTransferFrom } from "./testUtils";
+import { encodeTransfer, encodeTransferFrom } from "../smart-wallet/testUtils";
 import {
   buildContractCall,
   MetaTransaction,
@@ -24,11 +23,17 @@ import {
   safeSignMessage,
   buildSafeTransaction,
   executeContractCallWithSigners,
-  EOA_CONTROLLED_FLOW,
 } from "../../src/utils/execution";
 import { buildMultiSendSafeTx } from "../../src/utils/multisend";
 
-describe("Vulnerability tests", function () {
+export async function deployEntryPoint(
+  provider = ethers.provider
+): Promise<EntryPoint> {
+  const epf = await (await ethers.getContractFactory("EntryPoint")).deploy();
+  return EntryPoint__factory.connect(epf.address, provider.getSigner());
+}
+
+describe("Upgradeability", function () {
   // TODO
   let baseImpl: SmartWallet;
   let walletFactory: WalletFactory;
@@ -39,32 +44,15 @@ describe("Vulnerability tests", function () {
   let owner: string;
   let bob: string;
   let charlie: string;
-  let hacker: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const VERSION = "1.0.4";
-  const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
-  let fakeSigner: FakeSigner;
-  let selfDestruct: SelfDestructingContract;
-  let scwNativeTokenBalance: any;
 
-  /* const domainType = [
-    { name: "name", type: "string" },
-    { name: "version", type: "string" },
-    { name: "verifyingContract", type: "address" },
-    { name: "salt", type: "bytes32" },
-  ]; */
-
-  beforeEach(async () => {
+  before(async () => {
     accounts = await ethers.getSigners();
-    const addresses = await ethers.provider.listAccounts();
-    const ethersSigner = ethers.provider.getSigner();
-
     owner = await accounts[0].getAddress();
     bob = await accounts[1].getAddress();
     charlie = await accounts[2].getAddress();
-    hacker = await accounts[3].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
@@ -87,10 +75,7 @@ describe("Vulnerability tests", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy(
-      baseImpl.address,
-      handler.address
-    );
+    walletFactory = await WalletFactory.deploy();
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -109,91 +94,84 @@ describe("Vulnerability tests", function () {
 
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
+  });
 
+  it("Should deploy a wallet and validate entrypoint", async function () {
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+    const initializer = BaseImplementation.interface.encodeFunctionData(
+      "init",
+      [owner, handler.address]
+    );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      owner,
+      baseImpl.address,
+      initializer,
       0
     );
+    console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, 0))
-      .to.emit(walletFactory, "SmartAccountCreated")
-      .withArgs(expected, baseImpl.address, owner, VERSION, 0);
+    await expect(
+      walletFactory.deployCounterFactualWallet(baseImpl.address, initializer, 0)
+    )
+      .to.emit(walletFactory, "AccountCreation")
+      .withArgs(expected, baseImpl.address, initializer, 0);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expected
     );
 
-    scwNativeTokenBalance = ethers.utils.parseEther("5");
+    const entryPointAddress = await userSCW.entryPoint();
+    expect(entryPointAddress).to.equal(entryPoint.address);
 
     await accounts[1].sendTransaction({
       from: bob,
       to: expected,
-      value: scwNativeTokenBalance,
+      value: ethers.utils.parseEther("5"),
     });
   });
 
-  it("Should revert when called from malicious 1271 contract", async function () {
-    const FakeSigner = await ethers.getContractFactory("FakeSigner");
-    fakeSigner = await FakeSigner.deploy();
+  it("Should deploy new entrypoint and does upgrade flow", async function () {
+    const priorEntryPoint = await userSCW.entryPoint();
+    console.log("prior entrypoint ", priorEntryPoint);
+    console.log(entryPoint.address);
 
-    const SelfDestruct = await ethers.getContractFactory(
-      "SelfDestructingContract"
+    const EntryPoint = await ethers.getContractFactory("EntryPoint");
+    const newEntryPoint = await EntryPoint.deploy();
+    await newEntryPoint.deployed();
+    console.log("New entry point deployed at: ", newEntryPoint.address);
+
+    // Note that -> To upgrade an entry point we need to deploy new implementation
+    // but to update implementation previous entry point can use in it's constructor.
+    const BaseImplementation4 = await ethers.getContractFactory(
+      "SmartAccount4"
     );
-    selfDestruct = await SelfDestruct.deploy();
-
-    const SelfDestructingABI = ["function selfDestruct(address) external"];
-    const SelfDestructingInterface = new ethers.utils.Interface(
-      SelfDestructingABI
-    );
-
-    const safeTx: SafeTransaction = buildSafeTransaction({
-      to: selfDestruct.address,
-      data: SelfDestructingInterface.encodeFunctionData("selfDestruct", [hacker]),
-      nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
-    });
-
-    const transaction: Transaction = {
-      to: safeTx.to,
-      value: safeTx.value,
-      data: safeTx.data,
-      operation: safeTx.operation,
-      targetTxGas: safeTx.targetTxGas,
-    };
-    const refundInfo: FeeRefund = {
-      baseGas: safeTx.baseGas,
-      gasPrice: safeTx.gasPrice,
-      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
-      gasToken: safeTx.gasToken,
-      refundReceiver: safeTx.refundReceiver,
-    };
-
-    const chainId = await userSCW.getChainId();
-
-    const signature = await fakeSigner.connect(accounts[3]).getSignature();
+    const baseImpl4 = await BaseImplementation4.deploy(newEntryPoint.address);
+    await baseImpl4.deployed();
+    console.log("base wallet upgraded impl deployed at: ", baseImpl4.address);
 
     await expect(
-      userSCW.connect(accounts[3]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
-    ).to.be.revertedWith("INVALID_SIGNATURE");
+      userSCW.connect(accounts[0]).updateImplementation(baseImpl4.address)
+    ).to.emit(userSCW, "ImplementationUpdated");
+
+    userSCW = await ethers.getContractAt(
+      "contracts/smart-contract-wallet/test/upgrades/SmartAccount4.sol:SmartAccount4",
+      userSCW.address
+    );
+
+    const entryPointAddress = await userSCW.entryPoint();
+    expect(entryPointAddress).to.equal(newEntryPoint.address);
   });
 
-  it("relayer can not manipulate tokenGasPriceFactor to get profits", async function () {
+  it("should send a single transacton (EIP712 sign)", async function () {
     await token
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
-
-    const userSetGasPriceFactor = 100;
 
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: token.address,
       // value: ethers.utils.parseEther("1"),
       data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-      tokenGasPriceFactor: userSetGasPriceFactor,
-      nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
+      nonce: await userSCW.getNonce(1),
     });
 
     const chainId = await userSCW.getChainId();
@@ -213,26 +191,24 @@ describe("Vulnerability tests", function () {
       operation: safeTx.operation,
       targetTxGas: safeTx.targetTxGas,
     };
-
-    const fakeGasPriceFactor = 1;
-
     const refundInfo: FeeRefund = {
       baseGas: safeTx.baseGas,
       gasPrice: safeTx.gasPrice,
-      tokenGasPriceFactor: fakeGasPriceFactor,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
       gasToken: safeTx.gasToken,
       refundReceiver: safeTx.refundReceiver,
     };
 
     let signature = "0x";
     signature += data.slice(2);
-
     await expect(
-      userSCW.connect(accounts[4]).execTransaction(
-        transaction,
-        refundInfo,
-        signature
-      )
-    ).to.be.revertedWith("INVALID_SIGNATURE");
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
   });
 });

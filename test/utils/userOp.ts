@@ -104,8 +104,8 @@ export function packUserOp1(op: UserOperation): string {
       "bytes32", // initCode
       "bytes32", // callData
       "uint256", // callGasLimit
-      "uint", // verificationGasLimit
-      "uint", // preVerificationGas
+      "uint256", // verificationGasLimit
+      "uint256", // preVerificationGas
       "uint256", // maxFeePerGas
       "uint256", // maxPriorityFeePerGas
       "bytes32", // paymasterAndData

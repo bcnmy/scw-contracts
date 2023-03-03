@@ -4,9 +4,11 @@ pragma solidity 0.8.17;
 
 /* solhint-disable reason-string */
 
-import "@openzeppelin/contracts/access/Ownable.sol";
-import "@account-abstraction/contracts/interfaces/IPaymaster.sol";
-import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IPaymaster} from "@account-abstraction/contracts/interfaces/IPaymaster.sol";
+import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {BaseSmartAccountErrors} from "../common/Errors.sol"; 
 
 /**
  * Helper class for creating a paymaster.
@@ -14,7 +16,7 @@ import "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
  * validates that the postOp is called only by the entryPoint
  */
 // Could have Ownable2Step 
-abstract contract BasePaymaster is IPaymaster, Ownable {
+abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
 
     IEntryPoint immutable public entryPoint;
 
@@ -52,8 +54,6 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
      * @param actualGasCost - actual gas used so far (without this postOp call).
      */
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal virtual {
-
-        (mode,context,actualGasCost); // unused params
         // subclass must override this method if validatePaymasterUserOp returns a context
         revert("must override");
     }
@@ -93,7 +93,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
      * unlock the stake, in order to withdraw it.
      * The paymaster can't serve requests once unlocked, until it calls addStake again
      */
-    function unlockStake() external onlyOwner {
+    function unlockStake() external payable onlyOwner {
         entryPoint.unlockStake();
     }
 
@@ -102,12 +102,12 @@ abstract contract BasePaymaster is IPaymaster, Ownable {
      * stake must be unlocked first (and then wait for the unstakeDelay to be over)
      * @param withdrawAddress the address to send withdrawn value.
      */
-    function withdrawStake(address payable withdrawAddress) external onlyOwner {
+    function withdrawStake(address payable withdrawAddress) external payable onlyOwner {
         entryPoint.withdrawStake(withdrawAddress);
     }
 
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
-        require(msg.sender == address(entryPoint));
+        if(msg.sender != address(entryPoint)) revert CallerIsNotAnEntryPoint(msg.sender);
     }
 }

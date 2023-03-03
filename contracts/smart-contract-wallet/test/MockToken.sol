@@ -8,7 +8,7 @@ contract MockToken is ERC20 {
         ERC20("TST", "MockToken") {
     }
 
-    function mint(address sender, uint amount) external {
+    function mint(address sender, uint256 amount) external {
         _mint(sender, amount);
     }
 

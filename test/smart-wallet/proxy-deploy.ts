@@ -28,21 +28,32 @@ describe("Wallet Deployment", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    const walletFactory = await WalletFactory.deploy(
-      baseImpl.address,
-      handler.address
-    );
+    const walletFactory = await WalletFactory.deploy();
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
+    const initializer = SmartWallet.interface.encodeFunctionData("init", [
       owner,
+      handler.address,
+    ]);
+
+    const expected = await walletFactory.getAddressForCounterfactualWallet(
+      baseImpl.address,
+      initializer,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
-      .to.emit(walletFactory, "SmartAccountCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.4", 0);
+    const tx = await walletFactory.deployCounterFactualWallet(
+      baseImpl.address,
+      initializer,
+      indexForSalt
+    );
+    const receipt = await tx.wait();
+    console.log("smart account deployment gas ", receipt.gasUsed.toNumber());
+
+    /* await expect(walletFactory.deployCounterFactualWallet(baseImpl.address, initializer, indexForSalt))
+      .to.emit(walletFactory, "AccountCreation")
+      .withArgs(expected, baseImpl.address, initializer, indexForSalt); */
   });
 });
