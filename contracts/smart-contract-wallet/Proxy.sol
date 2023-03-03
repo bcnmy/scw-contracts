@@ -17,13 +17,6 @@ contract Proxy {
          }
     }
 
-    function getImplementation() external view returns (address _implementation) {
-         // solhint-disable-next-line no-inline-assembly
-         assembly {
-             _implementation := sload(address())
-         }
-    }
-
     fallback() external payable {
         address target;
         // solhint-disable-next-line no-inline-assembly

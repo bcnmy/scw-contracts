@@ -65,7 +65,7 @@ describe("Proxy Deployment", function () {
       .withArgs(expected, baseImpl.address, initializer, indexForSalt);
 
     const userSCW: any = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/Proxy.sol:Proxy",
+      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expected
     );
 

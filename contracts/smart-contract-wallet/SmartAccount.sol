@@ -115,6 +115,13 @@ contract SmartAccount is
         emit EOAChanged(address(this), oldOwner, _newOwner);
     }
 
+    function getImplementation() external view returns (address _implementation) {
+         // solhint-disable-next-line no-inline-assembly
+         assembly {
+             _implementation := sload(address())
+         }
+    }
+
     /**
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
