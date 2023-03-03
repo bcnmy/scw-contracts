@@ -96,7 +96,7 @@ contract VerifyingPaymaster is BasePaymaster {
     }
 
     function _updateNonce(UserOperation calldata userOp) internal {
-        paymasterNonces[userOp.getSender()]++;
+        ++paymasterNonces[userOp.getSender()];
     }
 
 }

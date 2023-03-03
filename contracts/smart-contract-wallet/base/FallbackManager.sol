@@ -2,9 +2,10 @@
 pragma solidity 0.8.12;
 
 import {SelfAuthorized} from "../common/SelfAuthorized.sol";
+import {FallbackManagerErrors} from "../common/Errors.sol";
 
 /// @title Fallback Manager - A contract that manages fallback calls made to this contract
-contract FallbackManager is SelfAuthorized {
+contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     // keccak-256 hash of "fallback_manager.handler.address" subtracted by 1
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT = 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d4;
 
@@ -49,7 +50,7 @@ contract FallbackManager is SelfAuthorized {
     }
 
     function _setFallbackHandler(address handler) internal {
-        require(handler != address(0), "Invalid Fallback Handler");
+        if(handler == address(0)) revert HandlerCannotBeZero();
         bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {

@@ -9,12 +9,13 @@ import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {Enum} from "./common/Enum.sol";
+import {BaseSmartAccountErrors} from "./common/Errors.sol";
 
 struct Transaction {
         address to;
+        Enum.Operation operation;
         uint256 value;
         bytes data;
-        Enum.Operation operation;
         uint256 targetTxGas;
     }
 
@@ -31,7 +32,7 @@ struct FeeRefund {
  * this contract provides the basic logic for implementing the IAccount interface  - validateUserOp
  * specific account implementation should inherit it and provide the account-specific logic
  */
-abstract contract BaseSmartAccount is IAccount {
+abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     using UserOperationLib for UserOperation;
 
     //return value in case of signature failure, with no time-range.
@@ -68,19 +69,12 @@ abstract contract BaseSmartAccount is IAccount {
     // review virtual 
     function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, address aggregator, uint256 missingAccountFunds)
     external override virtual returns (uint256 sigTimeRange) {
-        _requireFromEntryPoint();
+        if(msg.sender != address(entryPoint())) revert CallerIsNotAnEntryPoint(msg.sender);
         sigTimeRange = _validateSignature(userOp, userOpHash, aggregator);
         if (userOp.initCode.length == 0) {
             _validateAndUpdateNonce(userOp);
         }
         _payPrefund(missingAccountFunds);
-    }
-
-    /**
-     * ensure the request comes from the known entrypoint.
-     */
-    function _requireFromEntryPoint() internal virtual view {
-        require(msg.sender == address(entryPoint()), "account: not from EntryPoint");
     }
 
     /**
@@ -117,8 +111,7 @@ abstract contract BaseSmartAccount is IAccount {
      */
     function _payPrefund(uint256 missingAccountFunds) internal virtual {
         if (missingAccountFunds != 0) {
-            (bool success,) = payable(msg.sender).call{value : missingAccountFunds, gas : type(uint256).max}("");
-            (success);
+            payable(msg.sender).call{value : missingAccountFunds, gas : type(uint256).max}("");
             //ignore failure (its EntryPoint's job to verify, not account.)
         }
     }

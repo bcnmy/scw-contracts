@@ -206,7 +206,8 @@ contract SmartAccountNoAuth is
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
-        require(gasleft() >= max((_tx.targetTxGas * 64) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
+        // Bitshift left 6 bits means multiplying by 64, just more gas efficient
+        require(gasleft() >= max((_tx.targetTxGas << 6) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
@@ -218,7 +219,7 @@ contract SmartAccountNoAuth is
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment;
             // uint256 extraGas;
-            if (refundInfo.gasPrice > 0) {
+            if (refundInfo.gasPrice != 0) {
                 //console.log("sent %s", startGas - gasleft());
                 // extraGas = gasleft();
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
@@ -289,9 +290,8 @@ contract SmartAccountNoAuth is
         uint8 v;
         bytes32 r;
         bytes32 s;
-        uint256 i;
         address _signer;
-        (v, r, s) = signatureSplit(signatures, i);
+        (v, r, s) = signatureSplit(signatures);
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
