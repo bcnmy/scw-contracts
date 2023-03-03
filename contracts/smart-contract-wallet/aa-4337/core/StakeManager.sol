@@ -62,13 +62,8 @@ abstract contract StakeManager is IStakeManager {
         require(_unstakeDelaySec != 0, "must specify unstake delay");
         require(_unstakeDelaySec >= info.unstakeDelaySec, "cannot decrease unstake time");
         uint256 stake = info.stake + msg.value;
-<<<<<<< HEAD
-        require(stake != 0, "no stake specified");
-        require(stake < type(uint112).max, "stake overflow");
-=======
         require(stake > 0, "no stake specified");
         require(stake <= type(uint112).max, "stake overflow");
->>>>>>> c4-remediations
         deposits[msg.sender] = DepositInfo(
             info.deposit,
             true,

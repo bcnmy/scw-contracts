@@ -310,9 +310,8 @@ contract SmartAccount9 is
         uint8 v;
         bytes32 r;
         bytes32 s;
-        uint256 i = 0;
         address _signer;
-        (v, r, s) = signatureSplit(signatures, i);
+        (v, r, s) = signatureSplit(signatures);
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature

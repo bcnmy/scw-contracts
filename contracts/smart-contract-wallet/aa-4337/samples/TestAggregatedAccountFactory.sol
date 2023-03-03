@@ -26,13 +26,8 @@ contract TestAggregatedAccountFactory {
      */
     function createAccount(address owner, uint256 salt) public returns (TestAggregatedAccount ret) {
         address addr = getAddress(owner, salt);
-<<<<<<< HEAD
-        uint codeSize = addr.code.length;
-        if (codeSize != 0) {
-=======
         uint256 codeSize = addr.code.length;
         if (codeSize > 0) {
->>>>>>> c4-remediations
             return TestAggregatedAccount(payable(addr));
         }
         ret = TestAggregatedAccount(payable(new ERC1967Proxy{salt : bytes32(salt)}(
