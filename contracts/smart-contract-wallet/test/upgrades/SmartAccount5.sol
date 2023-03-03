@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 import "../../libs/LibAddress.sol";
 import "./BaseSmartAccountNew.sol";
