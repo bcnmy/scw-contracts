@@ -59,7 +59,7 @@ abstract contract StakeManager is IStakeManager {
      */
     function addStake(uint32 _unstakeDelaySec) public payable {
         DepositInfo storage info = deposits[msg.sender];
-        require(_unstakeDelaySec > 0, "must specify unstake delay");
+        require(_unstakeDelaySec != 0, "must specify unstake delay");
         require(_unstakeDelaySec >= info.unstakeDelaySec, "cannot decrease unstake time");
         uint256 stake = info.stake + msg.value;
         require(stake > 0, "no stake specified");
@@ -98,8 +98,8 @@ abstract contract StakeManager is IStakeManager {
         // require(withdrawAddress != address(0), "SM: Invalid withdraw address");
         DepositInfo storage info = deposits[msg.sender];
         uint256 stake = info.stake;
-        require(stake > 0, "No stake to withdraw");
-        require(info.withdrawTime > 0, "must call unlockStake() first");
+        require(stake != 0, "No stake to withdraw");
+        require(info.withdrawTime != 0, "must call unlockStake() first");
         require(info.withdrawTime <= block.timestamp, "Stake withdrawal is not due");
         info.unstakeDelaySec = 0;
         info.withdrawTime = 0;

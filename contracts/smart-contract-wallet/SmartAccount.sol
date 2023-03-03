@@ -63,7 +63,7 @@ contract SmartAccount is
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-        require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
+        if (address(anEntryPoint) == address(0)) revert EntryPointCannotBeZero();
         _entryPoint = anEntryPoint;
         _chainId = block.chainid;
     }
@@ -88,13 +88,13 @@ contract SmartAccount is
      * @notice Throws if the sender is not the owner.
      */
     modifier onlyOwner {
-        require(msg.sender == owner, "Smart Account:: Sender is not authorized");
+        if (msg.sender != owner) revert CallerIsNotOwner(msg.sender);
         _;
     }
 
     // onlyOwner OR self
     modifier mixedAuth {
-        require(msg.sender == owner || msg.sender == address(this), "Only owner or self");
+        if(msg.sender != owner && msg.sender != address(this)) revert MixedAuthFail(msg.sender);
         _;
    }
 
@@ -107,11 +107,13 @@ contract SmartAccount is
      * @param _newOwner Address of the new signatory 
      */
     function setOwner(address _newOwner) public mixedAuth {
-        require(_newOwner != address(0), "Smart Account:: new Signatory address cannot be zero");
+        if (_newOwner == address(0)) revert OwnerCannotBeZero();
         require(_newOwner != address(this), "Smart Account:: new Signatory address cannot be self");
         require(_newOwner != owner,"new Signatory address cannot be same as old one");
         address oldOwner = owner;
-        owner = _newOwner;
+        assembly {
+            sstore(owner.slot, _newOwner)
+        }
         emit EOAChanged(address(this), oldOwner, _newOwner);
     }
 
@@ -133,7 +135,7 @@ contract SmartAccount is
     function updateImplementation(address _implementation) public {
         require(_implementation != address(0), "Address cannot be zero");
         _requireFromEntryPointOrOwner();
-        require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
+        if(!_implementation.isContract()) revert InvalidImplementation(_implementation);
         // solhint-disable-next-line no-inline-assembly
         assembly {
              sstore(address(),_implementation) 
@@ -156,7 +158,7 @@ contract SmartAccount is
      * @return bytes32 The domain separator hash.
      */
     function domainSeparator() public view returns (bytes32) {
-        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, getChainId(), address(this)));
+        return keccak256(abi.encode(DOMAIN_SEPARATOR_TYPEHASH, block.chainid, address(this)));
     }
 
     /**
@@ -189,7 +191,7 @@ contract SmartAccount is
 
     // only from EntryPoint
     modifier onlyEntryPoint {
-        require(msg.sender == address(entryPoint()), "wallet: not from EntryPoint");
+        if(msg.sender != address(entryPoint())) revert CallerIsNotAnEntryPoint(msg.sender);
         _; 
     }
 
@@ -210,8 +212,8 @@ contract SmartAccount is
      * @notice init is prevented here by setting owner in the constructor and checking here for address(0) 
      */
     function init(address _owner, address _handler) external override { 
-        require(owner == address(0), "Already initialized");
-        require(_owner != address(0),"Invalid owner");
+        if(owner != address(0)) revert AlreadyInitialized(address(this));
+        if(_owner == address(0)) revert OwnerCannotBeZero();
         owner = _owner;
         _setFallbackHandler(_handler);
         address factory = msg.sender;
@@ -254,15 +256,15 @@ contract SmartAccount is
                     // Signature info
                     nonces[1]++
                 );
-            // Execute transaction.
             txHash = keccak256(txHashData);
             checkSignatures(txHash, signatures);
         }
 
-
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
-        require(gasleft() >= max((_tx.targetTxGas * 64) / 63,_tx.targetTxGas + 2500) + 500, "BSA010");
+        // Bitshift left 6 bits means multiplying by 64, just more gas efficient
+        if(gasleft() < max((_tx.targetTxGas << 6) / 63,_tx.targetTxGas + 2500) + 500) 
+            revert NotEnoughGasLeft(gasleft(), max((_tx.targetTxGas << 6) / 63,_tx.targetTxGas + 2500) + 500);
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
@@ -270,10 +272,10 @@ contract SmartAccount is
             success = execute(_tx.to, _tx.value, _tx.data, _tx.operation, refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.targetTxGas);
             // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
-            require(success || _tx.targetTxGas != 0 || refundInfo.gasPrice != 0, "BSA013");
+            if(!success && _tx.targetTxGas == 0 && refundInfo.gasPrice == 0) revert CanNotEstimateGas(_tx.targetTxGas, refundInfo.gasPrice, success);
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment;
-            if (refundInfo.gasPrice > 0) {
+            if (refundInfo.gasPrice != 0) {
                 payment = handlePayment(startGas - gasleft(), refundInfo.baseGas, refundInfo.gasPrice, refundInfo.tokenGasPriceFactor, refundInfo.gasToken, refundInfo.refundReceiver);
                 emit WalletHandlePayment(txHash, payment);
             }
@@ -305,11 +307,14 @@ contract SmartAccount is
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            (bool success,) = receiver.call{value: payment}("");
-            require(success, "BSA011");
+            bool success;                                 
+            assembly {                                    
+                success := call(gas(), receiver, payment, 0, 0, 0, 0)
+            }
+            if(!success) revert TokenTransferFailed(address(0), receiver, payment);
         } else {
             payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
-            require(transferToken(gasToken, receiver, payment), "BSA012");
+            if(!transferToken(gasToken, receiver, payment)) revert TokenTransferFailed(gasToken, receiver, payment);
         }
     }
     
@@ -341,13 +346,18 @@ contract SmartAccount is
         if (gasToken == address(0)) {
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             uint256 payment = (gasUsed + baseGas) * (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            (bool success,) = receiver.call{value: payment}("");
-            require(success, "BSA011");
+            bool success;                                 
+            assembly {                                    
+                success := call(gas(), receiver, payment, 0, 0, 0, 0)
+            }
+            if(!success) revert TokenTransferFailed(address(0), receiver, payment);
         } else {
             uint256 payment = (gasUsed + baseGas) * (gasPrice) / (tokenGasPriceFactor);
-            require(transferToken(gasToken, receiver, payment), "BSA012");
+            if(!transferToken(gasToken, receiver, payment)) revert TokenTransferFailed(gasToken, receiver, payment);
         }
-        requiredGas = startGas - gasleft();
+        unchecked { 
+            requiredGas = startGas - gasleft();
+        }
         revert(string(abi.encodePacked(requiredGas)));
     }
 
@@ -364,9 +374,8 @@ contract SmartAccount is
         uint8 v;
         bytes32 r;
         bytes32 s;
-        uint256 i;
         address _signer;
-        (v, r, s) = signatureSplit(signatures, i);
+        (v, r, s) = signatureSplit(signatures);
         //todo add the test case for contract signature
         if(v == 0) {
             // If v is 0 then it is a contract signature
@@ -374,12 +383,8 @@ contract SmartAccount is
             _signer = address(uint160(uint256(r)));
 
             // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
-                // This check is not completely accurate, since it is possible that more signatures than the threshold are sent.
-                // Here we only check that the pointer is not pointing inside the part that is being processed
-                require(uint256(s) >= uint256(1) * 65, "BSA021");
-
-                // Check that signature data pointer (s) is in bounds (points to the length of data -> 32 bytes)
-                require(uint256(s) + 32 <= signatures.length, "BSA022");
+                // Here we check that the pointer is not pointing inside the part that is being processed
+                if(uint256(s) < 65) revert WrongContractSignatureFormat(uint256(s), 0, 0);
 
                 // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
                 uint256 contractSignatureLen;
@@ -387,7 +392,8 @@ contract SmartAccount is
                 assembly {
                     contractSignatureLen := mload(add(add(signatures, s), 0x20))
                 }
-                require(uint256(s) + 32 + contractSignatureLen <= signatures.length, "BSA023");
+                if (uint256(s) + 32 + contractSignatureLen > signatures.length) 
+                    revert WrongContractSignatureFormat(uint256(s), contractSignatureLen, signatures.length);
 
                 // Check signature
                 bytes memory contractSignature;
@@ -396,7 +402,7 @@ contract SmartAccount is
                     // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                     contractSignature := add(add(signatures, s), 0x20)
                 }
-                require(ISignatureValidator(_signer).isValidSignature(dataHash, contractSignature) == EIP1271_MAGIC_VALUE, "BSA024");
+                if(ISignatureValidator(_signer).isValidSignature(dataHash, contractSignature) != EIP1271_MAGIC_VALUE) revert WrongContractSignature(contractSignature);
         }
         else if(v > 30) {
             // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
@@ -405,7 +411,7 @@ contract SmartAccount is
         } else {
             (_signer, ) = dataHash.tryRecover(v, r, s);
         }
-        require(_signer == owner, "INVALID_SIGNATURE");
+        if(_signer != owner) revert InvalidSignature(_signer, owner);
     }
 
     /// @dev Allows to estimate a transaction.
@@ -424,9 +430,11 @@ contract SmartAccount is
     ) external returns (uint256) {
         uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
-        require(execute(to, value, data, operation, gasleft()));
+        if(!execute(to, value, data, operation, gasleft())) revert ExecutionFailed();
         // Convert response to string and return via error message
-        revert(string(abi.encodePacked(startGas - gasleft())));
+        unchecked { 
+            revert(string(abi.encodePacked(startGas - gasleft())));
+        }
     }
 
     /**
@@ -512,9 +520,12 @@ contract SmartAccount is
      * @param amount Amount of native tokens
      */
     function transfer(address payable dest, uint256 amount) external onlyOwner {
-        require(dest != address(0), "this action will burn your funds");
-        (bool success, ) = dest.call{value: amount}("");
-        require(success, "transfer failed");
+        if(dest == address(0)) revert TransferToZeroAddressAttempt();
+        bool success;
+        assembly {
+            success := call(gas(), dest, amount, 0, 0, 0, 0)
+        }
+        if (!success) revert TokenTransferFailed(address(0), dest, amount);
     }
     
     /**
@@ -526,7 +537,7 @@ contract SmartAccount is
      * @param amount Amount of tokens
      */
     function pullTokens(address token, address dest, uint256 amount) external onlyOwner {
-        require(dest != address(0), "this action will burn your funds");
+        if(dest == address(0)) revert TransferToZeroAddressAttempt();
         if (!transferToken(token, dest, amount)) revert TokenTransferFailed(token, dest, amount);
     }
 
@@ -551,10 +562,10 @@ contract SmartAccount is
         bytes[] calldata func
     ) external {
         _requireFromEntryPointOrOwner();
-        require(dest.length != 0, "empty array provided");
-        require(dest.length == value.length, "wrong array lengths");
-        require(value.length == func.length, "wrong array lengths");
-        for (uint256 i = 0; i < dest.length; ) {
+        if(dest.length == 0 || dest.length != value.length || value.length != func.length) 
+            revert WrongBatchProvided (dest.length, value.length, func.length);
+        uint256 arraysLength = dest.length;
+        for (uint256 i; i < arraysLength; ) {
             _call(dest[i], value[i], func[i]);
             unchecked {
                 ++i;
@@ -570,10 +581,12 @@ contract SmartAccount is
      * @param data function singature of destination 
      */
     function _call(address target, uint256 value, bytes memory data) internal {
-        (bool success, bytes memory result) = target.call{value : value}(data);
-        if (!success) {
-            assembly {
-                revert(add(result, 32), mload(result))
+        assembly {
+            let success := call(gas(), target, value, add(data, 0x20), mload(data), 0, 0)
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
             }
         }
     }
@@ -582,11 +595,15 @@ contract SmartAccount is
     //Method is updated to instruct delegate call and emit regular events
     function execFromEntryPoint(address dest, uint256 value, bytes calldata func, Enum.Operation operation, uint256 gasLimit) external onlyEntryPoint returns (bool success) {        
         success = execute(dest, value, func, operation, gasLimit);
-        require(success, "Userop Failed");
+        if(!success) revert ExecutionFailed();
     }
 
     function _requireFromEntryPointOrOwner() internal view {
-        require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
+        if(msg.sender != address(entryPoint()) && msg.sender != owner) revert CallerIsNotEntryPointOrOwner(msg.sender);
+        
+        // Compatiblity options, should choose one
+        //if(msg.sender != address(entryPoint()) && msg.sender != owner) revert ("account: not Owner or EntryPoint");
+        //require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
     }
 
 
@@ -595,7 +612,11 @@ contract SmartAccount is
      * @notice Nonce space is locked to 0 for AA transactions
      */
     function _validateAndUpdateNonce(UserOperation calldata userOp) internal override {
-        require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
+        if(nonces[0]++ != userOp.nonce) revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
+        
+        // Compatiblity options, should choose one
+        //if(nonces[0]++ != userOp.nonce) revert ("account: invalid nonce");
+        //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /**
@@ -606,7 +627,6 @@ contract SmartAccount is
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
-        return 0;
     }
 
     /**
@@ -619,10 +639,9 @@ contract SmartAccount is
     /**
      * deposit more funds for this account in the entryPoint
      */
-    function addDeposit() external payable {
-
-        (bool req,) = address(entryPoint()).call{value : msg.value}("");
-        require(req,"Account deposit failed");
+    function addDeposit() public payable {
+        (bool success,) = address(entryPoint()).call{value : msg.value}("");
+        if(!success) revert TokenTransferFailed(address(0), address(entryPoint()), msg.value);
     }
 
     /**
@@ -630,7 +649,7 @@ contract SmartAccount is
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) external onlyOwner {
+    function withdrawDepositTo(address payable withdrawAddress, uint256 amount) public payable onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 
@@ -642,8 +661,7 @@ contract SmartAccount is
     function supportsInterface(bytes4 _interfaceId) external view virtual override returns (bool) {
         return _interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
-
-    // solhint-disable-next-line no-empty-blocks
+    
     receive() external payable {
         require(address(this) != _self, "only allowed via delegateCall");
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);

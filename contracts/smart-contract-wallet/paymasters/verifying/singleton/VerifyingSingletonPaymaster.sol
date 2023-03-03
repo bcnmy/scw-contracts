@@ -8,6 +8,7 @@ import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.
 import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {BasePaymaster, IEntryPoint} from "../../BasePaymaster.sol";
 import {PaymasterHelpers, PaymasterData, PaymasterContext} from "../../PaymasterHelpers.sol";
+import {SingletonPaymasterErrors} from "../../../common/Errors.sol";
 
 /**
  * A sample paymaster that uses external service to decide whether to pay for the UserOp.
@@ -18,7 +19,7 @@ import {PaymasterHelpers, PaymasterData, PaymasterContext} from "../../Paymaster
  * - the paymaster signs to agree to PAY for GAS.
  * - the wallet signs to prove identity and wallet ownership.
  */
-contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
+contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, SingletonPaymasterErrors {
 
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
@@ -39,10 +40,12 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
     event GasBalanceDeducted(address indexed _paymasterId, uint256 indexed _charge);
 
 
-    constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) {
-        require(address(_entryPoint) != address(0), "can not be 0 address");
-        require(_verifyingSigner != address(0), "signer of paymaster can not be 0");
-        verifyingSigner = _verifyingSigner;
+    constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) payable {
+        if(address(_entryPoint) == address(0)) revert EntryPointCannotBeZero();
+        if(_verifyingSigner == address(0)) revert VerifyingSignerCannotBeZero();
+        assembly {
+            sstore(verifyingSigner.slot, _verifyingSigner)
+        }
     }
 
     /**
@@ -50,9 +53,9 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
      * @param paymasterId dapp identifier for which deposit is being made
      */
     function depositFor(address paymasterId) external payable nonReentrant {
-        require(paymasterId != address(0), "Paymaster Id can not be zero");
-        require(msg.value != 0, "Zero deposit!");
-        paymasterIdBalances[paymasterId] += msg.value;
+        if(paymasterId == address(0)) revert PaymasterIdCannotBeZero();
+        if(msg.value == 0) revert DepositCanNotBeZero();
+        paymasterIdBalances[paymasterId] = paymasterIdBalances[paymasterId] + msg.value;
         entryPoint.depositTo{value : msg.value}(address(this));
         emit GasDeposited(paymasterId, msg.value);
     }
@@ -65,29 +68,31 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
         balance = paymasterIdBalances[paymasterId];
     } 
 
-    /**
-    this function will let owner change signer
-    */
-    function setSigner( address _newVerifyingSigner) external payable onlyOwner{
-        require(_newVerifyingSigner != address(0), "can't be 0 address");
-        address oldSigner = verifyingSigner;
-        verifyingSigner = _newVerifyingSigner;
-        emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
-    }
-
     function deposit() public virtual override payable {
         revert("user DepositFor instead");
     }
 
     function withdrawTo(address payable withdrawAddress, uint256 amount) public override nonReentrant {
-        require(withdrawAddress != address(0), "withdraw to 0 address");
+        if(withdrawAddress == address(0)) revert CanNotWithdrawToZeroAddress();
         uint256 currentBalance = paymasterIdBalances[msg.sender];
-        require(amount <= currentBalance, "Insufficient amount to withdraw");
-        paymasterIdBalances[msg.sender] -= amount;
+        if(amount > currentBalance) revert InsufficientBalance(amount, currentBalance);
+        paymasterIdBalances[msg.sender] = paymasterIdBalances[msg.sender] - amount;
         entryPoint.withdrawTo(withdrawAddress, amount);
         emit GasWithdrawn(msg.sender, withdrawAddress, amount);
     }
     
+    /**
+    this function will let owner change signer
+    */
+    function setSigner( address _newVerifyingSigner) external payable onlyOwner{
+        if(_newVerifyingSigner == address(0)) revert VerifyingSignerCannotBeZero();
+        address oldSigner = verifyingSigner;
+        assembly {
+            sstore(verifyingSigner.slot, _newVerifyingSigner)
+        }
+        emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
+    }
+
     /**
      * return the hash we're going to sign off-chain (and validate on-chain)
      * this method is called by the off-chain service, to sign the request.
@@ -131,20 +136,19 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
      */
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
     internal override returns (bytes memory context, uint256 sigTimeRange) {
-        (requiredPreFund);
         PaymasterData memory paymasterData = userOp._decodePaymasterData();
         bytes32 hash = getHash(userOp, paymasterNonces[userOp.getSender()], paymasterData.paymasterId);
         uint256 sigLength = paymasterData.signatureLength;
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
-        require(sigLength == 65, "VerifyingPaymaster: invalid signature length in paymasterAndData");
+        if(sigLength != 65) revert InvalidPaymasterSignatureLength(sigLength);
         //don't revert on signature failure: return SIG_VALIDATION_FAILED
         if (verifyingSigner != hash.toEthSignedMessageHash().recover(paymasterData.signature)) {
             // empty context and sigTimeRange 1
             return ("",1);
         }
         _updateNonce(userOp);
-        require(requiredPreFund <= paymasterIdBalances[paymasterData.paymasterId], "Insufficient balance for paymaster id");
-        // context and sigTimeRange 0
+        if(requiredPreFund > paymasterIdBalances[paymasterData.paymasterId]) 
+            revert InsufficientBalance(requiredPreFund, paymasterIdBalances[paymasterData.paymasterId]);
         return (userOp.paymasterContext(paymasterData), 0);
     }
 
@@ -158,16 +162,11 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard {
     * @param context payment conditions signed by the paymaster in `validatePaymasterUserOp`
     * @param actualGasCost amount to be paid to the entry point in wei
     */
-    function _postOp(
-     PostOpMode mode,
-     bytes calldata context,
-     uint256 actualGasCost
-    ) internal virtual override {
-    (mode);
-    PaymasterContext memory data = context._decodePaymasterContext();
-    address extractedPaymasterId = data.paymasterId;
-    paymasterIdBalances[extractedPaymasterId] -= actualGasCost;
-    emit GasBalanceDeducted(extractedPaymasterId, actualGasCost);
-  }
-
+    function _postOp (PostOpMode mode, bytes calldata context, uint256 actualGasCost) 
+    internal virtual override {
+        PaymasterContext memory data = context._decodePaymasterContext();
+        address extractedPaymasterId = data.paymasterId;
+        paymasterIdBalances[extractedPaymasterId] = paymasterIdBalances[extractedPaymasterId] - actualGasCost;
+        emit GasBalanceDeducted(extractedPaymasterId, actualGasCost);
+    }
 }

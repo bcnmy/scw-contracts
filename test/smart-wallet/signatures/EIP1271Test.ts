@@ -470,10 +470,12 @@ describe("EIP-1271 Signatures Tests", function () {
     // Expect can not use this signature on main smart account 2, even despite
     // it is owned by signer smart account 2, that is owned by the owner (original signer)
     await expect(
-      mainSmartAccount2
-        .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, manipulatedSignature)
-    ).to.be.revertedWith("BSA024");
+      mainSmartAccount2.connect(accounts[1]).execTransaction(
+        transaction,
+        refundInfo,
+        manipulatedSignature
+      )
+    ).to.be.revertedWith("WrongContractSignature");
 
     expect(await token.balanceOf(charlie)).to.equal(0);
   });

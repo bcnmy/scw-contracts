@@ -162,7 +162,7 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
       console.log("entrypoint ", entryPoint.address);
       await expect(
         entryPoint.callStatic.simulateValidation(userOp)
-      ).to.be.revertedWith("Insufficient balance for paymaster id");
+      ).to.be.revertedWith("FailedOp");
     });
 
     it("succeed with valid signature", async () => {

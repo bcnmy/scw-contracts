@@ -64,7 +64,7 @@ contract DepositPaymaster is BasePaymaster {
         //(sender must have approval for the paymaster)
         token.safeTransferFrom(msg.sender, address(this), amount);
         require(oracles[token] != NULL_ORACLE, "unsupported token");
-        balances[token][account] += amount;
+        balances[token][account] = balances[token][account] + amount;
         if (msg.sender == account) {
             lockTokenDeposit();
         }
@@ -100,7 +100,7 @@ contract DepositPaymaster is BasePaymaster {
      */
     function withdrawTokensTo(IERC20 token, address target, uint256 amount) public {
         require(unlockBlock[msg.sender] != 0 && block.number > unlockBlock[msg.sender], "DepositPaymaster: must unlockTokenDeposit");
-        balances[token][msg.sender] -= amount;
+        balances[token][msg.sender] = balances[token][msg.sender] - amount;
         token.safeTransfer(target, amount);
     }
 
@@ -157,8 +157,8 @@ contract DepositPaymaster is BasePaymaster {
             token.safeTransferFrom(account, address(this), actualTokenCost);
         } else {
             //in case above transferFrom failed, pay with deposit:
-            balances[token][account] -= actualTokenCost;
+            balances[token][account] = balances[token][account] - actualTokenCost;
         }
-        balances[token][owner()] += actualTokenCost;
+        balances[token][owner()] = balances[token][owner()] + actualTokenCost;
     }
 }

@@ -2,7 +2,8 @@
 pragma solidity 0.8.12;
 
 import "./Proxy.sol";
-import "./BaseSmartAccount.sol"; 
+import "./BaseSmartAccount.sol";
+import {SmartAccountFactoryErrors} from "./common/Errors.sol"; 
 
 // @todo review
 contract SmartAccountFactory {

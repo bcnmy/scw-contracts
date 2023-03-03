@@ -99,7 +99,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         uint256 collected = 0;
 
         for (uint256 i = 0; i < opslen; i++) {
-            collected += _executeUserOp(i, ops[i], opInfos[i]);
+            collected = collected + _executeUserOp(i, ops[i], opInfos[i]);
         }
 
         _compensate(beneficiary, collected);
@@ -119,7 +119,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         uint256 opasLen = opsPerAggregator.length;
         uint256 totalOps = 0;
         for (uint256 i = 0; i < opasLen; i++) {
-            totalOps += opsPerAggregator[i].userOps.length;
+            totalOps = totalOps + opsPerAggregator[i].userOps.length;
         }
 
         UserOpInfo[] memory opInfos = new UserOpInfo[](totalOps);
@@ -155,7 +155,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
             uint256 opslen = ops.length;
 
             for (uint256 i = 0; i < opslen; i++) {
-                collected += _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
+                collected = collected + _executeUserOp(opIndex, ops[i], opInfos[opIndex]);
                 opIndex++;
             }
         }
@@ -218,11 +218,11 @@ contract EntryPoint is IEntryPoint, StakeManager {
     }
 
         IPaymaster.PostOpMode mode = IPaymaster.PostOpMode.opSucceeded;
-        if (callData.length > 0) {
+        if (callData.length != 0) {
 
             (bool success,bytes memory result) = address(mUserOp.sender).call{gas : callGasLimit}(callData);
             if (!success) {
-                if (result.length > 0) {
+                if (result.length != 0) {
                     emit UserOperationRevertReason(opInfo.userOpHash, mUserOp.sender, mUserOp.nonce, result);
                 }
                 mode = IPaymaster.PostOpMode.opReverted;
@@ -256,7 +256,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         mUserOp.maxFeePerGas = userOp.maxFeePerGas;
         mUserOp.maxPriorityFeePerGas = userOp.maxPriorityFeePerGas;
         bytes calldata paymasterAndData = userOp.paymasterAndData;
-        if (paymasterAndData.length > 0) {
+        if (paymasterAndData.length != 0) {
             require(paymasterAndData.length >= 20, "AA93 invalid paymasterAndData");
             mUserOp.paymaster = address(bytes20(paymasterAndData[: 20]));
         } else {
@@ -536,7 +536,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
             refundAddress = mUserOp.sender;
         } else {
             refundAddress = paymaster;
-            if (context.length > 0) {
+            if (context.length != 0) {
                 actualGasCost = actualGas * gasPrice;
                 if (mode != IPaymaster.PostOpMode.postOpReverted) {
                     IPaymaster(paymaster).postOp{gas : mUserOp.verificationGasLimit}(mode, context, actualGasCost);
@@ -552,7 +552,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
                 }
             }
         }
-        actualGas += preGas - gasleft();
+        actualGas = actualGas + preGas - gasleft();
         actualGasCost = actualGas * gasPrice;
         if (opInfo.prefund < actualGasCost) {
             revert FailedOp(opIndex, paymaster, "A51 prefund below actualGasCost");
