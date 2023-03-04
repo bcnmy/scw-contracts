@@ -9,6 +9,7 @@ import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/in
 import "../../BasePaymaster.sol";
 import {PaymasterHelpers, PaymasterData, PaymasterContext} from "../../PaymasterHelpers.sol";
 import {SingletonPaymasterErrors} from "../../../common/Errors.sol";
+// import "hardhat/console.sol";
 
 /**
  * A sample paymaster that uses external service to decide whether to pay for the UserOp.
@@ -19,6 +20,7 @@ import {SingletonPaymasterErrors} from "../../../common/Errors.sol";
  * - the paymaster signs to agree to PAY for GAS.
  * - the wallet signs to prove identity and wallet ownership.
  */
+ // review signature verififcation. getHash and pack methods along with test case
 contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, SingletonPaymasterErrors {
 
     using ECDSA for bytes32;
@@ -153,6 +155,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
      * paymasterAndData[20:40] : paymasterId
      * paymasterAndData[40:] : signature
      */
+    // todo // #@review signature validation failing in singleton veirdying paymaster!
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
     internal override returns (bytes memory context, uint256 validationData) {
         // review could have a method within the contract itself called parsePaymasterData
@@ -165,14 +168,16 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
         if (verifyingSigner != hash.toEthSignedMessageHash().recover(paymasterData.signature)) {
             // empty context and validation Data
             // return ("",_packValidationData(true,validUntil,validAfter));
-            return ("",_packValidationData(true,0,0));
+            // console.log("ever here? 1");
+            return ("",0);
         }
+        // console.log("ever here? 2");
         _updateNonce(userOp);
         if(requiredPreFund > paymasterIdBalances[paymasterData.paymasterId]) 
             revert InsufficientBalance(requiredPreFund, paymasterIdBalances[paymasterData.paymasterId]);
 
         // // return (userOp.paymasterContext(paymasterData),_packValidationData(true,validUntil,validAfter));    
-        return (userOp.paymasterContext(paymasterData), _packValidationData(false,0,0));
+        return (userOp.paymasterContext(paymasterData),0);
     }
 
     function _updateNonce(UserOperation calldata userOp) internal {

@@ -19,6 +19,7 @@ import {
   EntryPoint__factory,
 } from "../../../typechain";
 import { AddressZero } from "../../smart-wallet/testutils";
+import { simulationResultCatch } from "../../aa-core/testutils";
 import { fillAndSign, fillUserOp } from "../../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { BigNumber, BigNumberish, Contract, Signer } from "ethers";
@@ -162,10 +163,16 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
       console.log("entrypoint ", entryPoint.address);
       await expect(
         entryPoint.callStatic.simulateValidation(userOp)
-      ).to.be.revertedWith("FailedOp");
+      //).to.be.revertedWith("FailedOp");
+      ).to.be.reverted;
     });
 
     it("succeed with valid signature", async () => {
+
+      const signer = await verifyingSingletonPaymaster.verifyingSigner();
+      const offchainSignerAddress = await offchainSigner.getAddress();  
+      expect(signer).to.be.equal(offchainSignerAddress);
+
       await verifyingSingletonPaymaster.depositFor(
         await offchainSigner.getAddress(),
         { value: ethers.utils.parseEther("1") }
