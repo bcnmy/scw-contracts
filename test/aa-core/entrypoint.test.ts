@@ -19,7 +19,9 @@ import {
   TestAggregatedAccount,
   TestSignatureAggregator,
   TestSignatureAggregator__factory,
-} from "../../typechain";
+  MaliciousAccount__factory,
+  TestWarmColdAccount__factory
+} from '../../typechain'
 import {
   AddressZero,
   createAccountOwner,
