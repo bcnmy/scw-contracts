@@ -6,7 +6,7 @@ pragma solidity 0.8.17;
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {BasePaymaster, IEntryPoint} from "../../BasePaymaster.sol";
+import "../../BasePaymaster.sol";
 import {PaymasterHelpers, PaymasterData, PaymasterContext} from "../../PaymasterHelpers.sol";
 import {SingletonPaymasterErrors} from "../../../common/Errors.sol";
 
@@ -23,28 +23,52 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
 
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
+
+    // review
     using PaymasterHelpers for UserOperation;
     using PaymasterHelpers for bytes;
     using PaymasterHelpers for PaymasterData;
 
+    // add offsets if paymasterAndData is supposed to be percieved differently
+    // could be address + sig
+    // but could also be address + validUntil + validAfter + sig
+    // but could also be (like for singleton) address + dappIdentifier (+ validUntil + validAfter) + sig 
+
+    // similar to how deposit paymaster maintains balances
     mapping(address => uint256) public paymasterIdBalances;
 
+    // review for imumutable
     address public verifyingSigner;
 
     // paymaster nonce for account 
-    mapping(address => uint256) private paymasterNonces;
+    mapping(address => uint256) public senderNonce;
 
     event VerifyingSignerChanged(address indexed _oldSigner, address indexed _newSigner, address indexed _actor);
     event GasDeposited(address indexed _paymasterId, uint256 indexed _value);
     event GasWithdrawn(address indexed _paymasterId, address indexed _to, uint256 indexed _value);
     event GasBalanceDeducted(address indexed _paymasterId, uint256 indexed _charge);
 
-
     constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) payable {
         if(address(_entryPoint) == address(0)) revert EntryPointCannotBeZero();
         if(_verifyingSigner == address(0)) revert VerifyingSignerCannotBeZero();
         assembly {
             sstore(verifyingSigner.slot, _verifyingSigner)
+        }
+    }
+
+    function pack(UserOperation calldata userOp) internal pure returns (bytes memory ret) {
+        // lighter signature scheme. must match UserOp.ts#packUserOp
+        bytes calldata pnd = userOp.paymasterAndData;
+        // copy directly the userOp from calldata up to (but not including) the paymasterAndData.
+        // this encoding depends on the ABI encoding of calldata, but is much lighter to copy
+        // than referencing each field separately.
+        assembly {
+            let ofs := userOp
+            let len := sub(sub(pnd.offset, ofs), 32)
+            ret := mload(0x40)
+            mstore(0x40, add(ret, add(len, 32)))
+            mstore(ret, len)
+            calldatacopy(add(ret, 32), ofs, len)
         }
     }
 
@@ -100,60 +124,59 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
      * note that this signature covers all fields of the UserOperation, except the "paymasterAndData",
      * which will carry the signature itself.
      */
+    // review if validUntil validAfter is a must
     function getHash(UserOperation calldata userOp, uint256 senderPaymasterNonce, address paymasterId)
     public view returns (bytes32) {
         //can't use userOp.hash(), since it contains also the paymasterAndData itself.
-        address sender = userOp.getSender();
         return keccak256(abi.encode(
-                sender,
-                userOp.nonce,
-                keccak256(userOp.initCode),
-                keccak256(userOp.callData),
-                userOp.callGasLimit,
-                userOp.verificationGasLimit,
-                userOp.preVerificationGas,
-                userOp.maxFeePerGas,
-                userOp.maxPriorityFeePerGas,
+                pack(userOp),
                 block.chainid,
                 address(this),
-                paymasterId,
-                senderPaymasterNonce
+                senderPaymasterNonce,
+                paymasterId
             ));
     }
 
     function getSenderPaymasterNonce(UserOperation calldata userOp) public view returns (uint256) {
         address account = userOp.getSender();
-        return paymasterNonces[account];
+        return senderNonce[account];
     }
 
     function getSenderPaymasterNonce(address account) public view returns (uint256) {
-        return paymasterNonces[account];
+        return senderNonce[account];
     }
 
     /**
      * verify our external signer signed this request.
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
+     * paymasterAndData[:20] : address(this)
+     * paymasterAndData[20:40] : paymasterId
+     * paymasterAndData[40:] : signature
      */
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
-    internal override returns (bytes memory context, uint256 sigTimeRange) {
+    internal override returns (bytes memory context, uint256 validationData) {
+        // review could have a method within the contract itself called parsePaymasterData
         PaymasterData memory paymasterData = userOp._decodePaymasterData();
-        bytes32 hash = getHash(userOp, paymasterNonces[userOp.getSender()], paymasterData.paymasterId);
+        bytes32 hash = getHash(userOp, senderNonce[userOp.getSender()], paymasterData.paymasterId);
         uint256 sigLength = paymasterData.signatureLength;
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
         if(sigLength != 65) revert InvalidPaymasterSignatureLength(sigLength);
         //don't revert on signature failure: return SIG_VALIDATION_FAILED
         if (verifyingSigner != hash.toEthSignedMessageHash().recover(paymasterData.signature)) {
-            // empty context and sigTimeRange 1
-            return ("",1);
+            // empty context and validation Data
+            // return ("",_packValidationData(true,validUntil,validAfter));
+            return ("",_packValidationData(true,0,0));
         }
         _updateNonce(userOp);
         if(requiredPreFund > paymasterIdBalances[paymasterData.paymasterId]) 
             revert InsufficientBalance(requiredPreFund, paymasterIdBalances[paymasterData.paymasterId]);
-        return (userOp.paymasterContext(paymasterData), 0);
+
+        // // return (userOp.paymasterContext(paymasterData),_packValidationData(true,validUntil,validAfter));    
+        return (userOp.paymasterContext(paymasterData), _packValidationData(false,0,0));
     }
 
     function _updateNonce(UserOperation calldata userOp) internal {
-        ++paymasterNonces[userOp.getSender()];
+        ++senderNonce[userOp.getSender()];
     }
 
     /**

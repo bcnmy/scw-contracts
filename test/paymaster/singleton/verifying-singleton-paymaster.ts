@@ -14,8 +14,8 @@ import {
   VerifyingSingletonPaymaster__factory,
   SmartAccountFactory,
   SmartAccountFactory__factory,
-  MaliciousAccount,
-  MaliciousAccount__factory,
+  MaliciousAccount2,
+  MaliciousAccount2__factory,
   EntryPoint__factory,
 } from "../../../typechain";
 import { AddressZero } from "../../smart-wallet/testutils";
@@ -44,7 +44,7 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
   let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
   let verifyPaymasterFactory: VerifyingPaymasterFactory;
   let smartWalletImp: SmartWallet;
-  let maliciousWallet: MaliciousAccount;
+  let maliciousWallet: MaliciousAccount2;
   let walletFactory: WalletFactory;
   let callBackHandler: DefaultCallbackHandler;
   const abi = ethers.utils.defaultAbiCoder;
@@ -77,7 +77,7 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
       entryPoint.address
     );
 
-    maliciousWallet = await new MaliciousAccount__factory(deployer).deploy(
+    maliciousWallet = await new MaliciousAccount2__factory(deployer).deploy(
       entryPoint.address
     );
 

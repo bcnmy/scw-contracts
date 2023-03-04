@@ -7,9 +7,9 @@ import "@openzeppelin/contracts/proxy/ERC1967/ERC1967Proxy.sol";
 import "./TestAggregatedAccount.sol";
 
 /**
- * Based n SimpleAccountFactory
- * can't be a subclass, since both constructor and createAccount depend on the
- * actual wallet contract constructor, initializer
+ * Based on SimpleAccountFactory.
+ * Cannot be a subclass since both constructor and createAccount depend on the
+ * constructor and initializer of the actual account contract.
  */
 contract TestAggregatedAccountFactory {
     TestAggregatedAccount public immutable accountImplementation;
@@ -24,9 +24,9 @@ contract TestAggregatedAccountFactory {
      * Note that during UserOperation execution, this method is called only if the account is not deployed.
      * This method returns an existing account address so that entryPoint.getSenderAddress() would work even after account creation
      */
-    function createAccount(address owner, uint256 salt) public returns (TestAggregatedAccount ret) {
+    function createAccount(address owner,uint256 salt) public returns (TestAggregatedAccount ret) {
         address addr = getAddress(owner, salt);
-        uint256 codeSize = addr.code.length;
+        uint codeSize = addr.code.length;
         if (codeSize > 0) {
             return TestAggregatedAccount(payable(addr));
         }
@@ -39,7 +39,7 @@ contract TestAggregatedAccountFactory {
     /**
      * calculate the counterfactual address of this account as it would be returned by createAccount()
      */
-    function getAddress(address owner, uint256 salt) public view returns (address) {
+    function getAddress(address owner,uint256 salt) public view returns (address) {
         return Create2.computeAddress(bytes32(salt), keccak256(abi.encodePacked(
                 type(ERC1967Proxy).creationCode,
                 abi.encode(

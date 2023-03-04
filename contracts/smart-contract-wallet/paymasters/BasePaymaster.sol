@@ -8,14 +8,15 @@ import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPaymaster} from "@account-abstraction/contracts/interfaces/IPaymaster.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {BaseSmartAccountErrors} from "../common/Errors.sol"; 
+import {BaseSmartAccountErrors} from "../common/Errors.sol";
+import "@account-abstraction/contracts/core/Helpers.sol"; 
 
 /**
  * Helper class for creating a paymaster.
  * provides helper methods for staking.
  * validates that the postOp is called only by the entryPoint
  */
-// Could have Ownable2Step 
+// @notice Could have Ownable2Step 
 abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
 
     IEntryPoint immutable public entryPoint;
@@ -27,13 +28,13 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
 
     /// @inheritdoc IPaymaster
     function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
-    external override returns (bytes memory context, uint256 sigTimeRange) {
+    external override returns (bytes memory context, uint256 validationData) {
          _requireFromEntryPoint();
         return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
     }
 
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 maxCost)
-    internal virtual returns (bytes memory context, uint256 sigTimeRange);
+    internal virtual returns (bytes memory context, uint256 validationData);
 
     /// @inheritdoc IPaymaster
     function postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) external override {
@@ -54,6 +55,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      * @param actualGasCost - actual gas used so far (without this postOp call).
      */
     function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal virtual {
+        (mode,context,actualGasCost); // unused params
         // subclass must override this method if validatePaymasterUserOp returns a context
         revert("must override");
     }
@@ -61,18 +63,15 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
     /**
      * add a deposit for this paymaster, used for paying for transaction fees
      */
-    function deposit() public virtual payable {
-        entryPoint.depositTo{value : msg.value}(address(this));
-    }
+    function deposit() external virtual payable;
 
     /**
      * withdraw value from the deposit
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
-    function withdrawTo(address payable withdrawAddress, uint256 amount) public virtual onlyOwner {
-        entryPoint.withdrawTo(withdrawAddress, amount);
-    }
+    function withdrawTo(address payable withdrawAddress, uint256 amount) external virtual;
+
     /**
      * add stake for this paymaster.
      * This method can also carry eth value to add to the current stake.
@@ -93,7 +92,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      * unlock the stake, in order to withdraw it.
      * The paymaster can't serve requests once unlocked, until it calls addStake again
      */
-    function unlockStake() external payable onlyOwner {
+    function unlockStake() external onlyOwner {
         entryPoint.unlockStake();
     }
 
@@ -102,12 +101,14 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      * stake must be unlocked first (and then wait for the unstakeDelay to be over)
      * @param withdrawAddress the address to send withdrawn value.
      */
-    function withdrawStake(address payable withdrawAddress) external payable onlyOwner {
+    function withdrawStake(address payable withdrawAddress) external onlyOwner {
         entryPoint.withdrawStake(withdrawAddress);
     }
 
+
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
+        // require(msg.sender == address(entryPoint), "Sender not EntryPoint"); // won't need BaseSmartAccountErrors import
         if(msg.sender != address(entryPoint)) revert CallerIsNotAnEntryPoint(msg.sender);
     }
 }

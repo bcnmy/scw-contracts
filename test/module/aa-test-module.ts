@@ -64,7 +64,6 @@ describe("Base Wallet Functionality", function () {
   let charlie: string;
   let userSCW: any;
   let smartWalletImp: SmartWallet;
-  let maliciousWallet: MaliciousAccount;
   let callBackHandler: DefaultCallbackHandler;
   let handler: DefaultCallbackHandler;
   const VERSION = "1.0.4";
