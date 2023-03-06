@@ -3,7 +3,7 @@
  ** Account-Abstraction (EIP-4337) singleton EntryPoint implementation.
  ** Only one instance required on each chain.
  **/
-pragma solidity ^0.8.12;
+pragma solidity 0.8.17;
 
 /* solhint-disable avoid-low-level-calls */
 /* solhint-disable no-inline-assembly */

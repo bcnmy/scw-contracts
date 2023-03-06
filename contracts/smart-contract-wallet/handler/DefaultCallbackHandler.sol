@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 import {IERC1155TokenReceiver} from "../interfaces/IERC1155TokenReceiver.sol";
 import {IERC721TokenReceiver} from "../interfaces/IERC721TokenReceiver.sol";
@@ -53,7 +53,7 @@ contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient
         uint256,
         bytes calldata
     ) external pure override returns (bytes4) {
-        return 0xf23a6e61;
+        return IERC1155TokenReceiver.onERC1155Received.selector;
     }
 
     function onERC1155BatchReceived(
@@ -63,7 +63,7 @@ contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient
         uint256[] calldata,
         bytes calldata
     ) external pure override returns (bytes4) {
-        return 0xbc197c81;
+        return IERC1155TokenReceiver.onERC1155BatchReceived.selector;
     }
 
     function onERC721Received(
@@ -72,7 +72,7 @@ contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient
         uint256,
         bytes calldata
     ) external pure override returns (bytes4) {
-        return 0x150b7a02;
+        return IERC721TokenReceiver.onERC721Received.selector;
     }
 
     function tokensReceived(
