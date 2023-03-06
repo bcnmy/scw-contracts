@@ -1,3 +1,4 @@
+/* eslint-disable node/no-unsupported-features/es-syntax */
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
@@ -46,6 +47,8 @@ describe("Account Functionality: 4337", function () {
   let userSCW: any;
   let handler: DefaultCallbackHandler;
   let accounts: any;
+  let erc20Interface: any;
+  const results: any = [];
 
   before(async () => {
     accounts = await ethers.getSigners();
@@ -62,6 +65,10 @@ describe("Account Functionality: 4337", function () {
     john = await accounts[3].getAddress();
     dave = await accounts[4].getAddress();
 
+    erc20Interface = new ethers.utils.Interface([
+      "function transfer(address _to, uint256 _value)",
+    ]);
+
     const offchainSignerAddress = await offchainSigner.getAddress();
     const walletOwnerAddress = await walletOwner.getAddress();
 
@@ -71,57 +78,32 @@ describe("Account Functionality: 4337", function () {
         entryPoint.address,
         offchainSignerAddress
       );
-    console.log(
-      "verifyingSingletonPaymaster: ",
-      verifyingSingletonPaymaster.deployTransaction.gasLimit.toNumber()
-    );
 
     const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
     );
     handler = await DefaultHandler.deploy();
     await handler.deployed();
-    console.log(
-      "Default callback handler: ",
-      handler.deployTransaction.gasLimit.toNumber()
-    );
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);
     await baseImpl.deployed();
-    console.log(
-      "BaseWallet impl: ",
-      baseImpl.deployTransaction.gasLimit.toNumber()
-    );
 
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
     walletFactory = await WalletFactory.deploy();
     await walletFactory.deployed();
-    console.log(
-      "Wallet factory: ",
-      walletFactory.deployTransaction.gasLimit.toNumber()
-    );
 
     const MockToken = await ethers.getContractFactory("MockToken");
     token = await MockToken.deploy();
     await token.deployed();
-    console.log("Mock ERC20: ", token.deployTransaction.gasLimit.toNumber());
 
     const Storage = await ethers.getContractFactory("StorageSetter");
     storage = await Storage.deploy();
-    console.log(
-      "Storage setter: ",
-      storage.deployTransaction.gasLimit.toNumber()
-    );
 
     const MultiSend = await ethers.getContractFactory("MultiSend");
     multiSend = await MultiSend.deploy();
-    console.log(
-      "Multisend helper: ",
-      multiSend.deployTransaction.gasLimit.toNumber()
-    );
 
     await token.mint(owner, ethers.utils.parseEther("1000000"));
 
@@ -140,9 +122,11 @@ describe("Account Functionality: 4337", function () {
       initializer,
       0
     );
-
     walletAddress = expected;
-    console.log("SmartAccount: ", tx.gasLimit.toNumber());
+    const receipt = await tx.wait();
+    // console.log("------------- Deploy SmartAccount Gas Used -------------");
+    // console.log("SmartAccount: ", receipt.gasUsed.toString());
+    results.push(`Deploy SmartAccount Gas Used: ${receipt.gasUsed.toString()}`);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -156,7 +140,7 @@ describe("Account Functionality: 4337", function () {
     await entryPoint.depositTo(paymasterAddress, { value: parseEther("1") });
   });
 
-  it("4337 flow: estimate send erc20 transaction gasUsed", async () => {
+  it("4337 flow: estimate [send erc20] (wallet already deployed): transaction gasUsed", async () => {
     // deposit for the pasymaster
     await verifyingSingletonPaymaster.depositFor(
       await offchainSigner.getAddress(),
@@ -169,10 +153,7 @@ describe("Account Functionality: 4337", function () {
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
 
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
-    // encode transfer erc20 token data
-    const erc20Interface = new ethers.utils.Interface([
-      "function transfer(address _to, uint256 _value)",
-    ]);
+
     // Encode an ERC-20 token transfer to recipient of the specified amount
     const transferData = erc20Interface.encodeFunctionData("transfer", [
       bob,
@@ -224,9 +205,13 @@ describe("Account Functionality: 4337", function () {
       await offchainSigner.getAddress()
     );
     const receipt = await tx.wait();
-    console.log(
-      "4337 flow: estimate send erc20 transaction gasUsed (wallet is deployed): ",
-      receipt.gasUsed.toNumber()
+    // console.log(
+    //   "--------AA 4337 flow: [Send erc20] tx executeCall: ",
+    //   receipt.gasUsed.toNumber(),
+    //   "--------"
+    // );
+    results.push(
+      `AA 4337 flow: [Send erc20] tx executeCall: ${receipt.gasUsed.toString()}`
     );
 
     // check updated balance of the wallet and bob
@@ -236,7 +221,7 @@ describe("Account Functionality: 4337", function () {
     expect(balanceBob).to.equal(ethers.utils.parseEther("1"));
   });
 
-  it("4337 flow: estimate wallet deployment + send erc20: transaction gasUsed", async () => {
+  it("4337 flow: estimate [wallet deployment + send erc20]: transaction gasUsed", async () => {
     // create new SCW but dont deployCounterFactualWallet
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
     const initializer = SmartAccount.interface.encodeFunctionData("init", [
@@ -249,7 +234,7 @@ describe("Account Functionality: 4337", function () {
         initializer,
         10
       );
-    console.log("wallet address address: ", expectedWallet);
+
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expectedWallet
@@ -260,10 +245,6 @@ describe("Account Functionality: 4337", function () {
       .connect(accounts[0])
       .transfer(newUserSCW.address, ethers.utils.parseEther("100"));
 
-    // encode transfer erc20 token data
-    const erc20Interface = new ethers.utils.Interface([
-      "function transfer(address _to, uint256 _value)",
-    ]);
     // Encode an ERC-20 token transfer to recipient of the specified amount
     const transferData = erc20Interface.encodeFunctionData("transfer", [
       bob,
@@ -275,7 +256,6 @@ describe("Account Functionality: 4337", function () {
       0,
       transferData,
     ]);
-    console.log("txnData: ");
 
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
@@ -297,11 +277,9 @@ describe("Account Functionality: 4337", function () {
       accounts[2],
       entryPoint
     );
-    console.log("userOp1: ", userOp1);
     const nonceFromContract = await verifyingSingletonPaymaster[
       "getSenderPaymasterNonce(address)"
     ](newUserSCW.address);
-
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
       nonceFromContract.toNumber(),
@@ -322,15 +300,20 @@ describe("Account Functionality: 4337", function () {
       accounts[2],
       entryPoint
     );
-    console.log("userOp: ", userOp);
+
     const tx = await entryPoint.handleOps(
       [userOp],
       await offchainSigner.getAddress()
     );
     const receipt = await tx.wait();
-    console.log(
-      "gasUsed for erc20 transfer (undeployed wallet)",
-      receipt.gasUsed.toNumber()
+
+    // console.log(
+    //   "--------AA 4337 flow: [Wallet Deploy + Send erc20] tx executeCall: ",
+    //   receipt.gasUsed.toNumber(),
+    //   "--------"
+    // );
+    results.push(
+      `AA 4337 flow: [Wallet Deploy + Send erc20] tx executeCall: ${receipt.gasUsed.toString()}`
     );
 
     // check updated balance of the wallet and bob
@@ -340,7 +323,7 @@ describe("Account Functionality: 4337", function () {
     expect(balanceBob).to.equal(ethers.utils.parseEther("2"));
   });
 
-  it("4337 flow: estimate wallet deployment + send erc20 batch (wallet is deployed): transaction gasUsed", async () => {
+  it("4337 flow: estimate [send erc20 batch] (wallet already deployed): transaction gasUsed", async () => {
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
     const initializer = SmartAccount.interface.encodeFunctionData("init", [
       charlie,
@@ -357,7 +340,7 @@ describe("Account Functionality: 4337", function () {
         initializer,
         11
       );
-    console.log("wallet address address: ", expectedWallet);
+
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expectedWallet
@@ -368,10 +351,6 @@ describe("Account Functionality: 4337", function () {
       .connect(accounts[0])
       .transfer(newUserSCW.address, ethers.utils.parseEther("100"));
 
-    // encode transfer erc20 token data
-    const erc20Interface = new ethers.utils.Interface([
-      "function transfer(address _to, uint256 _value)",
-    ]);
     // Encode an ERC-20 token transfer to recipient of the specified amount
     const transferData1 = erc20Interface.encodeFunctionData("transfer", [
       john,
@@ -390,16 +369,6 @@ describe("Account Functionality: 4337", function () {
         [transferData1, transferData2],
       ]
     );
-    console.log("txnData: ");
-
-    const WalletFactory = await ethers.getContractFactory(
-      "SmartAccountFactory"
-    );
-
-    const encodedData = WalletFactory.interface.encodeFunctionData(
-      "deployCounterFactualWallet",
-      [baseImpl.address, initializer, 11]
-    );
 
     const userOp1 = await fillAndSign(
       {
@@ -412,7 +381,7 @@ describe("Account Functionality: 4337", function () {
       accounts[2],
       entryPoint
     );
-    console.log("userOp1: ", userOp1);
+
     const nonceFromContract = await verifyingSingletonPaymaster[
       "getSenderPaymasterNonce(address)"
     ](newUserSCW.address);
@@ -437,15 +406,19 @@ describe("Account Functionality: 4337", function () {
       accounts[2],
       entryPoint
     );
-    console.log("userOp: ", userOp);
+
     const tx = await entryPoint.handleOps(
       [userOp],
       await offchainSigner.getAddress()
     );
     const receipt = await tx.wait();
-    console.log(
-      "gasUsed for erc20 batch transfer (deployed wallet)",
-      receipt.gasUsed.toNumber()
+    // console.log(
+    //   "--------AA 4337 flow: [Send erc20 batch] tx executeBatchCall:",
+    //   receipt.gasUsed.toNumber(),
+    //   "--------"
+    // );
+    results.push(
+      `AA 4337 flow: [Send erc20 batch] tx executeBatchCall: ${receipt.gasUsed.toString()}`
     );
 
     // check updated balance of the wallet and bob
@@ -457,9 +430,7 @@ describe("Account Functionality: 4337", function () {
     expect(balanceDave).to.equal(ethers.utils.parseEther("1"));
   });
 
-  // Todo // erc20 batch for undeployed wallet using aa flow
-
-  /* it("4337 flow: estimate wallet deployment + send erc20 batch (wallet is deployed): transaction gasUsed", async () => {
+  it("4337 flow: estimate [wallet deployment + send erc20 batch]: transaction gasUsed", async () => {
     // create new SCW but dont deployCounterFactualWallet
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
     const initializer = SmartAccount.interface.encodeFunctionData("init", [
@@ -472,7 +443,6 @@ describe("Account Functionality: 4337", function () {
         initializer,
         12
       );
-    console.log("wallet address address: ", expectedWallet);
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expectedWallet
@@ -483,10 +453,6 @@ describe("Account Functionality: 4337", function () {
       .connect(accounts[0])
       .transfer(expectedWallet, ethers.utils.parseEther("100"));
 
-    // encode transfer erc20 token data
-    const erc20Interface = new ethers.utils.Interface([
-      "function transfer(address _to, uint256 _value)",
-    ]);
     // Encode an ERC-20 token transfer to recipient of the specified amount
     const transferData1 = erc20Interface.encodeFunctionData("transfer", [
       john,
@@ -505,7 +471,6 @@ describe("Account Functionality: 4337", function () {
         [transferData1, transferData2],
       ]
     );
-    console.log("txnData: ");
 
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
@@ -520,14 +485,15 @@ describe("Account Functionality: 4337", function () {
       {
         sender: newUserSCW.address,
         callData: txnData,
-        // verificationGasLimit: 900000,
+        verificationGasLimit: 9000000,
         // nonce: 0,
+        callGasLimit: 500000,
         initCode: hexConcat([walletFactory.address, encodedData]),
       },
       accounts[2],
       entryPoint
     );
-    console.log("userOp1: ", userOp1);
+
     const nonceFromContract = await verifyingSingletonPaymaster[
       "getSenderPaymasterNonce(address)"
     ](newUserSCW.address);
@@ -552,15 +518,19 @@ describe("Account Functionality: 4337", function () {
       accounts[2],
       entryPoint
     );
-    console.log("userOp: ", userOp);
+
     const tx = await entryPoint.handleOps(
       [userOp],
       await offchainSigner.getAddress()
     );
     const receipt = await tx.wait();
-    console.log(
-      "gasUsed for erc20 batch transfer (undeployed wallet)",
-      receipt.gasUsed.toNumber()
+    // console.log(
+    //   "--------AA 4337 flow: [wallet deployment + send erc20 batch] tx executeBatchCall:",
+    //   receipt.gasUsed.toNumber(),
+    //   "--------"
+    // );
+    results.push(
+      `AA 4337 flow: [wallet deployment + send erc20 batch] tx executeBatchCall: ${receipt.gasUsed.toString()}`
     );
 
     // check updated balance of the wallet and bob
@@ -570,11 +540,67 @@ describe("Account Functionality: 4337", function () {
     expect(balanceSCW).to.equal(ethers.utils.parseEther("98"));
     expect(balanceJohn).to.equal(ethers.utils.parseEther("2"));
     expect(balanceDave).to.equal(ethers.utils.parseEther("2"));
-  }); */
+  });
 
   // Note : above results are when EP and Paymaster computation is involved!
   // Should do tests without paymaster (waller has native eth / pre deposited in entry point) and also below tests
+  it("Owner flow: estimate [send erc20 / erc20 batch] (wallet already deployed): transaction gasUsed", async () => {
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
 
-  // Todo // ERC20 transfer for executeCall and executeBathCall involked from onlyOwner
+    // Encode an ERC-20 token transfer to recipient of the specified amount
+    const transferData1 = erc20Interface.encodeFunctionData("transfer", [
+      john,
+      ethers.utils.parseEther("1"),
+    ]);
+    let tx = await userSCW
+      .connect(accounts[0])
+      .executeCall(token.address, 0, transferData1);
+    let receipt = await tx.wait();
+    // console.log(
+    //   "--------Owner flow: [send erc20] tx executeCall:",
+    //   receipt.gasUsed.toNumber(),
+    //   "--------"
+    // );
+    results.push(
+      `Owner flow: [send erc20] tx executeCall: ${receipt.gasUsed.toString()}`
+    );
+    expect(await token.balanceOf(john)).to.equal(ethers.utils.parseEther("3"));
+
+    // Encode an ERC-20 token transfer to recipient of the specified amount
+    const transferData2 = erc20Interface.encodeFunctionData("transfer", [
+      dave,
+      ethers.utils.parseEther("1"),
+    ]);
+    tx = await userSCW
+      .connect(accounts[0])
+      .executeBatchCall(
+        [token.address, token.address],
+        [0, 0],
+        [transferData1, transferData2]
+      );
+    receipt = await tx.wait();
+    // console.log(
+    //   "--------Owner flow: [send erc20] tx executeBatchCall:",
+    //   receipt.gasUsed.toNumber(),
+    //   "--------"
+    // );
+    results.push(
+      `Owner flow: [send erc20] tx executeBatchCall: ${receipt.gasUsed.toString()}`
+    );
+
+    expect(await token.balanceOf(john)).to.equal(ethers.utils.parseEther("4"));
+    expect(await token.balanceOf(dave)).to.equal(ethers.utils.parseEther("3"));
+  });
+
   // Todo // ERC20 transfer and ERC20 batch transfer but using owner signature via execTransaction
+
+  // log results
+  it("Gas results", async () => {
+    console.log("--------Gas results--------");
+    results.forEach((result: string) => {
+      console.log(result);
+    });
+  });
 });
