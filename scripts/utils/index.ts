@@ -35,15 +35,15 @@ const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
 // TODO
 // append TEST (temporary) for next dev deployment
 export enum DEPLOYMENT_SALTS {
-  FallBACK_HANDLER = "TEST_CALLBACK_HANDLER_V0_2002",
-  DECODER = "TEST_DECODER_V0_2002",
-  ENTRY_POINT = "TEST_ENTRY_POINT_V0_2002",
-  GAS_ESTIMATOR = "TEST_GAS_ESTIMATOR_V0_2002",
-  MULTI_SEND = "TEST_MULTI_SEND_V0_2002",
-  MULTI_SEND_CALLONLY = "TEST_MULTI_SEND_CALLONLY_V0_2002",
-  WALLET_FACTORY = "TEST_WALLET_FACTORY_V0_2002",
-  WALLET_IMP = "TEST_WALLET_IMP_V0_2002",
-  SINGELTON_PAYMASTER = "TEST_SINGELTON_PAYMASTER_V0_2002",
+  FallBACK_HANDLER = "TEST_CALLBACK_HANDLER_V0_0307",
+  DECODER = "TEST_DECODER_V0_0307",
+  ENTRY_POINT = "TEST_ENTRY_POINT_V0_0307",
+  GAS_ESTIMATOR = "TEST_GAS_ESTIMATOR_V0_0307",
+  MULTI_SEND = "TEST_MULTI_SEND_V0_0307",
+  MULTI_SEND_CALLONLY = "TEST_MULTI_SEND_CALLONLY_V0_0307",
+  WALLET_FACTORY = "TEST_WALLET_FACTORY_V0_0307",
+  WALLET_IMP = "TEST_WALLET_IMP_V0_0307",
+  SINGELTON_PAYMASTER = "TEST_SINGELTON_PAYMASTER_V0_0307",
 }
 
 export const factoryAbi = [
@@ -150,7 +150,7 @@ export const deployContract = async (
 
   console.log(`Submitted transaction ${hash} for deployment`);
 
-  const { status, logs, blockNumber } = await wait(2);
+  const { status, logs, blockNumber } = await wait(5);
 
   if (status !== 1) {
     throw new Error(`Transaction ${hash} failed`);

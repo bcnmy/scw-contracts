@@ -1,4 +1,4 @@
-import { ethers, run } from "hardhat";
+import { ethers, run, network } from "hardhat";
 import {
   deployContract,
   DEPLOYMENT_SALTS,
@@ -9,13 +9,18 @@ import {
 import { Deployer } from "../typechain";
 
 const provider = ethers.provider;
-let entryPointAddress = "";
+let entryPointAddress = process.env.ENTRY_POINT_ADDRESS;
 let baseImpAddress = "";
 let fallBackHandlerAddress = "";
 const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
+  if (network.name !== 'hardhat' || network.name !== 'ganache'){
+    console.log("Entry Point Already Deployed Address: ", entryPointAddress);
+    return
+  }
+
   try {
     const salt = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.ENTRY_POINT)
@@ -162,7 +167,7 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
       );
       await run(`verify:verify`, {
         address: walletFactoryComputedAddr,
-        constructorArguments: [baseImpAddress, fallBackHandlerAddress],
+        constructorArguments: [],
       });
     } else {
       console.log(
@@ -385,7 +390,7 @@ async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
   }
 }
 
-async function main() {
+async function main() {  
   const deployerInstance = await getDeployerInstance();
   await deployEntryPointContract(deployerInstance);
   await deployCallBackHandlerContract(deployerInstance);
