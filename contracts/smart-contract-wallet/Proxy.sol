@@ -10,11 +10,14 @@ contract Proxy {
     // address internal singleton;
 
     constructor(address _implementation) {
-         require(_implementation != address(0), "Invalid implementation address");
-         // solhint-disable-next-line no-inline-assembly
-         assembly {
-             sstore(address(),_implementation) 
-         }
+        require(
+            _implementation != address(0),
+            "Invalid implementation address"
+        );
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            sstore(address(), _implementation)
+        }
     }
 
     fallback() external payable {
@@ -26,9 +29,12 @@ contract Proxy {
             let result := delegatecall(gas(), target, 0, calldatasize(), 0, 0)
             returndatacopy(0, 0, returndatasize())
             switch result
-            case 0 {revert(0, returndatasize())}
-            default {return (0, returndatasize())}
+            case 0 {
+                revert(0, returndatasize())
+            }
+            default {
+                return(0, returndatasize())
+            }
         }
     }
-
 }

@@ -80,11 +80,10 @@ contract SocialRecoveryModule {
         walletsNonces[_wallet]++;
     }
 
-    function isConfirmedByRequiredFriends(bytes32 recoveryHash, address _wallet)
-        public
-        view
-        returns (bool)
-    {
+    function isConfirmedByRequiredFriends(
+        bytes32 recoveryHash,
+        address _wallet
+    ) public view returns (bool) {
         uint256 confirmationCount;
         Friends storage entry = friendsEntries[_wallet];
         for (uint256 i = 0; i < entry.friends.length; i++) {
@@ -95,11 +94,10 @@ contract SocialRecoveryModule {
         return false;
     }
 
-    function _onlyFriends(address _wallet, address _friend)
-        public
-        view
-        returns (bool)
-    {
+    function _onlyFriends(
+        address _wallet,
+        address _friend
+    ) public view returns (bool) {
         Friends storage entry = friendsEntries[_wallet];
         for (uint256 i = 0; i < entry.friends.length; i++) {
             if (entry.friends[i] == _friend) return true;

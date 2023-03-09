@@ -4,7 +4,9 @@ pragma solidity 0.8.17;
 import "../samples/IOracle.sol";
 
 contract TestOracle is IOracle {
-    function getTokenValueOfEth(uint256 ethOutput) external pure override returns (uint256 tokenInput) {
+    function getTokenValueOfEth(
+        uint256 ethOutput
+    ) external pure override returns (uint256 tokenInput) {
         return ethOutput * 2;
     }
 }

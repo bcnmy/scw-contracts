@@ -10,7 +10,8 @@ contract SignMessageLib is SmartAccountStorage {
     //keccak256(
     //    "SmartAccountMessage(bytes message)"
     //);
-    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH = 0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
+    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH =
+        0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     event MessageSigned(bytes32 indexed messageHash);
 
@@ -26,8 +27,20 @@ contract SignMessageLib is SmartAccountStorage {
     /// @dev Returns hash of a message that can be signed by owners.
     /// @param message Message that should be hashed
     /// @return Message hash.
-    function getMessageHash(bytes memory message) public view returns (bytes32) {
-        bytes32 smartAccountMessageHash = keccak256(abi.encode(SMART_ACCOUNT_MSG_TYPEHASH, keccak256(message)));
-        return keccak256(abi.encodePacked(bytes1(0x19), bytes1(0x01), SmartAccount(payable(address(this))).domainSeparator(), smartAccountMessageHash));
+    function getMessageHash(
+        bytes memory message
+    ) public view returns (bytes32) {
+        bytes32 smartAccountMessageHash = keccak256(
+            abi.encode(SMART_ACCOUNT_MSG_TYPEHASH, keccak256(message))
+        );
+        return
+            keccak256(
+                abi.encodePacked(
+                    bytes1(0x19),
+                    bytes1(0x01),
+                    SmartAccount(payable(address(this))).domainSeparator(),
+                    smartAccountMessageHash
+                )
+            );
     }
 }

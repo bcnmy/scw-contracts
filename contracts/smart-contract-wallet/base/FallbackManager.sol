@@ -7,9 +7,13 @@ import {FallbackManagerErrors} from "../common/Errors.sol";
 /// @title Fallback Manager - A contract that manages fallback calls made to this contract
 contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     // keccak-256 hash of "fallback_manager.handler.address" subtracted by 1
-    bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT = 0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d4;
+    bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT =
+        0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d4;
 
-    event ChangedFallbackHandler(address indexed previousHandler, address indexed handler);
+    event ChangedFallbackHandler(
+        address indexed previousHandler,
+        address indexed handler
+    );
 
     // solhint-disable-next-line payable-fallback,no-complex-fallback
     fallback() external {
@@ -25,7 +29,15 @@ contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
             // Then the address without padding is stored right after the calldata
             mstore(calldatasize(), shl(96, caller()))
             // Add 20 bytes for the address appended add the end
-            let success := call(gas(), handler, 0, 0, add(calldatasize(), 20), 0, 0)
+            let success := call(
+                gas(),
+                handler,
+                0,
+                0,
+                add(calldatasize(), 20),
+                0,
+                0
+            )
             returndatacopy(0, 0, returndatasize())
             if iszero(success) {
                 revert(0, returndatasize())
@@ -35,10 +47,10 @@ contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     }
 
     function getFallbackHandler() external view returns (address _handler) {
-         // solhint-disable-next-line no-inline-assembly
-         assembly {
-             _handler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
-         }
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            _handler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
+        }
     }
 
     /// @dev Allows to add a contract to handle fallback calls.
@@ -57,7 +69,7 @@ contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     }
 
     function _setFallbackHandler(address handler) internal {
-        if(handler == address(0)) revert HandlerCannotBeZero();
+        if (handler == address(0)) revert HandlerCannotBeZero();
         bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
         // solhint-disable-next-line no-inline-assembly
         assembly {
