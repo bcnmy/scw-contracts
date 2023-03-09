@@ -107,12 +107,12 @@ describe("Base Wallet Functionality", function () {
         offchainSignerAddress
       );
 
-    const DefaultHandler = await ethers.getContractFactory(
+    /* const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
     );
     handler = await DefaultHandler.deploy();
     await handler.deployed();
-    console.log("Default callback handler deployed at: ", handler.address);
+    console.log("Default callback handler deployed at: ", handler.address); */
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);
@@ -122,7 +122,7 @@ describe("Base Wallet Functionality", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy();
+    walletFactory = await WalletFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -143,18 +143,9 @@ describe("Base Wallet Functionality", function () {
     await token.mint(owner, ethers.utils.parseEther("1000000"));
 
     const implIface = BaseImplementation.interface;
-    const initializer = implIface.encodeFunctionData("init", [
-      walletOwnerAddress,
-      handler.address,
-    ]);
-    await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
-      0
-    );
+    await walletFactory.deployCounterFactualWallet(owner, 0);
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       0
     );
 

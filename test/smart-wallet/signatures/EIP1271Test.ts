@@ -90,7 +90,7 @@ describe("EIP-1271 Signatures Tests", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy();
+    walletFactory = await WalletFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     // console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -115,47 +115,30 @@ describe("EIP-1271 Signatures Tests", function () {
 
     const deployWalletIndex = 0;
 
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [owner, handler.address]
-    );
-
     // console.log("Owner of Signer Smart Account is ", owner);
     // Deploy Signer Smart Account owned by Owner
     const signerSmartAccountAddress =
       await walletFactory.getAddressForCounterfactualWallet(
-        baseImpl.address,
-        initializer,
+        owner,
         deployWalletIndex
       );
 
-    await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
-      deployWalletIndex
-    );
+    await walletFactory.deployCounterFactualWallet(owner, deployWalletIndex);
 
     signerSmartAccount = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       signerSmartAccountAddress
     );
 
-    const initializer2 = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [signerSmartAccountAddress, handler.address]
-    );
-
     // Deploy Main Smart Account owned by SignerSmartAccount
     const mainSmartAccountAddress =
       await walletFactory.getAddressForCounterfactualWallet(
-        baseImpl.address,
-        initializer2,
+        signerSmartAccountAddress,
         deployWalletIndex
       );
 
     await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer2,
+      signerSmartAccountAddress,
       deployWalletIndex
     );
 
@@ -356,46 +339,30 @@ describe("EIP-1271 Signatures Tests", function () {
   it("Wont let the transaction to go through with manipulated signer contract address", async function () {
     const deployWalletIndex = 1;
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [owner, handler.address]
-    );
 
     // Deploy Signer Smart Account 2 owned by Owner
     const signerSmartAccount2Address =
       await walletFactory.getAddressForCounterfactualWallet(
-        baseImpl.address,
-        initializer,
+        owner,
         deployWalletIndex
       );
 
-    await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
-      deployWalletIndex
-    );
+    await walletFactory.deployCounterFactualWallet(owner, deployWalletIndex);
 
     const signerSmartAccount2 = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       signerSmartAccount2Address
     );
 
-    const initializer2 = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [signerSmartAccount2Address, handler.address]
-    );
-
     // Deploy Main Smart Account 2 owned by SignerSmartAccount 2
     const mainSmartAccount2Address =
       await walletFactory.getAddressForCounterfactualWallet(
-        baseImpl.address,
-        initializer2,
+        signerSmartAccount2Address,
         deployWalletIndex
       );
 
     await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer2,
+      signerSmartAccount2Address,
       deployWalletIndex
     );
 
@@ -470,11 +437,9 @@ describe("EIP-1271 Signatures Tests", function () {
     // Expect can not use this signature on main smart account 2, even despite
     // it is owned by signer smart account 2, that is owned by the owner (original signer)
     await expect(
-      mainSmartAccount2.connect(accounts[1]).execTransaction(
-        transaction,
-        refundInfo,
-        manipulatedSignature
-      )
+      mainSmartAccount2
+        .connect(accounts[1])
+        .execTransaction(transaction, refundInfo, manipulatedSignature)
     ).to.be.revertedWith("WrongContractSignature");
 
     expect(await token.balanceOf(charlie)).to.equal(0);
@@ -553,22 +518,15 @@ describe("EIP-1271 Signatures Tests", function () {
     const testValidator = await deployContract(accounts[0], source);
     await testValidator.shouldChangeState(true);
 
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [testValidator.address, handler.address]
-    );
-
     // Deploy Main Smart Account 2 owned by testValidator
     const mainSmartAccount2Address =
       await walletFactory.getAddressForCounterfactualWallet(
-        baseImpl.address,
-        initializer,
+        testValidator.address,
         deployWalletIndex
       );
 
     await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
+      testValidator.address,
       deployWalletIndex
     );
 

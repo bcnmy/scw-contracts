@@ -140,7 +140,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     const SmartAccountFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await SmartAccountFactory.deploy();
+    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -189,14 +189,8 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   // describe("Wallet initialization", function () {
   it("Should estimate wallet deployment", async function () {
     const indexForSalt = 0;
-    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [owner, handler.address]
-    );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
@@ -212,7 +206,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
         walletFactory.address,
         SmartAccountFactory.interface.encodeFunctionData(
           "deployCounterFactualWallet",
-          [baseImpl.address, initializer, indexForSalt]
+          [owner, indexForSalt]
         ),
       ]
     );
@@ -226,7 +220,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
           walletFactory.address,
           SmartAccountFactory.interface.encodeFunctionData(
             "deployCounterFactualWallet",
-            [baseImpl.address, initializer, indexForSalt]
+            [owner, indexForSalt]
           )
         ).call()
       ).gas
@@ -234,7 +228,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     const txnData = SmartAccountFactory.interface.encodeFunctionData(
       "deployCounterFactualWallet",
-      [baseImpl.address, initializer, indexForSalt]
+      [owner, indexForSalt]
     );
 
     console.log("estimated using call() : ", estimated + txBaseCost(txnData));
@@ -267,8 +261,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     console.log("estimated gas to be used ", deployTransactionGas);
 
     const tx = await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       indexForSalt
     );
 
@@ -309,14 +302,8 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
   it("Should estimate gas sending transaction from an undeployed wallet", async function () {
     const saltForFreshWallet = 1; // we have deployed with salt 0 so far already above.
-    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [owner, handler.address]
-    );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       saltForFreshWallet
     );
     console.log("deploying new wallet..expected address: ", expected);
@@ -390,14 +377,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     // we are trying to estimate gas here for deploy wallet and then do a transaction on it
     const encodedEstimate = gasEstimatorCustomInterface.encodeFunctionData(
       "estimate",
-      [
-        expected,
-        walletFactory.address,
-        baseImpl.address,
-        initializer,
-        saltRandom,
-        txnData,
-      ]
+      [expected, walletFactory.address, owner, saltRandom, txnData]
     );
 
     const response = await ethers.provider.send("eth_call", [
@@ -433,8 +413,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
     );
 
     const tx = await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       saltForFreshWallet
     );
 
@@ -450,14 +429,8 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   // Review if the first transaction fails
   it("Should estimate wallet deployment and send first transacton", async function () {
     const saltForFreshWallet = 2; // we have deployed with salt 0 and 1 so far already above.
-    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [owner, handler.address]
-    );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       saltForFreshWallet
     );
     console.log("deploying new wallet..expected address: ", expected);
@@ -515,7 +488,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       buildContractCall(
         walletFactory,
         "deployCounterFactualWallet",
-        [baseImpl.address, initializer, saltForFreshWallet],
+        [owner, saltForFreshWallet],
         0
       ),
       buildContractCall(

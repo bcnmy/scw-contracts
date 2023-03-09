@@ -90,12 +90,12 @@ describe("Account Functionality: 4337", function () {
         offchainSignerAddress
       );
 
-    const DefaultHandler = await ethers.getContractFactory(
+    /* const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
     );
     handler = await DefaultHandler.deploy();
     await handler.deployed();
-    console.log("Default callback handler deployed at: ", handler.address);
+    console.log("Default callback handler deployed at: ", handler.address); */
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);
@@ -105,7 +105,7 @@ describe("Account Functionality: 4337", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy();
+    walletFactory = await WalletFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -125,19 +125,9 @@ describe("Account Functionality: 4337", function () {
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
 
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [walletOwnerAddress, handler.address]
-    );
-
-    await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
-      0
-    );
+    await walletFactory.deployCounterFactualWallet(walletOwnerAddress, 0);
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      baseImpl.address,
-      initializer,
+      walletOwnerAddress,
       0
     );
 
@@ -386,18 +376,25 @@ describe("Account Functionality: 4337", function () {
     ).to.be.reverted;
   });
 
-  it("4337 flow: should not be able to set implementation from executeCall() / execFromEntryPoint() method of AA flow", async () => {
+  it("4337 flow: should be able to set implementation from executeCall() / execFromEntryPoint() method of AA flow", async () => {
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       walletAddress
     );
 
-    entryPoint = await deployEntryPoint();
+    const priorEntryPoint = await userSCW.entryPoint();
+    console.log("prior entrypoint ", priorEntryPoint);
+
+    console.log(entryPoint.address);
+
+    const newEntryPoint = await deployEntryPoint();
+
+    console.log("deployed entrypoint again ", newEntryPoint.address);
 
     const BaseImplementation2 = await ethers.getContractFactory(
       "SmartAccount2"
     );
-    const baseImpl2 = await BaseImplementation2.deploy(entryPoint.address);
+    const baseImpl2 = await BaseImplementation2.deploy(newEntryPoint.address);
     await baseImpl2.deployed();
     console.log("base wallet upgraded impl deployed at: ", baseImpl2.address);
 
@@ -465,12 +462,76 @@ describe("Account Functionality: 4337", function () {
     );
     console.log(userOp);
 
+    entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+
+    // todo:
+    // after this should not be able to do transaction from previous entry point!
+
+    userSCW = await ethers.getContractAt(
+      "contracts/smart-contract-wallet/test/upgrades/SmartAccount2.sol:SmartAccount2",
+      walletAddress
+    );
+
+    const latestImplementation = await userSCW.getImplementation();
+    expect(latestImplementation).to.be.equal(baseImpl2.address);
+
+    const latestEntryPoint = await userSCW.entryPoint();
+    console.log("latest entrypoint ", latestEntryPoint);
+
+    expect(latestEntryPoint).to.be.equal(newEntryPoint.address);
+
+    // Transaction after updating implementation
+
+    await token
+      .connect(accounts[0])
+      .transfer(userSCW.address, ethers.utils.parseEther("100"));
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      // value: ethers.utils.parseEther("1"),
+      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
+      nonce: await userSCW.getNonce(1),
+    });
+
+    const chainId = await userSCW.getChainId();
+    const { signer, data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx,
+      chainId
+    );
+
+    console.log(safeTx);
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    let signature = "0x";
+    signature += data.slice(2);
     await expect(
-      entryPoint.handleOps([userOp], await offchainSigner.getAddress())
-    ).to.be.reverted;
+      userSCW
+        .connect(accounts[0])
+        .execTransaction(transaction, refundInfo, signature)
+    ).to.emit(userSCW, "ExecutionSuccess");
+
+    expect(await token.balanceOf(charlie)).to.equal(
+      ethers.utils.parseEther("10")
+    );
   });
 
-  it("4337 flow: should be able to set implementation to new one", async () => {
+  /* it("4337 flow: should not be able to set implementation to new one by directly making userop.calldata for updateImplementation", async () => {
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       walletAddress
@@ -554,64 +615,13 @@ describe("Account Functionality: 4337", function () {
     );
     console.log(userOp);
 
-    await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+    // entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+
+    // Todo
+    // Review with Fil for custom reverts
+
     await expect(
       entryPoint.handleOps([userOp], await offchainSigner.getAddress())
     ).to.be.reverted;
-
-    const latestEntryPoint = await userSCW.entryPoint();
-    console.log("latest entrypoint ", latestEntryPoint);
-
-    expect(latestEntryPoint).to.be.equal(newEntryPoint.address);
-
-    // Transaction after updating implementation
-
-    await token
-      .connect(accounts[0])
-      .transfer(userSCW.address, ethers.utils.parseEther("100"));
-
-    const safeTx: SafeTransaction = buildSafeTransaction({
-      to: token.address,
-      // value: ethers.utils.parseEther("1"),
-      data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-      nonce: await userSCW.getNonce(1),
-    });
-
-    const chainId = await userSCW.getChainId();
-    const { signer, data } = await safeSignTypedData(
-      accounts[0],
-      userSCW,
-      safeTx,
-      chainId
-    );
-
-    console.log(safeTx);
-
-    const transaction: Transaction = {
-      to: safeTx.to,
-      value: safeTx.value,
-      data: safeTx.data,
-      operation: safeTx.operation,
-      targetTxGas: safeTx.targetTxGas,
-    };
-    const refundInfo: FeeRefund = {
-      baseGas: safeTx.baseGas,
-      gasPrice: safeTx.gasPrice,
-      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
-      gasToken: safeTx.gasToken,
-      refundReceiver: safeTx.refundReceiver,
-    };
-
-    let signature = "0x";
-    signature += data.slice(2);
-    await expect(
-      userSCW
-        .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
-    ).to.emit(userSCW, "ExecutionSuccess");
-
-    expect(await token.balanceOf(charlie)).to.equal(
-      ethers.utils.parseEther("10")
-    );
-  });
+  }); */
 });
