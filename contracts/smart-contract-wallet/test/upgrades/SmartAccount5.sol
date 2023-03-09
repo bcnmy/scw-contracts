@@ -508,9 +508,11 @@ contract SmartAccount5 is
         require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
-    /// implement template method of BaseAccount
-    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
-    internal override virtual returns (uint256 sigTimeRange) {
+    /**
+     * @dev implement template method of BaseAccount
+     */
+    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
+    internal override virtual returns (uint256 validationData) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
@@ -528,9 +530,7 @@ contract SmartAccount5 is
      * deposit more funds for this account in the entryPoint
      */
     function addDeposit() external payable {
-
-        (bool req,) = address(entryPoint()).call{value : msg.value}("");
-        require(req,"Account deposit failed");
+         entryPoint().depositTo{value : msg.value}(address(this));
     }
 
     /**

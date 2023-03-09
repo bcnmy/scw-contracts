@@ -139,19 +139,15 @@ describe("EntryPoint with paymaster", function () {
           entryPoint
         );
         await expect(
-          entryPoint.callStatic
-            .handleOps([op], beneficiaryAddress, {
-              gasLimit: 1e7,
-            })
-            .catch(rethrow())
-        ).to.revertedWith("TokenPaymaster: no balance");
+          entryPoint.callStatic.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7,
+          })
+        ).to.revertedWith("AA33 reverted: TokenPaymaster: no balance");
         await expect(
-          entryPoint
-            .handleOps([op], beneficiaryAddress, {
-              gasLimit: 1e7,
-            })
-            .catch(rethrow())
-        ).to.revertedWith("TokenPaymaster: no balance");
+          entryPoint.handleOps([op], beneficiaryAddress, {
+            gasLimit: 1e7,
+          })
+        ).to.revertedWith("AA33 reverted: TokenPaymaster: no balance");
       });
     });
 

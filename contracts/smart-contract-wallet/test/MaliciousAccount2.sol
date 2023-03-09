@@ -12,7 +12,7 @@ import "../interfaces/ISignatureValidator.sol";
 import "../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract MaliciousAccount is 
+contract MaliciousAccount2 is 
      BaseSmartAccount,
      ModuleManager,
      FallbackManager,
@@ -486,8 +486,8 @@ contract MaliciousAccount is
     }
 
     /// implement template method of BaseAccount
-    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
-    internal override virtual returns (uint256 deadline) {
+    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
+    internal override virtual returns (uint256 validationData) {
         // bytes calldata userOpData = userOp.callData;
         // (address _to, uint256 _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint256, bytes));
         // if(address(modules[_to]) != address(0)) return 0;
@@ -512,9 +512,7 @@ contract MaliciousAccount is
      * deposit more funds for this account in the entryPoint
      */
     function addDeposit() external payable {
-
-        (bool req,) = address(entryPoint()).call{value : msg.value}("");
-        require(req,"Account deposit failed");
+         entryPoint().depositTo{value : msg.value}(address(this));
     }
 
     /**

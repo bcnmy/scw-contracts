@@ -507,7 +507,7 @@ contract SmartAccount4 is
     }
 
     /// implement template method of BaseAccount
-    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
+    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
     internal override virtual returns (uint256 sigTimeRange) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
@@ -526,9 +526,7 @@ contract SmartAccount4 is
      * deposit more funds for this account in the entryPoint
      */
     function addDeposit() external payable {
-
-        (bool req,) = address(entryPoint()).call{value : msg.value}("");
-        require(req,"Account deposit failed");
+         entryPoint().depositTo{value : msg.value}(address(this));
     }
 
     /**

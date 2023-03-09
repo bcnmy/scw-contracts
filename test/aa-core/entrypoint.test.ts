@@ -15,10 +15,13 @@ import {
   TestExpiryAccount__factory,
   TestPaymasterAcceptAll,
   TestPaymasterAcceptAll__factory,
+  TestRevertAccount__factory,
   TestAggregatedAccount,
   TestSignatureAggregator,
   TestSignatureAggregator__factory,
-} from "../../typechain";
+  MaliciousAccount__factory,
+  TestWarmColdAccount__factory
+} from '../../typechain'
 import {
   AddressZero,
   createAccountOwner,
@@ -41,11 +44,12 @@ import {
   getAggregatedAccountInitCode,
   simulationResultWithAggregationCatch,
 } from "./testutils";
-import { fillAndSign, getUserOpHash } from "./UserOp";
+import { DefaultsForUserOp, fillAndSign, getUserOpHash } from "./UserOp";
 import { UserOperation } from "./UserOperation";
 import { PopulatedTransaction } from "ethers/lib/ethers";
 import { ethers } from "hardhat";
 import {
+  arrayify,
   defaultAbiCoder,
   hexConcat,
   hexZeroPad,
@@ -286,8 +290,8 @@ describe("EntryPoint", function () {
         entryPoint
       );
       await expect(
-        entryPoint.callStatic.simulateValidation(op).catch(rethrow())
-      ).to.revertedWith("invalid nonce");
+        entryPoint.callStatic.simulateValidation(op)
+      ).to.revertedWith("AA23 reverted: account: invalid nonce");
     });
 
     it("should report signature failure without revert", async () => {
@@ -548,19 +552,171 @@ describe("EntryPoint", function () {
         {
           sender: account.address,
           callData,
-          maxFeePerGas: 1, // gasprice=gas...
         },
         accountOwner1,
         entryPoint
       );
 
       const ret = await entryPoint.callStatic
-        .simulateHandleOp(userOp)
+        .simulateHandleOp(
+          userOp,
+          counter.address,
+          counter.interface.encodeFunctionData("counters", [account.address])
+        )
         .catch((e) => e.errorArgs);
-      // TODO: we can't directly check simulation called the wallet's execute.
-      // need to do call tracing and parse emitted events
-      // we "hack" it by reporting out gas used, which is expected to be more than just verification
-      console.log("preOpGas=", ret.preOpGas, "total gas=", ret.paid);
+
+      const [countResult] = counter.interface.decodeFunctionResult(
+        "counters",
+        ret.targetResult
+      );
+      expect(countResult).to.eql(1);
+      expect(ret.targetSuccess).to.be.true;
+
+      // actual counter is zero
+      expect(await counter.counters(account.address)).to.eql(0);
+    });
+  });
+
+  describe("flickering account validation", () => {
+    it("should prevent leakage of basefee", async () => {
+      const maliciousAccount = await new MaliciousAccount__factory(
+        ethersSigner
+      ).deploy(entryPoint.address, { value: parseEther("1") });
+
+      const snap = await ethers.provider.send("evm_snapshot", []);
+      await ethers.provider.send("evm_mine", []);
+      const block = await ethers.provider.getBlock("latest");
+      await ethers.provider.send("evm_revert", [snap]);
+
+      if (block.baseFeePerGas == null) {
+        expect.fail(null, null, "test error: no basefee");
+      }
+
+      const userOp: UserOperation = {
+        sender: maliciousAccount.address,
+        nonce: block.baseFeePerGas,
+        initCode: "0x",
+        callData: "0x",
+        callGasLimit: "0x" + (1e5).toString(16),
+        verificationGasLimit: "0x" + (1e5).toString(16),
+        preVerificationGas: "0x" + (1e5).toString(16),
+        // we need maxFeeperGas > block.basefee + maxPriorityFeePerGas so requiredPrefund onchain is basefee + maxPriorityFeePerGas
+        maxFeePerGas: block.baseFeePerGas.mul(3),
+        maxPriorityFeePerGas: block.baseFeePerGas,
+        paymasterAndData: "0x",
+        signature: "0x",
+      };
+      try {
+        await expect(
+          entryPoint.simulateValidation(userOp, { gasLimit: 1e6 })
+        ).to.revertedWith("ValidationResult");
+        console.log("after first simulation");
+        await ethers.provider.send("evm_mine", []);
+        await expect(
+          entryPoint.simulateValidation(userOp, { gasLimit: 1e6 })
+        ).to.revertedWith("Revert after first validation");
+        // if we get here, it means the userOp passed first sim and reverted second
+        expect.fail(null, null, "should fail on first simulation");
+      } catch (e: any) {
+        expect(e.message).to.include("Revert after first validation");
+      }
+    });
+
+    it("should limit revert reason length before emitting it", async () => {
+      const revertLength = 1e5;
+      const REVERT_REASON_MAX_LEN = 2048;
+      const testRevertAccount = await new TestRevertAccount__factory(
+        ethersSigner
+      ).deploy(entryPoint.address, { value: parseEther("1") });
+      const badData = await testRevertAccount.populateTransaction.revertLong(
+        revertLength + 1
+      );
+      const badOp: UserOperation = {
+        ...DefaultsForUserOp,
+        sender: testRevertAccount.address,
+        callGasLimit: 1e5,
+        maxFeePerGas: 1,
+        verificationGasLimit: 1e5,
+        callData: badData.data!,
+      };
+      const beneficiaryAddress = createAddress();
+      await expect(
+        entryPoint.simulateValidation(badOp, { gasLimit: 3e5 })
+      ).to.revertedWith("ValidationResult");
+      const tx = await entryPoint.handleOps([badOp], beneficiaryAddress, {
+        gasLimit: 3e5,
+      });
+      const receipt = await tx.wait();
+      const userOperationRevertReasonEvent = receipt.events?.find(
+        (event) => event.event === "UserOperationRevertReason"
+      );
+      expect(userOperationRevertReasonEvent?.event).to.equal(
+        "UserOperationRevertReason"
+      );
+      const revertReason = Buffer.from(
+        arrayify(userOperationRevertReasonEvent?.args?.revertReason)
+      );
+      expect(revertReason.length).to.equal(REVERT_REASON_MAX_LEN);
+    });
+    describe("warm/cold storage detection in simulation vs execution", () => {
+      const TOUCH_GET_AGGREGATOR = 1;
+      const TOUCH_PAYMASTER = 2;
+      it("should prevent detection through getAggregator()", async () => {
+        const testWarmColdAccount = await new TestWarmColdAccount__factory(
+          ethersSigner
+        ).deploy(entryPoint.address, { value: parseEther("1") });
+        const badOp: UserOperation = {
+          ...DefaultsForUserOp,
+          nonce: TOUCH_GET_AGGREGATOR,
+          sender: testWarmColdAccount.address,
+        };
+        const beneficiaryAddress = createAddress();
+        try {
+          await entryPoint.simulateValidation(badOp, { gasLimit: 1e6 });
+        } catch (e: any) {
+          if ((e as Error).message.includes("ValidationResult")) {
+            const tx = await entryPoint.handleOps([badOp], beneficiaryAddress, {
+              gasLimit: 1e6,
+            });
+            await tx.wait();
+          } else {
+            expect(e.message).to.include(
+              'FailedOp(0, "AA23 reverted (or OOG)")'
+            );
+          }
+        }
+      });
+
+      it("should prevent detection through paymaster.code.length", async () => {
+        const testWarmColdAccount = await new TestWarmColdAccount__factory(
+          ethersSigner
+        ).deploy(entryPoint.address, { value: parseEther("1") });
+        const paymaster = await new TestPaymasterAcceptAll__factory(
+          ethersSigner
+        ).deploy(entryPoint.address);
+        await paymaster.deposit({ value: ONE_ETH });
+        const badOp: UserOperation = {
+          ...DefaultsForUserOp,
+          nonce: TOUCH_PAYMASTER,
+          paymasterAndData: paymaster.address,
+          sender: testWarmColdAccount.address,
+        };
+        const beneficiaryAddress = createAddress();
+        try {
+          await entryPoint.simulateValidation(badOp, { gasLimit: 1e6 });
+        } catch (e: any) {
+          if ((e as Error).message.includes("ValidationResult")) {
+            const tx = await entryPoint.handleOps([badOp], beneficiaryAddress, {
+              gasLimit: 1e6,
+            });
+            await tx.wait();
+          } else {
+            expect(e.message).to.include(
+              'FailedOp(0, "AA23 reverted (or OOG)")'
+            );
+          }
+        }
+      });
     });
   });
 
@@ -1132,8 +1288,6 @@ describe("EntryPoint", function () {
         aggAccount2 = await new TestAggregatedAccount__factory(
           ethersSigner
         ).deploy(entryPoint.address, aggregator.address);
-        await aggAccount.initialize(zeroAddress());
-        await aggAccount2.initialize(zeroAddress());
         await ethersSigner.sendTransaction({
           to: aggAccount.address,
           value: parseEther("0.1"),
@@ -1155,7 +1309,7 @@ describe("EntryPoint", function () {
         // no aggregator is kind of "wrong aggregator"
         await expect(
           entryPoint.handleOps([userOp], beneficiaryAddress)
-        ).to.revertedWith("wrong aggregator");
+        ).to.revertedWith("AA24 signature error");
       });
       it("should fail to execute aggregated account with wrong aggregator", async () => {
         const userOp = await fillAndSign(
@@ -1182,7 +1336,7 @@ describe("EntryPoint", function () {
             ],
             beneficiaryAddress
           )
-        ).to.revertedWith("wrong aggregator");
+        ).to.revertedWith("AA24 signature error");
       });
 
       it("should reject non-contract (address(1)) aggregator", async () => {
@@ -1191,7 +1345,6 @@ describe("EntryPoint", function () {
         const aggAccount1 = await new TestAggregatedAccount__factory(
           ethersSigner
         ).deploy(entryPoint.address, address1);
-        await aggAccount1.initialize(zeroAddress());
 
         const userOp = await fillAndSign(
           {
@@ -1216,10 +1369,8 @@ describe("EntryPoint", function () {
               ],
               beneficiaryAddress
             )
-            .catch((e) => e.message)
-        ).to.match(
-          /reverted without a reason string|function call to a non-contract account/
-        );
+            .catch((e) => e.reason)
+        ).to.match(/invalid aggregator/);
         // (different error in coverage mode (because of different solidity settings)
       });
 
@@ -1255,7 +1406,6 @@ describe("EntryPoint", function () {
         const aggAccount3 = await new TestAggregatedAccount__factory(
           ethersSigner
         ).deploy(entryPoint.address, aggregator3.address);
-        await aggAccount3.initialize(zeroAddress());
         await ethersSigner.sendTransaction({
           to: aggAccount3.address,
           value: parseEther("0.1"),
@@ -1400,9 +1550,7 @@ describe("EntryPoint", function () {
             const { aggregatorInfo } = await entryPoint.callStatic
               .simulateValidation(userOp)
               .catch(simulationResultWithAggregationCatch);
-            expect(aggregatorInfo.actualAggregator).to.equal(
-              aggregator.address
-            );
+            expect(aggregatorInfo.aggregator).to.equal(aggregator.address);
             expect(aggregatorInfo.stakeInfo.stake).to.equal(TWO_ETH);
             expect(aggregatorInfo.stakeInfo.unstakeDelaySec).to.equal(3);
           });
@@ -1579,7 +1727,7 @@ describe("EntryPoint", function () {
           const ret = await entryPoint.callStatic
             .simulateValidation(userOp)
             .catch(simulationResultCatch);
-          expect(ret.returnInfo.validUntil).to.eql(now + 60 - 1);
+          expect(ret.returnInfo.validUntil).to.eql(now + 60);
           expect(ret.returnInfo.validAfter).to.eql(100);
         });
 
@@ -1596,7 +1744,7 @@ describe("EntryPoint", function () {
           const ret = await entryPoint.callStatic
             .simulateValidation(userOp)
             .catch(simulationResultCatch);
-          expect(ret.returnInfo.validUntil).eql(now - 60 - 1);
+          expect(ret.returnInfo.validUntil).eql(now - 60);
           expect(ret.returnInfo.validAfter).to.eql(123);
         });
       });
@@ -1618,7 +1766,7 @@ describe("EntryPoint", function () {
 
         it("should accept non-expired paymaster request", async () => {
           const timeRange = defaultAbiCoder.encode(
-            ["uint64", "uint64"],
+            ["uint48", "uint48"],
             [123, now + 60]
           );
           const userOp = await fillAndSign(
@@ -1632,13 +1780,13 @@ describe("EntryPoint", function () {
           const ret = await entryPoint.callStatic
             .simulateValidation(userOp)
             .catch(simulationResultCatch);
-          expect(ret.returnInfo.validUntil).to.eql(now + 60 - 1);
+          expect(ret.returnInfo.validUntil).to.eql(now + 60);
           expect(ret.returnInfo.validAfter).to.eql(123);
         });
 
         it("should not reject expired paymaster request", async () => {
           const timeRange = defaultAbiCoder.encode(
-            ["uint64", "uint64"],
+            ["uint48", "uint48"],
             [321, now - 60]
           );
           const userOp = await fillAndSign(
@@ -1652,7 +1800,7 @@ describe("EntryPoint", function () {
           const ret = await entryPoint.callStatic
             .simulateValidation(userOp)
             .catch(simulationResultCatch);
-          expect(ret.returnInfo.validUntil).to.eql(now - 60 - 1);
+          expect(ret.returnInfo.validUntil).to.eql(now - 60);
           expect(ret.returnInfo.validAfter).to.eql(321);
         });
 
@@ -1663,7 +1811,7 @@ describe("EntryPoint", function () {
           until: number
         ): Promise<UserOperation> {
           const timeRange = defaultAbiCoder.encode(
-            ["uint64", "uint64"],
+            ["uint48", "uint48"],
             [after, until]
           );
           return await fillAndSign(
@@ -1712,12 +1860,12 @@ describe("EntryPoint", function () {
           it('should use higher "until" value of paymaster', async () => {
             expect(
               (await simulateWithPaymasterParams(10, 400)).validUntil
-            ).to.eql(399);
+            ).to.eql(400);
           });
           it('should use higher "until" value of account', async () => {
             expect(
               (await simulateWithPaymasterParams(200, 600)).validUntil
-            ).to.eql(499);
+            ).to.eql(500);
           });
 
           it("handleOps should revert on expired paymaster request", async () => {

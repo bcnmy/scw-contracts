@@ -622,11 +622,12 @@ contract SmartAccount is
     /**
      * @dev implement template method of BaseAccount
      */
-    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash, address)
-    internal override virtual returns (uint256 sigTimeRange) {
+    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
+    internal override virtual returns (uint256 validationData) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
+        return 0;
     }
 
     /**
@@ -640,8 +641,7 @@ contract SmartAccount is
      * deposit more funds for this account in the entryPoint
      */
     function addDeposit() public payable {
-        (bool success,) = address(entryPoint()).call{value : msg.value}("");
-        if(!success) revert TokenTransferFailed(address(0), address(entryPoint()), msg.value);
+         entryPoint().depositTo{value : msg.value}(address(this));
     }
 
     /**

@@ -23,12 +23,14 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
 
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
+    // review
     using PaymasterHelpers for UserOperation;
     using PaymasterHelpers for bytes;
     using PaymasterHelpers for PaymasterData;
 
     mapping(address => uint256) public paymasterIdBalances;
 
+    // review for immutable
     address public verifyingSigner;
 
     // paymaster nonce for account 
@@ -38,7 +40,6 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
     event GasDeposited(address indexed _paymasterId, uint256 indexed _value);
     event GasWithdrawn(address indexed _paymasterId, address indexed _to, uint256 indexed _value);
     event GasBalanceDeducted(address indexed _paymasterId, uint256 indexed _charge);
-
 
     constructor(address _owner, IEntryPoint _entryPoint, address _verifyingSigner) BasePaymaster(_owner, _entryPoint) payable {
         if(address(_entryPoint) == address(0)) revert EntryPointCannotBeZero();
@@ -135,7 +136,7 @@ contract VerifyingSingletonPaymaster is BasePaymaster, ReentrancyGuard, Singleto
      * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
      */
     function _validatePaymasterUserOp(UserOperation calldata userOp, bytes32 /*userOpHash*/, uint256 requiredPreFund)
-    internal override returns (bytes memory context, uint256 sigTimeRange) {
+    internal override returns (bytes memory context, uint256 validationData) {
         PaymasterData memory paymasterData = userOp._decodePaymasterData();
         bytes32 hash = getHash(userOp, paymasterNonces[userOp.getSender()], paymasterData.paymasterId);
         uint256 sigLength = paymasterData.signatureLength;
