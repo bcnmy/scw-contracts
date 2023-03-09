@@ -182,6 +182,13 @@ contract SmartAccount3 is
         return a >= b ? a : b;
     }
 
+    function getImplementation() external view returns (address _implementation) {
+         // solhint-disable-next-line no-inline-assembly
+         assembly {
+             _implementation := sload(address())
+         }
+    }
+
     // review: batchId should be carefully designed or removed all together (including 2D nonces)
     // Gnosis style transaction with optional repay in native tokens OR ERC20 
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.

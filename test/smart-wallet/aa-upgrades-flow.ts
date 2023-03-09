@@ -1,3 +1,9 @@
+// Todo : test cases updates when updateImplementation is done using AA flow!
+
+// Todo : single useop sends below
+// initcode : wallet factory + deployment data
+// calldata: executeCall, executeBatchCall, updateImplementationAndCall(,), setFallbackHandler
+
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
@@ -13,9 +19,9 @@ import {
   WhitelistModule,
   DefaultCallbackHandler,
 } from "../../typechain";
-import { AddressZero } from "../smart-wallet/testutils";
+import { AddressZero } from "./testutils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { encodeTransfer, encodeTransferFrom } from "../smart-wallet/testUtils";
+import { encodeTransfer, encodeTransferFrom } from "./testUtils";
 import { fillAndSign, fillUserOp } from "../utils/userOp";
 import {
   buildContractCall,
@@ -40,7 +46,7 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
-describe("Wallet factory deploy wallet with defaults and upgrades in same userOp!", function () {
+describe("Account Functionality: 4337", function () {
   let entryPoint: EntryPoint;
   let entryPointStatic: EntryPoint;
   let depositorSigner: Signer;
@@ -58,14 +64,13 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
   let multiSend: MultiSend;
   let storage: StorageSetter;
   let owner: string;
-  let blanketImplementation: string;
   let bob: string;
   let charlie: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
   let accounts: any;
 
-  before(async () => {
+  beforeEach(async () => {
     accounts = await ethers.getSigners();
 
     ethersSigner = await ethers.getSigners();
@@ -92,18 +97,16 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
       );
 
     /* const DefaultHandler = await ethers.getContractFactory(
-        "DefaultCallbackHandler"
-      );
-      handler = await DefaultHandler.deploy();
-      await handler.deployed();
-      console.log("Default callback handler deployed at: ", handler.address); */
+      "DefaultCallbackHandler"
+    );
+    handler = await DefaultHandler.deploy();
+    await handler.deployed();
+    console.log("Default callback handler deployed at: ", handler.address); */
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
-
-    blanketImplementation = baseImpl.address;
 
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
@@ -134,14 +137,6 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
       0
     );
 
-    userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
-      expected
-    );
-
-    const latestImplementation = await userSCW.getImplementation();
-    console.log("before hook :: latestImplementation ", latestImplementation);
-
     walletAddress = expected;
     console.log(" wallet address ", walletAddress);
 
@@ -149,9 +144,9 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
     console.log("Paymaster address is ", paymasterAddress);
 
     /* await verifyingSingletonPaymaster
-        .connect(deployer)
-        .addStake(0, { value: parseEther("2") });
-      console.log("paymaster staked"); */
+      .connect(deployer)
+      .addStake(0, { value: parseEther("2") });
+    console.log("paymaster staked"); */
 
     await entryPoint.depositTo(paymasterAddress, { value: parseEther("1") });
 
@@ -241,30 +236,32 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
     ).to.be.reverted;
   });
 
-  it("succeed deploy a new wallet from entry point flow", async () => {
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
-      owner,
-      10
-    );
-
-    const WalletFactory = await ethers.getContractFactory(
-      "SmartAccountFactory"
-    );
-
-    const encodedData = WalletFactory.interface.encodeFunctionData(
-      "deployCounterFactualWallet",
-      [owner, 10]
-    );
-
+  it("4337 flow: succeed with valid signature send value transaction", async () => {
     await verifyingSingletonPaymaster.depositFor(
       await offchainSigner.getAddress(),
       { value: ethers.utils.parseEther("1") }
     );
+
+    await accounts[1].sendTransaction({
+      from: bob,
+      to: walletAddress,
+      value: ethers.utils.parseEther("5"),
+    });
+
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+    const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+      charlie,
+      ethers.utils.parseEther("1"),
+      "0x",
+    ]);
+
+    // const smartAccountCallData = "0x";
     const userOp1 = await fillAndSign(
       {
-        sender: expected,
-        initCode: hexConcat([walletFactory.address, encodedData]),
-        verificationGasLimit: 500000,
+        sender: walletAddress,
+        callData: txnData,
+        verificationGasLimit: 200000,
       },
       walletOwner,
       entryPoint
@@ -272,7 +269,7 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
 
     const nonceFromContract = await verifyingSingletonPaymaster[
       "getSenderPaymasterNonce(address)"
-    ](expected);
+    ](walletAddress);
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
@@ -301,74 +298,44 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
     ).to.be.reverted;
   });
 
-  // Faulty!!
-  it("succeed deploy a new wallet from entry point flow and also upgrades implementation", async () => {
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
-      owner,
-      11
-    );
-
-    const code = await ethers.provider.getCode(expected);
-    console.log("code earlier ", code);
-
+  it("4337 flow: succeed with valid signature to update owner", async () => {
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
-      expected
+      walletAddress
     );
-
-    const WalletFactory = await ethers.getContractFactory(
-      "SmartAccountFactory"
-    );
-
-    const encodedData = WalletFactory.interface.encodeFunctionData(
-      "deployCounterFactualWallet",
-      [owner, 11]
-    );
-
-    // const priorEntryPoint = await userSCW.entryPoint();
-    // console.log("prior entrypoint ", priorEntryPoint);
-
-    console.log(entryPoint.address);
-
-    const newEntryPoint = await deployEntryPoint();
-
-    console.log("deployed entrypoint again ", newEntryPoint.address);
-
-    const BaseImplementation3 = await ethers.getContractFactory(
-      "SmartAccount3"
-    );
-    // keeping prior entry point and just updating implementation
-    const baseImpl3 = await BaseImplementation3.deploy(entryPoint.address);
-    await baseImpl3.deployed();
-    console.log("base wallet upgraded impl deployed at: ", baseImpl3.address);
 
     await verifyingSingletonPaymaster.depositFor(
       await offchainSigner.getAddress(),
       { value: ethers.utils.parseEther("1") }
     );
 
+    await accounts[1].sendTransaction({
+      from: bob,
+      to: walletAddress,
+      value: ethers.utils.parseEther("5"),
+    });
+
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-    const updateImplementationData = SmartAccount.interface.encodeFunctionData(
-      "updateImplementation",
-      [baseImpl3.address]
+    // creating data and dataHash signed by owner
+    const newOwner = accounts[5];
+    const swapOwnerData = SmartAccount.interface.encodeFunctionData(
+      "setOwner",
+      [newOwner.address]
     );
 
     const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
       walletAddress,
       ethers.utils.parseEther("0"),
-      updateImplementationData,
+      swapOwnerData,
     ]);
 
-    console.log("transaction data ", txnData);
-
+    // const smartAccountCallData = "0x";
     const userOp1 = await fillAndSign(
       {
-        sender: expected,
-        initCode: hexConcat([walletFactory.address, encodedData]),
+        sender: walletAddress,
         callData: txnData,
-        verificationGasLimit: 2000000,
-        callGasLimit: 5000000,
+        verificationGasLimit: 200000,
       },
       walletOwner,
       entryPoint
@@ -376,7 +343,7 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
 
     const nonceFromContract = await verifyingSingletonPaymaster[
       "getSenderPaymasterNonce(address)"
-    ](expected);
+    ](walletAddress);
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
@@ -400,213 +367,57 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
     );
     console.log(userOp);
     await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
-    await expect(
-      entryPoint.handleOps([userOp], await offchainSigner.getAddress())
-    ).to.be.reverted;
 
-    /* userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/test/upgrades/SmartAccount3.sol:SmartAccount3",
-      expected
-    ); */
-
-    const latestEntryPoint = await userSCW.entryPoint();
-    console.log("latest entrypoint ", latestEntryPoint);
-
-    expect(latestEntryPoint).to.be.equal(entryPoint.address);
-
-    const latestImplementation = await userSCW.getImplementation();
-    console.log("latestImplementation ", latestImplementation);
-    // Todo: Review :
-    // this check is wrong! it should have been baseImpl3
-    // somehow it doesn't work for undeployed wallet
-    expect(latestImplementation).to.be.equal(blanketImplementation);
-
-    const codeNew = await ethers.provider.getCode(expected);
-    console.log("code later ", codeNew);
-  });
-
-  // Faulty!!
-  it("succeed deploy a new wallet from entry point flow and also updates handler", async () => {
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
-      owner,
-      12
-    );
-
-    const code = await ethers.provider.getCode(expected);
-    console.log("code earlier ", code);
-
-    userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
-      expected
-    );
-
-    const WalletFactory = await ethers.getContractFactory(
-      "SmartAccountFactory"
-    );
-
-    const encodedData = WalletFactory.interface.encodeFunctionData(
-      "deployCounterFactualWallet",
-      [owner, 12]
-    );
-
-    const DefaultHandler = await ethers.getContractFactory(
-      "DefaultCallbackHandler"
-    );
-    const newHandler = await DefaultHandler.deploy();
-    await newHandler.deployed();
     console.log(
-      "New Default callback handler deployed at: ",
-      newHandler.address
+      "newOner should be",
+      newOwner.address,
+      "and is",
+      await userSCW.owner()
     );
+    // check if owner is updated
+    expect(await userSCW.owner()).to.equal(newOwner.address);
 
-    // const priorEntryPoint = await userSCW.entryPoint();
-    // console.log("prior entrypoint ", priorEntryPoint);
-
-    console.log(entryPoint.address);
-
-    // const newEntryPoint = await deployEntryPoint();
-
-    // console.log("deployed entrypoint again ", newEntryPoint.address);
-
-    /* const BaseImplementation3 = await ethers.getContractFactory(
-      "SmartAccount3"
-    );
-    // keeping prior entry point and just updating implementation
-    const baseImpl3 = await BaseImplementation3.deploy(entryPoint.address);
-    await baseImpl3.deployed();
-    console.log("base wallet upgraded impl deployed at: ", baseImpl3.address); */
-
-    await verifyingSingletonPaymaster.depositFor(
-      await offchainSigner.getAddress(),
-      { value: ethers.utils.parseEther("1") }
-    );
-
-    const SmartAccount = await ethers.getContractFactory("SmartAccount");
-
-    const updateHandlerData = SmartAccount.interface.encodeFunctionData(
-      "setFallbackHandler",
-      [newHandler.address]
-    );
-
-    const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
-      walletAddress,
-      ethers.utils.parseEther("0"),
-      updateHandlerData,
-    ]);
-
-    console.log("transaction data ", txnData);
-
-    const userOp1 = await fillAndSign(
-      {
-        sender: expected,
-        initCode: hexConcat([walletFactory.address, encodedData]),
-        callData: txnData,
-        verificationGasLimit: 2000000,
-        callGasLimit: 5000000,
-      },
-      walletOwner,
-      entryPoint
-    );
-
-    const nonceFromContract = await verifyingSingletonPaymaster[
-      "getSenderPaymasterNonce(address)"
-    ](expected);
-
-    const hash = await verifyingSingletonPaymaster.getHash(
-      userOp1,
-      nonceFromContract.toNumber(),
-      await offchainSigner.getAddress()
-    );
-    const sig = await offchainSigner.signMessage(arrayify(hash));
-    const userOp = await fillAndSign(
-      {
-        ...userOp1,
-        paymasterAndData: hexConcat([
-          paymasterAddress,
-          ethers.utils.defaultAbiCoder.encode(
-            ["address", "bytes"],
-            [await offchainSigner.getAddress(), sig]
-          ),
-        ]),
-      },
-      walletOwner,
-      entryPoint
-    );
-    console.log(userOp);
     await expect(
       entryPoint.handleOps([userOp], await offchainSigner.getAddress())
-    ).to.emit(walletFactory, "AccountCreation");
-
-    const latestEntryPoint = await userSCW.entryPoint();
-    console.log("current entrypoint ", latestEntryPoint);
-    expect(latestEntryPoint).to.be.equal(entryPoint.address);
-
-    // this is good as we did not upgrade the implementation
-    const latestImplementation = await userSCW.getImplementation();
-    console.log("latestImplementation ", latestImplementation);
-    expect(latestImplementation).to.be.equal(blanketImplementation);
-
-    // this is good as we did not upgrade the implementation
-    const latestHandler = await userSCW.getFallbackHandler();
-    console.log("latest handler ", latestHandler);
-
-    const codeNew = await ethers.provider.getCode(expected);
-    console.log("code later ", codeNew);
+    ).to.be.reverted;
   });
 
-  // Faulty !!
-  it("succeed deploy a new wallet from entry point flow and also upgrades implementation", async () => {
-    await walletFactory.deployCounterFactualWallet(owner, 13);
-
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
-      owner,
-      13
-    );
-
-    const code = await ethers.provider.getCode(expected);
-    console.log("code earlier ", code);
-
+  it("4337 flow: should be able to set implementation from executeCall() / execFromEntryPoint() method of AA flow", async () => {
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
-      expected
+      walletAddress
     );
 
-    const WalletFactory = await ethers.getContractFactory(
-      "SmartAccountFactory"
-    );
-
-    const encodedData = WalletFactory.interface.encodeFunctionData(
-      "deployCounterFactualWallet",
-      [owner, 13]
-    );
-
-    // const priorEntryPoint = await userSCW.entryPoint();
-    // console.log("prior entrypoint ", priorEntryPoint);
+    const priorEntryPoint = await userSCW.entryPoint();
+    console.log("prior entrypoint ", priorEntryPoint);
 
     console.log(entryPoint.address);
 
     const newEntryPoint = await deployEntryPoint();
 
-    console.log("deployed entrypoint again ", newEntryPoint.address);
-
-    const BaseImplementation3 = await ethers.getContractFactory(
-      "SmartAccount3"
+    const BaseImplementation2 = await ethers.getContractFactory(
+      "SmartAccount2"
     );
-    // keeping prior entry point and just updating implementation
-    const baseImpl3 = await BaseImplementation3.deploy(entryPoint.address);
-    await baseImpl3.deployed();
-    console.log("base wallet upgraded impl deployed at: ", baseImpl3.address);
+    const baseImpl2 = await BaseImplementation2.deploy(newEntryPoint.address);
+    await baseImpl2.deployed();
+    console.log("base wallet upgraded impl deployed at: ", baseImpl2.address);
 
     await verifyingSingletonPaymaster.depositFor(
       await offchainSigner.getAddress(),
       { value: ethers.utils.parseEther("1") }
     );
 
+    await accounts[1].sendTransaction({
+      from: bob,
+      to: walletAddress,
+      value: ethers.utils.parseEther("5"),
+    });
+
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
     const updateImplementationData = SmartAccount.interface.encodeFunctionData(
       "updateImplementation",
-      [baseImpl3.address]
+      [baseImpl2.address]
     );
 
     const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
@@ -617,13 +428,13 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
 
     console.log("transaction data ", txnData);
 
+    // const smartAccountCallData = "0x";
     const userOp1 = await fillAndSign(
       {
-        sender: expected,
-        // initCode: hexConcat([walletFactory.address, encodedData]),
+        sender: walletAddress,
         callData: txnData,
-        verificationGasLimit: 2000000,
-        callGasLimit: 5000000,
+        // verificationGasLimit: 200000,
+        // callGasLimit: 1000000,
       },
       walletOwner,
       entryPoint
@@ -631,7 +442,7 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
 
     const nonceFromContract = await verifyingSingletonPaymaster[
       "getSenderPaymasterNonce(address)"
-    ](expected);
+    ](walletAddress);
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
@@ -654,26 +465,20 @@ describe("Wallet factory deploy wallet with defaults and upgrades in same userOp
       entryPoint
     );
     console.log(userOp);
-    await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
-    await expect(
-      entryPoint.handleOps([userOp], await offchainSigner.getAddress())
-    ).to.be.reverted;
 
-    /* userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/test/upgrades/SmartAccount3.sol:SmartAccount3",
-      expected
-    ); */
+    await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+
+    const currentImpl = await userSCW.getImplementation();
+    expect(currentImpl).to.be.equal(baseImpl2.address);
+
+    userSCW = await ethers.getContractAt(
+      "contracts/smart-contract-wallet/test/upgrades/SmartAccount2.sol:SmartAccount2",
+      walletAddress
+    );
 
     const latestEntryPoint = await userSCW.entryPoint();
     console.log("latest entrypoint ", latestEntryPoint);
 
-    expect(latestEntryPoint).to.be.equal(entryPoint.address);
-
-    const latestImplementation = await userSCW.getImplementation();
-    console.log("latestImplementation ", latestImplementation);
-    expect(latestImplementation).to.be.equal(blanketImplementation);
-
-    const codeNew = await ethers.provider.getCode(expected);
-    console.log("code later ", codeNew);
+    expect(latestEntryPoint).to.be.equal(newEntryPoint.address);
   });
 });
