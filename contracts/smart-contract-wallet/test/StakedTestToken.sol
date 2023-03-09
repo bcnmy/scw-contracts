@@ -5,11 +5,9 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 contract StakedTestToken is ERC20 {
-
     address public STAKED_TOKEN;
 
-    constructor (address _token) 
-        ERC20("stTST", "StakedTestToken") {
+    constructor(address _token) ERC20("stTST", "StakedTestToken") {
         STAKED_TOKEN = _token;
     }
 

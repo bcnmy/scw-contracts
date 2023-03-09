@@ -7,7 +7,6 @@ pragma solidity 0.8.17;
  * Utility functions helpful when making different kinds of contract calls in Solidity.
  */
 library Exec {
-
     function call(
         address to,
         uint256 value,
@@ -15,7 +14,15 @@ library Exec {
         uint256 txGas
     ) internal returns (bool success) {
         assembly {
-            success := call(txGas, to, value, add(data, 0x20), mload(data), 0, 0)
+            success := call(
+                txGas,
+                to,
+                value,
+                add(data, 0x20),
+                mload(data),
+                0,
+                0
+            )
         }
     }
 
@@ -35,12 +42,21 @@ library Exec {
         uint256 txGas
     ) internal returns (bool success) {
         assembly {
-            success := delegatecall(txGas, to, add(data, 0x20), mload(data), 0, 0)
+            success := delegatecall(
+                txGas,
+                to,
+                add(data, 0x20),
+                mload(data),
+                0,
+                0
+            )
         }
     }
 
     // get returned data from last call or calldelegate
-    function getReturnData(uint256 maxLen) internal pure returns (bytes memory returnData) {
+    function getReturnData(
+        uint256 maxLen
+    ) internal pure returns (bytes memory returnData) {
         assembly {
             let len := returndatasize()
             if gt(len, maxLen) {
@@ -61,8 +77,12 @@ library Exec {
         }
     }
 
-    function callAndRevert(address to, bytes memory data, uint256 maxLen) internal {
-        bool success = call(to,0,data,gasleft());
+    function callAndRevert(
+        address to,
+        bytes memory data,
+        uint256 maxLen
+    ) internal {
+        bool success = call(to, 0, data, gasleft());
         if (!success) {
             revertWithData(getReturnData(maxLen));
         }

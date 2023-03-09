@@ -13,20 +13,20 @@ import {BaseSmartAccountErrors} from "../../common/Errors.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 
 struct Transaction {
-        address to;
-        uint256 value;
-        bytes data;
-        Enum.Operation operation;
-        uint256 targetTxGas;
-    }
+    address to;
+    uint256 value;
+    bytes data;
+    Enum.Operation operation;
+    uint256 targetTxGas;
+}
 
 struct FeeRefund {
-        uint256 baseGas;
-        uint256 gasPrice; //gasPrice or tokenGasPrice
-        uint256 tokenGasPriceFactor;
-        address gasToken;
-        address payable refundReceiver;
-    }
+    uint256 baseGas;
+    uint256 gasPrice; //gasPrice or tokenGasPrice
+    uint256 tokenGasPriceFactor;
+    address gasToken;
+    address payable refundReceiver;
+}
 
 /**
  * Basic account implementation.
@@ -38,7 +38,7 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
 
     //return value in case of signature failure, with no time-range.
     // equivalent to _packValidationData(true,0,0);
-    uint256 constant internal SIG_VALIDATION_FAILED = 1;
+    uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
     /**
      * return the account nonce.
@@ -56,9 +56,13 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
      * Validate user's signature and nonce.
      * subclass doesn't need to override this method. Instead, it should override the specific internal validation methods.
      */
-    function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
-    external override virtual returns (uint256 validationData) {
-        if(msg.sender != address(entryPoint())) revert CallerIsNotAnEntryPoint(msg.sender);
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external virtual override returns (uint256 validationData) {
+        if (msg.sender != address(entryPoint()))
+            revert CallerIsNotAnEntryPoint(msg.sender);
         validationData = _validateSignature(userOp, userOpHash);
         if (userOp.initCode.length == 0) {
             _validateAndUpdateNonce(userOp);
@@ -69,8 +73,11 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
     /**
      * ensure the request comes from the known entrypoint.
      */
-    function _requireFromEntryPoint() internal virtual view {
-        require(msg.sender == address(entryPoint()), "account: not from EntryPoint");
+    function _requireFromEntryPoint() internal view virtual {
+        require(
+            msg.sender == address(entryPoint()),
+            "account: not from EntryPoint"
+        );
     }
 
     /**
@@ -86,8 +93,10 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
      *      If the account doesn't use time-range, it is enough to return SIG_VALIDATION_FAILED value (1) for signature failure.
      *      Note that the validation code cannot use block.timestamp (or block.number) directly.
      */
-    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
-    internal virtual returns (uint256 validationData);
+    function _validateSignature(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) internal virtual returns (uint256 validationData);
 
     /**
      * validate the current nonce matches the UserOperation nonce.
@@ -95,7 +104,9 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
      * called only if initCode is empty (since "nonce" field is used as "salt" on account creation)
      * @param userOp the op to validate.
      */
-    function _validateAndUpdateNonce(UserOperation calldata userOp) internal virtual;
+    function _validateAndUpdateNonce(
+        UserOperation calldata userOp
+    ) internal virtual;
 
     /**
      * sends to the entrypoint (msg.sender) the missing funds for this transaction.
@@ -107,17 +118,21 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
      */
     function _payPrefund(uint256 missingAccountFunds) internal virtual {
         if (missingAccountFunds != 0) {
-            (bool success,) = payable(msg.sender).call{value : missingAccountFunds, gas : type(uint256).max}("");
+            (bool success, ) = payable(msg.sender).call{
+                value: missingAccountFunds,
+                gas: type(uint256).max
+            }("");
             (success);
             //ignore failure (its EntryPoint's job to verify, not account.)
         }
     }
-    
+
     function init(address _owner, address _handler) external virtual;
 
     function execTransaction(
         Transaction memory _tx,
         uint256 _batchId,
         FeeRefund memory refundInfo,
-        bytes memory signatures) external payable virtual returns (bool success);
+        bytes memory signatures
+    ) external payable virtual returns (bool success);
 }

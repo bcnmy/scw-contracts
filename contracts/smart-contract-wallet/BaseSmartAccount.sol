@@ -13,20 +13,20 @@ import {BaseSmartAccountErrors} from "./common/Errors.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 
 struct Transaction {
-        address to;
-        Enum.Operation operation;
-        uint256 value;
-        bytes data;
-        uint256 targetTxGas;
-    }
+    address to;
+    Enum.Operation operation;
+    uint256 value;
+    bytes data;
+    uint256 targetTxGas;
+}
 
 struct FeeRefund {
-        uint256 baseGas;
-        uint256 gasPrice; //gasPrice or tokenGasPrice
-        uint256 tokenGasPriceFactor;
-        address gasToken;
-        address payable refundReceiver;
-    }
+    uint256 baseGas;
+    uint256 gasPrice; //gasPrice or tokenGasPrice
+    uint256 tokenGasPriceFactor;
+    address gasToken;
+    address payable refundReceiver;
+}
 
 /**
  * Basic account implementation.
@@ -38,7 +38,7 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
 
     //return value in case of signature failure, with no time-range.
     // equivalent to _packValidationData(true,0,0);
-    uint256 constant internal SIG_VALIDATION_FAILED = 1;
+    uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
     /**
      * @return nonce the account nonce.
@@ -56,9 +56,13 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      * Validate user's signature and nonce.
      * subclass doesn't need to override this method. Instead, it should override the specific internal validation methods.
      */
-    function validateUserOp(UserOperation calldata userOp, bytes32 userOpHash, uint256 missingAccountFunds)
-    external override virtual returns (uint256 validationData) {
-        if(msg.sender != address(entryPoint())) revert CallerIsNotAnEntryPoint(msg.sender);
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external virtual override returns (uint256 validationData) {
+        if (msg.sender != address(entryPoint()))
+            revert CallerIsNotAnEntryPoint(msg.sender);
         validationData = _validateSignature(userOp, userOpHash);
         if (userOp.initCode.length == 0) {
             _validateAndUpdateNonce(userOp);
@@ -79,8 +83,10 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      *      If the account doesn't use time-range, it is enough to return SIG_VALIDATION_FAILED value (1) for signature failure.
      *      Note that the validation code cannot use block.timestamp (or block.number) directly.
      */
-    function _validateSignature(UserOperation calldata userOp, bytes32 userOpHash)
-    internal virtual returns (uint256 validationData);
+    function _validateSignature(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) internal virtual returns (uint256 validationData);
 
     /**
      * validate the current nonce matches the UserOperation nonce.
@@ -88,7 +94,9 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      * called only if initCode is empty (since "nonce" field is used as "salt" on account creation)
      * @param userOp the op to validate.
      */
-    function _validateAndUpdateNonce(UserOperation calldata userOp) internal virtual;
+    function _validateAndUpdateNonce(
+        UserOperation calldata userOp
+    ) internal virtual;
 
     /**
      * sends to the entrypoint (msg.sender) the missing funds for this transaction.
@@ -100,11 +108,14 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      */
     function _payPrefund(uint256 missingAccountFunds) internal virtual {
         if (missingAccountFunds != 0) {
-            payable(msg.sender).call{value : missingAccountFunds, gas : type(uint256).max}("");
+            payable(msg.sender).call{
+                value: missingAccountFunds,
+                gas: type(uint256).max
+            }("");
             //ignore failure (its EntryPoint's job to verify, not account.)
         }
     }
-    
+
     /**
      * @dev Initialize the Smart Account with required states
      * @param _owner Signatory of the Smart Account
@@ -114,15 +125,16 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     function init(address _owner, address _handler) external virtual;
 
     /**
-     * @dev Gnosis style transaction with optional repay in native tokens OR ERC20 
+     * @dev Gnosis style transaction with optional repay in native tokens OR ERC20
      * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
      * @notice The fees are always transferred, even if the user transaction fails.
-     * @param _tx Smart Account transaction 
+     * @param _tx Smart Account transaction
      * @param refundInfo Required information for gas refunds
      * @param signatures Packed signature/s data ({bytes32 r}{bytes32 s}{uint8 v})
      */
     function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
-        bytes memory signatures) external payable virtual returns (bool success);
+        bytes memory signatures
+    ) external payable virtual returns (bool success);
 }

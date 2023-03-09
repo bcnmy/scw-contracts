@@ -16,22 +16,34 @@ abstract contract SecuredTokenTransfer {
         require(token.code.length > 0, "token contract doesn't exist");
         // 0xa9059cbb - keccack("transfer(address,uint256)")
         // Review for sig collision and HAL-04 report i
-        bytes memory data = abi.encodeWithSelector(0xa9059cbb, receiver, amount);
+        bytes memory data = abi.encodeWithSelector(
+            0xa9059cbb,
+            receiver,
+            amount
+        );
         // solhint-disable-next-line no-inline-assembly
         assembly {
             // We write the return value to scratch space.
             // See https://docs.soliditylang.org/en/v0.8.17/internals/layout_in_memory.html#layout-in-memory
-            let success := call(sub(gas(), 10000), token, 0, add(data, 0x20), mload(data), 0, 0x20)
+            let success := call(
+                sub(gas(), 10000),
+                token,
+                0,
+                add(data, 0x20),
+                mload(data),
+                0,
+                0x20
+            )
             switch returndatasize()
-                case 0 {
-                    transferred := success
-                }
-                case 0x20 {
-                    transferred := iszero(or(iszero(success), iszero(mload(0))))
-                }
-                default {
-                    transferred := 0
-                }
+            case 0 {
+                transferred := success
+            }
+            case 0x20 {
+                transferred := iszero(or(iszero(success), iszero(mload(0))))
+            }
+            default {
+                transferred := 0
+            }
         }
     }
 }

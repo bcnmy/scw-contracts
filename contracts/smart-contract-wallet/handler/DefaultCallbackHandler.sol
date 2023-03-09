@@ -10,14 +10,21 @@ import {SmartAccount} from "../SmartAccount.sol";
 
 /// @title Default Callback Handler - returns true for known token callbacks
 /// @author Richard Meissner - <richard@gnosis.pm>
-contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient, IERC721TokenReceiver, IERC165, ISignatureValidator {
+contract DefaultCallbackHandler is
+    IERC1155TokenReceiver,
+    IERC777TokensRecipient,
+    IERC721TokenReceiver,
+    IERC165,
+    ISignatureValidator
+{
     string public constant NAME = "Default Callback Handler";
     string public constant VERSION = "1.0.0";
 
     //keccak256(
     //    "SmartAccountMessage(bytes message)"
     //);
-    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH = 0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
+    bytes32 private constant SMART_ACCOUNT_MSG_TYPEHASH =
+        0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
@@ -26,12 +33,18 @@ contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient
      * @param _signature Signature byte array associated with _dataHash
      * @return a bool upon valid or invalid signature with corresponding _data
      */
-    function isValidSignature(bytes32 _dataHash, bytes memory _signature) public view override returns (bytes4) {
+    function isValidSignature(
+        bytes32 _dataHash,
+        bytes memory _signature
+    ) public view override returns (bytes4) {
         // Caller should be a SmartAccount
         SmartAccount smartAccount = SmartAccount(payable(msg.sender));
 
         if (_signature.length == 0) {
-            return (smartAccount.signedMessages(_dataHash) != 0) ? EIP1271_MAGIC_VALUE : bytes4(0xffffffff);
+            return
+                (smartAccount.signedMessages(_dataHash) != 0)
+                    ? EIP1271_MAGIC_VALUE
+                    : bytes4(0xffffffff);
         } else {
             try smartAccount.checkSignatures(_dataHash, _signature) {
                 return EIP1271_MAGIC_VALUE;
@@ -41,9 +54,21 @@ contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient
         }
     }
 
-    function getMessageHash(bytes memory message) public view returns (bytes32) {
-        bytes32 smartAccountMessageHash = keccak256(abi.encode(SMART_ACCOUNT_MSG_TYPEHASH, keccak256(message)));
-        return keccak256(abi.encodePacked(bytes1(0x19), bytes1(0x01), SmartAccount(payable(msg.sender)).domainSeparator(), smartAccountMessageHash));
+    function getMessageHash(
+        bytes memory message
+    ) public view returns (bytes32) {
+        bytes32 smartAccountMessageHash = keccak256(
+            abi.encode(SMART_ACCOUNT_MSG_TYPEHASH, keccak256(message))
+        );
+        return
+            keccak256(
+                abi.encodePacked(
+                    bytes1(0x19),
+                    bytes1(0x01),
+                    SmartAccount(payable(msg.sender)).domainSeparator(),
+                    smartAccountMessageHash
+                )
+            );
     }
 
     function onERC1155Received(
@@ -86,7 +111,9 @@ contract DefaultCallbackHandler is IERC1155TokenReceiver, IERC777TokensRecipient
         // We implement this for completeness, doesn't really have any value
     }
 
-    function supportsInterface(bytes4 interfaceId) external view virtual override returns (bool) {
+    function supportsInterface(
+        bytes4 interfaceId
+    ) external view virtual override returns (bool) {
         return
             interfaceId == type(IERC1155TokenReceiver).interfaceId ||
             interfaceId == type(IERC721TokenReceiver).interfaceId ||
