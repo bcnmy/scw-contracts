@@ -14,7 +14,7 @@ async function main() {
   const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
   const entryPoint =
     process.env.ENTRY_POINT_ADDRESS ||
-    "0x27a4Db290B89AE3373ce4313cBEaE72112Ae7Da9";
+    "0x0576a174D229E3cFA37253523E645A78A0C91B57";
 
   const deployerInstance = await getDeployerInstance();
   const salt = ethers.utils.keccak256(
