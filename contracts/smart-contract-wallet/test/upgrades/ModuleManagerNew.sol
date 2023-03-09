@@ -6,7 +6,7 @@ import "../../common/SelfAuthorized.sol";
 import "../../base/Executor.sol";
 
 /// @title Module Manager - A contract that manages modules that can execute transactions via this contract
-contract ModuleManagerNew is SelfAuthorized, Executor {    
+contract ModuleManagerNew is SelfAuthorized, Executor {
     // Events
     event EnabledModule(address module);
     event DisabledModule(address module);
@@ -24,7 +24,10 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         if (to != address(0))
             // Setup has to complete successfully or transaction fails.
-            require(execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()), "BSA000");
+            require(
+                execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()),
+                "BSA000"
+            );
     }
 
     /// @dev Allows to add a module to the whitelist.
@@ -46,7 +49,10 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
     /// @notice Disables the module `module` for the Safe.
     /// @param prevModule Module that pointed to the module to be removed in the linked list
     /// @param module Module to be removed.
-    function disableModule(address prevModule, address module) public authorized {
+    function disableModule(
+        address prevModule,
+        address module
+    ) public authorized {
         // Validate module address and check that it corresponds to module index.
         require(module != address(0) && module != SENTINEL_MODULES, "BSA101");
         require(modules[prevModule] == module, "BSA103");
@@ -66,9 +72,12 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         bytes memory data,
         Enum.Operation operation
     ) public virtual returns (bool success) {
-        require(isActive == true,"disabled");
+        require(isActive == true, "disabled");
         // Only whitelisted modules are allowed.
-        require(msg.sender != SENTINEL_MODULES && modules[msg.sender] != address(0), "BSA104");
+        require(
+            msg.sender != SENTINEL_MODULES && modules[msg.sender] != address(0),
+            "BSA104"
+        );
         // Execute transaction without further confirmations.
         success = execute(to, value, data, operation, gasleft());
         if (success) emit ExecutionFromModuleSuccess(msg.sender);
@@ -114,14 +123,21 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
     /// @param pageSize Maximum number of modules that should be returned.
     /// @return array Array of modules.
     /// @return next Start of the next page.
-    function getModulesPaginated(address start, uint256 pageSize) external view returns (address[] memory array, address next) {
+    function getModulesPaginated(
+        address start,
+        uint256 pageSize
+    ) external view returns (address[] memory array, address next) {
         // Init array with max page size
         array = new address[](pageSize);
 
         // Populate return array
         uint256 moduleCount;
         address currentModule = modules[start];
-        while (currentModule != address(0x0) && currentModule != SENTINEL_MODULES && moduleCount < pageSize) {
+        while (
+            currentModule != address(0x0) &&
+            currentModule != SENTINEL_MODULES &&
+            moduleCount < pageSize
+        ) {
             array[moduleCount] = currentModule;
             currentModule = modules[currentModule];
             moduleCount++;

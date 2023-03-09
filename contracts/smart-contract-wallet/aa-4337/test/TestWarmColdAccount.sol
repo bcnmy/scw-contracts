@@ -10,18 +10,22 @@ import "../interfaces/IAccount.sol";
 contract TestWarmColdAccount is IAccount {
     IEntryPoint private ep;
     uint public state = 1;
+
     constructor(IEntryPoint _ep) payable {
         ep = _ep;
     }
 
-    function validateUserOp(UserOperation calldata userOp, bytes32, uint256 missingAccountFunds)
-    external override returns (uint256 validationData) {
-        ep.depositTo{value : missingAccountFunds}(address(this));
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32,
+        uint256 missingAccountFunds
+    ) external override returns (uint256 validationData) {
+        ep.depositTo{value: missingAccountFunds}(address(this));
         if (userOp.nonce == 1) {
             // can only succeed if storage is already warm
             this.touchStorage{gas: 1000}();
         } else if (userOp.nonce == 2) {
-            address paymaster = address(bytes20(userOp.paymasterAndData[: 20]));
+            address paymaster = address(bytes20(userOp.paymasterAndData[:20]));
             // can only succeed if storage is already warm
             this.touchPaymaster{gas: 1000}(paymaster);
         }

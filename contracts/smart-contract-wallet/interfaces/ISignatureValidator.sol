@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 contract ISignatureValidatorConstants {
     // bytes4(keccak256("isValidSignature(bytes32,bytes)")
-    bytes4 constant internal EIP1271_MAGIC_VALUE = 0x1626ba7e;
+    bytes4 internal constant EIP1271_MAGIC_VALUE = 0x1626ba7e;
 }
 
 abstract contract ISignatureValidator is ISignatureValidatorConstants {
@@ -16,5 +16,8 @@ abstract contract ISignatureValidator is ISignatureValidatorConstants {
      * MUST NOT modify state (using STATICCALL for solc < 0.5, view modifier for solc > 0.5)
      * MUST allow external calls
      */
-    function isValidSignature(bytes32 _dataHash, bytes memory _signature) public view virtual returns (bytes4);
+    function isValidSignature(
+        bytes32 _dataHash,
+        bytes memory _signature
+    ) public view virtual returns (bytes4);
 }

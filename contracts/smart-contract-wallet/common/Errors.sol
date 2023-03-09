@@ -2,13 +2,11 @@
 pragma solidity 0.8.17;
 
 contract BaseSmartAccountErrors {
-
     /**
      * @notice Throws at onlyEntryPoint when msg.sender is not an EntryPoint set for this Smart Account
      * @param caller address that tried to call onlyEntryPoint-protected method
      */
     error CallerIsNotAnEntryPoint(address caller);
-
 }
 
 contract FallbackManagerErrors {
@@ -19,18 +17,17 @@ contract FallbackManagerErrors {
 }
 
 contract SmartAccountErrors is BaseSmartAccountErrors {
-    
     /**
      * @notice Throws if zero address has been provided as Entry Point address
      */
     error EntryPointCannotBeZero();
-    
+
     /**
      * @notice Throws at mixedAuth when msg.sender is not an owner neither _self
      * @param caller address that tried to call mixedAuth-protected method
      */
     error MixedAuthFail(address caller);
-    
+
     /**
      * @notice Throws if transfer of tokens failed
      * @param token token contract address
@@ -88,7 +85,11 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
      * @param gasPrice gas price passed in Refund Info
      * @param success whether transaction has been executed successfully or not
      */
-    error CanNotEstimateGas(uint256 targetTxGas, uint256 gasPrice, bool success);
+    error CanNotEstimateGas(
+        uint256 targetTxGas,
+        uint256 gasPrice,
+        bool success
+    );
 
     /**
      * @notice Throws if contract signature is provided in frong format
@@ -96,7 +97,11 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
      * @param contractSignatureLength length of a contract signature
      * @param signatureLength the whole signature length
      */
-    error WrongContractSignatureFormat(uint256 uintS, uint256 contractSignatureLength, uint256 signatureLength);
+    error WrongContractSignatureFormat(
+        uint256 uintS,
+        uint256 contractSignatureLength,
+        uint256 signatureLength
+    );
 
     /**
      * @notice Throws when isValidSignature for the conrtact signature and data hash return differs from EIP1271 Magic Value
@@ -128,15 +133,21 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
      * @param valueLength length of txn values array
      * @param funcLength length of function signatures array
      */
-    error WrongBatchProvided (uint256 destLength, uint256 valueLength, uint256 funcLength);
+    error WrongBatchProvided(
+        uint256 destLength,
+        uint256 valueLength,
+        uint256 funcLength
+    );
 
     /**
      * @notice Throws when invalid nonce has been provided in an AA flow
      * @param nonceProvided nonce that has been provided within User Operation
      * @param nonceExpected expected nonce
      */
-    error InvalidUserOpNonceProvided(uint256 nonceProvided, uint256 nonceExpected);
-
+    error InvalidUserOpNonceProvided(
+        uint256 nonceProvided,
+        uint256 nonceExpected
+    );
 }
 
 contract SmartAccountFactoryErrors is SmartAccountErrors {
@@ -172,33 +183,33 @@ contract ModuleManagerErrors {
     error ModuleAlreadyEnabled(address module);
 
     /**
-     * @notice Throws when module and previous module mismatch 
+     * @notice Throws when module and previous module mismatch
      * @param expectedModule expected module at modules[prevModule]
      * @param returnedModule the module that has been found at modules[prevModule]
      * @param prevModule previous module address provided at call
      */
-    error ModuleAndPrevModuleMismatch(address expectedModule, address returnedModule, address prevModule);
+    error ModuleAndPrevModuleMismatch(
+        address expectedModule,
+        address returnedModule,
+        address prevModule
+    );
 
     /**
      * @notice Throws when trying to execute transaction from module that is not enabled
      * @param module Module address provided
      */
     error ModuleNotEnabled(address module);
-
 }
 
 contract SelfAuthorizedErrors {
-    
     /**
      * @notice Throws when the caller is not address(this)
      * @param caller Caller address
      */
     error CallerIsNotSelf(address caller);
-
 }
 
 contract SingletonPaymasterErrors {
-    
     /**
      * @notice Throws when the Entrypoint address provided is address(0)
      */
@@ -236,8 +247,6 @@ contract SingletonPaymasterErrors {
      * @param sigLength length oif the signature provided
      */
     error InvalidPaymasterSignatureLength(uint256 sigLength);
-
 }
-
 
 //

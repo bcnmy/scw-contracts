@@ -3,12 +3,11 @@ pragma solidity 0.8.17;
 import "@openzeppelin/contracts/access/Ownable.sol";
 
 contract Button is Ownable {
-
-   event ButtonPushed(address pusher, uint256 pushes);
-   uint256 public pushes;
+    event ButtonPushed(address pusher, uint256 pushes);
+    uint256 public pushes;
 
     function pushButton() public onlyOwner {
         pushes++;
         emit ButtonPushed(msg.sender, pushes);
-     }
+    }
 }

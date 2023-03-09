@@ -4,23 +4,21 @@ pragma solidity 0.8.17;
 import "../../SmartAccount.sol";
 import "hardhat/console.sol";
 
-
 contract SmartAccount6 is SmartAccount {
-
     // AA immutable storage
-    // @review @fil 
+    // @review @fil
     IEntryPoint private immutable _entryPoint;
 
     address public friend;
     bool public isDone;
 
-    modifier onlyFriend {
+    modifier onlyFriend() {
         require(msg.sender == friend, "only friend!");
         _;
     }
 
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
-    constructor(IEntryPoint anEntryPoint) SmartAccount(anEntryPoint){
+    constructor(IEntryPoint anEntryPoint) SmartAccount(anEntryPoint) {
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
@@ -32,20 +30,22 @@ contract SmartAccount6 is SmartAccount {
         // _chainId = block.chainid;
     }
 
-    function reinit(address _friend) public { 
+    function reinit(address _friend) public {
         require(friend == address(0), "Already initialized");
-        require(_friend != address(0),"Invalid owner");
+        require(_friend != address(0), "Invalid owner");
         friend = _friend;
         isDone = false;
     }
 
-    function transferByFriend(address payable dest, uint amount) public virtual onlyFriend {
+    function transferByFriend(
+        address payable dest,
+        uint amount
+    ) public virtual onlyFriend {
         require(dest != address(0), "this action will burn your funds");
         require(amount <= 1 ether, "can't exceed");
         require(isDone == false, "only once during urgency");
-        (bool success,) = dest.call{value:amount}("");
-        require(success,"transfer failed");
+        (bool success, ) = dest.call{value: amount}("");
+        require(success, "transfer failed");
         isDone = true;
     }
-} 
-    
+}
