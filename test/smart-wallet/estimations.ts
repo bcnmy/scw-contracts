@@ -16,6 +16,13 @@ import {
 } from "../../typechain";
 import { fillAndSign } from "../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
+import {
+  FeeRefund,
+  SafeTransaction,
+  buildSafeTransaction,
+  safeSignTypedData,
+  Transaction,
+} from "../../src/utils/execution";
 
 export async function deployEntryPoint(
   provider = ethers.provider
@@ -595,6 +602,74 @@ describe("Account Functionality: 4337", function () {
   });
 
   // Todo // ERC20 transfer and ERC20 batch transfer but using owner signature via execTransaction
+
+  it("Forward flow: estimate [send erc20] (wallet already deployed): transaction gasUsed", async () => {
+    // balance before transfer john-4, scw - 200
+
+    const transferData = erc20Interface.encodeFunctionData("transfer", [
+      john,
+      ethers.utils.parseEther("1"),
+    ]);
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: token.address,
+      data: transferData,
+      nonce: await userSCW.getNonce(1),
+    });
+
+    const gasEstimate = await ethers.provider.estimateGas({
+      to: token.address,
+      data: transferData,
+      from: userSCW.address,
+    });
+
+    const chainId = await userSCW.getChainId();
+
+    safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
+    safeTx.gasToken = token.address;
+    safeTx.gasPrice = 1000000000000; // this would be token gas price
+    safeTx.targetTxGas = gasEstimate.toNumber();
+    safeTx.baseGas = 21000 + gasEstimate.toNumber() - 21000; // base plus erc20 token transfer
+    const { data } = await safeSignTypedData(
+      accounts[0],
+      userSCW,
+      safeTx,
+      chainId
+    );
+    let signature = "0x";
+    signature += data.slice(2);
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    const tx = await userSCW
+      .connect(accounts[1])
+      .execTransaction(transaction, refundInfo, signature, {
+        gasPrice: safeTx.gasPrice,
+      });
+    const receipt = await tx.wait();
+    // console.log(
+    //   "--------Forward flow: [send erc20] tx execTransaction:",
+    //   receipt.gasUsed.toNumber(),
+    //   "--------"
+    // );
+    results.push(
+      `Forward flow: [send erc20] tx execTransaction: ${receipt.gasUsed.toString()}`
+    );
+
+    console.log(token.balanceOf(john));
+    expect(await token.balanceOf(john)).to.equal(ethers.utils.parseEther("5"));
+  });
 
   // log results
   it("Gas results", async () => {
