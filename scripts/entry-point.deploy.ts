@@ -1,4 +1,4 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import {
   deployContract,
   DEPLOYMENT_SALTS,
@@ -11,6 +11,11 @@ const options = { gasLimit: 7000000, gasPrice: 70000000000 };
 
 async function main() {
   const provider = ethers.provider;
+
+  if (network.name !== 'hardhat' || network.name !== 'ganache'){
+    console.log("Entry Point Already Deployed Address: ", entryPointAddress);
+    return
+  }
 
   const deployerInstance = await getDeployerInstance();
   const salt = ethers.utils.keccak256(
