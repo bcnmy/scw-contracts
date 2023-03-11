@@ -1147,8 +1147,174 @@ describe("Upgrade functionality Via Entrypoint", function () {
       console.log("wallet code after is: ", codeAfter);
     });
 
-    it("4337 flow: batch : deploy + update implementation + update handler + dapp transaction!", async () => {
-      // todo
+    it("4337 flow: batch : deploy + update implementation + update handler + dapp transactions", async () => {
+      // Now the wallet with owner and index 0 and 1 and 2 and 3 and 4 is deployed!
+
+      // anyway we will deploy a new one, so...
+      const freshAccount =
+        await walletFactory.getAddressForCounterfactualWallet(owner, 5);
+
+      const codeBefore = await ethers.provider.getCode(freshAccount);
+      console.log("wallet code before is: ", codeBefore);
+
+      // preserved now..
+      // latestEntryPoint = await deployEntryPoint();
+      // console.log("latest entrypoint ", latestEntryPoint.address);
+
+      const BaseImplementation11 = await ethers.getContractFactory(
+        "SmartAccount11"
+      );
+      const baseImpl11 = await BaseImplementation11.deploy(entryPoint.address);
+      await baseImpl11.deployed();
+      console.log("base wallet new impl deployed at: ", baseImpl11.address);
+
+      await accounts[1].sendTransaction({
+        from: bob,
+        to: freshAccount,
+        value: ethers.utils.parseEther("5"),
+      });
+
+      // transfer erc20 token to the new wallet
+      await token
+        .connect(accounts[0])
+        .transfer(freshAccount, ethers.utils.parseEther("100"));
+
+      const erc20Interface = new ethers.utils.Interface([
+        "function transfer(address _to, uint256 _value)",
+      ]);
+
+      // Encode an ERC-20 token transfer to recipient of the specified amount
+      const transferData = erc20Interface.encodeFunctionData("transfer", [
+        bob,
+        ethers.utils.parseEther("10"),
+      ]);
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+      const updateImplementationData =
+        SmartAccount.interface.encodeFunctionData("updateImplementation", [
+          baseImpl11.address,
+        ]);
+
+      // Let's deploy a new handler!
+      const DefaultHandler = await ethers.getContractFactory(
+        "DefaultCallbackHandler"
+      );
+      const handler = await DefaultHandler.deploy();
+      await handler.deployed();
+      console.log("Default callback handler deployed at: ", handler.address);
+
+      // setFallbackHandler is also mixedAuth!
+      const updateHandlerData = SmartAccount.interface.encodeFunctionData(
+        "setFallbackHandler",
+        [handler.address]
+      );
+
+      const bobBalanceBefore = await token.balanceOf(bob);
+
+      const charlieBalBefore = await ethers.provider.getBalance(charlie);
+
+      const txnData = SmartAccount.interface.encodeFunctionData(
+        "executeBatchCall",
+        [
+          [freshAccount, freshAccount, charlie, token.address],
+          [
+            ethers.utils.parseEther("0"),
+            ethers.utils.parseEther("0"),
+            ethers.utils.parseEther("1"),
+            ethers.utils.parseEther("0"),
+          ],
+          [updateHandlerData, updateImplementationData, "0x", transferData],
+        ]
+      );
+
+      console.log("transaction data ", txnData);
+
+      const WalletFactory = await ethers.getContractFactory(
+        "SmartAccountFactory"
+      );
+
+      const encodedData = WalletFactory.interface.encodeFunctionData(
+        "deployCounterFactualWallet",
+        [owner, 5]
+      );
+
+      // const smartAccountCallData = "0x";
+      const userOp1 = await fillAndSign(
+        {
+          sender: freshAccount,
+          callData: txnData,
+          initCode: hexConcat([walletFactory.address, encodedData]),
+          verificationGasLimit: 400000,
+          callGasLimit: 1000000,
+        },
+        accounts[0], // since the owner signer is supposed to be accounts[0]
+        entryPoint
+      );
+
+      const nonceFromContract = await verifyingSingletonPaymaster[
+        "getSenderPaymasterNonce(address)"
+      ](freshAccount);
+
+      const hash = await verifyingSingletonPaymaster.getHash(
+        userOp1,
+        nonceFromContract.toNumber(),
+        await offchainSigner.getAddress()
+      );
+      const sig = await offchainSigner.signMessage(arrayify(hash));
+      const userOp = await fillAndSign(
+        {
+          ...userOp1,
+          paymasterAndData: hexConcat([
+            paymasterAddress,
+            ethers.utils.defaultAbiCoder.encode(
+              ["address", "bytes"],
+              [await offchainSigner.getAddress(), sig]
+            ),
+          ]),
+        },
+        accounts[0], // since the owner signer is supposed to be accounts[0]
+        entryPoint
+      );
+      console.log(userOp);
+
+      // This action should send userOp that upgrades implementation on already deployed wallet!
+      await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+
+      userSCW = await ethers.getContractAt(
+        "contracts/smart-contract-wallet/test/upgrades/SmartAccount11.sol:SmartAccount11",
+        freshAccount
+      );
+
+      /* userSCW = await ethers.getContractAt(
+            "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
+            freshAccount
+          ); */
+
+      const currentImpl = await userSCW.getImplementation();
+      console.log("current implementation by querying: ", currentImpl);
+      expect(currentImpl).to.be.equal(baseImpl11.address);
+
+      const currentEntryPoint = await userSCW.entryPoint();
+      console.log("current entrypoint ", currentEntryPoint);
+      expect(currentEntryPoint).to.be.equal(entryPoint.address);
+
+      const currentHandler = await userSCW.getFallbackHandler();
+      console.log("current handler ", currentHandler);
+      expect(currentHandler).to.be.equal(handler.address);
+
+      const balActual = await ethers.provider.getBalance(charlie);
+      expect(balActual).to.be.equal(
+        charlieBalBefore.add(ethers.utils.parseEther("1"))
+      );
+
+      const bobBalanceAfter = await token.balanceOf(bob);
+      expect(bobBalanceAfter).to.be.equal(
+        bobBalanceBefore.add(ethers.utils.parseEther("10"))
+      );
+
+      const codeAfter = await ethers.provider.getCode(freshAccount);
+      console.log("wallet code after is: ", codeAfter);
     });
   });
 });
