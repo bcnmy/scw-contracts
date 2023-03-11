@@ -11,7 +11,7 @@
     "postinstall": "husky install",
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
-    "coverage": "DISABLE_VIA_IR=true hardhat coverage",
+    "coverage": "COVERAGE=1 DISABLE_VIA_IR=true hardhat coverage",
     "prepare": "husky install"
   },
   "keywords": [],
