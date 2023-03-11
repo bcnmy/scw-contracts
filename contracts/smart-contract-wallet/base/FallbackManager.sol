@@ -46,6 +46,13 @@ contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
         }
     }
 
+    function getFallbackHandler() external view returns (address _handler) {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            _handler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
+        }
+    }
+
     /// @dev Allows to add a contract to handle fallback calls.
     ///      Only fallback calls without value and with data will be forwarded.
     ///      This can only be done via a Safe transaction.

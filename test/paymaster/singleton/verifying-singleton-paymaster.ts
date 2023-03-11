@@ -82,22 +82,13 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
       entryPoint.address
     );
 
-    walletFactory = await new SmartAccountFactory__factory(deployer).deploy();
-
-    const implIface = smartWalletImp.interface;
-    const initializer = implIface.encodeFunctionData("init", [
-      walletOwnerAddress,
-      callBackHandler.address,
-    ]);
-
-    await walletFactory.deployCounterFactualWallet(
-      smartWalletImp.address,
-      initializer,
-      0
+    walletFactory = await new SmartAccountFactory__factory(deployer).deploy(
+      smartWalletImp.address
     );
+
+    await walletFactory.deployCounterFactualWallet(walletOwnerAddress, 0);
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      smartWalletImp.address,
-      initializer,
+      walletOwnerAddress,
       0
     );
 
@@ -163,14 +154,13 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
       console.log("entrypoint ", entryPoint.address);
       await expect(
         entryPoint.callStatic.simulateValidation(userOp)
-      //).to.be.revertedWith("FailedOp");
+        // ).to.be.revertedWith("FailedOp");
       ).to.be.reverted;
     });
 
     it("succeed with valid signature", async () => {
-
       const signer = await verifyingSingletonPaymaster.verifyingSigner();
-      const offchainSignerAddress = await offchainSigner.getAddress();  
+      const offchainSignerAddress = await offchainSigner.getAddress();
       expect(signer).to.be.equal(offchainSignerAddress);
 
       await verifyingSingletonPaymaster.depositFor(

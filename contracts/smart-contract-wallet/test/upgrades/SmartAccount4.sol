@@ -144,8 +144,7 @@ contract SmartAccount4 is
     // review for all methods to be invoked by smart account to self
     // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
-    function updateImplementation(address _implementation) public {
-        _requireFromEntryPointOrOwner();
+    function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         // solhint-disable-next-line no-inline-assembly
         assembly {

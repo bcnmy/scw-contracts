@@ -157,13 +157,11 @@ contract SmartAccount is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    // todo: write test case for updating implementation
     // review for all methods to be invoked by smart account to self
     // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
-    function updateImplementation(address _implementation) public {
+    function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation != address(0), "Address cannot be zero");
-        _requireFromEntryPointOrOwner();
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
         // solhint-disable-next-line no-inline-assembly
@@ -175,14 +173,14 @@ contract SmartAccount is
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
+    // either this and check for specific _data
+    // specific methods like updateImplementationAndSetHandler
+    // it could be generic reinit of proxy for states introduced in new implementation
+    /*function updateImplementationAndCall(address _implementation, bytes memory _data) public mixedAuth {
+
+    }*/
+
     // Getters
-
-    // @review: test case aid
-    // perhaps marked for deletion
-    function accountLogic() public pure returns (address) {
-        return address(0);
-    }
-
     /**
      * @dev Returns the domain separator for this contract, as defined in the EIP-712 standard.
      * @return bytes32 The domain separator hash.

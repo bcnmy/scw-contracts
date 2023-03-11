@@ -13,12 +13,12 @@ describe("Wallet Deployment", function () {
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
-    const DefaultHandler = await ethers.getContractFactory(
+    /* const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
     );
     const handler = await DefaultHandler.deploy();
     await handler.deployed();
-    console.log("Default callback handler deployed at: ", handler.address);
+    console.log("Default callback handler deployed at: ", handler.address); */
 
     const SmartWallet = await ethers.getContractFactory("SmartAccount");
     const baseImpl = await SmartWallet.deploy(entryPoint.address);
@@ -28,25 +28,18 @@ describe("Wallet Deployment", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    const walletFactory = await WalletFactory.deploy();
+    const walletFactory = await WalletFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
-    const initializer = SmartWallet.interface.encodeFunctionData("init", [
-      owner,
-      handler.address,
-    ]);
-
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
     const tx = await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       indexForSalt
     );
     const receipt = await tx.wait();

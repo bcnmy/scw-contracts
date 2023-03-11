@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 import "../../libs/LibAddress.sol";
 import "../../BaseSmartAccount.sol";
-import "./ModuleManagerNew.sol";
+import "../../base/ModuleManager.sol";
 import "../../base/FallbackManager.sol";
 import "../../common/SignatureDecoder.sol";
 import "../../common/SecuredTokenTransfer.sol";
@@ -13,9 +13,9 @@ import "../../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "hardhat/console.sol";
 
-contract SmartAccount7 is
+contract SmartAccount3 is
     BaseSmartAccount,
-    ModuleManagerNew,
+    ModuleManager,
     FallbackManager,
     SignatureDecoder,
     SecuredTokenTransfer,
@@ -51,10 +51,6 @@ contract SmartAccount7 is
     // @notice there is no _nonce
     mapping(uint256 => uint256) public nonces;
 
-    // Mapping to keep track of all message hashes that have been approved by the owner
-    // by ALL REQUIRED owners in a multisig flow
-    mapping(bytes32 => uint256) public signedMessages;
-
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
 
@@ -68,7 +64,6 @@ contract SmartAccount7 is
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-        isActive = false;
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;
         _chainId = block.chainid;
@@ -197,13 +192,9 @@ contract SmartAccount7 is
         return _entryPoint;
     }
 
-    function isActiveModuleManager() public view virtual returns (bool) {
-        return isActive;
-    }
-
-    // Note: just because of interface as we're not inherting from previous base!
-    // Todo: Make it easier to inherit from previous base contracts. Make methods internal virtual where it makes sense
-    // @review: abstract contracts and necessary interfaces which might change
+    // init
+    // Initialize / Setup
+    // Used to setup
     function init(address _owner, address _handler) external override {
         require(owner == address(0), "Already initialized");
         require(_owner != address(0), "Invalid owner");
@@ -212,16 +203,22 @@ contract SmartAccount7 is
         _setupModules(address(0), bytes(""));
     }
 
-    function reinit(bool _isMMActive) public {
-        require(isActive == false, "Already initialised");
-        isActive = _isMMActive;
-    }
-
     /**
      * @dev Returns the largest of two numbers.
      */
     function max(uint256 a, uint256 b) internal pure returns (uint256) {
         return a >= b ? a : b;
+    }
+
+    function getImplementation()
+        external
+        view
+        returns (address _implementation)
+    {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            _implementation := sload(address())
+        }
     }
 
     // review: batchId should be carefully designed or removed all together (including 2D nonces)
@@ -255,9 +252,10 @@ contract SmartAccount7 is
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
         // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
+        // Bitshift left 6 bits means multiplying by 64, just more gas efficient
         require(
             gasleft() >=
-                max((_tx.targetTxGas * 64) / 63, _tx.targetTxGas + 2500) + 500,
+                max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500,
             "BSA010"
         );
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -279,7 +277,7 @@ contract SmartAccount7 is
             );
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment;
-            if (refundInfo.gasPrice > 0) {
+            if (refundInfo.gasPrice != 0) {
                 payment = handlePayment(
                     startGas - gasleft(),
                     refundInfo.baseGas,
@@ -290,7 +288,7 @@ contract SmartAccount7 is
                 );
                 emit WalletHandlePayment(txHash, payment);
             }
-            console.log("has to go through new v4 implementation");
+            console.log("goes from v3");
         }
     }
 

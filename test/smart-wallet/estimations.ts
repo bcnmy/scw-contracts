@@ -86,11 +86,11 @@ describe("Account Functionality: 4337", function () {
         offchainSignerAddress
       );
 
-    const DefaultHandler = await ethers.getContractFactory(
+    /* const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
     );
     handler = await DefaultHandler.deploy();
-    await handler.deployed();
+    await handler.deployed(); */
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);
@@ -99,7 +99,7 @@ describe("Account Functionality: 4337", function () {
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy();
+    walletFactory = await WalletFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
 
     const MockToken = await ethers.getContractFactory("MockToken");
@@ -114,19 +114,12 @@ describe("Account Functionality: 4337", function () {
 
     await token.mint(owner, ethers.utils.parseEther("1000000"));
 
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [walletOwnerAddress, handler.address]
-    );
-
     const tx = await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
+      walletOwnerAddress,
       0
     );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      baseImpl.address,
-      initializer,
+      walletOwnerAddress,
       0
     );
     walletAddress = expected;
@@ -231,16 +224,8 @@ describe("Account Functionality: 4337", function () {
   it("4337 flow: estimate [wallet deployment + send erc20]: transaction gasUsed", async () => {
     // create new SCW but dont deployCounterFactualWallet
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
-    const initializer = SmartAccount.interface.encodeFunctionData("init", [
-      charlie,
-      handler.address,
-    ]);
     const expectedWallet =
-      await walletFactory.getAddressForCounterfactualWallet(
-        baseImpl.address,
-        initializer,
-        10
-      );
+      await walletFactory.getAddressForCounterfactualWallet(charlie, 10);
 
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -270,7 +255,7 @@ describe("Account Functionality: 4337", function () {
 
     const encodedData = WalletFactory.interface.encodeFunctionData(
       "deployCounterFactualWallet",
-      [baseImpl.address, initializer, 10]
+      [charlie, 10]
     );
 
     const userOp1 = await fillAndSign(
@@ -332,21 +317,9 @@ describe("Account Functionality: 4337", function () {
 
   it("4337 flow: estimate [send erc20 batch] (wallet already deployed): transaction gasUsed", async () => {
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
-    const initializer = SmartAccount.interface.encodeFunctionData("init", [
-      charlie,
-      handler.address,
-    ]);
-    await walletFactory.deployCounterFactualWallet(
-      baseImpl.address,
-      initializer,
-      11
-    );
+    await walletFactory.deployCounterFactualWallet(charlie, 11);
     const expectedWallet =
-      await walletFactory.getAddressForCounterfactualWallet(
-        baseImpl.address,
-        initializer,
-        11
-      );
+      await walletFactory.getAddressForCounterfactualWallet(charlie, 11);
 
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -440,16 +413,8 @@ describe("Account Functionality: 4337", function () {
   it("4337 flow: estimate [wallet deployment + send erc20 batch]: transaction gasUsed", async () => {
     // create new SCW but dont deployCounterFactualWallet
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
-    const initializer = SmartAccount.interface.encodeFunctionData("init", [
-      charlie,
-      handler.address,
-    ]);
     const expectedWallet =
-      await walletFactory.getAddressForCounterfactualWallet(
-        baseImpl.address,
-        initializer,
-        12
-      );
+      await walletFactory.getAddressForCounterfactualWallet(charlie, 12);
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expectedWallet
@@ -485,7 +450,7 @@ describe("Account Functionality: 4337", function () {
 
     const encodedData = WalletFactory.interface.encodeFunctionData(
       "deployCounterFactualWallet",
-      [baseImpl.address, initializer, 12]
+      [charlie, 12]
     );
 
     const userOp1 = await fillAndSign(

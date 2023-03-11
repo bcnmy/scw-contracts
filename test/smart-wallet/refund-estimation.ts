@@ -121,12 +121,12 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
-    const DefaultHandler = await ethers.getContractFactory(
+    /* const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
     );
     handler = await DefaultHandler.deploy();
     await handler.deployed();
-    console.log("Default callback handler deployed at: ", handler.address);
+    console.log("Default callback handler deployed at: ", handler.address); */
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);
@@ -136,7 +136,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const SmartAccountFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await SmartAccountFactory.deploy();
+    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
@@ -164,27 +164,15 @@ describe("Wallet tx gas estimations with and without refunds", function () {
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
     const indexForSalt = 0;
-    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
-    const initializer = BaseImplementation.interface.encodeFunctionData(
-      "init",
-      [owner, handler.address]
-    );
     const expected = await walletFactory.getAddressForCounterfactualWallet(
-      baseImpl.address,
-      initializer,
+      owner,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(
-      walletFactory.deployCounterFactualWallet(
-        baseImpl.address,
-        initializer,
-        indexForSalt
-      )
-    )
+    await expect(walletFactory.deployCounterFactualWallet(owner, indexForSalt))
       .to.emit(walletFactory, "AccountCreation")
-      .withArgs(expected, baseImpl.address, initializer, indexForSalt);
+      .withArgs(expected, owner, indexForSalt);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
