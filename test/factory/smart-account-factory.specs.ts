@@ -67,13 +67,13 @@ describe("Smart Account Factory", function () {
       const accounts = await ethers.getSigners();
       const owner = await accounts[0].getAddress();
 
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
+      const expected = await walletFactory.getAddressForCounterfactualAccount(
         owner,
         indexForSalt
       );
       console.log("deploying new wallet..expected address: ", expected);
 
-      /* const tx = await walletFactory.deployCounterFactualWallet(
+      /* const tx = await walletFactory.deployCounterFactualAccount(
           baseImpl.address,
           initializer,
           indexForSalt
@@ -82,7 +82,7 @@ describe("Smart Account Factory", function () {
         console.log("smart account deployment gas ", receipt.gasUsed.toNumber()); */
 
       await expect(
-        walletFactory.deployCounterFactualWallet(owner, indexForSalt)
+        walletFactory.deployCounterFactualAccount(owner, indexForSalt)
       )
         .to.emit(walletFactory, "AccountCreation")
         .withArgs(expected, owner, indexForSalt);
@@ -102,13 +102,13 @@ describe("Smart Account Factory", function () {
       const owner = await accounts[0].getAddress();
       // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
+      const expected = await walletFactory.getAddressForCounterfactualAccount(
         owner,
         indexForSalt
       );
       console.log("deploying account again..expected address: ", expected);
       await expect(
-        walletFactory.deployCounterFactualWallet(owner, indexForSalt)
+        walletFactory.deployCounterFactualAccount(owner, indexForSalt)
       ).to.be.revertedWith("Create2 call failed");
     });
   });
@@ -123,9 +123,11 @@ describe("Smart Account Factory", function () {
         "deploying new account for same owner using create: should succeed"
       );
 
-      await expect(walletFactory.deployWallet(owner));
-      // .to.emit(walletFactory, "AccountCreation")
-      // .withArgs(expected, owner, indexForSalt);
+      await expect(walletFactory.deployAccount(owner)).to.emit(
+        walletFactory,
+        "AccountCreationWithoutIndex"
+      );
+      // .withArgs(expected, owner);
     });
   });
 });
