@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint,
   EntryPoint__factory,
   VerifyingSingletonPaymaster,
@@ -12,21 +12,13 @@ import {
   StorageSetter,
   WhitelistModule,
   DefaultCallbackHandler,
+  SmartAccountFactory,
 } from "../../typechain";
 import { AddressZero } from "../smart-wallet/testutils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { encodeTransfer, encodeTransferFrom } from "../smart-wallet/testUtils";
 import { fillAndSign, fillUserOp } from "../utils/userOp";
 import {
-  buildContractCall,
-  MetaTransaction,
-  SafeTransaction,
-  Transaction,
-  FeeRefund,
-  executeTx,
-  safeSignTypedData,
-  safeSignMessage,
-  buildSafeTransaction,
   executeContractCallWithSigners,
 } from "../../src/utils/execution";
 import { buildMultiSendSafeTx } from "../../src/utils/multisend";
@@ -42,10 +34,8 @@ export async function deployEntryPoint(
 
 describe("Base Wallet Functionality", function () {
   let entryPoint: EntryPoint;
-  let entryPointStatic: EntryPoint;
   let depositorSigner: Signer;
   let walletOwner: Signer;
-  let proxyPaymaster: Contract;
   // let whitelistModule: WhitelistModule;
   let walletAddress: string, paymasterAddress: string;
   let ethersSigner;
@@ -53,9 +43,8 @@ describe("Base Wallet Functionality", function () {
   let offchainSigner: Signer, deployer: Signer;
 
   let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
-  let verifyPaymasterFactory: VerifyingPaymasterFactory;
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
@@ -63,11 +52,8 @@ describe("Base Wallet Functionality", function () {
   let bob: string;
   let charlie: string;
   let userSCW: any;
-  let smartWalletImp: SmartWallet;
-  let callBackHandler: DefaultCallbackHandler;
-  let handler: DefaultCallbackHandler;
-  const VERSION = "1.0.4";
-  const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
+  // let callBackHandler: DefaultCallbackHandler;
+  // let handler: DefaultCallbackHandler;
   let accounts: any;
 
   /* const domainType = [
@@ -82,14 +68,12 @@ describe("Base Wallet Functionality", function () {
 
     ethersSigner = await ethers.getSigners();
     entryPoint = await deployEntryPoint();
-    entryPointStatic = entryPoint.connect(AddressZero);
 
     deployer = ethersSigner[0];
     offchainSigner = ethersSigner[1];
     depositorSigner = ethersSigner[2];
     walletOwner = deployer; // ethersSigner[3];
 
-    const addresses = await ethers.provider.listAccounts();
     // const ethersSigner = ethers.provider.getSigner();
 
     owner = await accounts[0].getAddress();
@@ -98,7 +82,6 @@ describe("Base Wallet Functionality", function () {
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
     const offchainSignerAddress = await offchainSigner.getAddress();
-    const walletOwnerAddress = await walletOwner.getAddress();
 
     verifyingSingletonPaymaster =
       await new VerifyingSingletonPaymaster__factory(deployer).deploy(

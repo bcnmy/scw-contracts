@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint,
   EntryPoint__factory,
   VerifyingSingletonPaymaster,
@@ -13,20 +13,13 @@ import {
   DefaultCallbackHandler,
 } from "../../typechain";
 import {
-  buildContractCall,
-  MetaTransaction,
   SafeTransaction,
   Transaction,
   FeeRefund,
-  executeTx,
   safeSignTypedData,
-  safeSignMessage,
   buildSafeTransaction,
-  executeContractCallWithSigners,
 } from "../../src/utils/execution";
-import { AddressZero } from "./testutils";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
-import { encodeTransfer, encodeTransferFrom } from "./testUtils";
+import { encodeTransfer } from "./testUtils";
 import { fillAndSign, fillUserOp } from "../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
@@ -45,8 +38,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
   let paymasterAddress: string;
   let offchainSigner: Signer, deployer: Signer;
   let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;

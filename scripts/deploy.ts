@@ -102,8 +102,8 @@ async function deployBaseWalletImpContract(deployerInstance: Deployer) {
       ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_IMP)
     );
 
-    const SmartWallet = await ethers.getContractFactory("SmartAccount");
-    const smartWalletBytecode = `${SmartWallet.bytecode}${encodeParam(
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+    const smartAccountBytecode = `${SmartAccount.bytecode}${encodeParam(
       "address",
       entryPointAddress
     ).slice(2)}`;
@@ -117,7 +117,7 @@ async function deployBaseWalletImpContract(deployerInstance: Deployer) {
         DEPLOYMENT_SALTS.WALLET_IMP,
         baseImpAddress,
         WALLET_FACTORY_IMP_SALT,
-        smartWalletBytecode,
+        smartAccountBytecode,
         deployerInstance
       );
       await run(`verify:verify`, {

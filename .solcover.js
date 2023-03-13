@@ -3,7 +3,7 @@ module.exports = {
   skipFiles: [
   'references', 
   'smart-contract-wallet/test',
-  'smart-contract-wallet/SmartWalletNoAuth.sol',
+  'smart-contract-wallet/SmartAccountNoAuth.sol',
   'smart-contract-wallet/utils',
 ],
 providerOptions: {

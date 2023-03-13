@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint__factory,
   EntryPoint,
   MockToken,
@@ -13,21 +13,14 @@ import {
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { encodeTransfer, encodeTransferFrom } from "../smart-wallet/testUtils";
 import {
-  buildContractCall,
-  MetaTransaction,
   SafeTransaction,
   Transaction,
   FeeRefund,
-  executeTx,
   safeSignTypedData,
-  safeSignMessage,
   buildSafeTransaction,
-  executeContractCallWithSigners,
 } from "../../src/utils/execution";
 import {
-  executeTx2D,
   safeSignTypedData2D,
-  executeContractCallWithSigners2D,
   SafeTransaction2D,
   buildSafeTransaction2D,
 } from "../../src/utils/execution-2d";
@@ -42,8 +35,8 @@ export async function deployEntryPoint(
 
 describe("Upgradeability", function () {
   // TODO
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
   let token: MockToken;
   let multiSend: MultiSend;
@@ -52,7 +45,7 @@ describe("Upgradeability", function () {
   let bob: string;
   let charlie: string;
   let userSCW: any;
-  let handler: DefaultCallbackHandler;
+  // let handler: DefaultCallbackHandler;
   let accounts: any;
 
   before(async () => {
