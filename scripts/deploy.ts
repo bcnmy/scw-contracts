@@ -9,16 +9,18 @@ import {
 import { Deployer } from "../typechain";
 
 const provider = ethers.provider;
-let entryPointAddress = process.env.ENTRY_POINT_ADDRESS;
+let entryPointAddress =
+  process.env.ENTRY_POINT_ADDRESS ||
+  "0x0576a174D229E3cFA37253523E645A78A0C91B57";
 let baseImpAddress = "";
 let fallBackHandlerAddress = "";
 const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
-  if (network.name !== 'hardhat' || network.name !== 'ganache'){
+  if (network.name !== "hardhat" || network.name !== "ganache") {
     console.log("Entry Point Already Deployed Address: ", entryPointAddress);
-    return
+    return;
   }
 
   try {
@@ -98,7 +100,7 @@ async function deployCallBackHandlerContract(deployerInstance: Deployer) {
 
 async function deployBaseWalletImpContract(deployerInstance: Deployer) {
   try {
-    const WALLET_FACTORY_IMP_SALT = ethers.utils.keccak256(
+    const BASE_WALLET_IMP_SALT = ethers.utils.keccak256(
       ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_IMP)
     );
 
@@ -107,21 +109,20 @@ async function deployBaseWalletImpContract(deployerInstance: Deployer) {
       "address",
       entryPointAddress
     ).slice(2)}`;
-    baseImpAddress = await deployerInstance.addressOf(WALLET_FACTORY_IMP_SALT);
+    baseImpAddress = await deployerInstance.addressOf(BASE_WALLET_IMP_SALT);
     console.log("Base wallet Computed Address: ", baseImpAddress);
 
-    let baseImpDeployedAddr;
     const isBaseImpDeployed = await isContract(baseImpAddress, provider); // true (deployed on-chain)
     if (!isBaseImpDeployed) {
       await deployContract(
         DEPLOYMENT_SALTS.WALLET_IMP,
         baseImpAddress,
-        WALLET_FACTORY_IMP_SALT,
+        BASE_WALLET_IMP_SALT,
         smartAccountBytecode,
         deployerInstance
       );
       await run(`verify:verify`, {
-        address: fallBackHandlerAddress,
+        address: baseImpAddress,
         constructorArguments: [entryPointAddress],
       });
     } else {
@@ -145,7 +146,7 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
     const walletFactoryBytecode = `${WalletFactory.bytecode}${encodeParam(
       "address",
       baseImpAddress
-    ).slice(2)}${encodeParam("address", fallBackHandlerAddress).slice(2)}`;
+    ).slice(2)}`;
 
     const walletFactoryComputedAddr = await deployerInstance.addressOf(
       WALLET_FACTORY_SALT
@@ -167,7 +168,7 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
       );
       await run(`verify:verify`, {
         address: walletFactoryComputedAddr,
-        constructorArguments: [],
+        constructorArguments: [baseImpAddress],
       });
     } else {
       console.log(
@@ -390,10 +391,10 @@ async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
   }
 }
 
-async function main() {  
+async function main() {
   const deployerInstance = await getDeployerInstance();
   await deployEntryPointContract(deployerInstance);
-  await deployCallBackHandlerContract(deployerInstance);
+  // await deployCallBackHandlerContract(deployerInstance);
   await deployBaseWalletImpContract(deployerInstance);
   await deployWalletFactoryContract(deployerInstance);
   await deployGasEstimatorContract(deployerInstance);

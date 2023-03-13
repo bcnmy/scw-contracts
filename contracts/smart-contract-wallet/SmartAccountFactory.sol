@@ -6,19 +6,21 @@ import "./BaseSmartAccount.sol";
 import {DefaultCallbackHandler} from "./handler/DefaultCallbackHandler.sol";
 import {SmartAccountFactoryErrors} from "./common/Errors.sol";
 
-// @todo review
-// probably rename wallet to account
-
+/// @title Smart Account Factory - factory responsible for deploying smart account using CREATE2 and CREATE
+/// @author Chirag Titiya - <chirag@biconomy.io>
 contract SmartAccountFactory {
     address public immutable basicImplementation;
     DefaultCallbackHandler public immutable minimalHandler;
-
-    // may emit/note create2 computed salt
 
     event AccountCreation(
         address indexed account,
         address indexed owner,
         uint256 indexed index
+    );
+
+    event AccountCreationWithoutIndex(
+        address indexed account,
+        address indexed owner
     );
 
     constructor(address _basicImplementation) {
@@ -36,18 +38,17 @@ contract SmartAccountFactory {
     }
 
     /**
-     * @notice Deploys wallet using create2 and points it to basicImplementation
+     * @notice Deploys account using create2 and points it to basicImplementation
      * @param _owner EOA signatory for the account to be deployed
-     * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
+     * @param _index extra salt that allows to deploy more account if needed for same EOA (default 0)
      */
-    function deployCounterFactualWallet(
+    function deployCounterFactualAccount(
         address _owner,
         uint256 _index
     ) public returns (address proxy) {
         // create initializer data based on init method, _owner and minimalHandler
         bytes memory initializer = getInitializer(_owner);
 
-        // check optimisation scope in creating salt...
         bytes32 salt = keccak256(
             abi.encodePacked(initializer, address(uint160(_index)))
         );
@@ -88,18 +89,14 @@ contract SmartAccountFactory {
                 }
             }
         }
-
-        // can have below for simplicity (as we lose the freedom now for initializer to be anything)
-        // BaseSmartAccount(proxy).init(_owner, minimalHandler);
-
         emit AccountCreation(proxy, _owner, _index);
     }
 
     /**
-     * @notice Deploys wallet using create and points it to _implementation
+     * @notice Deploys account using create and points it to _implementation
      * @param _owner EOA signatory for the account to be deployed
      */
-    function deployWallet(address _owner) public returns (address proxy) {
+    function deployAccount(address _owner) public returns (address proxy) {
         bytes memory deploymentData = abi.encodePacked(
             type(Proxy).creationCode,
             uint256(uint160(basicImplementation))
@@ -137,11 +134,7 @@ contract SmartAccountFactory {
                 }
             }
         }
-
-        // can have below for simplicity (as we lose the freedom now for initializer to be anything)
-        // BaseSmartAccount(proxy).init(_owner, minimalHandler);
-
-        // possibly emit a different event
+        emit AccountCreationWithoutIndex(proxy, _owner);
     }
 
     function getInitializer(
@@ -155,14 +148,14 @@ contract SmartAccountFactory {
     }
 
     /**
-     * @notice Allows to find out wallet address prior to deployment
+     * @notice Allows to find out account address prior to deployment
      * @param _owner EOA signatory for the account to be deployed
-     * @param _index extra salt that allows to deploy more wallets if needed for same EOA (default 0)
+     * @param _index extra salt that allows to deploy more accounts if needed for same EOA (default 0)
      */
-    function getAddressForCounterfactualWallet(
+    function getAddressForCounterfactualAccount(
         address _owner,
         uint256 _index
-    ) external view returns (address _wallet) {
+    ) external view returns (address _account) {
         // create initializer data based on init method, _owner and minimalHandler
         bytes memory initializer = getInitializer(_owner);
         bytes memory code = abi.encodePacked(
@@ -175,7 +168,7 @@ contract SmartAccountFactory {
         bytes32 hash = keccak256(
             abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code))
         );
-        _wallet = address(uint160(uint256(hash)));
+        _account = address(uint160(uint256(hash)));
     }
     // off-chain calculation
     // return ethers.utils.getCreate2Address(<factory address>, <create2 salt>, ethers.utils.keccak256(creationCode + implementation));

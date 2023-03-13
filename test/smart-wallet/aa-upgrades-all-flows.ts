@@ -23,12 +23,50 @@ import { encodeTransfer } from "./testUtils";
 import { fillAndSign, fillUserOp } from "../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
+import { UserOperation } from "../utils/userOpetation";
 
 export async function deployEntryPoint(
   provider = ethers.provider
 ): Promise<EntryPoint> {
   const epf = await (await ethers.getContractFactory("EntryPoint")).deploy();
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
+}
+
+async function getUserOpWithPaymasterData(
+  paymaster: VerifyingSingletonPaymaster,
+  smartAccountAddress: any,
+  userOp: UserOperation,
+  offchainPaymasterSigner: Signer,
+  paymasterAddress: string,
+  walletOwner: Signer,
+  entryPoint: EntryPoint
+) {
+  const nonceFromContract = await paymaster["getSenderPaymasterNonce(address)"](
+    smartAccountAddress
+  );
+
+  const hash = await paymaster.getHash(
+    userOp,
+    nonceFromContract.toNumber(),
+    await offchainPaymasterSigner.getAddress()
+  );
+  const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
+  const userOpWithPaymasterData = await fillAndSign(
+    {
+      // eslint-disable-next-line node/no-unsupported-features/es-syntax
+      ...userOp,
+      paymasterAndData: hexConcat([
+        paymasterAddress,
+        ethers.utils.defaultAbiCoder.encode(
+          ["address", "bytes"],
+          [await offchainPaymasterSigner.getAddress(), sig]
+        ),
+      ]),
+    },
+    walletOwner,
+    entryPoint
+  );
+  return userOpWithPaymasterData;
 }
 
 describe("Upgrade functionality Via Entrypoint", function () {
@@ -117,46 +155,29 @@ describe("Upgrade functionality Via Entrypoint", function () {
   describe("Basic Userops using Entrypoint", function () {
     it("succeed with valid signature", async () => {
       // deploying wallet first
-      await walletFactory.deployCounterFactualWallet(owner, 0);
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
-        owner,
-        0
-      );
+      await walletFactory.deployCounterFactualAccount(owner, 0);
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       const userOp1 = await fillAndSign(
         {
-          sender: expected,
+          sender: expectedSmartAccountAddress,
           verificationGasLimit: 350000,
         },
         walletOwner,
         entryPoint
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expected);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        expectedSmartAccountAddress,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
+        offchainSigner,
+        paymasterAddress,
         walletOwner,
         entryPoint
       );
-      console.log(userOp);
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
       await expect(
         entryPoint.handleOps([userOp], await offchainSigner.getAddress())
@@ -166,20 +187,18 @@ describe("Upgrade functionality Via Entrypoint", function () {
     it("4337 flow: succeed with valid signature send value transaction", async () => {
       // Now the wallet with owner and index 0 is deployed!
 
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
-        owner,
-        0
-      );
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       // May use
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
-        expected
+        expectedSmartAccountAddress
       );
 
       await accounts[1].sendTransaction({
         from: bob,
-        to: expected,
+        to: expectedSmartAccountAddress,
         value: ethers.utils.parseEther("5"),
       });
 
@@ -196,7 +215,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // const smartAccountCallData = "0x";
       const userOp1 = await fillAndSign(
         {
-          sender: expected,
+          sender: expectedSmartAccountAddress,
           callData: txnData,
           verificationGasLimit: 200000,
         },
@@ -204,31 +223,16 @@ describe("Upgrade functionality Via Entrypoint", function () {
         entryPoint
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expected);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        expectedSmartAccountAddress,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
+        offchainSigner,
+        paymasterAddress,
         walletOwner,
         entryPoint
       );
-      console.log(userOp);
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
       await expect(
         entryPoint.handleOps([userOp], await offchainSigner.getAddress())
@@ -245,24 +249,22 @@ describe("Upgrade functionality Via Entrypoint", function () {
     it("4337 flow: succeed with valid signature to update owner", async () => {
       // // Now here also the wallet with owner and index 0 should have been deployed
 
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
-        owner,
-        0
-      );
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
-      const code = await ethers.provider.getCode(expected);
+      const code = await ethers.provider.getCode(expectedSmartAccountAddress);
       console.log("wallet code is: ", code);
 
       // May use!
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
-        expected
+        expectedSmartAccountAddress
       );
 
       // before this should have 4 ether already
       await accounts[1].sendTransaction({
         from: bob,
-        to: expected,
+        to: expectedSmartAccountAddress,
         value: ethers.utils.parseEther("5"),
       });
 
@@ -276,7 +278,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
-        expected,
+        expectedSmartAccountAddress,
         ethers.utils.parseEther("0"),
         swapOwnerData,
       ]);
@@ -284,7 +286,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // const smartAccountCallData = "0x";
       const userOp1 = await fillAndSign(
         {
-          sender: expected,
+          sender: expectedSmartAccountAddress,
           callData: txnData,
           verificationGasLimit: 200000,
         },
@@ -292,31 +294,16 @@ describe("Upgrade functionality Via Entrypoint", function () {
         entryPoint
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expected);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        expectedSmartAccountAddress,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
+        offchainSigner,
+        paymasterAddress,
         walletOwner,
         entryPoint
       );
-      console.log(userOp);
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
 
       console.log(
@@ -339,17 +326,15 @@ describe("Upgrade functionality Via Entrypoint", function () {
     it("4337 flow: should be able to set implementation from executeCall() / execFromEntryPoint() method of AA flow", async () => {
       // Now the wallet with owner and index 0 is deployed!
 
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
-        owner,
-        0
-      );
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
-      console.log("account ", expected);
+      console.log("account ", expectedSmartAccountAddress);
 
       // May use
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
-        expected
+        expectedSmartAccountAddress
       );
 
       // let's just update implementation on already deployed wallet
@@ -374,7 +359,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // should already have 4 + 5 ether by this time
       await accounts[1].sendTransaction({
         from: bob,
-        to: expected,
+        to: expectedSmartAccountAddress,
         value: ethers.utils.parseEther("5"),
       });
 
@@ -386,7 +371,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
         ]);
 
       const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
-        expected,
+        expectedSmartAccountAddress,
         ethers.utils.parseEther("0"),
         updateImplementationData,
       ]);
@@ -396,7 +381,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // const smartAccountCallData = "0x";
       const userOp1 = await fillAndSign(
         {
-          sender: expected,
+          sender: expectedSmartAccountAddress,
           callData: txnData,
           // verificationGasLimit: 200000,
           // callGasLimit: 1000000,
@@ -404,32 +389,16 @@ describe("Upgrade functionality Via Entrypoint", function () {
         accounts[5], // since the owner has changed!
         entryPoint
       );
-
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expected);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        expectedSmartAccountAddress,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
-        accounts[5], // since the owner has changed!
+        offchainSigner,
+        paymasterAddress,
+        accounts[5],
         entryPoint
       );
-      console.log(userOp);
 
       // This action should send userOp that upgrades implementation on already deployed wallet!
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
@@ -452,19 +421,17 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
     it("now sends the transaction through latest implementation", async () => {
       // Notice now owner is accounts[5] but to detect it we'd use owner (previous owner!) and index 0
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
-        owner,
-        0
-      );
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/test/upgrades/SmartAccount11.sol:SmartAccount11",
-        expected
+        expectedSmartAccountAddress
       );
 
       await token
-        .connect(accounts[0])
-        .transfer(expected, ethers.utils.parseEther("100"));
+        .connect(walletOwner)
+        .transfer(expectedSmartAccountAddress, ethers.utils.parseEther("100"));
 
       const safeTx: SafeTransaction = buildSafeTransaction({
         to: token.address,
@@ -502,7 +469,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       signature += data.slice(2);
       await expect(
         userSCW
-          .connect(accounts[0])
+          .connect(walletOwner)
           .execTransaction(transaction, refundInfo, signature)
       ).to.emit(userSCW, "ExecutionSuccess");
 
@@ -521,14 +488,12 @@ describe("Upgrade functionality Via Entrypoint", function () {
     it("4337 flow: sends userOp with initcode and calldata to update implementation from blanket to new one!", async () => {
       // Now the wallet with owner and index 0 is deployed!
       // Notice now owner is accounts[5] but to detect it we'd use owner (previous owner!) and index 0
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
-        owner,
-        0
-      );
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 1);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 1);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -574,7 +539,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 1]
       );
 
@@ -587,35 +552,20 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 400000,
           callGasLimit: 1000000,
         },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        walletOwner, // since the owner signer is supposed to be walletOwner
         entryPoint // at this point original entrypoint should process userops
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](freshAccount);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        freshAccount,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        offchainSigner,
+        paymasterAddress,
+        walletOwner,
         entryPoint
       );
-      console.log(userOp);
 
       // This action should send userOp that upgrades implementation on already deployed wallet!
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
@@ -644,44 +594,28 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
     it("should now reject any trasactions from previous entry point", async () => {
       // Now here also the wallet with owner and index 1 should have been deployed
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
-        owner,
-        1
-      );
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterfactualAccount(owner, 1);
       const userOp1 = await fillAndSign(
         {
-          sender: expected,
+          sender: expectedSmartAccountAddress,
           verificationGasLimit: 350000,
         },
         walletOwner, // rightful owner signer
         entryPoint // previous entrypoint
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expected);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        expectedSmartAccountAddress,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
+        offchainSigner,
+        paymasterAddress,
+        walletOwner,
+        entryPoint
       );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
-        walletOwner, // rightful owner signer
-        entryPoint // previous entrypoint
-      );
-      console.log(userOp);
+
       await expect(
         entryPoint.handleOps([userOp], await offchainSigner.getAddress())
       ).to.be.reverted;
@@ -689,10 +623,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
     it("should now accept trasactions from latest entry point", async () => {
       // Now here also the wallet with owner and index 1 should have been deployed
-      const expected = await walletFactory.getAddressForCounterfactualWallet(
-        owner,
-        1
-      );
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterfactualAccount(owner, 1);
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -706,7 +638,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       const userOp1 = await fillAndSign(
         {
-          sender: expected,
+          sender: expectedSmartAccountAddress,
           callData: txnData,
           verificationGasLimit: 350000,
         },
@@ -738,31 +670,17 @@ describe("Upgrade functionality Via Entrypoint", function () {
         value: parseEther("10"),
       });
 
-      const nonceFromContract = await verifyingSingletonPaymasterNew[
-        "getSenderPaymasterNonce(address)"
-      ](expected);
-
-      const hash = await verifyingSingletonPaymasterNew.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymasterNew,
+        expectedSmartAccountAddress,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
+        offchainSigner,
+        verifyingSingletonPaymasterNew.address,
+        walletOwner,
+        latestEntryPoint
       );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            verifyingSingletonPaymasterNew.address,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
-        walletOwner, // rightful owner signer
-        latestEntryPoint // previous entrypoint
-      );
-      console.log(userOp);
+
       await latestEntryPoint.handleOps(
         [userOp],
         await offchainSigner.getAddress()
@@ -782,7 +700,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 2);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 2);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -826,7 +744,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 2]
       );
 
@@ -839,35 +757,20 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 400000,
           callGasLimit: 1000000,
         },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        walletOwner, // since the owner signer is supposed to be walletOwner
         entryPoint
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](freshAccount);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        freshAccount,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        offchainSigner,
+        paymasterAddress,
+        walletOwner,
         entryPoint
       );
-      console.log(userOp);
 
       // This action should send userOp that upgrades implementation on already deployed wallet!
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
@@ -899,7 +802,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 3);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 3);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -941,7 +844,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 3]
       );
 
@@ -954,35 +857,20 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 400000,
           callGasLimit: 1000000,
         },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        walletOwner, // since the owner signer is supposed to be walletOwner
         entryPoint
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](freshAccount);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        freshAccount,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        offchainSigner,
+        paymasterAddress,
+        walletOwner,
         entryPoint
       );
-      console.log(userOp);
 
       // This action should send userOp that upgrades implementation on already deployed wallet!
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
@@ -1017,7 +905,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 4);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 4);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -1064,7 +952,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 4]
       );
 
@@ -1077,35 +965,20 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 400000,
           callGasLimit: 1000000,
         },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        walletOwner, // since the owner signer is supposed to be walletOwner
         entryPoint
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](freshAccount);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        freshAccount,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        offchainSigner,
+        paymasterAddress,
+        walletOwner,
         entryPoint
       );
-      console.log(userOp);
 
       // This action should send userOp that upgrades implementation on already deployed wallet!
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
@@ -1145,7 +1018,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 5);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 5);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -1169,7 +1042,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // transfer erc20 token to the new wallet
       await token
-        .connect(accounts[0])
+        .connect(walletOwner)
         .transfer(freshAccount, ethers.utils.parseEther("100"));
 
       const erc20Interface = new ethers.utils.Interface([
@@ -1228,7 +1101,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 5]
       );
 
@@ -1241,35 +1114,20 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 400000,
           callGasLimit: 1000000,
         },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        walletOwner, // since the owner signer is supposed to be walletOwner
         entryPoint
       );
 
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](freshAccount);
-
-      const hash = await verifyingSingletonPaymaster.getHash(
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        freshAccount,
         userOp1,
-        nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
-      );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
-      const userOp = await fillAndSign(
-        {
-          ...userOp1,
-          paymasterAndData: hexConcat([
-            paymasterAddress,
-            ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
-            ),
-          ]),
-        },
-        accounts[0], // since the owner signer is supposed to be accounts[0]
+        offchainSigner,
+        paymasterAddress,
+        walletOwner,
         entryPoint
       );
-      console.log(userOp);
 
       // This action should send userOp that upgrades implementation on already deployed wallet!
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());

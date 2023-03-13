@@ -32,20 +32,20 @@ describe("Wallet Deployment", function () {
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
+    const expected = await walletFactory.getAddressForCounterfactualAccount(
       owner,
       indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    const tx = await walletFactory.deployCounterFactualWallet(
+    const tx = await walletFactory.deployCounterFactualAccount(
       owner,
       indexForSalt
     );
     const receipt = await tx.wait();
     console.log("smart account deployment gas ", receipt.gasUsed.toNumber());
 
-    /* await expect(walletFactory.deployCounterFactualWallet(baseImpl.address, initializer, indexForSalt))
+    /* await expect(walletFactory.deployCounterFactualAccount(baseImpl.address, initializer, indexForSalt))
       .to.emit(walletFactory, "AccountCreation")
       .withArgs(expected, baseImpl.address, initializer, indexForSalt); */
   });

@@ -99,13 +99,13 @@ describe("Upgradeability", function () {
 
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
+    const expected = await walletFactory.getAddressForCounterfactualAccount(
       owner,
       0
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(walletFactory.deployCounterFactualWallet(owner, 0))
+    await expect(walletFactory.deployCounterFactualAccount(owner, 0))
       .to.emit(walletFactory, "AccountCreation")
       .withArgs(expected, owner, 0);
 

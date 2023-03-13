@@ -126,8 +126,8 @@ describe("Base Wallet Functionality", function () {
     await token.mint(owner, ethers.utils.parseEther("1000000"));
 
     const implIface = BaseImplementation.interface;
-    await walletFactory.deployCounterFactualWallet(owner, 0);
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
+    await walletFactory.deployCounterFactualAccount(owner, 0);
+    const expected = await walletFactory.getAddressForCounterfactualAccount(
       owner,
       0
     );
