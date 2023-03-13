@@ -118,12 +118,12 @@ describe("EIP-1271 Signatures Tests", function () {
     // console.log("Owner of Signer Smart Account is ", owner);
     // Deploy Signer Smart Account owned by Owner
     const signerSmartAccountAddress =
-      await walletFactory.getAddressForCounterfactualWallet(
+      await walletFactory.getAddressForCounterfactualAccount(
         owner,
         deployWalletIndex
       );
 
-    await walletFactory.deployCounterFactualWallet(owner, deployWalletIndex);
+    await walletFactory.deployCounterFactualAccount(owner, deployWalletIndex);
 
     signerSmartAccount = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -132,12 +132,12 @@ describe("EIP-1271 Signatures Tests", function () {
 
     // Deploy Main Smart Account owned by SignerSmartAccount
     const mainSmartAccountAddress =
-      await walletFactory.getAddressForCounterfactualWallet(
+      await walletFactory.getAddressForCounterfactualAccount(
         signerSmartAccountAddress,
         deployWalletIndex
       );
 
-    await walletFactory.deployCounterFactualWallet(
+    await walletFactory.deployCounterFactualAccount(
       signerSmartAccountAddress,
       deployWalletIndex
     );
@@ -342,12 +342,12 @@ describe("EIP-1271 Signatures Tests", function () {
 
     // Deploy Signer Smart Account 2 owned by Owner
     const signerSmartAccount2Address =
-      await walletFactory.getAddressForCounterfactualWallet(
+      await walletFactory.getAddressForCounterfactualAccount(
         owner,
         deployWalletIndex
       );
 
-    await walletFactory.deployCounterFactualWallet(owner, deployWalletIndex);
+    await walletFactory.deployCounterFactualAccount(owner, deployWalletIndex);
 
     const signerSmartAccount2 = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -356,12 +356,12 @@ describe("EIP-1271 Signatures Tests", function () {
 
     // Deploy Main Smart Account 2 owned by SignerSmartAccount 2
     const mainSmartAccount2Address =
-      await walletFactory.getAddressForCounterfactualWallet(
+      await walletFactory.getAddressForCounterfactualAccount(
         signerSmartAccount2Address,
         deployWalletIndex
       );
 
-    await walletFactory.deployCounterFactualWallet(
+    await walletFactory.deployCounterFactualAccount(
       signerSmartAccount2Address,
       deployWalletIndex
     );
@@ -520,12 +520,12 @@ describe("EIP-1271 Signatures Tests", function () {
 
     // Deploy Main Smart Account 2 owned by testValidator
     const mainSmartAccount2Address =
-      await walletFactory.getAddressForCounterfactualWallet(
+      await walletFactory.getAddressForCounterfactualAccount(
         testValidator.address,
         deployWalletIndex
       );
 
-    await walletFactory.deployCounterFactualWallet(
+    await walletFactory.deployCounterFactualAccount(
       testValidator.address,
       deployWalletIndex
     );

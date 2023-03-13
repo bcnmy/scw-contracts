@@ -162,9 +162,9 @@ describe("Upgrade functionality Via Entrypoint", function () {
   describe("Basic Userops using Entrypoint", function () {
     it("succeed with valid signature", async () => {
       // deploying wallet first
-      await walletFactory.deployCounterFactualWallet(owner, 0);
+      await walletFactory.deployCounterFactualAccount(owner, 0);
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 0);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       const userOp1 = await fillAndSign(
         {
@@ -195,7 +195,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // Now the wallet with owner and index 0 is deployed!
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 0);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       // May use
       userSCW = await ethers.getContractAt(
@@ -257,7 +257,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // // Now here also the wallet with owner and index 0 should have been deployed
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 0);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       const code = await ethers.provider.getCode(expectedSmartAccountAddress);
       console.log("wallet code is: ", code);
@@ -334,7 +334,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // Now the wallet with owner and index 0 is deployed!
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 0);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       console.log("account ", expectedSmartAccountAddress);
 
@@ -429,7 +429,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
     it("now sends the transaction through latest implementation", async () => {
       // Notice now owner is accounts[5] but to detect it we'd use owner (previous owner!) and index 0
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 0);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/test/upgrades/SmartAccount11.sol:SmartAccount11",
@@ -496,11 +496,11 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // Now the wallet with owner and index 0 is deployed!
       // Notice now owner is accounts[5] but to detect it we'd use owner (previous owner!) and index 0
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 0);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 1);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 1);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -546,7 +546,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 1]
       );
 
@@ -602,7 +602,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
     it("should now reject any trasactions from previous entry point", async () => {
       // Now here also the wallet with owner and index 1 should have been deployed
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 1);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 1);
       const userOp1 = await fillAndSign(
         {
           sender: expectedSmartAccountAddress,
@@ -631,7 +631,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
     it("should now accept trasactions from latest entry point", async () => {
       // Now here also the wallet with owner and index 1 should have been deployed
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 1);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 1);
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -707,7 +707,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 2);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 2);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -751,7 +751,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 2]
       );
 
@@ -809,7 +809,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 3);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 3);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -851,7 +851,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 3]
       );
 
@@ -912,7 +912,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 4);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 4);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -959,7 +959,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 4]
       );
 
@@ -1025,7 +1025,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
       // anyway we will deploy a new one, so...
       const freshAccount =
-        await walletFactory.getAddressForCounterfactualWallet(owner, 5);
+        await walletFactory.getAddressForCounterfactualAccount(owner, 5);
 
       const codeBefore = await ethers.provider.getCode(freshAccount);
       console.log("wallet code before is: ", codeBefore);
@@ -1108,7 +1108,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
 
       const encodedData = WalletFactory.interface.encodeFunctionData(
-        "deployCounterFactualWallet",
+        "deployCounterFactualAccount",
         [owner, 5]
       );
 

@@ -22,13 +22,13 @@ async function main() {
   await handler.deployed();
   console.log("Default callback handler deployed at: ", handler.address); */
 
-  const expected = await walletFactory.getAddressForCounterfactualWallet(
+  const expected = await walletFactory.getAddressForCounterfactualAccount(
     owner,
     0
   );
   console.log("deploying new wallet..expected address: ", expected);
 
-  const tx = await walletFactory.deployCounterFactualWallet(owner, 0);
+  const tx = await walletFactory.deployCounterFactualAccount(owner, 0);
   const receipt = await tx.wait();
   console.log("gas used to deploy account ", receipt.gasUsed.toNumber());
 }
