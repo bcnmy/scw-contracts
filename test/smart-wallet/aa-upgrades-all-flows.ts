@@ -477,7 +477,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       await expect(
         userSCW
           .connect(walletOwner)
-          .execTransaction(transaction, refundInfo, signature)
+          .execTransaction_S6W(transaction, refundInfo, signature)
       ).to.emit(userSCW, "ExecutionSuccess");
 
       expect(await token.balanceOf(charlie)).to.equal(

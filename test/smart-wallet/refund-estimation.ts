@@ -315,7 +315,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log(refundInfo);
 
     const dataEstimate = SmartAccount.interface.encodeFunctionData(
-      "execTransaction",
+      "execTransaction_S6W",
       [transaction, refundInfo, signature]
     );
 
@@ -324,7 +324,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
     const tx = await userSCW
       .connect(accounts[1])
-      .execTransaction(transaction, refundInfo, signature, {
+      .execTransaction_S6W(transaction, refundInfo, signature, {
         gasPrice: 20000000000,
       });
 
@@ -499,7 +499,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log(refundInfo);
 
     const dataEstimate = SmartAccount.interface.encodeFunctionData(
-      "execTransaction",
+      "execTransaction_S6W",
       [transaction, refundInfo, signature]
     );
 
@@ -509,7 +509,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     // await expect(
     const tx = await userSCW
       .connect(accounts[1])
-      .execTransaction(transaction, refundInfo, signature, {
+      .execTransaction_S6W(transaction, refundInfo, signature, {
         gasPrice: 20000000000,
       });
 

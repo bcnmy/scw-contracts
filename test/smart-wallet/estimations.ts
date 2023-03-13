@@ -619,17 +619,17 @@ describe("Account Functionality: 4337", function () {
 
     const tx = await userSCW
       .connect(accounts[1])
-      .execTransaction(transaction, refundInfo, signature, {
+      .execTransaction_S6W(transaction, refundInfo, signature, {
         gasPrice: safeTx.gasPrice,
       });
     const receipt = await tx.wait();
     // console.log(
-    //   "--------Forward flow: [send erc20] tx execTransaction:",
+    //   "--------Forward flow: [send erc20] tx execTransaction_S6W:",
     //   receipt.gasUsed.toNumber(),
     //   "--------"
     // );
     results.push(
-      `Forward flow: [send erc20] tx execTransaction: ${receipt.gasUsed.toString()}`
+      `Forward flow: [send erc20] tx execTransaction_S6W: ${receipt.gasUsed.toString()}`
     );
 
     console.log(token.balanceOf(john));

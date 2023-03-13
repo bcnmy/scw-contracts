@@ -239,7 +239,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       "estimate",
       [
         userSCW.address,
-        SmartAccount.interface.encodeFunctionData("execTransaction", [
+        SmartAccount.interface.encodeFunctionData("execTransaction_S6W", [
           transaction,
           refundInfo,
           signature,
@@ -279,7 +279,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     // await expect(
     const txn = await userSCW
       .connect(accounts[0])
-      .execTransaction(transaction, refundInfo, signature);
+      .execTransaction_S6W(transaction, refundInfo, signature);
 
     const receipt = await txn.wait(1);
     console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
@@ -378,7 +378,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       "estimate",
       [
         userSCW.address,
-        SmartAccount.interface.encodeFunctionData("execTransaction", [
+        SmartAccount.interface.encodeFunctionData("execTransaction_S6W", [
           transaction,
           refundInfo,
           signature,
@@ -432,7 +432,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       // await expect(
       const tx = await userSCW
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, signature);
+        .execTransaction_S6W(transaction, refundInfo, signature);
 
       const receipt = await tx.wait(1);
       console.log("gasPrice: ", tx.gasPrice);
@@ -535,7 +535,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       "estimate",
       [
         userSCW.address,
-        SmartAccount.interface.encodeFunctionData("execTransaction", [
+        SmartAccount.interface.encodeFunctionData("execTransaction_S6W", [
           transaction,
           refundInfo,
           signature,
@@ -588,7 +588,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
       const tx = await userSCW
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, signature);
+        .execTransaction_S6W(transaction, refundInfo, signature);
 
       const receipt = await tx.wait(1);
       console.log("gasPrice: ", tx.gasPrice);

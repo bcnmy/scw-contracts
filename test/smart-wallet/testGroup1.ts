@@ -339,7 +339,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     await expect(
@@ -405,7 +405,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -457,7 +457,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.be.reverted;
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -508,7 +508,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -518,7 +518,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.be.reverted;
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -568,7 +568,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -603,7 +603,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction2, refundInfo, signature)
+        .execTransaction_S6W(transaction2, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -652,7 +652,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(
@@ -662,7 +662,7 @@ describe("Base Wallet Functionality", function () {
 
   // Work in progress!
   // transactions from modules -> Done
-  // execTransaction from relayer - personal Sign + EIP712 sign (without refund) -> Done
+  // execTransaction_S6W from relayer - personal Sign + EIP712 sign (without refund) -> Done
   // above with refund in eth and in erc20 [ Need gas estimation utils! #Review] -> Done
 
   it("can send transactions and charge smart account for fees in native tokens", async function () {
@@ -726,7 +726,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, signature, {
+        .execTransaction_S6W(transaction, refundInfo, signature, {
           gasPrice: safeTx.gasPrice,
         })
     ).to.emit(userSCW, "ExecutionSuccess");
@@ -801,7 +801,7 @@ describe("Base Wallet Functionality", function () {
     await expect(
       userSCW
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, signature, {
+        .execTransaction_S6W(transaction, refundInfo, signature, {
           gasPrice: safeTx.gasPrice,
         })
     ).to.emit(userSCW, "ExecutionSuccess");
