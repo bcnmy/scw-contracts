@@ -841,7 +841,7 @@ describe("Base Wallet Functionality", function () {
       .connect(accounts[0])
       .enableModule(socialRecoveryModule.address);
     await expect(tx).to.be.reverted;
-    // without enabling module one can't send transactions invoking safe from module without enabling it!
+    // without enabling module one can't send transactions invoking account from module without enabling it!
     await expect(
       socialRecoveryModule
         .connect(charlie)
