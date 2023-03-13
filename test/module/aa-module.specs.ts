@@ -588,7 +588,7 @@ describe("Module transactions via AA flow", function () {
         {
           sender: expectedSmartAccountAddress,
           callData: txnDataAA1,
-          // verificationGasLimit: 5000000,
+          verificationGasLimit: 5000000,
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
@@ -805,7 +805,7 @@ describe("Module transactions via AA flow", function () {
         {
           sender: expectedSmartAccountAddress,
           callData: txnDataAA1,
-          // verificationGasLimit: 5000000,
+          verificationGasLimit: 5000000,
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
@@ -884,7 +884,7 @@ describe("Module transactions via AA flow", function () {
         {
           sender: expectedSmartAccountAddress,
           callData: txnDataAA2,
-          // verificationGasLimit: 5000000,
+          verificationGasLimit: 5000000,
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
