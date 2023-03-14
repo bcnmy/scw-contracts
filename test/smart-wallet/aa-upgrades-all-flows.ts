@@ -944,7 +944,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       const charlieBalBefore = await ethers.provider.getBalance(charlie);
 
       const txnData = SmartAccount.interface.encodeFunctionData(
-        "executeBatchCall",
+        "executeBatchCall_4by",
         [
           [freshAccount, charlie],
           [ethers.utils.parseEther("0"), ethers.utils.parseEther("1")],
@@ -1088,7 +1088,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       const charlieBalBefore = await ethers.provider.getBalance(charlie);
 
       const txnData = SmartAccount.interface.encodeFunctionData(
-        "executeBatchCall",
+        "executeBatchCall_4by",
         [
           [freshAccount, freshAccount, charlie, token.address],
           [

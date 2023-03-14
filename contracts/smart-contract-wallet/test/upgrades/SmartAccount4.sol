@@ -225,7 +225,7 @@ contract SmartAccount4 is
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public payable returns (bool success) {
+    ) public virtual payable returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
