@@ -862,11 +862,11 @@ describe("Module transactions via AA flow", function () {
 
       // Enable social recovery module : Step 2 (setup)
 
-      // setup social recovery module, set bob, entrypoint(for testing without signature) as friends and set threshold as 1 (so only bob has to confirm)
+      // setup social recovery module, set bob,charlie as friends and set threshold as 2
       // must be called via the users SCW
       const setupModuleData = socialRecoveryModule.interface.encodeFunctionData(
         "setup",
-        [[bob, entryPoint.address], 2]
+        [[bob, charlie], 2]
       );
 
       const txnDataAA2 = SmartAccount.interface.encodeFunctionData(
@@ -970,14 +970,14 @@ describe("Module transactions via AA flow", function () {
       console.log(await userSCW.owner());
 
       // charlie confirms transaction for setOwner()
-      /* tx = await socialRecoveryModule
+      tx = await socialRecoveryModule
         .connect(accounts[2])
-        .confirmTransaction(userSCW.address, newOwner.address); */
+        .confirmTransaction(userSCW.address, newOwner.address);
 
       // have to make entrypoint do confirmTransaction somehow
 
-      /* const txnDataModule = SocialRecoveryModule.interface.encodeFunctionData(
-        "confirmTransaction",
+      const txnDataModule = SocialRecoveryModule.interface.encodeFunctionData(
+        "recoverAccess",
         [userSCW.address, newOwner.address]
       );
 
@@ -1051,7 +1051,7 @@ describe("Module transactions via AA flow", function () {
         await userSCW.owner()
       );
       // check if owner is updated
-      expect(await userSCW.owner()).to.equal(newOwner.address); */
+      expect(await userSCW.owner()).to.equal(newOwner.address);
     });
   });
 });
