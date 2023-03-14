@@ -18,6 +18,31 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
+export async function calculateProxyAddress(
+  factory: SmartAccountFactory,
+  singleton: string,
+  handler: string,
+  owner: string,
+  index: number | string
+): Promise<string> {
+  const deploymentCode = ethers.utils.solidityPack(
+    ["bytes", "uint256"],
+    [await factory.accountCreationCode(), singleton]
+  );
+  const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+  const implIface = BaseImplementation.interface;
+  const initializer = implIface.encodeFunctionData("init", [owner, handler]);
+  const salt = ethers.utils.solidityKeccak256(
+    ["bytes32", "uint256"],
+    [ethers.utils.solidityKeccak256(["bytes"], [initializer]), index]
+  );
+  return ethers.utils.getCreate2Address(
+    factory.address,
+    salt,
+    ethers.utils.keccak256(deploymentCode)
+  );
+}
+
 describe("Smart Account Factory", function () {
   let entryPoint: EntryPoint;
   let walletOwner: Signer;
@@ -80,6 +105,16 @@ describe("Smart Account Factory", function () {
         );
         const receipt = await tx.wait();
         console.log("smart account deployment gas ", receipt.gasUsed.toNumber()); */
+
+      const minimalHandler = await walletFactory.minimalHandler();
+      const calculated = await calculateProxyAddress(
+        walletFactory,
+        baseImpl.address,
+        minimalHandler,
+        owner,
+        indexForSalt
+      );
+      console.log("calculated address ", calculated);
 
       await expect(
         walletFactory.deployCounterFactualAccount(owner, indexForSalt)
