@@ -261,13 +261,6 @@ describe("Upgrade functionality Via Entrypoint", function () {
         expectedSmartAccountAddress
       );
 
-      // before this should have 4 ether already
-      await accounts[1].sendTransaction({
-        from: bob,
-        to: expectedSmartAccountAddress,
-        value: ethers.utils.parseEther("5"),
-      });
-
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
       // creating data and dataHash signed by owner
@@ -355,13 +348,6 @@ describe("Upgrade functionality Via Entrypoint", function () {
       );
       await baseImpl11.deployed();
       console.log("base wallet new impl deployed at: ", baseImpl11.address);
-
-      // should already have 4 + 5 ether by this time
-      await accounts[1].sendTransaction({
-        from: bob,
-        to: expectedSmartAccountAddress,
-        value: ethers.utils.parseEther("5"),
-      });
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 

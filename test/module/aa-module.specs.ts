@@ -263,8 +263,8 @@ describe("Module transactions via AA flow", function () {
         entryPoint.handleOps([userOp], await offchainSigner.getAddress())
       ).to.be.reverted;
 
-      const balActual = await ethers.provider.getBalance(charlie);
-      expect(balActual).to.be.equal(
+      const balCharlieActual = await ethers.provider.getBalance(charlie);
+      expect(balCharlieActual).to.be.equal(
         charlieBalBefore.add(ethers.utils.parseEther("1"))
       );
     });
@@ -285,13 +285,6 @@ describe("Module transactions via AA flow", function () {
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
         expectedSmartAccountAddress
       );
-
-      // before this should have 4 ether already
-      await accounts[1].sendTransaction({
-        from: bob,
-        to: expectedSmartAccountAddress,
-        value: ethers.utils.parseEther("5"),
-      });
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -362,12 +355,6 @@ describe("Module transactions via AA flow", function () {
       const code = await ethers.provider.getCode(expectedSmartAccountAddress);
       console.log("wallet code is: ", code);
 
-      await accounts[1].sendTransaction({
-        from: bob,
-        to: expectedSmartAccountAddress,
-        value: ethers.utils.parseEther("5"),
-      });
-
       await token
         .connect(accounts[0])
         .transfer(expectedSmartAccountAddress, ethers.utils.parseEther("100"));
@@ -379,7 +366,7 @@ describe("Module transactions via AA flow", function () {
 
       // Owner itself can not directly add modules
       await expect(
-        userSCW.connect(accounts[0]).enableModule(whitelistModule.address)
+        userSCW.connect(accounts[5]).enableModule(whitelistModule.address)
       ).to.be.reverted;
 
       // Without enabling module one can't send transactions
@@ -405,6 +392,10 @@ describe("Module transactions via AA flow", function () {
           [accounts[5]]
         )
       ).to.emit(userSCW, "ExecutionSuccess");
+
+      expect(await token.balanceOf(charlie)).to.equal(
+        ethers.utils.parseEther("0")
+      );
 
       // invoking module!
       await whitelistModule
@@ -443,7 +434,7 @@ describe("Module transactions via AA flow", function () {
 
       // Owner itself can not directly add modules
       await expect(
-        userSCW.connect(accounts[0]).enableModule(whitelistModule.address)
+        userSCW.connect(accounts[5]).enableModule(whitelistModule.address)
       ).to.be.reverted;
 
       // Can't enable module which is already enabled!
@@ -483,7 +474,7 @@ describe("Module transactions via AA flow", function () {
           userSCW,
           userSCW,
           "disableModule",
-          [AddressOne, AddressOne],
+          [AddressOne, AddressZero],
           [accounts[5]]
         )
       ).to.be.reverted;
@@ -550,12 +541,6 @@ describe("Module transactions via AA flow", function () {
 
       const prevNonce = await userSCW.nonce();
       console.log("previous nonce is: ", prevNonce.toNumber());
-
-      await accounts[1].sendTransaction({
-        from: bob,
-        to: expectedSmartAccountAddress,
-        value: ethers.utils.parseEther("5"),
-      });
 
       await token
         .connect(accounts[0])
@@ -700,7 +685,7 @@ describe("Module transactions via AA flow", function () {
           // verificationGasLimit: 5000000,
           // no callGasLImit override as wallet is deployed
         },
-        walletOwner,
+        accounts[7], // not an owner // as good as overriding later with fake sig!
         entryPoint
       );
 
@@ -767,12 +752,6 @@ describe("Module transactions via AA flow", function () {
 
       const prevNonce = await userSCW.nonce();
       console.log("previous nonce is: ", prevNonce.toNumber());
-
-      await accounts[1].sendTransaction({
-        from: bob,
-        to: expectedSmartAccountAddress,
-        value: ethers.utils.parseEther("5"),
-      });
 
       await token
         .connect(accounts[0])
@@ -923,6 +902,18 @@ describe("Module transactions via AA flow", function () {
           gasLimit: 10000000,
         }
       );
+
+      // checking if they have been added as friends for our account
+      const isBobAFriend = await socialRecoveryModule.isFriend(
+        expectedSmartAccountAddress,
+        bob
+      );
+      const isCharlieAFriend = await socialRecoveryModule.isFriend(
+        expectedSmartAccountAddress,
+        charlie
+      );
+      expect(isBobAFriend).to.equal(true);
+      expect(isCharlieAFriend).to.equal(true);
     });
 
     it("send transaction from enabled social recovery module using EntryPoint (and Paymaster)", async function () {
@@ -967,8 +958,6 @@ describe("Module transactions via AA flow", function () {
       tx = await socialRecoveryModule
         .connect(accounts[1])
         .confirmTransaction(userSCW.address, newOwner.address);
-      console.log(await userSCW.owner());
-
       // charlie confirms transaction for setOwner()
       tx = await socialRecoveryModule
         .connect(accounts[2])
@@ -1000,7 +989,7 @@ describe("Module transactions via AA flow", function () {
           // verificationGasLimit: 5000000,
           // no callGasLImit override as wallet is deployed
         },
-        walletOwner,
+        accounts[8], // not an owner
         entryPoint
       );
 

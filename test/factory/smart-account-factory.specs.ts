@@ -47,7 +47,7 @@ describe("Smart Account Factory", function () {
   let entryPoint: EntryPoint;
   let walletOwner: Signer;
   let baseImpl: SmartAccount;
-  let walletFactory: SmartAccountFactory;
+  let accountFactory: SmartAccountFactory;
   let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
@@ -73,12 +73,12 @@ describe("Smart Account Factory", function () {
     await baseImpl.deployed();
     console.log("base wallet impl deployed at: ", baseImpl.address);
 
-    const WalletFactory = await ethers.getContractFactory(
+    const AccountFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
     );
-    walletFactory = await WalletFactory.deploy(baseImpl.address);
-    await walletFactory.deployed();
-    console.log("wallet factory deployed at: ", walletFactory.address);
+    accountFactory = await AccountFactory.deploy(baseImpl.address);
+    await accountFactory.deployed();
+    console.log("wallet factory deployed at: ", accountFactory.address);
 
     const MockToken = await ethers.getContractFactory("MockToken");
     token = await MockToken.deploy();
@@ -92,13 +92,13 @@ describe("Smart Account Factory", function () {
       const accounts = await ethers.getSigners();
       const owner = await accounts[0].getAddress();
 
-      const expected = await walletFactory.getAddressForCounterfactualAccount(
+      const expected = await accountFactory.getAddressForCounterfactualAccount(
         owner,
         indexForSalt
       );
       console.log("deploying new wallet..expected address: ", expected);
 
-      /* const tx = await walletFactory.deployCounterFactualAccount(
+      /* const tx = await accountFactory.deployCounterFactualAccount(
           baseImpl.address,
           initializer,
           indexForSalt
@@ -106,21 +106,23 @@ describe("Smart Account Factory", function () {
         const receipt = await tx.wait();
         console.log("smart account deployment gas ", receipt.gasUsed.toNumber()); */
 
-      const minimalHandler = await walletFactory.minimalHandler();
-      const calculated = await calculateProxyAddress(
-        walletFactory,
+      const minimalHandler = await accountFactory.minimalHandler();
+      const calculatedProxyAddress = await calculateProxyAddress(
+        accountFactory,
         baseImpl.address,
         minimalHandler,
         owner,
         indexForSalt
       );
-      console.log("calculated address ", calculated);
+      console.log("calculated proxy address ", calculatedProxyAddress);
 
       await expect(
-        walletFactory.deployCounterFactualAccount(owner, indexForSalt)
+        accountFactory.deployCounterFactualAccount(owner, indexForSalt)
       )
-        .to.emit(walletFactory, "AccountCreation")
+        .to.emit(accountFactory, "AccountCreation")
         .withArgs(expected, owner, indexForSalt);
+
+      expect(calculatedProxyAddress).to.be.equal(expected);
 
       const userSCW: any = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -137,13 +139,13 @@ describe("Smart Account Factory", function () {
       const owner = await accounts[0].getAddress();
       // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-      const expected = await walletFactory.getAddressForCounterfactualAccount(
+      const expected = await accountFactory.getAddressForCounterfactualAccount(
         owner,
         indexForSalt
       );
       console.log("deploying account again..expected address: ", expected);
       await expect(
-        walletFactory.deployCounterFactualAccount(owner, indexForSalt)
+        accountFactory.deployCounterFactualAccount(owner, indexForSalt)
       ).to.be.revertedWith("Create2 call failed");
     });
   });
@@ -158,8 +160,8 @@ describe("Smart Account Factory", function () {
         "deploying new account for same owner using create: should succeed"
       );
 
-      await expect(walletFactory.deployAccount(owner)).to.emit(
-        walletFactory,
+      await expect(accountFactory.deployAccount(owner)).to.emit(
+        accountFactory,
         "AccountCreationWithoutIndex"
       );
       // .withArgs(expected, owner);
