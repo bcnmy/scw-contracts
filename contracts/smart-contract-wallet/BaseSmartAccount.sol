@@ -54,14 +54,14 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
 
     /**
      * Validate user's signature and nonce.
-     * subclass doesn't need to override this method. Instead, it should override the specific internal validation methods.
-     * @dev name is optimized for this method to be cheaper to be called
+     * Subclass doesn't need to override this method. 
+     * Instead, it should override the specific internal validation methods.
      */
-    function validateUserOp_kab(
+    function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash,
         uint256 missingAccountFunds
-    ) public returns (uint256 validationData) {
+    ) external virtual override returns (uint256 validationData) {
         if (msg.sender != address(entryPoint()))
             revert CallerIsNotAnEntryPoint(msg.sender);
         validationData = _validateSignature(userOp, userOpHash);
@@ -69,17 +69,6 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
             _validateAndUpdateNonce(userOp);
         }
         _payPrefund(missingAccountFunds);
-    }
-
-     /**
-     * Interface function with the standard name
-     */
-    function validateUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 missingAccountFunds
-    ) external virtual override returns (uint256) {
-        return validateUserOp_kab(userOp, userOpHash, missingAccountFunds);
     }
 
     /**
