@@ -16,6 +16,7 @@ import "../utils/Exec.sol";
 import "./StakeManager.sol";
 import "./SenderCreator.sol";
 import "./Helpers.sol";
+import "hardhat/console.sol";
 
 contract EntryPoint is IEntryPoint, StakeManager {
     using UserOperationLib for UserOperation;
@@ -779,12 +780,22 @@ contract EntryPoint is IEntryPoint, StakeManager {
                     }
                 }
             }
+            // console.log("Actual Gas in entry point before calculation %s", actualGasCost);
             actualGas += preGas - gasleft();
+            console.log(
+                "Extra gas used in handlePostOp: %s",
+                preGas - gasleft()
+            );
             actualGasCost = actualGas * gasPrice;
+            // console.log("Gas used in EP: %s", actualGas);
+            // console.log("Gas Price in EP: %s", gasPrice);
+            // console.log("Actual Gas Fee in entry point After calculation %s", actualGasCost);
             if (opInfo.prefund < actualGasCost) {
                 revert FailedOp(opIndex, "AA51 prefund below actualGasCost");
             }
+            // console.log("Prefund %s", opInfo.prefund);
             uint256 refund = opInfo.prefund - actualGasCost;
+            // console.log("Refund amount %s", refund);
             _incrementDeposit(refundAddress, refund);
             bool success = mode == IPaymaster.PostOpMode.opSucceeded;
             emit UserOperationEvent(
@@ -813,6 +824,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
                 //legacy mode (for networks that don't support basefee opcode)
                 return maxFeePerGas;
             }
+            // console.log("Base Fee on chain: %s",block.basefee);
             return min(maxFeePerGas, maxPriorityFeePerGas + block.basefee);
         }
     }

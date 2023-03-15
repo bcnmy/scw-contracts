@@ -12,6 +12,7 @@ struct PaymasterData {
 
 struct PaymasterContext {
     address paymasterId;
+    uint256 gasPrice;
     //@review
 }
 
@@ -24,9 +25,10 @@ library PaymasterHelpers {
      */
     function paymasterContext(
         UserOperation calldata op,
-        PaymasterData memory data
+        PaymasterData memory data,
+        uint256 gasPrice
     ) internal pure returns (bytes memory context) {
-        return abi.encode(data.paymasterId);
+        return abi.encode(data.paymasterId, gasPrice);
     }
 
     /**
@@ -49,7 +51,10 @@ library PaymasterHelpers {
     function _decodePaymasterContext(
         bytes memory context
     ) internal pure returns (PaymasterContext memory) {
-        address paymasterId = abi.decode(context, (address));
-        return PaymasterContext(paymasterId);
+        (address paymasterId, uint256 gasPrice) = abi.decode(
+            context,
+            (address, uint256)
+        );
+        return PaymasterContext(paymasterId, gasPrice);
     }
 }

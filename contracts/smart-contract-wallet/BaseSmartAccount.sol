@@ -54,7 +54,7 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
 
     /**
      * Validate user's signature and nonce.
-     * Subclass doesn't need to override this method. 
+     * Subclass doesn't need to override this method.
      * Instead, it should override the specific internal validation methods.
      */
     function validateUserOp(
