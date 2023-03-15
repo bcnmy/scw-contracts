@@ -183,15 +183,6 @@ contract SmartAccount9 is
         return nonces[0];
     }
 
-    // only from EntryPoint
-    modifier onlyEntryPoint() {
-        require(
-            msg.sender == address(entryPoint()),
-            "wallet: not from EntryPoint"
-        );
-        _;
-    }
-
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }
@@ -582,20 +573,6 @@ contract SmartAccount9 is
                 revert(add(result, 32), mload(result))
             }
         }
-    }
-
-    //called by entryPoint, only after validateUserOp succeeded.
-    //@review
-    //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(
-        address dest,
-        uint value,
-        bytes calldata func,
-        Enum.Operation operation,
-        uint256 gasLimit
-    ) external onlyEntryPoint returns (bool success) {
-        success = execute(dest, value, func, operation, gasLimit);
-        require(success, "Userop Failed");
     }
 
     function _requireFromEntryPointOrOwner() internal view {

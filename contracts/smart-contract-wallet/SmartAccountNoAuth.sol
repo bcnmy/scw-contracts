@@ -107,15 +107,6 @@ contract SmartAccountNoAuth is
         _;
     }
 
-    // only from EntryPoint
-    modifier onlyEntryPoint() {
-        require(
-            msg.sender == address(entryPoint()),
-            "wallet: not from EntryPoint"
-        );
-        _;
-    }
-
     function nonce() public view virtual override returns (uint256) {
         return nonces[0];
     }
@@ -540,20 +531,6 @@ contract SmartAccountNoAuth is
                 revert(add(result, 32), mload(result))
             }
         }
-    }
-
-    //called by entryPoint, only after validateUserOp succeeded.
-    //@review
-    //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(
-        address dest,
-        uint256 value,
-        bytes calldata func,
-        Enum.Operation operation,
-        uint256 gasLimit
-    ) external onlyEntryPoint returns (bool success) {
-        success = execute(dest, value, func, operation, gasLimit);
-        require(success, "Userop Failed");
     }
 
     function _requireFromEntryPointOrOwner() internal view {

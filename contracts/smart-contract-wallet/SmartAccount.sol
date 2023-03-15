@@ -221,13 +221,6 @@ contract SmartAccount is
         return nonces[0];
     }
 
-    // only from EntryPoint
-    modifier onlyEntryPoint() {
-        if (msg.sender != address(entryPoint()))
-            revert CallerIsNotAnEntryPoint(msg.sender);
-        _;
-    }
-
     /**
      * return the entryPoint used by this account.
      * subclass should return the current entryPoint used by this account.
@@ -732,19 +725,6 @@ contract SmartAccount is
                 revert(ptr, returndatasize())
             }
         }
-    }
-
-    //@todo marked for deletion
-    //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(
-        address dest,
-        uint256 value,
-        bytes calldata func,
-        Enum.Operation operation,
-        uint256 gasLimit
-    ) external onlyEntryPoint returns (bool success) {
-        success = execute(dest, value, func, operation, gasLimit);
-        if (!success) revert ExecutionFailed();
     }
 
     function _requireFromEntryPointOrOwner() internal view {
