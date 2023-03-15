@@ -158,9 +158,9 @@ describe("Upgrade functionality Via Entrypoint", function () {
   describe("Basic Userops using Entrypoint", function () {
     it("succeed with valid signature", async () => {
       // Deploying wallet first
-      await walletFactory.deployCounterFactualWallet(ownerAddress, 0);
+      await walletFactory.deployCounterFactualAccount(ownerAddress, 0);
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualWallet(ownerAddress, 0);
+        await walletFactory.getAddressForCounterfactualAccount(ownerAddress, 0);
 
       // Send some funds to smart contract wallet
       await accounts[3].sendTransaction({
