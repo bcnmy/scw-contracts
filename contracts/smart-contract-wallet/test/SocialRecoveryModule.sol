@@ -1,10 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 import "../SmartAccount.sol";
+import {IModule} from "./IModule.sol";
 
-contract SocialRecoveryModule {
+contract SocialRecoveryModule is IModule {
     string public constant NAME = "Social Recovery Module";
     string public constant VERSION = "0.1.0";
+    uint256 internal constant SIG_VALIDATION_FAILED = 1;
+
+    // @review
+    // Might as well keep a state to mark seen userOpHashes
+    mapping(bytes32 => bool) public opsSeen;
+
+    // @todo
+    // Notice validateAndUpdateNonce in just skipped in case of modules. To avoid replay of same userOpHash I think it should be done.
 
     struct Friends {
         address[] friends; // the list of friends
@@ -40,6 +49,22 @@ contract SocialRecoveryModule {
         // update friends list and threshold for smart account
         entry.friends = _friends;
         entry.threshold = _threshold;
+    }
+
+    /**
+     * @dev standard validateSignature for modules to validate and mark userOpHash as seen
+     * @param userOp the operation that is about to be executed.
+     * @param userOpHash hash of the user's request data. can be used as the basis for signature.
+     * @return sigValidationResult sigAuthorizer to be passed back to trusting Account, aligns with validationData
+     */
+    function validateSignature(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external virtual returns (uint256 sigValidationResult) {
+        if (opsSeen[userOpHash] == true) return SIG_VALIDATION_FAILED;
+        opsSeen[userOpHash] = true;
+        // can perform it's own access control logic, verify agaisnt expected signer and return SIG_VALIDATION_FAILED
+        return 0;
     }
 
     /**

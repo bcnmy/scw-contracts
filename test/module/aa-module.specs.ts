@@ -605,6 +605,7 @@ describe("Module transactions via AA flow", function () {
         entryPoint
       );
       console.log(userOp);
+      // const userOpHash = await entryPoint.getUserOpHash(userOp);
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress(), {
         gasLimit: 10000000,
       });
