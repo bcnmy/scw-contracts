@@ -201,7 +201,7 @@ describe("EIP-1271 Signatures Tests", function () {
     await expect(
       mainSmartAccount
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(mainSmartAccount, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(tokensToBeTransferred);
@@ -285,7 +285,7 @@ describe("EIP-1271 Signatures Tests", function () {
 
     const txSignMessage = await signerSmartAccount
       .connect(accounts[0])
-      .execTransaction(transaction, refundInfo, signature);
+      .execTransaction_S6W(transaction, refundInfo, signature);
     const receipt = await txSignMessage.wait();
 
     const smartAccountWithHandlerInterface = await ethers.getContractAt(
@@ -428,7 +428,7 @@ describe("EIP-1271 Signatures Tests", function () {
     await expect(
       mainSmartAccount2
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, manipulatedSignature)
+        .execTransaction_S6W(transaction, refundInfo, manipulatedSignature)
     ).to.be.revertedWith("WrongContractSignature");
 
     expect(await token.balanceOf(charlie)).to.equal(0);
@@ -481,7 +481,7 @@ describe("EIP-1271 Signatures Tests", function () {
     await expect(
       signerSmartAccount
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, fakeSignature)
+        .execTransaction_S6W(transaction, refundInfo, fakeSignature)
     ).to.be.reverted;
   });
 
@@ -569,7 +569,7 @@ describe("EIP-1271 Signatures Tests", function () {
     await expect(
       mainSmartAccount2
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.be.reverted;
     expect(await token.balanceOf(charlie)).to.equal(0);
 
@@ -578,7 +578,7 @@ describe("EIP-1271 Signatures Tests", function () {
     await expect(
       mainSmartAccount2
         .connect(accounts[1])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(mainSmartAccount2, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(tokensToBeTransferred);

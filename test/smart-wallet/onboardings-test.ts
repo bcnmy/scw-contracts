@@ -361,13 +361,13 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
     /* const targetTx = buildContractCall(
       userSCW,
-      "execTransaction",
+      "execTransaction_S6W",
       [transaction, 1, refundInfo, signature],
       0
     ); */
 
     const txnData = SmartAccount.interface.encodeFunctionData(
-      "execTransaction",
+      "execTransaction_S6W",
       [transaction, refundInfo, signature]
     );
 
@@ -493,7 +493,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       ),
       buildContractCall(
         userSCW,
-        "execTransaction",
+        "execTransaction_S6W",
         [transaction, refundInfo, signature],
         0
       ),
@@ -611,7 +611,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       ),
       buildContractCall(
         userSCW,
-        "execTransaction",
+        "execTransaction_S6W",
         [transaction, 1, refundInfo, signature],
         0
       ),
@@ -744,7 +744,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
       ),
       buildContractCall(
         userSCW,
-        "execTransaction",
+        "execTransaction_S6W",
         [transaction, 1, refundInfo, signature],
         0
       ),

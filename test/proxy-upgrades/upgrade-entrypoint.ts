@@ -189,7 +189,7 @@ describe("Upgradeability", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(

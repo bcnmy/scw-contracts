@@ -271,16 +271,17 @@ contract SmartAccount is
     /**
      * @dev Gnosis style transaction with optional repay in native tokens OR ERC20
      * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
+     * @dev Function name optimized to have hash started with zeros to make this function calls cheaper
      * @notice The fees are always transferred, even if the user transaction fails.
      * @param _tx Smart Account transaction
      * @param refundInfo Required information for gas refunds
      * @param signatures Packed signature/s data ({bytes32 r}{bytes32 s}{uint8 v})
      */
-    function execTransaction(
+    function execTransaction_S6W(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) external payable virtual override returns (bool success) {
+    ) public payable virtual returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -341,6 +342,14 @@ contract SmartAccount is
                 emit WalletHandlePayment(txHash, payment);
             }
         }
+    }
+
+    function execTransaction(
+        Transaction memory _tx,
+        FeeRefund memory refundInfo,
+        bytes memory signatures
+    ) external payable virtual override returns (bool) {
+        return execTransaction_S6W(_tx, refundInfo, signatures);
     }
 
     /**
@@ -641,25 +650,38 @@ contract SmartAccount is
     }
 
     /**
-     * execute a transaction (called directly from owner, or by entryPoint)
+     * Execute a transaction (called directly from owner, or by entryPoint)
+     * @dev name is optimized for this method to be cheaper to be called
+     */
+    function executeCall_s1m(
+        address dest,
+        uint256 value,
+        bytes calldata func
+    ) public {
+        _requireFromEntryPointOrOwner();
+        _call(dest, value, func);
+    }
+
+    /**
+     * Interface function with the standard name
      */
     function executeCall(
         address dest,
         uint256 value,
         bytes calldata func
     ) external {
-        _requireFromEntryPointOrOwner();
-        _call(dest, value, func);
+        executeCall_s1m(dest, value, func);
     }
 
     /**
-     * execute a sequence of transactions
+     * Execute a sequence of transactions
+     * @dev name is optimized for this method to be cheaper to be called
      */
-    function executeBatchCall(
+    function executeBatchCall_4by(
         address[] calldata dest,
         uint256[] calldata value,
         bytes[] calldata func
-    ) external {
+    ) public {
         _requireFromEntryPointOrOwner();
         if (
             dest.length == 0 ||
@@ -673,6 +695,17 @@ contract SmartAccount is
                 ++i;
             }
         }
+    }
+
+    /**
+     * Interface function with the standard name
+     */
+    function executeBatchCall(
+        address[] calldata dest,
+        uint256[] calldata value,
+        bytes[] calldata func
+    ) external {
+        executeBatchCall_4by(dest, value, func);
     }
 
     /**
