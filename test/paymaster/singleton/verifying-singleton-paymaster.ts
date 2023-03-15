@@ -239,7 +239,7 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
       ).deploy();
       const w = SmartAccount__factory.connect(walletAddress, walletOwner);
 
-      await w.executeCall(
+      await w.executeCall_s1m(
         w.address,
         0,
         w.interface.encodeFunctionData("enableModule", [

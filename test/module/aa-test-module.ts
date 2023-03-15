@@ -334,7 +334,7 @@ describe("Base Wallet Functionality", function () {
 
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-    const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+    const txnData = SmartAccount.interface.encodeFunctionData("executeCall_s1m", [
       charlie,
       ethers.utils.parseEther("1"),
       "0x",
@@ -440,7 +440,7 @@ describe("Base Wallet Functionality", function () {
 
     console.log("data for authCall");
 
-    const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+    const txnData = SmartAccount.interface.encodeFunctionData("executeCall_s1m", [
       whitelistModule.address,
       ethers.utils.parseEther("0"),
       txnDataModule,

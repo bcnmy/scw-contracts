@@ -187,7 +187,7 @@ describe("Upgradeability", function () {
     const data = encodeTransfer(bob, ethers.utils.parseEther("10").toString());
     const tx = await userSCW
       .connect(accounts[0])
-      .executeCall(token.address, ethers.utils.parseEther("0"), data);
+      .executeCall_s1m(token.address, ethers.utils.parseEther("0"), data);
     const receipt = await tx.wait();
     console.log(receipt.transactionHash);
 
@@ -200,7 +200,7 @@ describe("Upgradeability", function () {
     );
     await userSCW
       .connect(accounts[0])
-      .executeBatchCall(
+      .executeBatchCall_4by(
         [token.address, token.address],
         [ethers.utils.parseEther("0"), ethers.utils.parseEther("0")],
         [data, data2]
@@ -254,7 +254,7 @@ describe("Upgradeability", function () {
     await expect(
       userSCW
         .connect(accounts[0])
-        .execTransaction(transaction, refundInfo, signature)
+        .execTransaction_S6W(transaction, refundInfo, signature)
     ).to.emit(userSCW, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(

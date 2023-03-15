@@ -160,7 +160,7 @@ describe("Account Functionality: 4337", function () {
       ethers.utils.parseEther("1"),
     ]);
     // encode executeCall function data with transfer erc20 token data
-    const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+    const txnData = SmartAccount.interface.encodeFunctionData("executeCall_s1m", [
       token.address,
       0,
       transferData,
@@ -243,7 +243,7 @@ describe("Account Functionality: 4337", function () {
       ethers.utils.parseEther("1"),
     ]);
     // encode executeCall function data with transfer erc20 token data
-    const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+    const txnData = SmartAccount.interface.encodeFunctionData("executeCall_s1m", [
       token.address,
       0,
       transferData,
@@ -342,7 +342,7 @@ describe("Account Functionality: 4337", function () {
     ]);
     // encode executeCall function data with transfer erc20 token data
     const txnData = SmartAccount.interface.encodeFunctionData(
-      "executeBatchCall",
+      "executeBatchCall_4by",
       [
         [token.address, token.address],
         [0, 0],
@@ -436,7 +436,7 @@ describe("Account Functionality: 4337", function () {
     ]);
     // encode executeCall function data with transfer erc20 token data
     const txnData = SmartAccount.interface.encodeFunctionData(
-      "executeBatchCall",
+      "executeBatchCall_4by",
       [
         [token.address, token.address],
         [0, 0],
@@ -528,7 +528,7 @@ describe("Account Functionality: 4337", function () {
     ]);
     let tx = await userSCW
       .connect(accounts[0])
-      .executeCall(token.address, 0, transferData1);
+      .executeCall_s1m(token.address, 0, transferData1);
     let receipt = await tx.wait();
     // console.log(
     //   "--------Owner flow: [send erc20] tx executeCall:",
@@ -547,7 +547,7 @@ describe("Account Functionality: 4337", function () {
     ]);
     tx = await userSCW
       .connect(accounts[0])
-      .executeBatchCall(
+      .executeBatchCall_4by(
         [token.address, token.address],
         [0, 0],
         [transferData1, transferData2]
@@ -619,17 +619,17 @@ describe("Account Functionality: 4337", function () {
 
     const tx = await userSCW
       .connect(accounts[1])
-      .execTransaction(transaction, refundInfo, signature, {
+      .execTransaction_S6W(transaction, refundInfo, signature, {
         gasPrice: safeTx.gasPrice,
       });
     const receipt = await tx.wait();
     // console.log(
-    //   "--------Forward flow: [send erc20] tx execTransaction:",
+    //   "--------Forward flow: [send erc20] tx execTransaction_S6W:",
     //   receipt.gasUsed.toNumber(),
     //   "--------"
     // );
     results.push(
-      `Forward flow: [send erc20] tx execTransaction: ${receipt.gasUsed.toString()}`
+      `Forward flow: [send erc20] tx execTransaction_S6W: ${receipt.gasUsed.toString()}`
     );
 
     console.log(token.balanceOf(john));

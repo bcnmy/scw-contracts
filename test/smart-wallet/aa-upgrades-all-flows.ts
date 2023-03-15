@@ -477,7 +477,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       await expect(
         userSCW
           .connect(walletOwner)
-          .execTransaction(transaction, refundInfo, signature)
+          .execTransaction_S6W(transaction, refundInfo, signature)
       ).to.emit(userSCW, "ExecutionSuccess");
 
       expect(await token.balanceOf(charlie)).to.equal(
@@ -944,7 +944,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       const charlieBalBefore = await ethers.provider.getBalance(charlie);
 
       const txnData = SmartAccount.interface.encodeFunctionData(
-        "executeBatchCall",
+        "executeBatchCall_4by",
         [
           [freshAccount, charlie],
           [ethers.utils.parseEther("0"), ethers.utils.parseEther("1")],
@@ -1088,7 +1088,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       const charlieBalBefore = await ethers.provider.getBalance(charlie);
 
       const txnData = SmartAccount.interface.encodeFunctionData(
-        "executeBatchCall",
+        "executeBatchCall_4by",
         [
           [freshAccount, freshAccount, charlie, token.address],
           [

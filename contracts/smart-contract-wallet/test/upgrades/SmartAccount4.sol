@@ -221,11 +221,11 @@ contract SmartAccount4 is
     /// @param _tx Wallet transaction
     /// @param refundInfo Required information for gas refunds
     /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
-    function execTransaction(
+    function execTransaction_S6W(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) external payable virtual override returns (bool success) {
+    ) public virtual payable returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -282,6 +282,14 @@ contract SmartAccount4 is
             }
             console.log("has to go through new v4 implementation");
         }
+    }
+
+    function execTransaction(
+        Transaction memory _tx,
+        FeeRefund memory refundInfo,
+        bytes memory signatures
+    ) external payable virtual override returns (bool) { 
+        return execTransaction_S6W(_tx, refundInfo, signatures);
     }
 
     function handlePayment(
