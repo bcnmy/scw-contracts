@@ -281,7 +281,7 @@ contract SmartAccount is
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public virtual payable returns (bool success) {
+    ) public payable virtual returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -348,7 +348,7 @@ contract SmartAccount is
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) external payable virtual override returns (bool) { 
+    ) external payable virtual override returns (bool) {
         return execTransaction_S6W(_tx, refundInfo, signatures);
     }
 
@@ -763,12 +763,20 @@ contract SmartAccount is
     function _validateAndUpdateNonce(
         UserOperation calldata userOp
     ) internal override {
+        bytes calldata userOpData = userOp.callData;
+        if (userOpData.length > 0) {
+            bytes4 methodSig = bytes4(userOpData[:4]);
+            // If method to be called is executeCall then only check for module transaction
+            if (methodSig == this.executeCall.selector) {
+                (address _to, uint _amount, bytes memory _data) = abi.decode(
+                    userOpData[4:],
+                    (address, uint, bytes)
+                );
+                if (address(modules[_to]) != address(0)) return;
+            }
+        }
         if (nonces[0]++ != userOp.nonce)
             revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
-
-        // Compatiblity options, should choose one
-        //if(nonces[0]++ != userOp.nonce) revert ("account: invalid nonce");
-        //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /**
@@ -778,6 +786,19 @@ contract SmartAccount is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal virtual override returns (uint256 validationData) {
+        // below changes need formal verification.
+        bytes calldata userOpData = userOp.callData;
+        if (userOpData.length > 0) {
+            bytes4 methodSig = bytes4(userOpData[:4]);
+            // If method to be called is executeCall then only check for module transaction
+            if (methodSig == this.executeCall.selector) {
+                (address _to, uint _amount, bytes memory _data) = abi.decode(
+                    userOpData[4:],
+                    (address, uint, bytes)
+                );
+                if (address(modules[_to]) != address(0)) return 0;
+            }
+        }
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
