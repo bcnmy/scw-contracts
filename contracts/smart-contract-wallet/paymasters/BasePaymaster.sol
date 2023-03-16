@@ -1,73 +1,51 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.12;
-
+pragma solidity 0.8.17;
 
 /* solhint-disable reason-string */
 
-import "../aa-4337/interfaces/IPaymaster.sol";
-import "../aa-4337/interfaces/IEntryPoint.sol";
+import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
+import {IPaymaster} from "@account-abstraction/contracts/interfaces/IPaymaster.sol";
+import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
+import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {BaseSmartAccountErrors} from "../common/Errors.sol";
+import "@account-abstraction/contracts/core/Helpers.sol";
 
 /**
  * Helper class for creating a paymaster.
  * provides helper methods for staking.
  * validates that the postOp is called only by the entryPoint
  */
-abstract contract BasePaymaster is IPaymaster {
+// @notice Could have Ownable2Step
+abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
+    IEntryPoint public immutable entryPoint;
 
-
-    IEntryPoint public entryPoint;
-
-    /**
-    Owner realted function are implemented in this function instead of inheriting Ownable contract from Openzepplin. 
-    cause Ownable contract needs to be inherit and it requires this { BasePaymaster } contract to have constructor
-    So that its constructor can be called but we are deploying this contract using factory pattern that means we 
-    can't create constructor for this contract
-     */
-
-    // maintain owner address
-    address public owner;
-
-    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
-
-    function _msgSender() internal view virtual returns (address) {
-        return msg.sender;
-    }
-
-    /**
-     * @dev Throws if called by any account other than the owner.
-     */
-    modifier onlyOwner() {
-        require(owner == _msgSender(), "Ownable: caller is not the owner");
-        _;
-    }
-
-    function setEntryPoint(IEntryPoint _entryPoint) public onlyOwner {
-        require(address(_entryPoint) != address(0), "BasePaymaster: new entry point can not be zero address");
+    constructor(address _owner, IEntryPoint _entryPoint) {
         entryPoint = _entryPoint;
+        _transferOwnership(_owner);
     }
 
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Can only be called by the current owner.
-     */
-    function transferOwnership(address newOwner) public virtual onlyOwner {
-        require(newOwner != address(0), "Ownable: new owner is the zero address");
-        _transferOwnership(newOwner);
+    /// @inheritdoc IPaymaster
+    function validatePaymasterUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 maxCost
+    ) external override returns (bytes memory context, uint256 validationData) {
+        _requireFromEntryPoint();
+        return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
     }
 
-    /**
-     * @dev Transfers ownership of the contract to a new account (`newOwner`).
-     * Internal function without access restriction.
-     */
-    function _transferOwnership(address newOwner) internal virtual {
-        address oldOwner = owner;
-        owner = newOwner;
-        emit OwnershipTransferred(oldOwner, newOwner);
-    }
+    function _validatePaymasterUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 maxCost
+    ) internal virtual returns (bytes memory context, uint256 validationData);
 
-    function validatePaymasterUserOp(UserOperation calldata userOp, bytes32 requestId, uint256 maxCost) external virtual override returns (bytes memory context);
-
-    function postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) external override {
+    /// @inheritdoc IPaymaster
+    function postOp(
+        PostOpMode mode,
+        bytes calldata context,
+        uint256 actualGasCost
+    ) external override {
         _requireFromEntryPoint();
         _postOp(mode, context, actualGasCost);
     }
@@ -84,20 +62,38 @@ abstract contract BasePaymaster is IPaymaster {
      * @param context - the context value returned by validatePaymasterUserOp
      * @param actualGasCost - actual gas used so far (without this postOp call).
      */
-    function _postOp(PostOpMode mode, bytes calldata context, uint256 actualGasCost) internal virtual {
-        (mode,context,actualGasCost); // unused params
+    function _postOp(
+        PostOpMode mode,
+        bytes calldata context,
+        uint256 actualGasCost
+    ) internal virtual {
+        (mode, context, actualGasCost); // unused params
         // subclass must override this method if validatePaymasterUserOp returns a context
         revert("must override");
     }
 
+    /**
+     * add a deposit for this paymaster, used for paying for transaction fees
+     */
+    function deposit() external payable virtual;
+
+    /**
+     * withdraw value from the deposit
+     * @param withdrawAddress target to send to
+     * @param amount to withdraw
+     */
+    function withdrawTo(
+        address payable withdrawAddress,
+        uint256 amount
+    ) external virtual;
 
     /**
      * add stake for this paymaster.
      * This method can also carry eth value to add to the current stake.
-     * @param extraUnstakeDelaySec - set the stake to the entrypoint's default unstakeDelay plus this value.
+     * @param unstakeDelaySec - the unstake delay for this paymaster. Can only be increased.
      */
-    function addStake(uint32 extraUnstakeDelaySec) external payable onlyOwner {
-        entryPoint.addStake{value : msg.value}(entryPoint.unstakeDelaySec() + extraUnstakeDelaySec);
+    function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
+        entryPoint.addStake{value: msg.value}(unstakeDelaySec);
     }
 
     /**
@@ -126,6 +122,8 @@ abstract contract BasePaymaster is IPaymaster {
 
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
-        require(_msgSender() == address(entryPoint));
+        // require(msg.sender == address(entryPoint), "Sender not EntryPoint"); // won't need BaseSmartAccountErrors import
+        if (msg.sender != address(entryPoint))
+            revert CallerIsNotAnEntryPoint(msg.sender);
     }
 }

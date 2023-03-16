@@ -1,17 +1,25 @@
 {
   "name": "@biconomy/wallet-contracts",
-  "version": "1.0.1",
+  "version": "1.0.4",
   "description": "SCW contracts for Biconomy SDK",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "clean": "npx hardhat clean",
+    "build": "npm run clean && npx hardhat compile",
+    "test": "npx hardhat test",
+    "lint": "prettier --write 'contracts/**/*.sol'",
+    "postinstall": "husky install",
+    "prepack": "pinst --disable",
+    "postpack": "pinst --enable",
+    "coverage": "COVERAGE=1 DISABLE_VIA_IR=true hardhat coverage",
+    "prepare": "husky install"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "^2.0.6",
-    "@nomiclabs/hardhat-etherscan": "^3.0.4",
+    "@nomiclabs/hardhat-etherscan": "^3.1.7",
     "@nomiclabs/hardhat-truffle5": "^2.0.6",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
     "@nomiclabs/hardhat-web3": "^2.0.0",
@@ -39,24 +47,27 @@
     "ethers": "^5.6.8",
     "hardhat": "^2.9.7",
     "hardhat-gas-reporter": "^1.0.8",
+    "husky": "^8.0.3",
+    "pinst": "^3.0.0",
     "prettier": "^2.6.2",
-    "prettier-plugin-solidity": "^1.0.0-beta.13",
+    "prettier-plugin-solidity": "^1.1.2",
     "solc": "^0.8.15",
     "solhint": "^3.3.7",
-    "solidity-coverage": "^0.7.21",
+    "solidity-coverage": "^0.8.2",
     "ts-node": "^10.8.1",
     "typechain": "^5.2.0",
     "typescript": "^4.7.3",
     "web3": "^1.7.4"
   },
   "dependencies": {
-    "@account-abstraction/contracts": "^0.2.0",
+    "@0xsequence/create3": "https://github.com/0xsequence/create3",
+    "@account-abstraction/contracts": "^0.5.0",
+    "@account-abstraction/sdk": "^0.5.0",
     "@chainlink/contracts": "^0.4.1",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/constants": "^5.6.1",
-    "@nomiclabs/hardhat-etherscan": "^2.1.6",
-    "@openzeppelin/contracts": "^4.7.3",
-    "@openzeppelin/contracts-upgradeable": "^4.7.3",
+    "@openzeppelin/contracts": "4.8.1",
+    "@openzeppelin/contracts-upgradeable": "4.8.1",
     "@typechain/hardhat": "^2.3.0",
     "@types/mocha": "^9.0.0",
     "chai-as-promised": "^7.1.1",
@@ -75,5 +86,10 @@
     "solidity-bytes-utils": "^0.8.0",
     "source-map-support": "^0.5.19",
     "typescript": "^4.3.5"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": ""
+    }
   }
 }

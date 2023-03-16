@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /// @title Multi Send Call Only - Allows to batch multiple transactions into one, but only calls
 /// @author Stefan George - <stefan@gnosis.io>
@@ -18,7 +18,7 @@ contract MultiSendCallOnly {
     ///         but reverts if a transaction tries to use a delegatecall.
     /// @notice This method is payable as delegatecalls keep the msg.value from the previous call
     ///         If the calling method (e.g. execTransaction) received ETH this would revert otherwise
-    function multiSend(bytes memory transactions) public payable {
+    function multiSend(bytes memory transactions) external {
         // solhint-disable-next-line no-inline-assembly
         assembly {
             let length := mload(transactions)
@@ -43,13 +43,13 @@ contract MultiSendCallOnly {
                 let data := add(transactions, add(i, 0x55))
                 let success := 0
                 switch operation
-                    case 0 {
-                        success := call(gas(), to, value, data, dataLength, 0, 0)
-                    }
-                    // This version does not allow delegatecalls
-                    case 1 {
-                        revert(0, 0)
-                    }
+                case 0 {
+                    success := call(gas(), to, value, data, dataLength, 0, 0)
+                }
+                // This version does not allow delegatecalls
+                case 1 {
+                    revert(0, 0)
+                }
                 if eq(success, 0) {
                     revert(0, 0)
                 }

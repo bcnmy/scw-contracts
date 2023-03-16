@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /// @title Multi Send - Allows to batch multiple transactions into one.
 /// @author Nick Dodson - <nick.dodson@consensys.net>
@@ -23,8 +23,11 @@ contract MultiSend {
     ///                     see abi.encodePacked for more information on packed encoding
     /// @notice This method is payable as delegatecalls keep the msg.value from the previous call
     ///         If the calling method (e.g. execTransaction) received ETH this would revert otherwise
-    function multiSend(bytes memory transactions) public payable {
-        require(address(this) != multisendSingleton, "MultiSend should only be called via delegatecall");
+    function multiSend(bytes memory transactions) external {
+        require(
+            address(this) != multisendSingleton,
+            "MultiSend should only be called via delegatecall"
+        );
         // solhint-disable-next-line no-inline-assembly
         assembly {
             let length := mload(transactions)
@@ -49,12 +52,12 @@ contract MultiSend {
                 let data := add(transactions, add(i, 0x55))
                 let success := 0
                 switch operation
-                    case 0 {
-                        success := call(gas(), to, value, data, dataLength, 0, 0)
-                    }
-                    case 1 {
-                        success := delegatecall(gas(), to, data, dataLength, 0, 0)
-                    }
+                case 0 {
+                    success := call(gas(), to, value, data, dataLength, 0, 0)
+                }
+                case 1 {
+                    success := delegatecall(gas(), to, data, dataLength, 0, 0)
+                }
                 if eq(success, 0) {
                     revert(0, 0)
                 }

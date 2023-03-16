@@ -104,8 +104,8 @@ export function packUserOp1(op: UserOperation): string {
       "bytes32", // initCode
       "bytes32", // callData
       "uint256", // callGasLimit
-      "uint", // verificationGasLimit
-      "uint", // preVerificationGas
+      "uint256", // verificationGasLimit
+      "uint256", // preVerificationGas
       "uint256", // maxFeePerGas
       "uint256", // maxPriorityFeePerGas
       "bytes32", // paymasterAndData
@@ -125,7 +125,7 @@ export function packUserOp1(op: UserOperation): string {
   );
 }
 
-export function getRequestId(
+export function getUserOpHash(
   op: UserOperation,
   entryPoint: string,
   chainId: number
@@ -145,7 +145,7 @@ export const DefaultsForUserOp: UserOperation = {
   callData: "0x",
   callGasLimit: 0,
   verificationGasLimit: 100000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
-  preVerificationGas: 21000, // should also cover calldata cost.
+  preVerificationGas: 0, // should also cover calldata cost.
   maxFeePerGas: 0,
   maxPriorityFeePerGas: 1e9,
   paymasterAndData: "0x",
@@ -158,7 +158,7 @@ export function signUserOp(
   entryPoint: string,
   chainId: number
 ): UserOperation {
-  const message = getRequestId(op, entryPoint, chainId);
+  const message = getUserOpHash(op, entryPoint, chainId);
   const msg1 = Buffer.concat([
     Buffer.from("\x19Ethereum Signed Message:\n32", "ascii"),
     Buffer.from(arrayify(message)),
@@ -216,15 +216,11 @@ export async function fillUserOp(
     const initAddr = hexDataSlice(op1.initCode!, 0, 20);
     const initCallData = hexDataSlice(op1.initCode!, 20);
     if (op1.nonce == null) op1.nonce = 0;
-    console.log("what is opcode.sender ", op1.sender);
-    // op1.sender = undefined
     if (op1.sender == null) {
-      console.log("sender is null");
       // hack: if the init contract is our deployer, then we know what the address would be, without a view call
       if (
         initAddr.toLowerCase() === Create2Factory.contractAddress.toLowerCase()
       ) {
-        console.log("=>> ever herer? +++");
         const [ctr] = defaultAbiCoder.decode(
           ["bytes", "bytes32"],
           "0x" + initCallData.slice(10)
@@ -232,18 +228,14 @@ export async function fillUserOp(
         op1.sender = getCreate2Address(initAddr, HashZero, keccak256(ctr));
       } else {
         // console.log('\t== not our deployer. our=', Create2Factory.contractAddress, 'got', initAddr)
-        console.log("=>-----> ever herer? -----");
         if (provider == null) throw new Error("no entrypoint/provider");
-        op1.sender = await entryPoint!
-          .connect(AddressZero)
-          .callStatic.getSenderAddress(op1.initCode!);
-        console.log("new op1.sender assigned ", op1.sender);
+        op1.sender = await entryPoint!.callStatic
+          .getSenderAddress(op1.initCode!)
+          .catch((e) => e.errorArgs.sender);
       }
     }
     if (op1.verificationGasLimit == null) {
       if (provider == null) throw new Error("no entrypoint/provider");
-      console.log("verificationGasLimit trying to estimate");
-
       const initEstimate = await provider.estimateGas({
         from: entryPoint?.address,
         to: initAddr,
@@ -260,15 +252,14 @@ export async function fillUserOp(
       throw new Error("must have entryPoint to autofill nonce");
     const c = new Contract(
       op.sender!,
-      ["function getNonce(uint256 batchId) view returns(uint256)"],
+      ["function nonce() view returns(uint256)"],
       provider
     );
-    op1.nonce = await c.getNonce(0).catch(rethrow());
+    op1.nonce = await c.nonce().catch(rethrow());
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
       throw new Error("must have entryPoint for callGasLimit estimate");
-    console.log("callGasLimit trying to estimate");
     const gasEtimated = await provider.estimateGas({
       from: entryPoint?.address,
       to: op1.sender,
@@ -277,8 +268,7 @@ export async function fillUserOp(
 
     // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEtimated)
     // estimateGas assumes direct call from entryPoint. add wrapper cost.
-    op1.callGasLimit = gasEtimated.add(55000);
-    console.log("callGasLimit with added wrapper ", op1.callGasLimit);
+    op1.callGasLimit = gasEtimated; // .add(55000)
   }
   if (op1.maxFeePerGas == null) {
     if (provider == null)
@@ -297,22 +287,23 @@ export async function fillUserOp(
   // eslint-disable-next-line @typescript-eslint/no-base-to-string
   if (op2.preVerificationGas.toString() === "0") {
     // TODO: we don't add overhead, which is ~21000 for a single TX, but much lower in a batch.
-    op2.preVerificationGas = callDataCost(packUserOp(op2, false));
+    op2.preVerificationGas = callDataCost(packUserOp(op2, false)) + 21000;
   }
-  console.log("userOp made succesfully");
   return op2;
 }
 
 export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
-  entryPoint?: EntryPoint
+  entryPoint?: EntryPoint,
+  extraPreVerificationGas: number = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
   const op2 = await fillUserOp(op, entryPoint);
-
+  op2.preVerificationGas =
+    Number(op2.preVerificationGas) + extraPreVerificationGas;
   const chainId = await provider!.getNetwork().then((net) => net.chainId);
-  const message = arrayify(getRequestId(op2, entryPoint!.address, chainId));
+  const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
 
   return {
     ...op2,

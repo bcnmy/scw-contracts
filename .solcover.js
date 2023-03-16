@@ -1,3 +1,11 @@
 module.exports = {
-    skipFiles: ['references/aa-4337/EntryPoint.sol']
-  };
+  configureYulOptimizer: true,
+  skipFiles: [
+  'smart-contract-wallet/test',
+  'smart-contract-wallet/SmartAccountNoAuth.sol',
+  'smart-contract-wallet/utils',
+],
+providerOptions: {
+  allowUnlimitedContractSize: true,
+},
+};

@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
+
+import {SelfAuthorizedErrors} from "../common/Errors.sol";
 
 /// @title SelfAuthorized - authorizes current contract to perform actions
-contract SelfAuthorized {
+contract SelfAuthorized is SelfAuthorizedErrors {
     function requireSelfCall() private view {
-        require(msg.sender == address(this), "BSA031");
+        if (msg.sender != address(this)) revert CallerIsNotSelf(msg.sender);
     }
 
     modifier authorized() {

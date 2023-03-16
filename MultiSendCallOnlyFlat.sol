@@ -3,7 +3,7 @@
 // File contracts/smart-contract-wallet/libs/MultiSendCallOnly.sol
 
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.12;
+pragma solidity 0.8.17;
 
 /// @title Multi Send Call Only - Allows to batch multiple transactions into one, but only calls
 /// @author Stefan George - <stefan@gnosis.io>

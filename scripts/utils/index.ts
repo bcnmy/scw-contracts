@@ -1,5 +1,14 @@
-import { BigNumber, BigNumberish, Contract, ethers, Signer } from "ethers";
+import { ethers as hardhatEthersInstance } from "hardhat";
 import {
+  BigNumber,
+  BigNumberish,
+  Contract,
+  ethers,
+  Signer,
+  ContractFactory,
+} from "ethers";
+import {
+  getContractAddress,
   arrayify,
   hexConcat,
   hexlify,
@@ -8,8 +17,10 @@ import {
   Interface,
 } from "ethers/lib/utils";
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
+import { Deployer, Deployer__factory } from "../../typechain";
 
-export const FACTORY_ADDRESS = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
+// { FACTORY_ADDRESS  } is deployed from chirag's private key for nonce 0
+export const FACTORY_ADDRESS = "0x757056493cd5E44e4cFe2719aE05FbcfC1178087";
 export const FACTORY_BYTE_CODE =
   "0x6080604052348015600f57600080fd5b506004361060285760003560e01c80634af63f0214602d575b600080fd5b60cf60048036036040811015604157600080fd5b810190602081018135640100000000811115605b57600080fd5b820183602082011115606c57600080fd5b80359060200191846001830284011164010000000083111715608d57600080fd5b91908080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250929550509135925060eb915050565b604080516001600160a01b039092168252519081900360200190f35b6000818351602085016000f5939250505056fea26469706673582212206b44f8a82cb6b156bfcc3dc6aadd6df4eefd204bc928a4397fd15dacf6d5320564736f6c63430006020033";
 export const factoryDeployer = "0xBb6e024b9cFFACB947A71991E386681B1Cd1477D";
@@ -20,6 +31,20 @@ export const factoryTxHash =
 
 const factoryDeploymentFee = (0.0247 * 1e18).toString(); // 0.0247
 const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
+
+// TODO
+// remove TEST for production deployments
+export enum DEPLOYMENT_SALTS {
+  FallBACK_HANDLER = "TEST_CALLBACK_HANDLER_V0_1103",
+  DECODER = "TEST_DECODER_V0_1103",
+  ENTRY_POINT = "TEST_ENTRY_POINT_V0_1103",
+  GAS_ESTIMATOR = "TEST_GAS_ESTIMATOR_V0_1103",
+  MULTI_SEND = "TEST_MULTI_SEND_V0_1103",
+  MULTI_SEND_CALLONLY = "TEST_MULTI_SEND_CALLONLY_V0_1103",
+  WALLET_FACTORY = "TEST_WALLET_FACTORY_V0_1103",
+  WALLET_IMP = "TEST_WALLET_IMP_V0_1103",
+  SINGELTON_PAYMASTER = "TEST_SINGELTON_PAYMASTER_V0_1103",
+}
 
 export const factoryAbi = [
   {
@@ -73,6 +98,92 @@ export const getDeployedAddress = (initCode: string, salt: BigNumberish) => {
       hexConcat(["0xff", FACTORY_ADDRESS, saltBytes32, keccak256(initCode)])
     ).slice(-40)
   );
+};
+
+export const getDeployerInstance = async (): Promise<Deployer> => {
+  const metaDeployerPrivateKey = process.env.FACTORY_DEPLOYER_PRIVATE_KEY;
+  if (!metaDeployerPrivateKey) {
+    throw new Error("FACTORY_DEPLOYER_PRIVATE_KEY not set");
+  }
+  const metaDeployer = new ethers.Wallet(
+    metaDeployerPrivateKey,
+    hardhatEthersInstance.provider
+  );
+  // const FACTORY_ADDRESS = getContractAddress({
+  //   from: metaDeployer.address,
+  //   nonce: 0,
+  // });
+  
+  const provider = hardhatEthersInstance.provider;
+  const [signer] = await hardhatEthersInstance.getSigners();
+  const chainId = (await provider.getNetwork()).chainId;
+  console.log(`Checking deployer ${FACTORY_ADDRESS} on chain ${chainId}...`);
+  const code = await provider.getCode(FACTORY_ADDRESS);
+  if (code === "0x") {
+    console.log("Deployer not deployed, deploying...");
+    const metaDeployerPrivateKey = process.env.FACTORY_DEPLOYER_PRIVATE_KEY;
+    if (!metaDeployerPrivateKey) {
+      throw new Error("FACTORY_DEPLOYER_PRIVATE_KEY not set");
+    }
+    const metaDeployerSigner = new ethers.Wallet(
+      metaDeployerPrivateKey,
+      provider
+    );
+    const deployer = await new Deployer__factory(metaDeployerSigner).deploy();
+    await deployer.deployed();
+    console.log(`Deployer deployed at ${deployer.address} on chain ${chainId}`);
+  } else {
+    console.log(`Deployer already deployed on chain ${chainId}`);
+  }
+
+  return Deployer__factory.connect(FACTORY_ADDRESS, signer);
+};
+
+export const deployContract = async (
+  name: string,
+  computedContractAddress: string,
+  salt: string,
+  contractByteCode: string,
+  deployerInstance: Deployer
+): Promise<string> => {
+  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode);
+
+  console.log(`Submitted transaction ${hash} for deployment`);
+
+  const { status, logs, blockNumber } = await wait(5);
+
+  if (status !== 1) {
+    throw new Error(`Transaction ${hash} failed`);
+  }
+
+  console.log(`Transaction ${hash} is included in block ${blockNumber}`);
+
+  // Get the address of the deployed contract
+  const topicHash = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes("ContractDeployed(address)")
+  );
+  const contractDeployedLog = logs.find((log) => log.topics[0] === topicHash);
+
+  if (!contractDeployedLog) {
+    throw new Error(`Transaction ${hash} did not emit ContractDeployed event`);
+  }
+
+  const deployedContractAddress =
+    deployerInstance.interface.parseLog(contractDeployedLog).args
+      .contractAddress;
+
+  const deploymentStatus =
+    computedContractAddress === deployedContractAddress
+      ? "Deployed Successfully"
+      : false;
+
+  console.log(name, deploymentStatus);
+
+  if (!deploymentStatus) {
+    console.log(`Invalid ${name} Handler Deployment`);
+  }
+
+  return "0x";
 };
 
 /**
@@ -160,7 +271,10 @@ export const encodeParam = (dataType: any, data: any) => {
 
 export const encodeParams = (dataTypes: any[], data: any[]) => {
   const abiCoder = ethers.utils.defaultAbiCoder;
-  return abiCoder.encode(dataTypes, data);
+  const encodedData = abiCoder.encode(dataTypes, data);
+  console.log("encodedData ", encodedData);
+
+  return encodedData;
 };
 
 export const isContract = async (address: string, provider: Provider) => {

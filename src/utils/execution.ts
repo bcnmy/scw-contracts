@@ -11,6 +11,9 @@ import {
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
 
+export const ACCOUNT_ABSTRACTION_FLOW = 0;
+export const EOA_CONTROLLED_FLOW = 1;
+
 export const EIP_DOMAIN = {
   EIP712Domain: [
     { type: "uint256", name: "chainId" },
@@ -18,9 +21,9 @@ export const EIP_DOMAIN = {
   ],
 };
 
-export const EIP712_WALLET_TX_TYPE = {
-  // "WalletTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
-  WalletTx: [
+export const EIP712_ACCOUNT_TX_TYPE = {
+  // "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
+  AccountTx: [
     { type: "address", name: "to" },
     { type: "uint256", name: "value" },
     { type: "bytes", name: "data" },
@@ -28,6 +31,7 @@ export const EIP712_WALLET_TX_TYPE = {
     { type: "uint256", name: "targetTxGas" },
     { type: "uint256", name: "baseGas" },
     { type: "uint256", name: "gasPrice" },
+    { type: "uint256", name: "tokenGasPriceFactor" },
     { type: "address", name: "gasToken" },
     { type: "address", name: "refundReceiver" },
     { type: "uint256", name: "nonce" },
@@ -101,7 +105,7 @@ export const preimageSafeTransactionHash = (
 ): string => {
   return utils._TypedDataEncoder.encode(
     { verifyingContract: safe.address, chainId },
-    EIP712_WALLET_TX_TYPE,
+    EIP712_ACCOUNT_TX_TYPE,
     safeTx
   );
 };
@@ -113,7 +117,7 @@ export const calculateSafeTransactionHash = (
 ): string => {
   return utils._TypedDataEncoder.hash(
     { verifyingContract: safe.address, chainId },
-    EIP712_WALLET_TX_TYPE,
+    EIP712_ACCOUNT_TX_TYPE,
     safeTx
   );
 };
@@ -171,7 +175,7 @@ export const safeSignTypedData = async (
     signer: signerAddress,
     data: await signer._signTypedData(
       { verifyingContract: safe.address, chainId: cid },
-      EIP712_WALLET_TX_TYPE,
+      EIP712_ACCOUNT_TX_TYPE,
       safeTx
     ),
   };
@@ -210,6 +214,35 @@ export const buildSignatureBytes = (signatures: SafeSignature[]): string => {
     signatureBytes += sig.data.slice(2);
   }
   return signatureBytes;
+};
+
+export const buildContractSignature = (signer: string, data: string): string => {
+  const SIGNATURE_LENGTH_BYTES = 65;
+
+  let signatureBytes = "0x";
+  let dynamicBytes = "";
+  
+          /* 
+              A contract signature has a static part of 65 bytes and the dynamic part that needs to be appended at the end of 
+              end signature bytes.
+              The signature format is
+              Signature type == 0
+              Constant part: 65 bytes
+              {32-bytes signature verifier}{32-bytes dynamic data position}{1-byte signature type}
+              Dynamic part (solidity bytes): 32 bytes + signature data length
+              {32-bytes signature length}{bytes signature data}
+          */
+          const dynamicPartPosition = (SIGNATURE_LENGTH_BYTES)
+              .toString(16)
+              .padStart(64, "0");
+          const dynamicPartLength = (data.slice(2).length / 2).toString(16).padStart(64, "0");
+          const staticSignature = `${signer.slice(2).padStart(64, "0")}${dynamicPartPosition}00`;
+          const dynamicPartWithLength = `${dynamicPartLength}${data.slice(2)}`;
+
+          signatureBytes += staticSignature;
+          dynamicBytes += dynamicPartWithLength;
+
+  return signatureBytes + dynamicBytes;
 };
 
 export const logGas = async (
@@ -252,7 +285,6 @@ export const executeTx = async (
   };
   return safe.execTransaction(
     transaction,
-    0, // batchId
     refundInfo,
     signatureBytes,
     overrides || {}
@@ -282,7 +314,6 @@ export const populateExecuteTx = async (
   };
   return safe.populateTransaction.execTransaction(
     transaction,
-    0, // batchId
     refundInfo,
     signatureBytes,
     overrides || {}
@@ -336,7 +367,7 @@ export const executeContractCallWithSigners = async (
     contract,
     method,
     params,
-    await safe.getNonce(0),
+    await safe.getNonce(EOA_CONTROLLED_FLOW),
     delegateCall,
     overrides
   );

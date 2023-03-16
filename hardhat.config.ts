@@ -30,26 +30,22 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.12",
+        version: "0.8.17",
         settings: {
-          optimizer: { enabled: true, runs: 200 },
-        },
-      },
-      {
-        version: "0.8.4",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
-        },
-      },
-      {
-        version: "0.8.9",
-        settings: {
-          optimizer: { enabled: true, runs: 200 },
+          optimizer: { enabled: true, runs: 800 },
         },
       },
     ],
   },
   networks: {
+    hardhat: {
+      accounts: {
+        accountsBalance: "10000000000000000000000000",
+        //   mnemonic: MNEMONIC,
+      },
+      allowUnlimitedContractSize: true,
+      chainId: 31337,
+    },
     ganache: {
       chainId: 1337,
       url: "http://localhost:8545",
@@ -226,7 +222,23 @@ const config: HardhatUserConfig = {
     currency: "USD",
   },
   etherscan: {
-    apiKey: process.env.ETHERSCAN_API_KEY,
+    apiKey: {
+      mainnet: process.env.ETHERSCAN_API_KEY || "",
+      goerli: process.env.ETHERSCAN_API_KEY || "",
+      polygonMumbai: process.env.POLYGONSCAN_API_KEY || "",
+      polygon: process.env.POLYGONSCAN_API_KEY || "",
+      bscTestnet: process.env.BSCSCAN_API_KEY || "",
+      bsc: process.env.BSCSCAN_API_KEY || "",
+      moonbeam: process.env.MOONBEAM_KEY || "",
+      moonbaseAlpha: process.env.MOONBEAM_KEY || "",
+      avalancheFujiTestnet: process.env.AVALANCHE_API_KEY || "",
+      avalanche: process.env.AVALANCHE_API_KEY || "",
+      arbitrumGoerli: process.env.ARBITRUM_API_KEY || "",
+      arbitrumTestnet: process.env.ARBITRUM_API_KEY || "",
+      arbitrumOne: process.env.ARBITRUM_API_KEY || "",
+      optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
+      optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
+    },
   },
 };
 

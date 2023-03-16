@@ -1,10 +1,10 @@
 import { expect } from "chai";
 import { ethers, waffle } from "hardhat";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint,
-  TestToken,
+  MockToken,
   MultiSend,
   StorageSetter,
   GasEstimator,
@@ -22,6 +22,7 @@ import {
   safeSignTypedData,
   buildSafeTransaction,
   executeContractCallWithSigners,
+  EOA_CONTROLLED_FLOW,
 } from "../../src/utils/execution";
 import { buildMultiSendSafeTx } from "../../src/utils/multisend";
 import { BytesLike } from "ethers";
@@ -63,10 +64,10 @@ function txBaseCost(data: BytesLike): number {
 
 describe("Wallet tx gas estimations with and without refunds", function () {
   // TODO
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
-  let token: TestToken;
+  let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
   let estimator: GasEstimator;
@@ -75,8 +76,6 @@ describe("Wallet tx gas estimations with and without refunds", function () {
   let charlie: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const UNSTAKE_DELAY_SEC = 100;
-  const PAYMASTER_STAKE = ethers.utils.parseEther("1");
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
 
@@ -108,32 +107,34 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     charlie = await accounts[2].getAddress();
     // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-    const BaseImplementation = await ethers.getContractFactory("SmartWallet");
-    baseImpl = await BaseImplementation.deploy();
-    await baseImpl.deployed();
-    console.log("base wallet impl deployed at: ", baseImpl.address);
-
-    const WalletFactory = await ethers.getContractFactory("WalletFactory");
-    walletFactory = await WalletFactory.deploy(baseImpl.address);
-    await walletFactory.deployed();
-    console.log("wallet factory deployed at: ", walletFactory.address);
-
     const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    entryPoint = await EntryPoint.deploy(PAYMASTER_STAKE, UNSTAKE_DELAY_SEC);
+    entryPoint = await EntryPoint.deploy();
     await entryPoint.deployed();
     console.log("Entry point deployed at: ", entryPoint.address);
 
-    const TestToken = await ethers.getContractFactory("TestToken");
-    token = await TestToken.deploy();
-    await token.deployed();
-    console.log("Test token deployed at: ", token.address);
-
-    const DefaultHandler = await ethers.getContractFactory(
+    /* const DefaultHandler = await ethers.getContractFactory(
       "DefaultCallbackHandler"
     );
     handler = await DefaultHandler.deploy();
     await handler.deployed();
-    console.log("Default callback handler deployed at: ", handler.address);
+    console.log("Default callback handler deployed at: ", handler.address); */
+
+    const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+    baseImpl = await BaseImplementation.deploy(entryPoint.address);
+    await baseImpl.deployed();
+    console.log("base wallet impl deployed at: ", baseImpl.address);
+
+    const SmartAccountFactory = await ethers.getContractFactory(
+      "SmartAccountFactory"
+    );
+    walletFactory = await SmartAccountFactory.deploy(baseImpl.address);
+    await walletFactory.deployed();
+    console.log("wallet factory deployed at: ", walletFactory.address);
+
+    const MockToken = await ethers.getContractFactory("MockToken");
+    token = await MockToken.deploy();
+    await token.deployed();
+    console.log("Test token deployed at: ", token.address);
 
     const Storage = await ethers.getContractFactory("StorageSetter");
     storage = await Storage.deploy();
@@ -153,25 +154,19 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
+    const indexForSalt = 0;
+    const expected = await walletFactory.getAddressForCounterfactualAccount(
       owner,
-      0
+      indexForSalt
     );
     console.log("deploying new wallet..expected address: ", expected);
 
-    await expect(
-      walletFactory.deployCounterFactualWallet(
-        owner,
-        entryPoint.address,
-        handler.address,
-        0
-      )
-    )
-      .to.emit(walletFactory, "WalletCreated")
-      .withArgs(expected, baseImpl.address, owner, "1.0.1", 0);
+    await expect(walletFactory.deployCounterFactualAccount(owner, indexForSalt))
+      .to.emit(walletFactory, "AccountCreation")
+      .withArgs(expected, owner, indexForSalt);
 
     userSCW = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/SmartWallet.sol:SmartWallet",
+      "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expected
     );
 
@@ -181,12 +176,12 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     const walletOwner = await userSCW.owner();
     expect(walletOwner).to.equal(owner);
 
-    const walletNonce1 = await userSCW.getNonce(0); // only 0 space is in the context now
-    const walletNonce2 = await userSCW.getNonce(1);
+    const walletNonce1 = await userSCW.nonce();
+    const walletNonce2 = await userSCW.getNonce(EOA_CONTROLLED_FLOW);
     const chainId = await userSCW.getChainId();
 
-    console.log("walletNonce1 ", walletNonce1);
-    console.log("walletNonce2 ", walletNonce2);
+    console.log("walletNonce AA flow ", walletNonce1);
+    console.log("walletNonce EOA flow ", walletNonce2);
     console.log("chainId ", chainId);
 
     await accounts[1].sendTransaction({
@@ -205,7 +200,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       to: token.address,
       // value: ethers.utils.parseEther("1"),
       data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-      nonce: await userSCW.getNonce(0),
+      nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
     });
 
     const chainId = await userSCW.getChainId();
@@ -236,7 +231,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     let signature = "0x";
     signature += data.slice(2);
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
     const Estimator = await ethers.getContractFactory("GasEstimator");
     const gasEstimatorInterface = Estimator.interface;
@@ -244,9 +239,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       "estimate",
       [
         userSCW.address,
-        SmartWallet.interface.encodeFunctionData("execTransaction", [
+        SmartAccount.interface.encodeFunctionData("execTransaction_S6W", [
           transaction,
-          0, // batchId
           refundInfo,
           signature,
         ]),
@@ -283,12 +277,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     );
 
     // await expect(
-    const txn = await userSCW.connect(accounts[0]).execTransaction(
-      transaction,
-      0, // batchId
-      refundInfo,
-      signature
-    );
+    const txn = await userSCW
+      .connect(accounts[0])
+      .execTransaction_S6W(transaction, refundInfo, signature);
 
     const receipt = await txn.wait(1);
     console.log("Real txn gas used: ", receipt.gasUsed.toNumber());
@@ -298,7 +289,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     );
   });
 
-  it("can send transactions and charge wallet for fees in erc20 tokens", async function () {
+  it("can send transactions and charge smart account for fees in erc20 tokens", async function () {
     await token
       .connect(accounts[0])
       .transfer(userSCW.address, ethers.utils.parseEther("100"));
@@ -311,7 +302,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       to: token.address,
       // value: ethers.utils.parseEther("1"),
       data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-      nonce: await userSCW.getNonce(0),
+      nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
     });
 
     const gasEstimate1 = await ethers.provider.estimateGas({
@@ -342,6 +333,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     let signature = "0x";
     signature += data.slice(2);
 
+    // 2 signatures way : not viable!
+
     const transaction: Transaction = {
       to: safeTx.to,
       value: safeTx.value,
@@ -357,9 +350,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       refundReceiver: safeTx.refundReceiver,
     };
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
+    const requiredTxGasData = SmartAccount.interface.encodeFunctionData(
       "requiredTxGas",
       [safeTx.to, safeTx.value, safeTx.data, safeTx.operation]
     );
@@ -385,9 +378,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       "estimate",
       [
         userSCW.address,
-        SmartWallet.interface.encodeFunctionData("execTransaction", [
+        SmartAccount.interface.encodeFunctionData("execTransaction_S6W", [
           transaction,
-          0, // batchId
           refundInfo,
           signature,
         ]),
@@ -438,12 +430,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       console.log(refundInfo);
 
       // await expect(
-      const tx = await userSCW.connect(accounts[1]).execTransaction(
-        transaction,
-        0, // batchId
-        refundInfo,
-        signature
-      );
+      const tx = await userSCW
+        .connect(accounts[1])
+        .execTransaction_S6W(transaction, refundInfo, signature);
 
       const receipt = await tx.wait(1);
       console.log("gasPrice: ", tx.gasPrice);
@@ -472,7 +461,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       to: token.address,
       // value: ethers.utils.parseEther("1"),
       data: encodeTransfer(charlie, ethers.utils.parseEther("10").toString()),
-      nonce: await userSCW.getNonce(0),
+      nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
     });
 
     const gasEstimate1 = await ethers.provider.estimateGas({
@@ -501,6 +490,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     let signature = "0x";
     signature += data.slice(2);
 
+    // 2 signatures way : Not viable!
+
     const transaction: Transaction = {
       to: safeTx.to,
       value: safeTx.value,
@@ -516,9 +507,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       refundReceiver: safeTx.refundReceiver,
     };
 
-    const SmartWallet = await ethers.getContractFactory("SmartWallet");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-    const requiredTxGasData = SmartWallet.interface.encodeFunctionData(
+    const requiredTxGasData = SmartAccount.interface.encodeFunctionData(
       "requiredTxGas",
       [safeTx.to, safeTx.value, safeTx.data, safeTx.operation]
     );
@@ -544,9 +535,8 @@ describe("Wallet tx gas estimations with and without refunds", function () {
       "estimate",
       [
         userSCW.address,
-        SmartWallet.interface.encodeFunctionData("execTransaction", [
+        SmartAccount.interface.encodeFunctionData("execTransaction_S6W", [
           transaction,
-          0, // batchId
           refundInfo,
           signature,
         ]),
@@ -596,12 +586,9 @@ describe("Wallet tx gas estimations with and without refunds", function () {
 
       console.log(refundInfo);
 
-      const tx = await userSCW.connect(accounts[1]).execTransaction(
-        transaction,
-        0, // batchId
-        refundInfo,
-        signature
-      );
+      const tx = await userSCW
+        .connect(accounts[1])
+        .execTransaction_S6W(transaction, refundInfo, signature);
 
       const receipt = await tx.wait(1);
       console.log("gasPrice: ", tx.gasPrice);

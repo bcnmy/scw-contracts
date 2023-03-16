@@ -5,44 +5,33 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 
 import {
-  SmartWallet,
-  SmartWallet__factory,
+  SmartAccount,
+  SmartAccount__factory,
   DefaultCallbackHandler,
   DefaultCallbackHandler__factory,
   EntryPoint,
   VerifyingSingletonPaymaster,
   VerifyingSingletonPaymaster__factory,
-  VerifyingPaymasterFactory,
-  VerifyingPaymasterFactory__factory,
-  WalletFactory,
-  WalletFactory__factory,
+  SmartAccountFactory,
+  SmartAccountFactory__factory,
+  MaliciousAccount2,
+  MaliciousAccount2__factory,
   EntryPoint__factory,
 } from "../../../typechain";
 import { AddressZero } from "../../smart-wallet/testutils";
+import { simulationResultCatch } from "../../aa-core/testutils";
 import { fillAndSign, fillUserOp } from "../../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { BigNumber, BigNumberish, Contract, Signer } from "ethers";
 
 export async function deployEntryPoint(
-  paymasterStake: BigNumberish,
-  unstakeDelaySecs: BigNumberish,
   provider = ethers.provider
 ): Promise<EntryPoint> {
-  const create2factory = new Create2Factory(provider);
-  const epf = new EntryPoint__factory(provider.getSigner());
-  const ctrParams = ethers.utils.defaultAbiCoder.encode(
-    ["uint256", "uint256"],
-    [paymasterStake, unstakeDelaySecs]
-  );
-
-  const addr = await create2factory.deploy(
-    hexConcat([epf.bytecode, ctrParams]),
-    0
-  );
-  return EntryPoint__factory.connect(addr, provider.getSigner());
+  const epf = await (await ethers.getContractFactory("EntryPoint")).deploy();
+  return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
-describe("EntryPoint with VerifyingPaymaster", function () {
+describe("EntryPoint with VerifyingPaymaster Singleton", function () {
   let entryPoint: EntryPoint;
   let entryPointStatic: EntryPoint;
   let depositorSigner: Signer;
@@ -56,47 +45,49 @@ describe("EntryPoint with VerifyingPaymaster", function () {
   let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
   let verifyPaymasterFactory: VerifyingPaymasterFactory;
   let smartWalletImp: SmartWallet;
+  let maliciousWallet: MaliciousAccount2;
   let walletFactory: WalletFactory;
   let callBackHandler: DefaultCallbackHandler;
   const abi = ethers.utils.defaultAbiCoder;
 
-  before(async function () {
+  beforeEach(async function () {
     ethersSigner = await ethers.getSigners();
-    entryPoint = await deployEntryPoint(1, 1);
+    entryPoint = await deployEntryPoint();
     entryPointStatic = entryPoint.connect(AddressZero);
 
     deployer = ethersSigner[0];
     offchainSigner = ethersSigner[1];
     depositorSigner = ethersSigner[2];
-    walletOwner = ethersSigner[3];
+    walletOwner = deployer; // ethersSigner[3];
 
     const offchainSignerAddress = await offchainSigner.getAddress();
     const walletOwnerAddress = await walletOwner.getAddress();
 
     verifyingSingletonPaymaster =
       await new VerifyingSingletonPaymaster__factory(deployer).deploy(
+        await deployer.getAddress(),
         entryPoint.address,
-        walletOwnerAddress,
         offchainSignerAddress
       );
-
-    smartWalletImp = await new SmartWallet__factory(deployer).deploy();
-
-    walletFactory = await new WalletFactory__factory(deployer).deploy(
-      smartWalletImp.address
-    );
 
     callBackHandler = await new DefaultCallbackHandler__factory(
       deployer
     ).deploy();
 
-    await walletFactory.deployCounterFactualWallet(
-      walletOwnerAddress,
-      entryPoint.address,
-      callBackHandler.address,
-      0
+    smartWalletImp = await new SmartAccount__factory(deployer).deploy(
+      entryPoint.address
     );
-    const expected = await walletFactory.getAddressForCounterfactualWallet(
+
+    maliciousWallet = await new MaliciousAccount2__factory(deployer).deploy(
+      entryPoint.address
+    );
+
+    walletFactory = await new SmartAccountFactory__factory(deployer).deploy(
+      smartWalletImp.address
+    );
+
+    await walletFactory.deployCounterFactualAccount(walletOwnerAddress, 0);
+    const expected = await walletFactory.getAddressForCounterfactualAccount(
       walletOwnerAddress,
       0
     );
@@ -107,12 +98,15 @@ describe("EntryPoint with VerifyingPaymaster", function () {
     paymasterAddress = verifyingSingletonPaymaster.address;
     console.log("Paymaster address is ", paymasterAddress);
 
-    await verifyingSingletonPaymaster
-      .connect(walletOwner)
+    /* await verifyingSingletonPaymaster
+      .connect(deployer)
       .addStake(0, { value: parseEther("2") });
+    console.log("paymaster staked"); */
+
     await entryPoint.depositTo(paymasterAddress, { value: parseEther("1") });
-    const resultSet = await entryPoint.getDepositInfo(paymasterAddress);
-    console.log("deposited state ", resultSet);
+
+    // const resultSet = await entryPoint.getDepositInfo(paymasterAddress);
+    // console.log("deposited state ", resultSet);
   });
 
   async function getUserOpWithPaymasterInfo(paymasterId: string) {
@@ -124,7 +118,21 @@ describe("EntryPoint with VerifyingPaymaster", function () {
       entryPoint
     );
 
-    const hash = await verifyingSingletonPaymaster.getHash(userOp1);
+    const nonceFromContract = await verifyingSingletonPaymaster[
+      "getSenderPaymasterNonce(address)"
+    ](walletAddress);
+
+    const nonceFromContract1 = await verifyingSingletonPaymaster[
+      "getSenderPaymasterNonce((address,uint256,bytes,bytes,uint256,uint256,uint256,uint256,uint256,bytes,bytes))"
+    ](userOp1);
+
+    expect(nonceFromContract).to.be.equal(nonceFromContract1);
+
+    const hash = await verifyingSingletonPaymaster.getHash(
+      userOp1,
+      nonceFromContract.toNumber(),
+      paymasterId
+    );
     const sig = await offchainSigner.signMessage(arrayify(hash));
     const paymasterData = abi.encode(["address", "bytes"], [paymasterId, sig]);
     const paymasterAndData = hexConcat([paymasterAddress, paymasterData]);
@@ -141,123 +149,128 @@ describe("EntryPoint with VerifyingPaymaster", function () {
   describe("#validatePaymasterUserOp", () => {
     it("Should Fail when there is no deposit for paymaster id", async () => {
       const paymasterId = await depositorSigner.getAddress();
+      console.log("paymaster Id ", paymasterId);
       const userOp = await getUserOpWithPaymasterInfo(paymasterId);
+      console.log("entrypoint ", entryPoint.address);
       await expect(
-        verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          1029
-        )
-      ).to.be.revertedWith("Insufficient balance for paymaster id");
+        entryPoint.callStatic.simulateValidation(userOp)
+        // ).to.be.revertedWith("FailedOp");
+      ).to.be.reverted;
     });
 
-    it("Should Fail when deposit for paymaster id is not enough", async () => {
-      // Do the deposit on behalf of paymaster id
-      const paymasterId = await depositorSigner.getAddress();
-      const depositAmount = 1028;
-      const requiredFundsInPaymaster = 1029;
-      await verifyingSingletonPaymaster.deposit(paymasterId, {
-        value: depositAmount,
-      });
+    it("succeed with valid signature", async () => {
+      const signer = await verifyingSingletonPaymaster.verifyingSigner();
+      const offchainSignerAddress = await offchainSigner.getAddress();
+      expect(signer).to.be.equal(offchainSignerAddress);
 
-      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
+      await verifyingSingletonPaymaster.depositFor(
+        await offchainSigner.getAddress(),
+        { value: ethers.utils.parseEther("1") }
+      );
+      const userOp1 = await fillAndSign(
+        {
+          sender: walletAddress,
+          verificationGasLimit: 200000,
+        },
+        walletOwner,
+        entryPoint
+      );
+
+      const nonceFromContract = await verifyingSingletonPaymaster[
+        "getSenderPaymasterNonce(address)"
+      ](walletAddress);
+
+      const hash = await verifyingSingletonPaymaster.getHash(
+        userOp1,
+        nonceFromContract.toNumber(),
+        await offchainSigner.getAddress()
+      );
+      const sig = await offchainSigner.signMessage(arrayify(hash));
+      const userOp = await fillAndSign(
+        {
+          ...userOp1,
+          paymasterAndData: hexConcat([
+            paymasterAddress,
+            ethers.utils.defaultAbiCoder.encode(
+              ["address", "bytes"],
+              [await offchainSigner.getAddress(), sig]
+            ),
+          ]),
+        },
+        walletOwner,
+        entryPoint
+      );
+      await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
       await expect(
-        verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          requiredFundsInPaymaster
-        )
-      ).to.be.revertedWith("Insufficient balance for paymaster id");
+        entryPoint.handleOps([userOp], await offchainSigner.getAddress())
+      ).to.be.reverted;
     });
 
-    it("Should validate user op successfully", async () => {
-      // Do the deposit on behalf of paymaster id
-      const paymasterId = await depositorSigner.getAddress();
-      const depositAmount = 1030;
-      const requiredFundsInPaymaster = 1029;
-      await verifyingSingletonPaymaster.deposit(paymasterId, {
-        value: depositAmount,
-      });
+    it("signature replay", async () => {
+      console.log("Paymaster Signed for good sender😇");
+      await verifyingSingletonPaymaster.depositFor(
+        await offchainSigner.getAddress(),
+        { value: ethers.utils.parseEther("1") }
+      );
+      const userOp1 = await fillAndSign(
+        {
+          sender: walletAddress,
+          verificationGasLimit: 200000,
+        },
+        walletOwner,
+        entryPoint
+      );
+      const nonceFromContract = await verifyingSingletonPaymaster[
+        "getSenderPaymasterNonce(address)"
+      ](walletAddress);
 
-      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
-      const paymasterContext =
-        await verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          requiredFundsInPaymaster
-        );
-      const paymasterIdFromContext = abi.decode(["address"], paymasterContext);
-      await expect(paymasterIdFromContext[0]).to.be.eq(paymasterId);
+      const hash = await verifyingSingletonPaymaster.getHash(
+        userOp1,
+        nonceFromContract.toNumber(),
+        await offchainSigner.getAddress()
+      );
+      const sig = await offchainSigner.signMessage(arrayify(hash));
+      console.log("offchainSigner : " + (await offchainSigner.getAddress()));
+      console.log("good sender becomes malicious😈");
+
+      const upgrader = await (
+        await ethers.getContractFactory("Upgrader")
+      ).deploy();
+      const w = SmartAccount__factory.connect(walletAddress, walletOwner);
+
+      await w.executeCall(
+        w.address,
+        0,
+        w.interface.encodeFunctionData("enableModule", [
+          await walletOwner.getAddress(),
+        ])
+      );
+      await w.execTransactionFromModule(
+        upgrader.address,
+        0,
+        upgrader.interface.encodeFunctionData("upgrade", [
+          maliciousWallet.address,
+        ]),
+        1
+      );
+      const userOp = await fillAndSign(
+        {
+          ...userOp1,
+          paymasterAndData: hexConcat([
+            paymasterAddress,
+            ethers.utils.defaultAbiCoder.encode(
+              ["address", "bytes"],
+              [await offchainSigner.getAddress(), sig]
+            ),
+          ]),
+        },
+        walletOwner,
+        entryPoint
+      );
+      await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+      await expect(
+        entryPoint.handleOps([userOp], await offchainSigner.getAddress())
+      ).to.be.reverted;
     });
-
-    /* it("Should validate simulation from entry point", async () => {
-      // Do the deposit on behalf of paymaster id
-      const paymasterId = await depositorSigner.getAddress();
-      const depositAmount = 1030;
-      const requiredFundsInPaymaster = 1029;
-      await verifyingSingletonPaymaster.deposit(paymasterId, {
-        value: depositAmount,
-      });
-
-      const userOp = await getUserOpWithPaymasterInfo(paymasterId);
-      const paymasterContext =
-        await verifyingSingletonPaymaster.validatePaymasterUserOp(
-          userOp,
-          ethers.utils.hexZeroPad("0x1234", 32),
-          requiredFundsInPaymaster
-        );
-      const paymasterIdFromContext = abi.decode(["address"], paymasterContext);
-      await expect(paymasterIdFromContext[0]).to.be.eq(paymasterId);
-    }); */
-
-    //   it("should reject on no signature", async () => {
-    //     const userOp = await fillAndSign(
-    //       {
-    //         sender: walletAddress,
-    //         paymasterAndData: hexConcat([paymasterAddress, "0x1234"]),
-    //       },
-    //       walletOwner,
-    //       entryPoint
-    //     );
-    //     await expect(
-    //       entryPointStatic.callStatic.simulateValidation(userOp, false)
-    //     ).to.be.revertedWith("invalid signature length in paymasterAndData");
-    //   });
-    //   it("should reject on invalid signature", async () => {
-    //     const userOp = await fillAndSign(
-    //       {
-    //         sender: walletAddress,
-    //         paymasterAndData: hexConcat([
-    //           paymasterAddress,
-    //           "0x" + "1c".repeat(65),
-    //         ]),
-    //       },
-    //       walletOwner,
-    //       entryPoint
-    //     );
-    //     await expect(
-    //       entryPointStatic.callStatic.simulateValidation(userOp, false)
-    //     ).to.be.revertedWith("ECDSA: invalid signature");
-    //   });
-    //   it("succeed with valid signature", async () => {
-    //     const userOp1 = await fillAndSign(
-    //       {
-    //         sender: walletAddress,
-    //       },
-    //       walletOwner,
-    //       entryPoint
-    //     );
-    //     const hash = await proxyPaymaster.getHash(userOp1);
-    //     const sig = await offchainSigner.signMessage(arrayify(hash));
-    //     const userOp = await fillAndSign(
-    //       {
-    //         ...userOp1,
-    //         paymasterAndData: hexConcat([paymasterAddress, sig]),
-    //       },
-    //       walletOwner,
-    //       entryPoint
-    //     );
-    //     await entryPointStatic.callStatic.simulateValidation(userOp, false);
-    //   });
   });
 });

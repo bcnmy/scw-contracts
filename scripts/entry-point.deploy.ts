@@ -1,11 +1,9 @@
-import { ethers } from "hardhat";
+import { ethers, network } from "hardhat";
 import {
-  SALT,
-  FACTORY_ADDRESS,
-  getDeployedAddress,
-  deploy,
-  deployFactory,
+  deployContract,
+  DEPLOYMENT_SALTS,
   encodeParam,
+  getDeployerInstance,
   isContract,
 } from "./utils";
 
@@ -14,23 +12,20 @@ const options = { gasLimit: 7000000, gasPrice: 70000000000 };
 async function main() {
   const provider = ethers.provider;
 
-  const UNSTAKE_DELAY_SEC = 86400; // update to very high value
-  const PAYMASTER_STAKE = ethers.utils.parseEther("1"); // TODO : update to at least 1000$ Note: depends on chain!
-
-  const isFactoryDeployed = await isContract(FACTORY_ADDRESS, provider);
-  if (!isFactoryDeployed) {
-    const deployedFactory = await deployFactory(provider);
+  if (network.name !== 'hardhat' || network.name !== 'ganache'){
+    console.log("Entry Point Already Deployed Address: ", entryPointAddress);
+    return
   }
 
-  const EntryPoint = await ethers.getContractFactory("EntryPoint");
-  const entryPointBytecode = `${EntryPoint.bytecode}${encodeParam(
-    "uint",
-    PAYMASTER_STAKE
-  ).slice(2)}${encodeParam("uint32", UNSTAKE_DELAY_SEC).slice(2)}`;
-  const entryPointComputedAddr = getDeployedAddress(
-    entryPointBytecode,
-    ethers.BigNumber.from(SALT)
+  const deployerInstance = await getDeployerInstance();
+  const salt = ethers.utils.keccak256(
+    ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.ENTRY_POINT)
   );
+
+  const EntryPoint = await ethers.getContractFactory("EntryPoint");
+  const entryPointBytecode = `${EntryPoint.bytecode}`;
+  const entryPointComputedAddr = await deployerInstance.addressOf(salt);
+
   console.log("Entry Point Computed Address: ", entryPointComputedAddr);
 
   const isEntryPointDeployed = await isContract(
@@ -38,23 +33,13 @@ async function main() {
     provider
   ); // true (deployed on-chain)
   if (!isEntryPointDeployed) {
-    const entryPointDeployedAddr = await deploy(
-      provider,
+    await deployContract(
+      DEPLOYMENT_SALTS.ENTRY_POINT,
+      entryPointComputedAddr,
+      salt,
       entryPointBytecode,
-      ethers.BigNumber.from(SALT)
+      deployerInstance
     );
-
-    console.log("entryPointDeployedAddr ", entryPointDeployedAddr);
-    const entryPointDeploymentStatus =
-      entryPointComputedAddr === entryPointDeployedAddr
-        ? "Deployed Successfully"
-        : false;
-
-    console.log("entryPointDeploymentStatus ", entryPointDeploymentStatus);
-
-    if (!entryPointDeploymentStatus) {
-      console.log("Invalid Entry Point Deployment");
-    }
   } else {
     console.log(
       "Entry Point is Already deployed with address ",
