@@ -11,6 +11,7 @@ import {IERC165} from "./interfaces/IERC165.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
 import {ISignatureValidator, ISignatureValidatorConstants} from "./interfaces/ISignatureValidator.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IModule} from "./test/IModule.sol";
 
 contract SmartAccount is
     BaseSmartAccount,
@@ -753,7 +754,8 @@ contract SmartAccount is
                     userOpData[4:],
                     (address, uint, bytes)
                 );
-                if (address(modules[_to]) != address(0)) return 0;
+                if (address(modules[_to]) != address(0))
+                    return IModule(_to).validateSignature(userOp, userOpHash);
             }
         }
         bytes32 hash = userOpHash.toEthSignedMessageHash();
