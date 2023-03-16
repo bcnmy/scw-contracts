@@ -151,10 +151,10 @@ contract SmartAccount is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    // review for all methods to be invoked by smart account to self
-    // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
-    function updateImplementation(address _implementation) public mixedAuth {
+    function updateImplementation(
+        address _implementation
+    ) public virtual mixedAuth {
         require(_implementation != address(0), "Address cannot be zero");
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
@@ -162,17 +162,9 @@ contract SmartAccount is
         assembly {
             sstore(address(), _implementation)
         }
-        // EOA + Version tracking
         // review here the second argument it emits is: VERSION upgraded from but not the VERSION it's upgraded to
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
-
-    // either this and check for specific _data
-    // specific methods like updateImplementationAndSetHandler
-    // it could be generic reinit of proxy for states introduced in new implementation
-    /*function updateImplementationAndCall(address _implementation, bytes memory _data) public mixedAuth {
-
-    }*/
 
     // Getters
     /**

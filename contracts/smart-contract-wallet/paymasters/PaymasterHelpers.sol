@@ -19,8 +19,10 @@ library PaymasterHelpers {
     using ECDSA for bytes32;
 
     /**
-     * review update description
-     * @dev Encodes the paymaster context: sender, token, rate, and fee
+     * @dev Encodes the paymaster context: paymasterId and gasPrice
+     * @param op UserOperation object
+     * @param data PaymasterData passed
+     * @param gasPrice effective gasPrice
      */
     function paymasterContext(
         UserOperation calldata op,

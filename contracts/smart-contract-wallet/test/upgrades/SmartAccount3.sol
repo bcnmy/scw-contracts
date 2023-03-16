@@ -47,8 +47,6 @@ contract SmartAccount3 is
     // Owner storage
     address public owner;
 
-    // uint96 private _nonce; //changed to 2D nonce below
-    // @notice there is no _nonce
     mapping(uint256 => uint256) public nonces;
 
     // AA immutable storage
@@ -132,9 +130,6 @@ contract SmartAccount3 is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    // todo: write test case for updating implementation
-    // review for all methods to be invoked by smart account to self
-    // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
     function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
@@ -142,7 +137,6 @@ contract SmartAccount3 is
         assembly {
             sstore(address(), _implementation)
         }
-        // EOA + Version tracking
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
@@ -207,7 +201,6 @@ contract SmartAccount3 is
         }
     }
 
-    // review: batchId should be carefully designed or removed all together (including 2D nonces)
     // Gnosis style transaction with optional repay in native tokens OR ERC20
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.

@@ -56,8 +56,6 @@ contract SmartAccountNoAuth is
 
     uint256 public immutable _chainId;
 
-    // review
-    // mock constructor or use deinitializers
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
     constructor(IEntryPoint anEntryPoint) {
         // By setting the owner it is not possible to call init anymore,

@@ -6,7 +6,7 @@ import "hardhat/console.sol";
 
 contract SmartAccount6 is SmartAccount {
     // AA immutable storage
-    // @review @fil
+    // @review
     IEntryPoint private immutable _entryPoint;
 
     address public friend;
@@ -22,7 +22,7 @@ contract SmartAccount6 is SmartAccount {
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
-        // @review fil
+        // @review
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         friend = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");

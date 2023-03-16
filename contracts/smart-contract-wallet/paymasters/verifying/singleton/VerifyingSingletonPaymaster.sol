@@ -26,7 +26,6 @@ contract VerifyingSingletonPaymaster is
 {
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
-    // review
     using PaymasterHelpers for UserOperation;
     using PaymasterHelpers for bytes;
     using PaymasterHelpers for PaymasterData;
@@ -35,7 +34,6 @@ contract VerifyingSingletonPaymaster is
     uint256 private unaccountedEPGasOverhead;
     mapping(address => uint256) public paymasterIdBalances;
 
-    // review for immutable
     address public verifyingSigner;
 
     // paymaster nonce for account
