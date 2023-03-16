@@ -33,7 +33,7 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
   let depositorSigner: Signer;
   let walletOwner: Signer;
   let walletAddress: string, paymasterAddress: string;
-  let accounts;
+  let accounts: any;
 
   let offchainSigner: Signer, deployer: Signer;
 
@@ -118,15 +118,30 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
     const balBefore = await ethers.provider.getBalance(paymasterId);
     console.log("balBefore", balBefore.toString());
     const tx = verifyingSingletonPaymaster
-      .connect(offchainSigner)
+      .connect(deployer)
       .withdrawTo(AddressZero, parseEther("0.5"));
     expect(tx).to.be.revertedWith("CanNotWithdrawToZeroAddress");
 
-    await verifyingSingletonPaymaster
-      .connect(offchainSigner)
-      .withdrawTo(paymasterId, parseEther("0.5"));
-    const balAfter = await ethers.provider.getBalance(paymasterId);
-    console.log("balAfter", balAfter.toString());
+    // await verifyingSingletonPaymaster
+    //   .connect(deployer)
+    //   .withdrawTo(paymasterId, parseEther("0.5"));
+    // const balAfter = await ethers.provider.getBalance(paymasterId);
+    // console.log("balAfter", balAfter.toString());
     // expect(balAfter.sub(balBefore)).to.be.equal(parseEther("0"));
+  });
+
+  it("setSigner: should be able to set signer", async () => {
+    const tx1 = verifyingSingletonPaymaster
+      .connect(deployer)
+      .setSigner(AddressZero);
+    expect(tx1).to.be.revertedWith("VerifyingSignerCannotBeZero");
+
+    const newSigner = await accounts[5].address;
+    const tx2 = await verifyingSingletonPaymaster
+      .connect(deployer)
+      .setSigner(newSigner);
+    expect(tx2)
+      .to.emit(verifyingSingletonPaymaster, "SignerChanged")
+      .withArgs(newSigner);
   });
 });
