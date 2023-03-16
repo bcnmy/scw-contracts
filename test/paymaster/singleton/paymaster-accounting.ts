@@ -188,11 +188,11 @@ describe("Upgrade functionality Via Entrypoint", function () {
         feePaidByPaymasterDeposit.toNumber()
       );
 
-      // TODO: fix below
+      // TODO: review with different extraPreVerificationGas values
       // Ensure that tx fee paid by bundler is less than the refund paid by paymaster
-      /* expect(transactionFee.toNumber()).to.be.lessThan(
+      expect(transactionFee.toNumber()).to.be.lessThan(
         feePaidByPaymasterDeposit.toNumber()
-      ); */
+      );
     });
   });
 });
@@ -230,7 +230,7 @@ async function getUserOpWithInitCodeAndPaymasterData(
     },
     walletOwner,
     entryPoint,
-    385 // _validateAccountAndPaymasterValidationData
+    21385 // _validateAccountAndPaymasterValidationData + compensate + anything unaccounted
   );
 
   // Set paymaster data in UserOp
