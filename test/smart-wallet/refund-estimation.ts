@@ -333,7 +333,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
     /* const eventLogs = SmartAccount.interface.decodeEventLog(
-      "WalletHandlePayment",
+      "AccountHandlePayment",
       receipt.logs[2].data
     ); */
     // eventLogs.payment.toNumber();
@@ -518,7 +518,7 @@ describe("Wallet tx gas estimations with and without refunds", function () {
     console.log("real txn gas used: ", receipt.gasUsed.toNumber());
 
     /* const eventLogs = SmartAccount.interface.decodeEventLog(
-      "WalletHandlePayment",
+      "AccountHandlePayment",
       receipt.logs[3].data
     ); */
     // ventLogs.payment

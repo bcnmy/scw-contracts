@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint,
   MockToken,
   MultiSend,
@@ -10,31 +10,23 @@ import {
   DefaultCallbackHandler,
   SignMessageLib,
 } from "../../typechain";
-import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { encodeTransfer, encodeSignMessage } from "../testUtils";
 import {
-  encodeTransfer,
-  encodeTransferFrom,
-  encodeSignMessage,
-} from "../testUtils";
-import {
-  buildContractCall,
-  MetaTransaction,
   SafeTransaction,
   Transaction,
   FeeRefund,
-  executeTx,
   safeSignTypedData,
   buildContractSignature,
-  safeSignMessage,
   buildSafeTransaction,
-  executeContractCallWithSigners,
   EOA_CONTROLLED_FLOW,
 } from "../../../src/utils/execution";
 import { deployContract } from "../../utils/setupHelper";
 
+export const AddressZero = ethers.constants.AddressZero;
+
 describe("EIP-1271 Signatures Tests", function () {
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
   let token: MockToken;
   let multiSend: MultiSend;
@@ -47,8 +39,6 @@ describe("EIP-1271 Signatures Tests", function () {
   let signerSmartAccount: any;
   let mainSmartAccount: any;
   let handler: DefaultCallbackHandler;
-  const VERSION = "1.0.4";
-  const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
   let smartAccountInitialNativeTokenBalance: any;
 
@@ -61,8 +51,6 @@ describe("EIP-1271 Signatures Tests", function () {
 
   beforeEach(async () => {
     accounts = await ethers.getSigners();
-    const addresses = await ethers.provider.listAccounts();
-    const ethersSigner = ethers.provider.getSigner();
 
     owner = await accounts[0].getAddress();
     bob = await accounts[1].getAddress();
@@ -221,6 +209,53 @@ describe("EIP-1271 Signatures Tests", function () {
   it("Fallback handler reverts if called directly", async function () {
     const dataHash = ethers.utils.keccak256("0xbaddad");
     await expect(handler.isValidSignature(dataHash, "0x")).to.be.reverted;
+  });
+
+  // TODO: move from here to fallback-handler.specs.ts
+  it("Fallback handler handles tokensReceived", async () => {
+    await handler.callStatic.tokensReceived(
+      AddressZero,
+      AddressZero,
+      AddressZero,
+      0,
+      "0x",
+      "0x"
+    );
+  });
+
+  it("Fallback handler handles onERC721Received", async () => {
+    await expect(
+      await handler.callStatic.onERC721Received(
+        AddressZero,
+        AddressZero,
+        0,
+        "0x"
+      )
+    ).to.be.eq("0x150b7a02");
+  });
+
+  it("Fallback handler handles onERC1155Received", async () => {
+    await expect(
+      await handler.callStatic.onERC1155Received(
+        AddressZero,
+        AddressZero,
+        0,
+        0,
+        "0x"
+      )
+    ).to.be.eq("0xf23a6e61");
+  });
+
+  it("Fallback handler handles onERC1155BatchReceived", async () => {
+    await expect(
+      await handler.callStatic.onERC1155BatchReceived(
+        AddressZero,
+        AddressZero,
+        [],
+        [],
+        "0x"
+      )
+    ).to.be.eq("0xbc197c81");
   });
 
   it("Fallback handler returns 0xffffffff if the message has not been signed", async function () {

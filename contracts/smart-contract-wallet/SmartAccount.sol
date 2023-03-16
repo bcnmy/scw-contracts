@@ -84,16 +84,10 @@ contract SmartAccount is
         address indexed _oldEOA,
         address indexed _newEOA
     );
-    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
+    event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(
         address indexed sender,
         uint256 indexed value
-    );
-    event SmartAccountInitialized(
-        address indexed _owner,
-        address indexed _handler,
-        string indexed _version,
-        address _entryPoint
     );
 
     // todo
@@ -204,7 +198,6 @@ contract SmartAccount is
         return _chainId;
     }
 
-    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -219,13 +212,6 @@ contract SmartAccount is
      */
     function nonce() public view virtual override returns (uint256) {
         return nonces[0];
-    }
-
-    // only from EntryPoint
-    modifier onlyEntryPoint() {
-        if (msg.sender != address(entryPoint()))
-            revert CallerIsNotAnEntryPoint(msg.sender);
-        _;
     }
 
     /**
@@ -249,14 +235,6 @@ contract SmartAccount is
         if (_owner == address(0)) revert OwnerCannotBeZero();
         owner = _owner;
         _setFallbackHandler(_handler);
-        address factory = msg.sender;
-        // can be emitted owner, entryPoint, VERSION, handler
-        emit SmartAccountInitialized(
-            _owner,
-            _handler,
-            VERSION,
-            address(_entryPoint)
-        );
         _setupModules(address(0), bytes(""));
     }
 
@@ -339,7 +317,7 @@ contract SmartAccount is
                     refundInfo.gasToken,
                     refundInfo.refundReceiver
                 );
-                emit WalletHandlePayment(txHash, payment);
+                emit AccountHandlePayment(txHash, payment);
             }
         }
     }
@@ -590,7 +568,7 @@ contract SmartAccount is
         FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
-        bytes32 walletTxHash = keccak256(
+        bytes32 accountTxHash = keccak256(
             abi.encode(
                 ACCOUNT_TX_TYPEHASH,
                 _tx.to,
@@ -611,7 +589,7 @@ contract SmartAccount is
                 bytes1(0x19),
                 bytes1(0x01),
                 domainSeparator(),
-                walletTxHash
+                accountTxHash
             );
     }
 
@@ -734,19 +712,6 @@ contract SmartAccount is
         }
     }
 
-    //@todo marked for deletion
-    //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(
-        address dest,
-        uint256 value,
-        bytes calldata func,
-        Enum.Operation operation,
-        uint256 gasLimit
-    ) external onlyEntryPoint returns (bool success) {
-        success = execute(dest, value, func, operation, gasLimit);
-        if (!success) revert ExecutionFailed();
-    }
-
     function _requireFromEntryPointOrOwner() internal view {
         if (msg.sender != address(entryPoint()) && msg.sender != owner)
             revert CallerIsNotEntryPointOrOwner(msg.sender);
@@ -763,12 +728,20 @@ contract SmartAccount is
     function _validateAndUpdateNonce(
         UserOperation calldata userOp
     ) internal override {
+        bytes calldata userOpData = userOp.callData;
+        if (userOpData.length > 0) {
+            bytes4 methodSig = bytes4(userOpData[:4]);
+            // If method to be called is executeCall then only check for module transaction
+            if (methodSig == this.executeCall.selector) {
+                (address _to, uint _amount, bytes memory _data) = abi.decode(
+                    userOpData[4:],
+                    (address, uint, bytes)
+                );
+                if (address(modules[_to]) != address(0)) return;
+            }
+        }
         if (nonces[0]++ != userOp.nonce)
             revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
-
-        // Compatiblity options, should choose one
-        //if(nonces[0]++ != userOp.nonce) revert ("account: invalid nonce");
-        //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /**
@@ -778,6 +751,19 @@ contract SmartAccount is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal virtual override returns (uint256 validationData) {
+        // below changes need formal verification.
+        bytes calldata userOpData = userOp.callData;
+        if (userOpData.length > 0) {
+            bytes4 methodSig = bytes4(userOpData[:4]);
+            // If method to be called is executeCall then only check for module transaction
+            if (methodSig == this.executeCall.selector) {
+                (address _to, uint _amount, bytes memory _data) = abi.decode(
+                    userOpData[4:],
+                    (address, uint, bytes)
+                );
+                if (address(modules[_to]) != address(0)) return 0;
+            }
+        }
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;

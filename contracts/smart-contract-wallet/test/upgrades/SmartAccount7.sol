@@ -87,14 +87,10 @@ contract SmartAccount7 is
         address indexed _oldEOA,
         address indexed _newEOA
     );
-    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
+    event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(
         address indexed sender,
         uint256 value
-    );
-    event SmartAccountInitialized(
-        address indexed _owner,
-        address indexed _handler
     );
 
     // todo
@@ -169,7 +165,6 @@ contract SmartAccount7 is
         return _chainId;
     }
 
-    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -182,15 +177,6 @@ contract SmartAccount7 is
     // Standard interface for 1d nonces. Use it for Account Abstraction flow.
     function nonce() public view virtual override returns (uint256) {
         return nonces[0];
-    }
-
-    // only from EntryPoint
-    modifier onlyEntryPoint() {
-        require(
-            msg.sender == address(entryPoint()),
-            "wallet: not from EntryPoint"
-        );
-        _;
     }
 
     function entryPoint() public view virtual override returns (IEntryPoint) {
@@ -288,7 +274,7 @@ contract SmartAccount7 is
                     refundInfo.gasToken,
                     refundInfo.refundReceiver
                 );
-                emit WalletHandlePayment(txHash, payment);
+                emit AccountHandlePayment(txHash, payment);
             }
             console.log("has to go through new v4 implementation");
         }
@@ -507,7 +493,7 @@ contract SmartAccount7 is
         FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
-        bytes32 walletTxHash = keccak256(
+        bytes32 accountTxHash = keccak256(
             abi.encode(
                 ACCOUNT_TX_TYPEHASH,
                 _tx.to,
@@ -528,7 +514,7 @@ contract SmartAccount7 is
                 bytes1(0x19),
                 bytes1(0x01),
                 domainSeparator(),
-                walletTxHash
+                accountTxHash
             );
     }
 
@@ -582,20 +568,6 @@ contract SmartAccount7 is
                 revert(add(result, 32), mload(result))
             }
         }
-    }
-
-    //called by entryPoint, only after validateUserOp succeeded.
-    //@review
-    //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(
-        address dest,
-        uint value,
-        bytes calldata func,
-        Enum.Operation operation,
-        uint256 gasLimit
-    ) external onlyEntryPoint returns (bool success) {
-        success = execute(dest, value, func, operation, gasLimit);
-        require(success, "Userop Failed");
     }
 
     function _requireFromEntryPointOrOwner() internal view {

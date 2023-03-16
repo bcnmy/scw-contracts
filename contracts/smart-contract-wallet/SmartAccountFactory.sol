@@ -50,7 +50,7 @@ contract SmartAccountFactory {
         bytes memory initializer = getInitializer(_owner);
 
         bytes32 salt = keccak256(
-            abi.encodePacked(initializer, address(uint160(_index)))
+            abi.encodePacked(keccak256(initializer), _index)
         );
 
         bytes memory deploymentData = abi.encodePacked(
@@ -163,7 +163,7 @@ contract SmartAccountFactory {
             uint256(uint160(basicImplementation))
         );
         bytes32 salt = keccak256(
-            abi.encodePacked(initializer, address(uint160(_index)))
+            abi.encodePacked(keccak256(initializer), _index)
         );
         bytes32 hash = keccak256(
             abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code))

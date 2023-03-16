@@ -3,8 +3,8 @@ import { expect } from "chai";
 import { ethers } from "hardhat";
 import { Signer } from "ethers";
 import {
-  SmartWallet,
-  WalletFactory,
+  SmartAccount,
+  SmartAccountFactory,
   EntryPoint__factory,
   VerifyingSingletonPaymaster__factory,
   EntryPoint,
@@ -41,8 +41,8 @@ describe("Account Functionality: 4337", function () {
   let offchainSigner: Signer, deployer: Signer;
 
   let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
-  let baseImpl: SmartWallet;
-  let walletFactory: WalletFactory;
+  let baseImpl: SmartAccount;
+  let walletFactory: SmartAccountFactory;
   let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;

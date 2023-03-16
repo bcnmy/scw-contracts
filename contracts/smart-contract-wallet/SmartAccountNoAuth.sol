@@ -83,7 +83,7 @@ contract SmartAccountNoAuth is
         address indexed _oldEOA,
         address indexed _newEOA
     );
-    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
+    event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
 
     // modifiers
     // onlyOwner
@@ -103,15 +103,6 @@ contract SmartAccountNoAuth is
         require(
             msg.sender == owner || msg.sender == address(this),
             "Only owner or self"
-        );
-        _;
-    }
-
-    // only from EntryPoint
-    modifier onlyEntryPoint() {
-        require(
-            msg.sender == address(entryPoint()),
-            "wallet: not from EntryPoint"
         );
         _;
     }
@@ -170,7 +161,6 @@ contract SmartAccountNoAuth is
         return _chainId;
     }
 
-    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -266,7 +256,7 @@ contract SmartAccountNoAuth is
                     refundInfo.gasToken,
                     refundInfo.refundReceiver
                 );
-                emit WalletHandlePayment(txHash, payment);
+                emit AccountHandlePayment(txHash, payment);
             }
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);
@@ -469,7 +459,7 @@ contract SmartAccountNoAuth is
         FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
-        bytes32 walletTxHash = keccak256(
+        bytes32 accountTxHash = keccak256(
             abi.encode(
                 ACCOUNT_TX_TYPEHASH,
                 _tx.to,
@@ -489,7 +479,7 @@ contract SmartAccountNoAuth is
                 bytes1(0x19),
                 bytes1(0x01),
                 domainSeparator(),
-                walletTxHash
+                accountTxHash
             );
     }
 
@@ -540,20 +530,6 @@ contract SmartAccountNoAuth is
                 revert(add(result, 32), mload(result))
             }
         }
-    }
-
-    //called by entryPoint, only after validateUserOp succeeded.
-    //@review
-    //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(
-        address dest,
-        uint256 value,
-        bytes calldata func,
-        Enum.Operation operation,
-        uint256 gasLimit
-    ) external onlyEntryPoint returns (bool success) {
-        success = execute(dest, value, func, operation, gasLimit);
-        require(success, "Userop Failed");
     }
 
     function _requireFromEntryPointOrOwner() internal view {

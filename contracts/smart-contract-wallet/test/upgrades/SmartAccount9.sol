@@ -84,13 +84,12 @@ contract SmartAccount9 is
         address indexed _oldEOA,
         address indexed _newEOA
     );
-    event WalletHandlePayment(bytes32 txHash, uint256 payment);
+    event AccountHandlePayment(bytes32 txHash, uint256 payment);
     event SmartAccountReceivedNativeToken(
         address indexed sender,
         uint256 value
     );
-    // nice to have
-    // event SmartAccountInitialized(IEntryPoint indexed entryPoint, address indexed owner);
+
     // todo
     // emit events like executedTransactionFromModule
     // emit events with whole information of execTransaction (ref Safe L2)
@@ -168,7 +167,6 @@ contract SmartAccount9 is
         return id;
     }
 
-    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -181,15 +179,6 @@ contract SmartAccount9 is
     // Standard interface for 1d nonces. Use it for Account Abstraction flow.
     function nonce() public view virtual override returns (uint256) {
         return nonces[0];
-    }
-
-    // only from EntryPoint
-    modifier onlyEntryPoint() {
-        require(
-            msg.sender == address(entryPoint()),
-            "wallet: not from EntryPoint"
-        );
-        _;
     }
 
     function entryPoint() public view virtual override returns (IEntryPoint) {
@@ -282,7 +271,7 @@ contract SmartAccount9 is
                     refundInfo.gasToken,
                     refundInfo.refundReceiver
                 );
-                emit WalletHandlePayment(txHash, payment);
+                emit AccountHandlePayment(txHash, payment);
             }
             console.log("goes through 9");
             // extraGas = extraGas - gasleft();
@@ -582,20 +571,6 @@ contract SmartAccount9 is
                 revert(add(result, 32), mload(result))
             }
         }
-    }
-
-    //called by entryPoint, only after validateUserOp succeeded.
-    //@review
-    //Method is updated to instruct delegate call and emit regular events
-    function execFromEntryPoint(
-        address dest,
-        uint value,
-        bytes calldata func,
-        Enum.Operation operation,
-        uint256 gasLimit
-    ) external onlyEntryPoint returns (bool success) {
-        success = execute(dest, value, func, operation, gasLimit);
-        require(success, "Userop Failed");
     }
 
     function _requireFromEntryPointOrOwner() internal view {

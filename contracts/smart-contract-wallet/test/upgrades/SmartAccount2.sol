@@ -82,7 +82,7 @@ contract SmartAccount2 is SmartAccount {
                     refundInfo.gasToken,
                     refundInfo.refundReceiver
                 );
-                emit WalletHandlePayment(txHash, payment);
+                emit AccountHandlePayment(txHash, payment);
             }
             console.log("goes from v2");
         }
