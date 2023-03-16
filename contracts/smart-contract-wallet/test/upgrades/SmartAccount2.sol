@@ -51,7 +51,8 @@ contract SmartAccount2 is SmartAccount {
         // Bitshift left 6 bits means multiplying by 64, just more gas efficient
         require(
             gasleft() >=
-                max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500,
+                Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) +
+                    500,
             "BSA010"
         );
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors

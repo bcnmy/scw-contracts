@@ -7,6 +7,7 @@ import {FallbackManager} from "./base/FallbackManager.sol";
 import {SignatureDecoder} from "./common/SignatureDecoder.sol";
 import {SecuredTokenTransfer} from "./common/SecuredTokenTransfer.sol";
 import {LibAddress} from "./libs/LibAddress.sol";
+import {Math} from "./libs/Math.sol";
 import {IERC165} from "./interfaces/IERC165.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
 import {ISignatureValidator, ISignatureValidatorConstants} from "./interfaces/ISignatureValidator.sol";
@@ -231,14 +232,6 @@ contract SmartAccount is
         _setupModules(address(0), bytes(""));
     }
 
-    // @review: max and min use from Math.sol instead of re-implemented in the contracts
-    /**
-     * @dev Returns the largest of two numbers.
-     */
-    function max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a >= b ? a : b;
-    }
-
     /**
      * @dev Gnosis style transaction with optional repay in native tokens OR ERC20
      * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
@@ -274,11 +267,12 @@ contract SmartAccount is
         // Bitshift left 6 bits means multiplying by 64, just more gas efficient
         if (
             gasleft() <
-            max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
+            Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
         )
             revert NotEnoughGasLeft(
                 gasleft(),
-                max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
+                Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) +
+                    500
             );
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
