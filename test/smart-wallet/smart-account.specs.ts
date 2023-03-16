@@ -12,12 +12,10 @@ import {
   MockToken,
   MultiSend,
   StorageSetter,
-  DefaultCallbackHandler,
 } from "../../typechain";
-import { fillAndSign } from "../utils/userOp";
-import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
-import { UserOperation } from "../utils/userOpetation";
+import { parseEther } from "ethers/lib/utils";
+import { encodeTransfer } from "./testUtils";
 
 export async function deployEntryPoint(
   provider = ethers.provider
@@ -31,11 +29,6 @@ export const AddressOne = "0x0000000000000000000000000000000000000001";
 
 describe("Smart Account tests", function () {
   let entryPoint: EntryPoint;
-  let walletOwner: Signer;
-  let paymasterAddress: string;
-  let offchainSigner: Signer, deployer: Signer;
-  let offchainSigner2: Signer;
-  let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
   let baseImpl: SmartAccount;
   let whitelistModule: WhitelistModule;
   let socialRecoveryModule: SocialRecoveryModule;
@@ -45,8 +38,6 @@ describe("Smart Account tests", function () {
   let storage: StorageSetter;
   let owner: string;
   let bob: string;
-  let charlie: string;
-  let newAuthority: string;
   let userSCW: any;
   let accounts: any;
   let tx: any;
@@ -55,24 +46,8 @@ describe("Smart Account tests", function () {
     accounts = await ethers.getSigners();
     entryPoint = await deployEntryPoint();
 
-    deployer = accounts[0];
-    offchainSigner = accounts[1];
-    offchainSigner2 = accounts[3];
-    walletOwner = deployer;
-
     owner = await accounts[0].getAddress();
     bob = await accounts[1].getAddress();
-    charlie = await accounts[2].getAddress();
-    newAuthority = await accounts[3].getAddress();
-
-    const offchainSignerAddress = await offchainSigner.getAddress();
-
-    verifyingSingletonPaymaster =
-      await new VerifyingSingletonPaymaster__factory(deployer).deploy(
-        await deployer.getAddress(),
-        entryPoint.address,
-        offchainSignerAddress
-      );
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);
@@ -117,21 +92,6 @@ describe("Smart Account tests", function () {
 
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
-
-    paymasterAddress = verifyingSingletonPaymaster.address;
-    console.log("Paymaster address is ", paymasterAddress);
-
-    await verifyingSingletonPaymaster
-      .connect(deployer)
-      .addStake(10, { value: parseEther("2") });
-    console.log("paymaster staked");
-
-    await verifyingSingletonPaymaster.depositFor(
-      await offchainSigner.getAddress(),
-      { value: ethers.utils.parseEther("1") }
-    );
-
-    await entryPoint.depositTo(paymasterAddress, { value: parseEther("10") });
   });
 
   describe("transfer: take native tokens out of Smart Account", function () {
@@ -169,42 +129,6 @@ describe("Smart Account tests", function () {
       expect(
         await ethers.provider.getBalance(expectedSmartAccountAddress)
       ).to.equal(parseEther("0.5"));
-    });
-
-    it("fail via the entry point call", async () => {
-      // const expectedSmartAccountAddress =
-      //   await walletFactory.getAddressForCounterfactualAccount(owner, 0);
-      // const SmartAccount = await ethers.getContractFactory("SmartAccount");
-      // const txnData = SmartAccount.interface.encodeFunctionData("transfer", [
-      //   bob,
-      //   ethers.utils.parseEther("0.5"),
-      // ]);
-      // const userOp1 = await fillAndSign(
-      //   {
-      //     sender: expectedSmartAccountAddress,
-      //     callData: txnData,
-      //     verificationGasLimit: 200000,
-      //   },
-      //   walletOwner,
-      //   entryPoint
-      // );
-      // console.log("userOp1: ", userOp1);
-      // // Set paymaster data in UserOp
-      // const userOp = await getUserOpWithPaymasterData(
-      //   verifyingSingletonPaymaster,
-      //   expectedSmartAccountAddress,
-      //   userOp1,
-      //   offchainSigner,
-      //   paymasterAddress,
-      //   walletOwner,
-      //   entryPoint
-      // );
-      // const tx = entryPoint.handleOps(
-      //   [userOp],
-      //   await offchainSigner.getAddress()
-      // );
-      // console.log("tx hash: ", tx);
-      // await expect(tx).to.be.reverted;
     });
 
     it("fail if not enough tokens", async () => {
@@ -278,6 +202,48 @@ describe("Smart Account tests", function () {
         .getDeposit();
       console.log("entryPointBalAfter: ", entryPointBalAfter.toString());
       expect(entryPointBalAfter).to.equal(parseEther("1"));
+    });
+  });
+
+  describe("executeCall: can withdraw tokens from entry point", function () {
+    it("fail if called by not owner or entry point", async () => {
+      expect(await token.balanceOf(userSCW.address)).to.equal(
+        parseEther("500")
+      );
+      const txData = encodeTransfer(
+        bob,
+        ethers.utils.parseEther("500").toString()
+      );
+      tx = userSCW
+        .connect(accounts[1]) // via bob
+        .executeCall(token.address, 0, txData);
+      await expect(tx).to.be.revertedWith("CallerIsNotEntryPointOrOwner");
+      expect(await token.balanceOf(userSCW.address)).to.equal(
+        parseEther("500")
+      );
+    });
+
+    it("success if called by the owner", async () => {
+      expect(await token.balanceOf(userSCW.address)).to.equal(
+        parseEther("500")
+      );
+      const txData = encodeTransfer(
+        bob,
+        ethers.utils.parseEther("500").toString()
+      );
+      tx = await userSCW
+        .connect(accounts[0]) // via owner
+        .executeCall(token.address, 0, txData);
+      await tx.wait();
+      expect(await token.balanceOf(userSCW.address)).to.equal(0);
+    });
+  });
+
+  describe("supportsInterface: ERC165", function () {
+    it("should support ERC165", async () => {
+      tx = await userSCW.supportsInterface("0x01ffc9a7");
+      console.log("tx: ", tx);
+      expect(tx).to.equal(true);
     });
   });
 });
