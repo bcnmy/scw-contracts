@@ -81,6 +81,7 @@ describe("Module transactions via AA flow", function () {
   let walletOwner: Signer;
   let paymasterAddress: string;
   let offchainSigner: Signer, deployer: Signer;
+  let offchainSigner2: Signer;
   let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
   let baseImpl: SmartAccount;
   let whitelistModule: WhitelistModule;
@@ -92,6 +93,7 @@ describe("Module transactions via AA flow", function () {
   let owner: string;
   let bob: string;
   let charlie: string;
+  let newAuthority: string;
   let userSCW: any;
   let accounts: any;
   let tx: any;
@@ -102,11 +104,13 @@ describe("Module transactions via AA flow", function () {
 
     deployer = accounts[0];
     offchainSigner = accounts[1];
+    offchainSigner2 = accounts[3];
     walletOwner = deployer;
 
     owner = await accounts[0].getAddress();
     bob = await accounts[1].getAddress();
     charlie = await accounts[2].getAddress();
+    newAuthority = await accounts[3].getAddress();
 
     const offchainSignerAddress = await offchainSigner.getAddress();
 
@@ -981,6 +985,15 @@ describe("Module transactions via AA flow", function () {
 
       console.log("data for executeCall");
 
+      // let's also update offchainSigner
+      await verifyingSingletonPaymaster
+        .connect(accounts[0])
+        .setSigner(await offchainSigner2.getAddress());
+
+      const currentSigner = await verifyingSingletonPaymaster.verifyingSigner();
+
+      expect(currentSigner).to.be.equal(newAuthority);
+
       // const smartAccountCallData = "0x";
       const userOp1 = await fillAndSign(
         {
@@ -1000,9 +1013,9 @@ describe("Module transactions via AA flow", function () {
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
         nonceFromContract.toNumber(),
-        await offchainSigner.getAddress()
+        await offchainSigner.getAddress() // paymaster id is still same as previous offchain signer
       );
-      const sig = await offchainSigner.signMessage(arrayify(hash));
+      const sig = await offchainSigner2.signMessage(arrayify(hash));
       const userOp = await fillAndSign(
         {
           ...userOp1,
