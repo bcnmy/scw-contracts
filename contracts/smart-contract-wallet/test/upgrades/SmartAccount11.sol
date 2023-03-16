@@ -237,8 +237,6 @@ contract SmartAccount11 is
         if (_owner == address(0)) revert OwnerCannotBeZero();
         owner = _owner;
         _setFallbackHandler(_handler);
-        address factory = msg.sender;
-        // can be emitted owner, entryPoint, VERSION, handler
         _setupModules(address(0), bytes(""));
     }
 
