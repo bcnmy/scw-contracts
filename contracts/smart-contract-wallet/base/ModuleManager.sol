@@ -89,9 +89,7 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
                 prevModule
             );
         modules[prevModule] = modules[module];
-        // review if we should delete the module or just set it to address(0)
         delete modules[module];
-        // modules[module] = address(0);
         emit DisabledModule(module);
     }
 

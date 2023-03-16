@@ -156,7 +156,6 @@ contract MaliciousAccount2 is
         return _chainId;
     }
 
-    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -335,7 +334,6 @@ contract MaliciousAccount2 is
         bytes32 s;
         address _signer;
         (v, r, s) = signatureSplit(signatures);
-        //review
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the contract is encoded into r

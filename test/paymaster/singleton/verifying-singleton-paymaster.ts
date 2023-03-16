@@ -200,7 +200,6 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
         walletOwner,
         entryPoint
       );
-      console.log(userOp);
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
       await expect(
         entryPoint.handleOps([userOp], await offchainSigner.getAddress())
@@ -239,7 +238,7 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
       ).deploy();
       const w = SmartAccount__factory.connect(walletAddress, walletOwner);
 
-      await w.executeCall_s1m(
+      await w.executeCall(
         w.address,
         0,
         w.interface.encodeFunctionData("enableModule", [
@@ -268,7 +267,6 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
         walletOwner,
         entryPoint
       );
-      console.log(userOp);
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
       await expect(
         entryPoint.handleOps([userOp], await offchainSigner.getAddress())

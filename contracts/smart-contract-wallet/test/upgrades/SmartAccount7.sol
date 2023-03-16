@@ -139,9 +139,6 @@ contract SmartAccount7 is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    // todo: write test case for updating implementation
-    // review for all methods to be invoked by smart account to self
-    // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
     function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
@@ -149,7 +146,6 @@ contract SmartAccount7 is
         assembly {
             sstore(address(), _implementation)
         }
-        // EOA + Version tracking
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
@@ -167,7 +163,6 @@ contract SmartAccount7 is
         return _chainId;
     }
 
-    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -213,7 +208,6 @@ contract SmartAccount7 is
         return a >= b ? a : b;
     }
 
-    // review: batchId should be carefully designed or removed all together (including 2D nonces)
     // Gnosis style transaction with optional repay in native tokens OR ERC20
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.

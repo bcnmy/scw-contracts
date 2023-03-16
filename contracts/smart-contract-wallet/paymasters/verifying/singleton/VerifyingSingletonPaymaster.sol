@@ -26,18 +26,23 @@ contract VerifyingSingletonPaymaster is
 {
     using ECDSA for bytes32;
     using UserOperationLib for UserOperation;
-    // review
     using PaymasterHelpers for UserOperation;
     using PaymasterHelpers for bytes;
     using PaymasterHelpers for PaymasterData;
 
+    // Gas used in EntryPoint._handlePostOp() method (including this#postOp() call)
+    uint256 private unaccountedEPGasOverhead;
     mapping(address => uint256) public paymasterIdBalances;
 
-    // review for immutable
     address public verifyingSigner;
 
     // paymaster nonce for account
     mapping(address => uint256) private paymasterNonces;
+
+    event EPGasOverheadChanged(
+        uint256 indexed _oldValue,
+        uint256 indexed _newValue
+    );
 
     event VerifyingSignerChanged(
         address indexed _oldSigner,
@@ -66,6 +71,7 @@ contract VerifyingSingletonPaymaster is
         assembly {
             sstore(verifyingSigner.slot, _verifyingSigner)
         }
+        unaccountedEPGasOverhead = 9591;
     }
 
     /**
@@ -122,6 +128,12 @@ contract VerifyingSingletonPaymaster is
             sstore(verifyingSigner.slot, _newVerifyingSigner)
         }
         emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
+    }
+
+    function setUnaccountedEPGasOverhead(uint256 value) external onlyOwner {
+        uint256 oldValue = unaccountedEPGasOverhead;
+        unaccountedEPGasOverhead = value;
+        emit EPGasOverheadChanged(oldValue, value);
     }
 
     /**
@@ -203,7 +215,7 @@ contract VerifyingSingletonPaymaster is
                 requiredPreFund,
                 paymasterIdBalances[paymasterData.paymasterId]
             );
-        return (userOp.paymasterContext(paymasterData), 0);
+        return (userOp.paymasterContext(paymasterData, userOp.gasPrice()), 0);
     }
 
     function _updateNonce(UserOperation calldata userOp) internal {
@@ -225,7 +237,7 @@ contract VerifyingSingletonPaymaster is
         address extractedPaymasterId = data.paymasterId;
         paymasterIdBalances[extractedPaymasterId] =
             paymasterIdBalances[extractedPaymasterId] -
-            actualGasCost;
+            (actualGasCost + unaccountedEPGasOverhead * data.gasPrice);
         emit GasBalanceDeducted(extractedPaymasterId, actualGasCost);
     }
 }

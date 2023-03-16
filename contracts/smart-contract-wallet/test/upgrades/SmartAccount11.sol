@@ -154,8 +154,6 @@ contract SmartAccount11 is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    // review for all methods to be invoked by smart account to self
-    // @todo : this may be replaced by updateImplementationAndCall for reinit needs and such
     // all the new implementations MUST have this method!
     function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation != address(0), "Address cannot be zero");
@@ -165,8 +163,6 @@ contract SmartAccount11 is
         assembly {
             sstore(address(), _implementation)
         }
-        // EOA + Version tracking
-        // review here the second argument it emits is: VERSION upgraded from but not the VERSION it's upgraded to
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
@@ -201,7 +197,6 @@ contract SmartAccount11 is
         return _chainId;
     }
 
-    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
@@ -239,8 +234,6 @@ contract SmartAccount11 is
         if (_owner == address(0)) revert OwnerCannotBeZero();
         owner = _owner;
         _setFallbackHandler(_handler);
-        address factory = msg.sender;
-        // can be emitted owner, entryPoint, VERSION, handler
         _setupModules(address(0), bytes(""));
     }
 

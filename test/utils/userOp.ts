@@ -145,7 +145,7 @@ export const DefaultsForUserOp: UserOperation = {
   callData: "0x",
   callGasLimit: 0,
   verificationGasLimit: 100000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
-  preVerificationGas: 21000, // should also cover calldata cost.
+  preVerificationGas: 0, // should also cover calldata cost.
   maxFeePerGas: 0,
   maxPriorityFeePerGas: 1e9,
   paymasterAndData: "0x",
@@ -287,7 +287,7 @@ export async function fillUserOp(
   // eslint-disable-next-line @typescript-eslint/no-base-to-string
   if (op2.preVerificationGas.toString() === "0") {
     // TODO: we don't add overhead, which is ~21000 for a single TX, but much lower in a batch.
-    op2.preVerificationGas = callDataCost(packUserOp(op2, false));
+    op2.preVerificationGas = callDataCost(packUserOp(op2, false)) + 21000;
   }
   return op2;
 }
@@ -295,11 +295,13 @@ export async function fillUserOp(
 export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
-  entryPoint?: EntryPoint
+  entryPoint?: EntryPoint,
+  extraPreVerificationGas: number = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
   const op2 = await fillUserOp(op, entryPoint);
-
+  op2.preVerificationGas =
+    Number(op2.preVerificationGas) + extraPreVerificationGas;
   const chainId = await provider!.getNetwork().then((net) => net.chainId);
   const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
 

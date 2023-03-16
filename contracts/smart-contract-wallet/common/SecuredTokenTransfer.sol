@@ -15,7 +15,6 @@ abstract contract SecuredTokenTransfer {
         require(token != address(0), "token can not be zero address");
         require(token.code.length > 0, "token contract doesn't exist");
         // 0xa9059cbb - keccack("transfer(address,uint256)")
-        // Review for sig collision and HAL-04 report i
         bytes memory data = abi.encodeWithSelector(
             0xa9059cbb,
             receiver,
