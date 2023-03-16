@@ -102,7 +102,7 @@ describe("Base Wallet Functionality", function () {
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
     const indexForSalt = 0;
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       indexForSalt
     );

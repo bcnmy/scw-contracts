@@ -106,7 +106,7 @@ describe("EIP-1271 Signatures Tests", function () {
     // console.log("Owner of Signer Smart Account is ", owner);
     // Deploy Signer Smart Account owned by Owner
     const signerSmartAccountAddress =
-      await walletFactory.getAddressForCounterfactualAccount(
+      await walletFactory.getAddressForCounterFactualAccount(
         owner,
         deployWalletIndex
       );
@@ -120,7 +120,7 @@ describe("EIP-1271 Signatures Tests", function () {
 
     // Deploy Main Smart Account owned by SignerSmartAccount
     const mainSmartAccountAddress =
-      await walletFactory.getAddressForCounterfactualAccount(
+      await walletFactory.getAddressForCounterFactualAccount(
         signerSmartAccountAddress,
         deployWalletIndex
       );
@@ -377,7 +377,7 @@ describe("EIP-1271 Signatures Tests", function () {
 
     // Deploy Signer Smart Account 2 owned by Owner
     const signerSmartAccount2Address =
-      await walletFactory.getAddressForCounterfactualAccount(
+      await walletFactory.getAddressForCounterFactualAccount(
         owner,
         deployWalletIndex
       );
@@ -391,7 +391,7 @@ describe("EIP-1271 Signatures Tests", function () {
 
     // Deploy Main Smart Account 2 owned by SignerSmartAccount 2
     const mainSmartAccount2Address =
-      await walletFactory.getAddressForCounterfactualAccount(
+      await walletFactory.getAddressForCounterFactualAccount(
         signerSmartAccount2Address,
         deployWalletIndex
       );
@@ -555,7 +555,7 @@ describe("EIP-1271 Signatures Tests", function () {
 
     // Deploy Main Smart Account 2 owned by testValidator
     const mainSmartAccount2Address =
-      await walletFactory.getAddressForCounterfactualAccount(
+      await walletFactory.getAddressForCounterFactualAccount(
         testValidator.address,
         deployWalletIndex
       );

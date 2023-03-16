@@ -37,7 +37,8 @@ contract SmartAccount is
     using ECDSA for bytes32;
     using LibAddress for address;
 
-    string public constant VERSION = "1.0.4"; // using AA 0.4.0
+    // Storage Version
+    string public constant VERSION = "2.0.0";
 
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =

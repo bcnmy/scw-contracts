@@ -33,7 +33,7 @@ describe("Proxy Deployment", function () {
     await walletFactory.deployed();
     console.log("wallet factory deployed at: ", walletFactory.address);
 
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       indexForSalt
     );

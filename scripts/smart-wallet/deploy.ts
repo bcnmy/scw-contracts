@@ -22,7 +22,7 @@ async function main() {
   await handler.deployed();
   console.log("Default callback handler deployed at: ", handler.address); */
 
-  const expected = await walletFactory.getAddressForCounterfactualAccount(
+  const expected = await walletFactory.getAddressForCounterFactualAccount(
     owner,
     0
   );

@@ -99,7 +99,7 @@ describe("Smart Account tests", function () {
       // deploying wallet first
       await walletFactory.deployCounterFactualAccount(owner, 0);
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
       // balance of scw before deposit
       let balance = await ethers.provider.getBalance(
         expectedSmartAccountAddress

@@ -1,4 +1,4 @@
-import { expect } from "chai";
+ import { expect } from "chai";
 import { ethers } from "hardhat";
 import {
   SmartAccount,
@@ -79,7 +79,7 @@ describe("Upgrade to enable Guards", function () {
   });
 
   it("Should deploy a wallet and validate entrypoint", async function () {
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       0
     );
@@ -106,10 +106,10 @@ describe("Upgrade to enable Guards", function () {
 
   it("Should deploy new implementation and upgrade", async function () {
 
-    const BaseImplementation2 = await ethers.getContractFactory(
+    const BaseImplementation12 = await ethers.getContractFactory(
       "SmartAccount12Guard"
     );
-    const baseImpl12 = await BaseImplementation2.deploy(entryPoint.address);
+    const baseImpl12 = await BaseImplementation12.deploy(entryPoint.address);
     await baseImpl12.deployed();
     console.log("Upgraded Smart Account deployed at: ", baseImpl12.address);
 

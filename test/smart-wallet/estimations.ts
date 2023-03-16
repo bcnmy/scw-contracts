@@ -118,7 +118,7 @@ describe("Account Functionality: 4337", function () {
       walletOwnerAddress,
       0
     );
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       walletOwnerAddress,
       0
     );
@@ -225,7 +225,7 @@ describe("Account Functionality: 4337", function () {
     // create new SCW but dont deployCounterFactualAccount
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
     const expectedWallet =
-      await walletFactory.getAddressForCounterfactualAccount(charlie, 10);
+      await walletFactory.getAddressForCounterFactualAccount(charlie, 10);
 
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -319,7 +319,7 @@ describe("Account Functionality: 4337", function () {
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
     await walletFactory.deployCounterFactualAccount(charlie, 11);
     const expectedWallet =
-      await walletFactory.getAddressForCounterfactualAccount(charlie, 11);
+      await walletFactory.getAddressForCounterFactualAccount(charlie, 11);
 
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -414,7 +414,7 @@ describe("Account Functionality: 4337", function () {
     // create new SCW but dont deployCounterFactualAccount
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
     const expectedWallet =
-      await walletFactory.getAddressForCounterfactualAccount(charlie, 12);
+      await walletFactory.getAddressForCounterFactualAccount(charlie, 12);
     const newUserSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
       expectedWallet
