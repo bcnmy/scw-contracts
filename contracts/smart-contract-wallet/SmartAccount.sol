@@ -83,10 +83,6 @@ contract SmartAccount is
         uint256 indexed value
     );
 
-    // todo
-    // emit events like executedTransactionFromModule
-    // emit events with whole information of execTransaction (ref Safe L2)
-
     /**
      * @dev Constructor that sets the owner of the contract and the entry point contract.
      * @param anEntryPoint The address of the entry point contract.
@@ -243,7 +239,7 @@ contract SmartAccount is
      * @notice any further implementations that introduces a new state must have a reinit method
      * @notice init is prevented here by setting owner in the constructor and checking here for address(0)
      */
-    function init(address _owner, address _handler) external override {
+    function init(address _owner, address _handler) external virtual override {
         if (owner != address(0)) revert AlreadyInitialized(address(this));
         if (_owner == address(0)) revert OwnerCannotBeZero();
         owner = _owner;
@@ -447,7 +443,6 @@ contract SmartAccount is
         bytes32 s;
         address _signer;
         (v, r, s) = signatureSplit(signatures);
-        //todo add the test case for contract signature
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the signer contract is encoded into r

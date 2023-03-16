@@ -651,7 +651,6 @@ describe("Module transactions via AA flow", function () {
       const isEnabled = await userSCW.isModuleEnabled(whitelistModule.address);
       expect(isEnabled).to.be.equal(true);
 
-      // Review
       /* expect(
         await userSCW.getModulesPaginated(AddressOne, 10)
       ).to.be.deep.equal([[whitelistModule.address], AddressOne]); */

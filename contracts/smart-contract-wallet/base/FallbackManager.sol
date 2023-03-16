@@ -58,7 +58,6 @@ contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     ///      This can only be done via a smartAccount transaction.
     /// @param handler contract to handle fallback calls.
     function setFallbackHandler(address handler) public authorized {
-        // review - check if this is loading the correct slot, for previousHandler indexing
         address previousHandler;
         // solhint-disable-next-line no-inline-assembly
         assembly {

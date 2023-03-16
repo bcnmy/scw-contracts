@@ -62,7 +62,6 @@ contract SmartAccount7 is
 
     uint256 public immutable _chainId;
 
-    // review
     // mock constructor or use deinitializers
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
     constructor(IEntryPoint anEntryPoint) {
@@ -92,10 +91,6 @@ contract SmartAccount7 is
         address indexed sender,
         uint256 value
     );
-
-    // todo
-    // emit events like executedTransactionFromModule
-    // emit events with whole information of execTransaction (ref Safe L2)
 
     // modifiers
     // onlyOwner
@@ -183,10 +178,7 @@ contract SmartAccount7 is
         return isActive;
     }
 
-    // Note: just because of interface as we're not inherting from previous base!
-    // Todo: Make it easier to inherit from previous base contracts. Make methods internal virtual where it makes sense
-    // @review: abstract contracts and necessary interfaces which might change
-    function init(address _owner, address _handler) external override {
+    function init(address _owner, address _handler) external virtual override {
         require(owner == address(0), "Already initialized");
         require(_owner != address(0), "Invalid owner");
         owner = _owner;
@@ -199,7 +191,6 @@ contract SmartAccount7 is
         isActive = _isMMActive;
     }
 
-    // review: batchId should be carefully designed or removed all together (including 2D nonces)
     // Gnosis style transaction with optional repay in native tokens OR ERC20
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
@@ -356,7 +347,6 @@ contract SmartAccount7 is
         bytes32 s;
         address _signer;
         (v, r, s) = signatureSplit(signatures);
-        //todo add the test case for contract signature
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the signer contract is encoded into r

@@ -163,7 +163,7 @@ contract MaliciousAccount2 is
     }
 
     // init
-    function init(address _owner, address _handler) external override {
+    function init(address _owner, address _handler) external virtual override {
         require(owner == address(0), "Already initialized");
         require(_owner != address(0), "Invalid owner");
         owner = _owner;

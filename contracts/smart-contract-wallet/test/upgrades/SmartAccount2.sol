@@ -5,11 +5,6 @@ import "../../SmartAccount.sol";
 import "hardhat/console.sol";
 
 contract SmartAccount2 is SmartAccount {
-    // AA immutable storage
-    // @review
-    IEntryPoint private immutable _entryPoint;
-
-    // review
     // mock constructor or use deinitializers
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
     constructor(IEntryPoint anEntryPoint) SmartAccount(anEntryPoint) {
@@ -18,8 +13,6 @@ contract SmartAccount2 is SmartAccount {
         // This is an unusable account, perfect for the singleton
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
-        _entryPoint = anEntryPoint;
-        // _chainId = block.chainid;
     }
 
     function execTransaction(

@@ -16,6 +16,13 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     event DisabledModule(address module);
     event ExecutionFromModuleSuccess(address indexed module);
     event ExecutionFromModuleFailure(address indexed module);
+    event ModuleTransaction(
+        address module,
+        address to,
+        uint256 value,
+        bytes data,
+        Enum.Operation operation
+    );
 
     /**
      * @dev Returns array of modules. Useful for a widget
@@ -111,8 +118,10 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
             revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
         success = execute(to, value, data, operation, gasleft());
-        if (success) emit ExecutionFromModuleSuccess(msg.sender);
-        else emit ExecutionFromModuleFailure(msg.sender);
+        if (success) {
+            emit ModuleTransaction(msg.sender, to, value, data, operation);
+            emit ExecutionFromModuleSuccess(msg.sender);
+        } else emit ExecutionFromModuleFailure(msg.sender);
     }
 
     /**
