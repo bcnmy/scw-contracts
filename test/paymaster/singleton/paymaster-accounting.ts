@@ -167,6 +167,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
         .connect(bundler)
         .handleOps([userOp], await bundler.getAddress());
 
+      expect(tx).to.emit(paymaster, "GasBalanceDeducted");
+
       // Check paymaster deposit and paymasterID deposit after executing userOp
       const paymasterDepositAfter = (
         await entryPoint.getDepositInfo(paymasterAddress)
@@ -230,7 +232,7 @@ async function getUserOpWithInitCodeAndPaymasterData(
     },
     walletOwner,
     entryPoint,
-    21385 // _validateAccountAndPaymasterValidationData + compensate + anything unaccounted
+    21685 // _validateAccountAndPaymasterValidationData + compensate + anything unaccounted
   );
 
   // Set paymaster data in UserOp

@@ -235,9 +235,12 @@ contract VerifyingSingletonPaymaster is
     ) internal virtual override {
         PaymasterContext memory data = context._decodePaymasterContext();
         address extractedPaymasterId = data.paymasterId;
+        uint256 balToDeduct = actualGasCost +
+            unaccountedEPGasOverhead *
+            data.gasPrice;
         paymasterIdBalances[extractedPaymasterId] =
             paymasterIdBalances[extractedPaymasterId] -
-            (actualGasCost + unaccountedEPGasOverhead * data.gasPrice);
-        emit GasBalanceDeducted(extractedPaymasterId, actualGasCost);
+            balToDeduct;
+        emit GasBalanceDeducted(extractedPaymasterId, balToDeduct);
     }
 }
