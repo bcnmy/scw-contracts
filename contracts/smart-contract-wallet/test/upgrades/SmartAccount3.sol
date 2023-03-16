@@ -13,7 +13,6 @@ import "../../interfaces/ISignatureValidator.sol";
 import "../../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-
 contract SmartAccount3 is
     BaseSmartAccount,
     ModuleManager,

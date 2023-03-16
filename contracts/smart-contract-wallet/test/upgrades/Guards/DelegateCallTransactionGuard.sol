@@ -6,7 +6,6 @@ import {BaseGuard} from "./GuardManager.sol";
 import {Transaction, FeeRefund} from "../../../BaseSmartAccount.sol";
 
 contract DelegateCallTransactionGuard is BaseGuard {
-
     error DelegateCallGuardRestricted();
 
     address public immutable allowedTarget;
@@ -27,7 +26,10 @@ contract DelegateCallTransactionGuard is BaseGuard {
         bytes memory,
         address
     ) external view override {
-        if(_tx.operation == Enum.Operation.DelegateCall && _tx.to != allowedTarget) revert DelegateCallGuardRestricted();
+        if (
+            _tx.operation == Enum.Operation.DelegateCall &&
+            _tx.to != allowedTarget
+        ) revert DelegateCallGuardRestricted();
     }
 
     function checkAfterExecution(bytes32, bool) external view override {}

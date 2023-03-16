@@ -6,14 +6,13 @@ import {GuardManager, Guard} from "./Guards/GuardManager.sol";
 import "hardhat/console.sol";
 
 contract SmartAccount12Guard is SmartAccount, GuardManager {
-
     constructor(IEntryPoint anEntryPoint) SmartAccount(anEntryPoint) {}
 
     function execTransaction_S6W(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public payable virtual override nonReentrant() returns (bool success) {
+    ) public payable virtual override nonReentrant returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
@@ -47,11 +46,12 @@ contract SmartAccount12Guard is SmartAccount, GuardManager {
         // Bitshift left 6 bits means multiplying by 64, just more gas efficient
         if (
             gasleft() <
-            max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
+            Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
         )
             revert NotEnoughGasLeft(
                 gasleft(),
-                max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
+                Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) +
+                    500
             );
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -136,5 +136,4 @@ contract SmartAccount12Guard is SmartAccount, GuardManager {
                 revert TokenTransferFailed(gasToken, receiver, payment);
         }
     }
-
 }
