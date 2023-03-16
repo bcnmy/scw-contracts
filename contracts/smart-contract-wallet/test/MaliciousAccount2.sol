@@ -156,7 +156,6 @@ contract MaliciousAccount2 is
         return _chainId;
     }
 
-    //@review getNonce specific to EntryPoint requirements
     /**
      * @dev returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
