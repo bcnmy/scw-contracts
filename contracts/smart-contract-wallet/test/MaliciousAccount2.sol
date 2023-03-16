@@ -174,13 +174,6 @@ contract MaliciousAccount2 is
         _setupModules(address(0), bytes(""));
     }
 
-    /**
-     * @dev Returns the largest of two numbers.
-     */
-    function max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a >= b ? a : b;
-    }
-
     // Gnosis style transaction with optional repay in native tokens OR ERC20
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
@@ -214,7 +207,8 @@ contract MaliciousAccount2 is
         // Bitshift left 6 bits means multiplying by 64, just more gas efficient
         require(
             gasleft() >=
-                max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500,
+                Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) +
+                    500,
             "BSA010"
         );
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
