@@ -15,6 +15,14 @@ import {SmartAccountErrors} from "./common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IModule} from "./test/IModule.sol";
 
+/**
+ * @title SmartAccount - Implements a customizable wallet with modular functionality.
+ * @dev This contract is the main entry point for the Smart Account.
+ *         - It is responsible for managing the modules and fallbacks that are attached to the account.
+ *         - It also provides the basic functionality to execute transactions and receive tokens.
+ *         - The account can be used as with modules, such as SocialRecoveryModule.
+ * @author Chirag Titiya - <chirag@biconomy.io>
+ */
 contract SmartAccount is
     BaseSmartAccount,
     ModuleManager,
@@ -29,8 +37,7 @@ contract SmartAccount is
     using ECDSA for bytes32;
     using LibAddress for address;
 
-    // Storage
-    // Version
+    // Storage Version
     string public constant VERSION = "2.0.0";
 
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
@@ -56,23 +63,8 @@ contract SmartAccount is
 
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
-
     uint256 private immutable _chainId;
-
     address private immutable _self;
-
-    // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
-    constructor(IEntryPoint anEntryPoint) {
-        _self = address(this);
-        // By setting the owner it is not possible to call init anymore,
-        // so we create an account with fixed non-zero owner.
-        // This is an unusable account, perfect for the singleton
-        owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-        if (address(anEntryPoint) == address(0))
-            revert EntryPointCannotBeZero();
-        _entryPoint = anEntryPoint;
-        _chainId = block.chainid;
-    }
 
     // Events
     // EOA + Version tracking
@@ -81,7 +73,6 @@ contract SmartAccount is
         string indexed version,
         address indexed newImplementation
     );
-
     event EOAChanged(
         address indexed _scw,
         address indexed _oldEOA,
@@ -97,26 +88,50 @@ contract SmartAccount is
     // emit events like executedTransactionFromModule
     // emit events with whole information of execTransaction (ref Safe L2)
 
-    // modifiers
-    // onlyOwner
     /**
-     * @notice Throws if the sender is not the owner.
+     * @dev Constructor that sets the owner of the contract and the entry point contract.
+     * @param anEntryPoint The address of the entry point contract.
+     */
+    constructor(IEntryPoint anEntryPoint) {
+        _self = address(this);
+        // By setting the owner it is not possible to call init anymore,
+        // so we create an account with fixed non-zero owner.
+        // This is an unusable account, perfect for the singleton
+        owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+        if (address(anEntryPoint) == address(0))
+            revert EntryPointCannotBeZero();
+        _entryPoint = anEntryPoint;
+        _chainId = block.chainid;
+    }
+
+    /// modifiers
+    /**
+     * @dev Modifier to allow only the owner to call the function.
+     * Reverts with CallerIsNotOwner if the caller is not the owner.
      */
     modifier onlyOwner() {
         if (msg.sender != owner) revert CallerIsNotOwner(msg.sender);
         _;
     }
-
-    // onlyOwner OR self
+    /**
+     * @dev Modifier to allow only the owner or the contract itself to call the function.
+     * Reverts with MixedAuthFail if the caller is not the owner or the contract itself.
+     */
     modifier mixedAuth() {
         if (msg.sender != owner && msg.sender != address(this))
             revert MixedAuthFail(msg.sender);
         _;
     }
 
-    // @notice authorized modifier (onlySelf) is already inherited
-
-    // Setters
+    /**
+     * @dev This function allows the owner or entry point to execute certain actions.
+     * If the caller is not authorized, the function will revert with an error message.
+     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     */
+    function _requireFromEntryPointOrOwner() internal view {
+        if (msg.sender != address(entryPoint()) && msg.sender != owner)
+            revert CallerIsNotEntryPointOrOwner(msg.sender);
+    }
 
     /**
      * @dev Allows to change the owner of the smart account by current owner or self-call (modules)
@@ -139,22 +154,11 @@ contract SmartAccount is
         emit EOAChanged(address(this), oldOwner, _newOwner);
     }
 
-    function getImplementation()
-        external
-        view
-        returns (address _implementation)
-    {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            _implementation := sload(address())
-        }
-    }
-
     /**
+     * @notice All the new implementations MUST have this method!
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    // all the new implementations MUST have this method!
     function updateImplementation(
         address _implementation
     ) public virtual mixedAuth {
@@ -169,7 +173,22 @@ contract SmartAccount is
         emit ImplementationUpdated(address(this), VERSION, _implementation);
     }
 
-    // Getters
+    /// Getters
+    /**
+     * @dev Returns the address of the implementation contract associated with this contract.
+     * @notice The implementation address is stored in the contract's storage slot with index 0.
+     */
+    function getImplementation()
+        external
+        view
+        returns (address _implementation)
+    {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            _implementation := sload(address())
+        }
+    }
+
     /**
      * @dev Returns the domain separator for this contract, as defined in the EIP-712 standard.
      * @return bytes32 The domain separator hash.
@@ -210,8 +229,9 @@ contract SmartAccount is
     }
 
     /**
-     * return the entryPoint used by this account.
-     * subclass should return the current entryPoint used by this account.
+     * @dev Returns the current entry point used by this account.
+     * @return EntryPoint as an `IEntryPoint` interface.
+     * @dev This function should be implemented by the subclass to return the current entry point used by this account.
      */
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
@@ -310,6 +330,9 @@ contract SmartAccount is
         }
     }
 
+    /**
+     * @dev Interface function with the standard name for execTransaction_S6W
+     */
     function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
@@ -477,14 +500,16 @@ contract SmartAccount is
         if (_signer != owner) revert InvalidSignature(_signer, owner);
     }
 
-    /// @dev Allows to estimate a transaction.
-    ///      This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
-    ///      Since the `estimateGas` function includes refunds, call this method to get an estimated of the costs that are deducted from the safe with `execTransaction`
-    /// @param to Destination address of Safe transaction.
-    /// @param value Ether value of transaction.
-    /// @param data Data payload of transaction.
-    /// @param operation Operation type of transaction.
-    /// @return Estimate without refunds and overhead fees (base transaction and payload data gas costs).
+    /**
+     * @dev Allows to estimate a transaction.
+     *      This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
+     *      Since the `estimateGas` function includes refunds, call this method to get an estimated of the costs that are deducted from the wallet with `execTransaction`
+     * @param to Destination address of the transaction.
+     * @param value Ether value of transaction.
+     * @param data Data payload of transaction.
+     * @param operation Operation type of transaction.
+     * @return Estimate without refunds and overhead fees (base transaction and payload data gas costs).
+     */
     function requiredTxGas(
         address to,
         uint256 value,
@@ -546,11 +571,13 @@ contract SmartAccount is
         return keccak256(encodeTransactionData(_tx, refundInfo, _nonce));
     }
 
-    /// @dev Returns the bytes that are hashed to be signed by owner.
-    /// @param _tx Wallet transaction
-    /// @param refundInfo Required information for gas refunds
-    /// @param _nonce Transaction nonce.
-    /// @return Transaction hash bytes.
+    /**
+     * @dev Returns the bytes that are hashed to be signed by owner.
+     * @param _tx The wallet transaction to be signed.
+     * @param refundInfo Required information for gas refunds.
+     * @param _nonce Transaction nonce.
+     * @return transactionHash bytes that are hashed to be signed by the owner.
+     */
     function encodeTransactionData(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
@@ -616,8 +643,11 @@ contract SmartAccount is
     }
 
     /**
-     * Execute a transaction (called directly from owner, or by entryPoint)
-     * @dev name is optimized for this method to be cheaper to be called
+     * @dev Execute a transaction (called directly from owner, or by entryPoint)
+     * @notice Name is optimized for this method to be cheaper to be called
+     * @param dest Address of the contract to call
+     * @param value Amount of native tokens to send along with the transaction
+     * @param func Data of the transaction
      */
     function executeCall_s1m(
         address dest,
@@ -629,7 +659,10 @@ contract SmartAccount is
     }
 
     /**
-     * Interface function with the standard name
+     * @dev Interface function with the standard name for executeCall_s1m
+     * @param dest Address of the contract to call
+     * @param value Amount of native tokens to send along with the transaction
+     * @param func Data of the transaction
      */
     function executeCall(
         address dest,
@@ -640,8 +673,11 @@ contract SmartAccount is
     }
 
     /**
-     * Execute a sequence of transactions
-     * @dev name is optimized for this method to be cheaper to be called
+     * @dev Execute a sequence of transactions
+     * @notice Name is optimized for this method to be cheaper to be called
+     * @param dest Addresses of the contracts to call
+     * @param value Amounts of native tokens to send along with the transactions
+     * @param func Data of the transactions
      */
     function executeBatchCall_4by(
         address[] calldata dest,
@@ -664,7 +700,10 @@ contract SmartAccount is
     }
 
     /**
-     * Interface function with the standard name
+     * @dev Interface function with the standard name for executeBatchCall_4by
+     * @param dest Addresses of the contracts to call
+     * @param value Amounts of native tokens to send along with the transactions
+     * @param func Data of the transactions
      */
     function executeBatchCall(
         address[] calldata dest,
@@ -700,15 +739,6 @@ contract SmartAccount is
         }
     }
 
-    function _requireFromEntryPointOrOwner() internal view {
-        if (msg.sender != address(entryPoint()) && msg.sender != owner)
-            revert CallerIsNotEntryPointOrOwner(msg.sender);
-
-        // Compatiblity options, should choose one
-        //if(msg.sender != address(entryPoint()) && msg.sender != owner) revert ("account: not Owner or EntryPoint");
-        //require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
-    }
-
     /**
      * @dev implement template method of BaseAccount
      * @notice Nonce space is locked to 0 for AA transactions
@@ -733,7 +763,10 @@ contract SmartAccount is
     }
 
     /**
-     * @dev implement template method of BaseAccount
+     * @dev Implements the template method of BaseAccount and validates the user's signature for a given operation.
+     * @notice This function is marked as internal and virtual, and it overrides the BaseAccount function of the same name.
+     * @param userOp The user operation to be validated, provided as a `UserOperation` calldata struct.
+     * @param userOpHash The hashed version of the user operation, provided as a `bytes32` value.
      */
     function _validateSignature(
         UserOperation calldata userOp,
@@ -760,21 +793,21 @@ contract SmartAccount is
     }
 
     /**
-     * check current account deposit in the entryPoint
+     * @dev Check current account deposit in the entryPoint
      */
     function getDeposit() public view returns (uint256) {
         return entryPoint().balanceOf(address(this));
     }
 
     /**
-     * deposit more funds for this account in the entryPoint
+     * @dev Deposit more funds for this account in the entryPoint
      */
     function addDeposit() public payable {
         entryPoint().depositTo{value: msg.value}(address(this));
     }
 
     /**
-     * withdraw value from the account's deposit
+     * @dev Withdraw value from the account's deposit
      * @param withdrawAddress target to send to
      * @param amount to withdraw
      */
@@ -796,6 +829,12 @@ contract SmartAccount is
         return _interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
     }
 
+    /**
+     * @dev This function is a special fallback function that is triggered when the contract receives Ether.
+     * It logs an event indicating the amount of Ether received and the sender's address.
+     * @notice This function is marked as external and payable, meaning it can be called from external
+     * sources and accepts Ether as payment.
+     */
     receive() external payable {
         require(address(this) != _self, "only allowed via delegateCall");
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);

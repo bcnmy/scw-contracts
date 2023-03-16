@@ -16,7 +16,6 @@ contract SmartAccount2 is SmartAccount {
         // By setting the owner it is not possible to call init anymore,
         // so we create an account with fixed non-zero owner.
         // This is an unusable account, perfect for the singleton
-        // @review
         owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         require(address(anEntryPoint) != address(0), "Invalid Entrypoint");
         _entryPoint = anEntryPoint;

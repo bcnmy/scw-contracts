@@ -53,8 +53,8 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
 
     /**
      * @dev Allows to add a module to the allowlist.
-     * @notice This can only be done via a Safe transaction.
-     * @notice Enables the module `module` for the Safe.
+     * @notice This can only be done via a wallet transaction.
+     * @notice Enables the module `module` for the wallet.
      * @param module Module to be allow-listed.
      */
     function enableModule(address module) public authorized {
@@ -70,8 +70,8 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
 
     /**
      * @dev Allows to remove a module from the allowlist.
-     * @notice This can only be done via a Safe transaction.
-     * @notice Disables the module `module` for the Safe.
+     * @notice This can only be done via a wallet transaction.
+     * @notice Disables the module `module` for the wallet.
      * @param prevModule Module that pointed to the module to be removed in the linked list
      * @param module Module to be removed.
      */
@@ -94,7 +94,7 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     }
 
     /**
-     * @dev Allows a Module to execute a Safe transaction without any further confirmations.
+     * @dev Allows a Module to execute a wallet transaction without any further confirmations.
      * @param to Destination address of module transaction.
      * @param value Ether value of module transaction.
      * @param data Data payload of module transaction.
@@ -116,7 +116,7 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     }
 
     /**
-     * @dev Allows a Module to execute a Safe transaction without any further confirmations and return data
+     * @dev Allows a Module to execute a wallet transaction without any further confirmations and return data
      * @param to Destination address of module transaction.
      * @param value Ether value of module transaction.
      * @param data Data payload of module transaction.
