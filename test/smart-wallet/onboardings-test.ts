@@ -189,7 +189,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   // describe("Wallet initialization", function () {
   it("Should estimate wallet deployment", async function () {
     const indexForSalt = 0;
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       indexForSalt
     );
@@ -302,7 +302,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
   it("Should estimate gas sending transaction from an undeployed wallet", async function () {
     const saltForFreshWallet = 1; // we have deployed with salt 0 so far already above.
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       saltForFreshWallet
     );
@@ -429,7 +429,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   // Review if the first transaction fails
   it("Should estimate wallet deployment and send first transacton", async function () {
     const saltForFreshWallet = 2; // we have deployed with salt 0 and 1 so far already above.
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       saltForFreshWallet
     );
@@ -550,7 +550,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
 
   /* it("Should estimate wallet deployment and enable module", async function () {
     const indexForSalt = 1;
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       baseImpl.address,
       handler.address,
       owner,
@@ -663,7 +663,7 @@ describe("Wallet deployment cost estimation in various onbaording flows", functi
   });
 
   it("Should estimate wallet deployment, enable module and send basic lego", async function () {
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       baseImpl.address,
       handler.address,
       owner,

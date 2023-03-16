@@ -30,7 +30,7 @@ contract SmartAccount3 is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.4"; // using AA 0.4.0
+    string public constant VERSION = "1.0.0"; // using AA 0.4.0
 
     // Domain Seperators
     // keccak256(
@@ -55,7 +55,6 @@ contract SmartAccount3 is
 
     uint256 public immutable _chainId;
 
-    // review
     // mock constructor or use deinitializers
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
     constructor(IEntryPoint anEntryPoint) {
@@ -69,10 +68,8 @@ contract SmartAccount3 is
     }
 
     // Events
-    // EOA + Version tracking
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
 
@@ -86,10 +83,6 @@ contract SmartAccount3 is
         address indexed sender,
         uint256 value
     );
-
-    // todo
-    // emit events like executedTransactionFromModule
-    // emit events with whole information of execTransaction (ref Safe L2)
 
     // modifiers
     // onlyOwner
@@ -138,7 +131,7 @@ contract SmartAccount3 is
         assembly {
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // Getters
@@ -176,7 +169,7 @@ contract SmartAccount3 is
     // init
     // Initialize / Setup
     // Used to setup
-    function init(address _owner, address _handler) external override {
+    function init(address _owner, address _handler) external virtual override {
         require(owner == address(0), "Already initialized");
         require(_owner != address(0), "Invalid owner");
         owner = _owner;
@@ -343,7 +336,6 @@ contract SmartAccount3 is
         bytes32 s;
         address _signer;
         (v, r, s) = signatureSplit(signatures);
-        //todo add the test case for contract signature
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the signer contract is encoded into r

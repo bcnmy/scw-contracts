@@ -55,10 +55,9 @@ contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
 
     /// @dev Allows to add a contract to handle fallback calls.
     ///      Only fallback calls without value and with data will be forwarded.
-    ///      This can only be done via a Safe transaction.
+    ///      This can only be done via a smartAccount transaction.
     /// @param handler contract to handle fallback calls.
     function setFallbackHandler(address handler) public authorized {
-        // review - check if this is loading the correct slot, for previousHandler indexing
         address previousHandler;
         // solhint-disable-next-line no-inline-assembly
         assembly {

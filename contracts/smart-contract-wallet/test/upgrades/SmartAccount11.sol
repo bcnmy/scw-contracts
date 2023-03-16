@@ -12,7 +12,6 @@ import {SmartAccountErrors} from "../../common/Errors.sol";
 import "../../interfaces/ISignatureValidator.sol";
 import "../../interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "hardhat/console.sol";
 
 contract SmartAccount11 is
     BaseSmartAccount,
@@ -31,7 +30,7 @@ contract SmartAccount11 is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.4"; // using AA 0.4.0
+    string public constant VERSION = "1.0.0"; // using AA 0.4.0
 
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
@@ -75,10 +74,8 @@ contract SmartAccount11 is
     }
 
     // Events
-    // EOA + Version tracking
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
 
@@ -92,10 +89,6 @@ contract SmartAccount11 is
         address indexed sender,
         uint256 indexed value
     );
-
-    // todo
-    // emit events like executedTransactionFromModule
-    // emit events with whole information of execTransaction (ref Safe L2)
 
     // modifiers
     // onlyOwner
@@ -163,7 +156,7 @@ contract SmartAccount11 is
         assembly {
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // either this and check for specific _data
@@ -229,20 +222,12 @@ contract SmartAccount11 is
      * @notice any further implementations that introduces a new state must have a reinit method
      * @notice init is prevented here by setting owner in the constructor and checking here for address(0)
      */
-    function init(address _owner, address _handler) external override {
+    function init(address _owner, address _handler) external virtual override {
         if (owner != address(0)) revert AlreadyInitialized(address(this));
         if (_owner == address(0)) revert OwnerCannotBeZero();
         owner = _owner;
         _setFallbackHandler(_handler);
         _setupModules(address(0), bytes(""));
-    }
-
-    // @review: max and min use from Math.sol instead of re-implemented in the contracts
-    /**
-     * @dev Returns the largest of two numbers.
-     */
-    function max(uint256 a, uint256 b) internal pure returns (uint256) {
-        return a >= b ? a : b;
     }
 
     /**
@@ -279,11 +264,12 @@ contract SmartAccount11 is
         // Bitshift left 6 bits means multiplying by 64, just more gas efficient
         if (
             gasleft() <
-            max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
+            Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
         )
             revert NotEnoughGasLeft(
                 gasleft(),
-                max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
+                Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) +
+                    500
             );
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -317,7 +303,6 @@ contract SmartAccount11 is
                 );
                 emit AccountHandlePayment(txHash, payment);
             }
-            console.log("Goes through 11");
         }
     }
 
@@ -437,7 +422,6 @@ contract SmartAccount11 is
         bytes32 s;
         address _signer;
         (v, r, s) = signatureSplit(signatures);
-        //todo add the test case for contract signature
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the signer contract is encoded into r

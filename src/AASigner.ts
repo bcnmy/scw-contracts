@@ -238,7 +238,7 @@ export class AASigner extends Signer {
     return getCreate2Address(Create2Factory.contractAddress, HashZero, keccak256(await this._deploymentTransaction()))
   }
 
-  // TODO TODO: THERE IS UTILS.getAccountInitCode - why not use that?
+  // TODO: THERE IS UTILS.getAccountInitCode - why not use that?
   async _deploymentTransaction (): Promise<BytesLike> {
     const implementationAddress = zeroAddress() // TODO: pass implementation in here
     const ownerAddress = await this.signer.getAddress()

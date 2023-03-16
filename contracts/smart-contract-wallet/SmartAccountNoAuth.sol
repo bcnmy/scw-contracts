@@ -28,7 +28,7 @@ contract SmartAccountNoAuth is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.4"; // aa 0.4.0 rebase
+    string public constant VERSION = "1.0.0"; // aa 0.4.0 rebase
 
     // Domain Seperators
     // keccak256(
@@ -37,7 +37,6 @@ contract SmartAccountNoAuth is
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
         0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
-    // todo? rename wallet to account
     // keccak256(
     //     "WalletTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,address gasToken,address refundReceiver,uint256 nonce)"
     // );
@@ -68,11 +67,8 @@ contract SmartAccountNoAuth is
     }
 
     // Events
-    // EOA + Version tracking
-    // Review when you keep it bytes32 it doesn't match with string value in testCase emit.withArgs
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
 
@@ -138,7 +134,7 @@ contract SmartAccountNoAuth is
             sstore(address(), _implementation)
         }
         // EOA + Version tracking
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // Getters
@@ -172,7 +168,7 @@ contract SmartAccountNoAuth is
     // Initialize / Setup
     // Used to setup
     // i. owner ii. entry point address iii. handler
-    function init(address _owner, address _handler) external override {
+    function init(address _owner, address _handler) external virtual override {
         require(owner == address(0), "Already initialized");
         require(_owner != address(0), "Invalid owner");
         owner = _owner;
@@ -181,11 +177,13 @@ contract SmartAccountNoAuth is
     }
 
     // Gnosis style transaction with optional repay in native tokens OR ERC20
-    /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
-    /// Note: The fees are always transferred, even if the user transaction fails.
-    /// @param _tx Wallet transaction
-    /// @param refundInfo Required information for gas refunds
-    /// @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
+    /**
+     * @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
+     * @notice The fees are always transferred, even if the user transaction fails.
+     * @param _tx Wallet transaction
+     * @param refundInfo Required information for gas refunds
+     * @param signatures Packed signature data ({bytes32 r}{bytes32 s}{uint8 v})
+     */
     function execTransaction(
         Transaction memory _tx,
         FeeRefund memory refundInfo,
@@ -329,7 +327,6 @@ contract SmartAccountNoAuth is
         bytes32 s;
         address _signer;
         (v, r, s) = signatureSplit(signatures);
-        //todo add the test case for contract signature
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the contract is encoded into r

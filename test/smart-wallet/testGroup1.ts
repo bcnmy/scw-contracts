@@ -102,7 +102,7 @@ describe("Base Wallet Functionality", function () {
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
     const indexForSalt = 0;
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       indexForSalt
     );
@@ -162,7 +162,7 @@ describe("Base Wallet Functionality", function () {
     ).to.be.reverted;
 
     // Without enabling module one can't send transactions
-    // invoking safe from module without enabling it!
+    // invoking wallet from module without enabling it!
     await expect(
       whitelistModule
         .connect(accounts[2])

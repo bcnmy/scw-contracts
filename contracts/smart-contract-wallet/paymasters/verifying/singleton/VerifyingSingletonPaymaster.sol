@@ -11,13 +11,13 @@ import {PaymasterHelpers, PaymasterData, PaymasterContext} from "../../Paymaster
 import {SingletonPaymasterErrors} from "../../../common/Errors.sol";
 
 /**
- * A sample paymaster that uses external service to decide whether to pay for the UserOp.
- * The paymaster trusts an external signer to sign the transaction.
- * The calling user must pass the UserOp to that external signer first, which performs
- * whatever off-chain verification before signing the UserOp.
- * Note that this signature is NOT a replacement for wallet signature:
- * - the paymaster signs to agree to PAY for GAS.
- * - the wallet signs to prove identity and wallet ownership.
+ * @title A sample paymaster that uses external service to decide whether to pay for the UserOp.
+ * @dev The paymaster trusts an external signer to sign the transaction.
+ * The calling user must pass the UserOp to that external signer first, which performs whatever
+ * off-chain verification before signing the UserOp.
+ * @notice That this signature is NOT a replacement for wallet signature:
+ *  - The paymaster signs to agree to PAY for GAS.
+ *  - The wallet signs to prove identity and wallet ownership.
  */
 contract VerifyingSingletonPaymaster is
     BasePaymaster,
@@ -75,7 +75,7 @@ contract VerifyingSingletonPaymaster is
     }
 
     /**
-     * @dev add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
+     * @dev Add a deposit for this paymaster and given paymasterId (Dapp Depositor address), used for paying for transaction fees
      * @param paymasterId dapp identifier for which deposit is being made
      */
     function depositFor(address paymasterId) external payable nonReentrant {
@@ -98,10 +98,18 @@ contract VerifyingSingletonPaymaster is
         balance = paymasterIdBalances[paymasterId];
     }
 
+    /**
+     @dev Override the default implementation.
+     */
     function deposit() public payable virtual override {
         revert("user DepositFor instead");
     }
 
+    /**
+     * @dev Withdraws the specified amount of gas tokens from the paymaster's balance and transfers them to the specified address.
+     * @param withdrawAddress The address to which the gas tokens should be transferred.
+     * @param amount The amount of gas tokens to withdraw.
+     */
     function withdrawTo(
         address payable withdrawAddress,
         uint256 amount
@@ -118,8 +126,12 @@ contract VerifyingSingletonPaymaster is
     }
 
     /**
-    this function will let owner change signer
-    */
+     * @dev Set a new verifying signer address.
+     * Can only be called by the owner of the contract.
+     * @param _newVerifyingSigner The new address to be set as the verifying signer.
+     * @notice If _newVerifyingSigner is set to zero address, it will revert with an error.
+     * After setting the new signer address, it will emit an event VerifyingSignerChanged.
+     */
     function setSigner(address _newVerifyingSigner) external payable onlyOwner {
         if (_newVerifyingSigner == address(0))
             revert VerifyingSignerCannotBeZero();
@@ -137,11 +149,11 @@ contract VerifyingSingletonPaymaster is
     }
 
     /**
-     * return the hash we're going to sign off-chain (and validate on-chain)
-     * this method is called by the off-chain service, to sign the request.
-     * it is called on-chain from the validatePaymasterUserOp, to validate the signature.
-     * note that this signature covers all fields of the UserOperation, except the "paymasterAndData",
+     * @dev This method is called by the off-chain service, to sign the request.
+     * It is called on-chain from the validatePaymasterUserOp, to validate the signature.
+     * @notice That this signature covers all fields of the UserOperation, except the "paymasterAndData",
      * which will carry the signature itself.
+     * @return hash we're going to sign off-chain (and validate on-chain)
      */
     function getHash(
         UserOperation calldata userOp,
@@ -184,8 +196,13 @@ contract VerifyingSingletonPaymaster is
     }
 
     /**
-     * verify our external signer signed this request.
-     * the "paymasterAndData" is expected to be the paymaster and a signature over the entire request params
+     * @dev Verify that an external signer signed the paymaster data of a user operation.
+     * The paymaster data is expected to be the paymaster and a signature over the entire request parameters.
+     * @param userOp The UserOperation struct that represents the current user operation.
+     * userOpHash The hash of the UserOperation struct.
+     * @param requiredPreFund The required amount of pre-funding for the paymaster.
+     * @return context A context string returned by the entry point after successful validation.
+     * @return validationData An integer returned by the entry point after successful validation.
      */
     function _validatePaymasterUserOp(
         UserOperation calldata userOp,

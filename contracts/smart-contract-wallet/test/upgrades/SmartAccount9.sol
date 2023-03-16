@@ -72,11 +72,9 @@ contract SmartAccount9 is
     }
 
     // Events
-    // EOA + Version tracking
     event ImplementationUpdated(
-        address _scw,
-        string version,
-        address newImplementation
+        address indexed oldImplementation,
+        address indexed newImplementation
     );
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
     event EOAChanged(
@@ -89,10 +87,6 @@ contract SmartAccount9 is
         address indexed sender,
         uint256 value
     );
-
-    // todo
-    // emit events like executedTransactionFromModule
-    // emit events with whole information of execTransaction (ref Safe L2)
 
     // modifiers
     // onlyOwner
@@ -141,7 +135,7 @@ contract SmartAccount9 is
         assembly {
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // Getters
@@ -193,7 +187,6 @@ contract SmartAccount9 is
         _setupModules(address(0), bytes(""));
     }
 
-    // review: batchId should be carefully designed or removed all together (including 2D nonces)
     // Gnosis style transaction with optional repay in native tokens OR ERC20
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
@@ -353,7 +346,6 @@ contract SmartAccount9 is
         bytes32 s;
         address _signer;
         (v, r, s) = signatureSplit(signatures);
-        //todo add the test case for contract signature
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the signer contract is encoded into r

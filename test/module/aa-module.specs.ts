@@ -186,7 +186,7 @@ describe("Module transactions via AA flow", function () {
       // deploying wallet first
       await walletFactory.deployCounterFactualAccount(owner, 0);
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
 
       const userOp1 = await fillAndSign(
         {
@@ -217,7 +217,7 @@ describe("Module transactions via AA flow", function () {
       // Now the wallet with owner and index 0 is deployed!
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
 
       // May use
       userSCW = await ethers.getContractAt(
@@ -279,7 +279,7 @@ describe("Module transactions via AA flow", function () {
       // // Now here also the wallet with owner and index 0 should have been deployed
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
 
       const code = await ethers.provider.getCode(expectedSmartAccountAddress);
       console.log("wallet code is: ", code);
@@ -348,7 +348,7 @@ describe("Module transactions via AA flow", function () {
       // also it has the owner accounts[5]
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
       // although owner is different we get the same address by previous owner
 
       userSCW = await ethers.getContractAt(
@@ -421,7 +421,7 @@ describe("Module transactions via AA flow", function () {
       // also it has the owner accounts[5]
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 0);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
       // although owner is different we get the same address by previous owner
 
       userSCW = await ethers.getContractAt(
@@ -534,7 +534,7 @@ describe("Module transactions via AA flow", function () {
       // will deploy a new wallet with index 1
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 1);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 1);
 
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -632,7 +632,7 @@ describe("Module transactions via AA flow", function () {
       // Now here also the wallet with owner and index 1 should have been deployed
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 1);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 1);
 
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -651,7 +651,6 @@ describe("Module transactions via AA flow", function () {
       const isEnabled = await userSCW.isModuleEnabled(whitelistModule.address);
       expect(isEnabled).to.be.equal(true);
 
-      // Review
       /* expect(
         await userSCW.getModulesPaginated(AddressOne, 10)
       ).to.be.deep.equal([[whitelistModule.address], AddressOne]); */
@@ -746,7 +745,7 @@ describe("Module transactions via AA flow", function () {
       // will deploy a new wallet with index 2
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 2);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 2);
 
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
@@ -925,7 +924,7 @@ describe("Module transactions via AA flow", function () {
       // Now here also the wallet with owner and index 2 should have been deployed
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 2);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 2);
 
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",

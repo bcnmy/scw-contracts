@@ -20,9 +20,9 @@ contract SmartAccount5 is
     FallbackManager,
     SignatureDecoder,
     SecuredTokenTransfer,
-    ReentrancyGuard,
     ISignatureValidatorConstants,
     IERC165,
+    ReentrancyGuard,
     SmartAccountErrors
 {
     using ECDSA for bytes32;
@@ -31,7 +31,7 @@ contract SmartAccount5 is
     // Storage
 
     // Version
-    string public constant VERSION = "1.0.4"; // using AA 0.4.0
+    string public constant VERSION = "1.0.0"; // using AA 0.4.0
 
     // Domain Seperators
     // keccak256(
@@ -62,7 +62,6 @@ contract SmartAccount5 is
 
     uint256 public immutable _chainId;
 
-    // review
     // mock constructor or use deinitializers
     // This constructor ensures that this contract can only be used as a master copy for Proxy accounts
     constructor(IEntryPoint anEntryPoint) {
@@ -76,10 +75,8 @@ contract SmartAccount5 is
     }
 
     // Events
-    // EOA + Version tracking
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
 
@@ -93,10 +90,6 @@ contract SmartAccount5 is
         address indexed sender,
         uint256 value
     );
-
-    // todo
-    // emit events like executedTransactionFromModule
-    // emit events with whole information of execTransaction (ref Safe L2)
 
     // modifiers
     // onlyOwner
@@ -146,7 +139,7 @@ contract SmartAccount5 is
             sstore(address(), _implementation)
         }
         // EOA + Version tracking
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // Getters
@@ -184,7 +177,7 @@ contract SmartAccount5 is
     // init
     // Initialize / Setup
     // Used to setup
-    function init(address _owner, address _handler) external override {
+    function init(address _owner, address _handler) external virtual override {
         require(owner == address(0), "Already initialized");
         require(_owner != address(0), "Invalid owner");
         owner = _owner;
@@ -192,7 +185,6 @@ contract SmartAccount5 is
         _setupModules(address(0), bytes(""));
     }
 
-    // review: batchId should be carefully designed or removed all together (including 2D nonces)
     // Gnosis style transaction with optional repay in native tokens OR ERC20
     /// @dev Allows to execute a Safe transaction confirmed by required number of owners and then pays the account that submitted the transaction.
     /// Note: The fees are always transferred, even if the user transaction fails.
@@ -342,7 +334,6 @@ contract SmartAccount5 is
         bytes32 s;
         address _signer;
         (v, r, s) = signatureSplit(signatures);
-        //todo add the test case for contract signature
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the signer contract is encoded into r
