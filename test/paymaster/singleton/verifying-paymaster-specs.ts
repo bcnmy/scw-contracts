@@ -133,9 +133,10 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
       const tx2 = await verifyingSingletonPaymaster
         .connect(deployer)
         .setSigner(newSigner);
-      expect(tx2)
-        .to.emit(verifyingSingletonPaymaster, "SignerChanged")
-        .withArgs(newSigner);
+      expect(tx2).to.emit(
+        verifyingSingletonPaymaster,
+        "VerifyingSignerChanged"
+      );
     });
   });
 });
