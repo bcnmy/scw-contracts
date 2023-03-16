@@ -23,7 +23,7 @@ struct Transaction {
 struct FeeRefund {
     uint256 baseGas;
     uint256 gasPrice; //gasPrice or tokenGasPrice
-    uint256 tokenGasPriceFactor;
+    uint256 tokenGasPriceFactor; 
     address gasToken;
     address payable refundReceiver;
 }
