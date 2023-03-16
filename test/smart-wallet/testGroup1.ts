@@ -225,7 +225,11 @@ describe("Base Wallet Functionality", function () {
     );
     tx = await userSCW
       .connect(accounts[0])
-      .executeBatchCall_4by([token.address, token.address], [0, 0], [data, data2]);
+      .executeBatchCall_4by(
+        [token.address, token.address],
+        [0, 0],
+        [data, data2]
+      );
     await tx.wait();
 
     expect(await token.balanceOf(bob)).to.equal(ethers.utils.parseEther("20"));
