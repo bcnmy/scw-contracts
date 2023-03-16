@@ -78,7 +78,7 @@ contract MaliciousAccount2 is
         address indexed _oldEOA,
         address indexed _newEOA
     );
-    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
+    event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
 
     // modifiers
     // onlyOwner
@@ -249,7 +249,7 @@ contract MaliciousAccount2 is
                     refundInfo.gasToken,
                     refundInfo.refundReceiver
                 );
-                emit WalletHandlePayment(txHash, payment);
+                emit AccountHandlePayment(txHash, payment);
             }
             // extraGas = extraGas - gasleft();
             //console.log("extra gas %s ", extraGas);

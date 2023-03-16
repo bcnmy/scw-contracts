@@ -82,14 +82,10 @@ contract SmartAccount3 is
         address indexed _oldEOA,
         address indexed _newEOA
     );
-    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
+    event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(
         address indexed sender,
         uint256 value
-    );
-    event SmartAccountInitialized(
-        address indexed _owner,
-        address indexed _handler
     );
 
     // todo
@@ -277,7 +273,7 @@ contract SmartAccount3 is
                     refundInfo.gasToken,
                     refundInfo.refundReceiver
                 );
-                emit WalletHandlePayment(txHash, payment);
+                emit AccountHandlePayment(txHash, payment);
             }
             console.log("goes from v3");
         }

@@ -84,16 +84,10 @@ contract SmartAccount is
         address indexed _oldEOA,
         address indexed _newEOA
     );
-    event WalletHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
+    event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(
         address indexed sender,
         uint256 indexed value
-    );
-    event SmartAccountInitialized(
-        address indexed _owner,
-        address indexed _handler,
-        string indexed _version,
-        address _entryPoint
     );
 
     // todo
@@ -244,12 +238,6 @@ contract SmartAccount is
         _setFallbackHandler(_handler);
         address factory = msg.sender;
         // can be emitted owner, entryPoint, VERSION, handler
-        emit SmartAccountInitialized(
-            _owner,
-            _handler,
-            VERSION,
-            address(_entryPoint)
-        );
         _setupModules(address(0), bytes(""));
     }
 
@@ -332,7 +320,7 @@ contract SmartAccount is
                     refundInfo.gasToken,
                     refundInfo.refundReceiver
                 );
-                emit WalletHandlePayment(txHash, payment);
+                emit AccountHandlePayment(txHash, payment);
             }
         }
     }
