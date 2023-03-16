@@ -1,12 +1,3 @@
-# Biconomy Smart Account Contracts v1.0 contest details
-
-- \$TBD USDT main award pot
-- \$TBD USDT gas optimization award pot
-- Join [C4 Discord](https://discord.gg/code4rena) to register
-- Submit findings [using the C4 form](https://code4rena.com/contests/)
-- [Read our guidelines for more details](https://docs.code4rena.com/roles/wardens)
-- Starts 
-- Ends 
 
 # Biconomy Smart Account (Smart Contract Wallet) Overview
 
@@ -20,14 +11,13 @@ These smart wallets have a single owner (1/1 Multisig) and are designed in such 
 - Modules can be used to extend the functionality of the smart contract wallet. Concepts like multi-sig, session keys, etc also can be implemented using the MultiSig Module, SessionKey Module & so on.
 
 ## Smart Contracts
-All the contracts in this section are to be reviewed. Any contracts not in this list are to be ignored for this contest.
 
 #### BaseSmartAccount.sol (51 sloc)
 Abstract contract that implements EIP4337 IWallet interface 
 defines set of methods (compatible with EIP and Biconomy SDK) that all Smart Wallets must implement
 
 #### Proxy.sol (26 sloc)
-EIP1167 Proxy
+lightweight Proxy which can be upgraded using UUPS pattern
 
 #### SmartAccountFactory.sol (38 sloc)
 Constract responsible for deploying smart wallets aka accounts using create2 and create
@@ -41,7 +31,7 @@ salt consists of _owner and _index. _entryPoint and _handler are required to ini
 #### SmartAccount.sol (332 sloc)
 Base implementation contract for smart wallet
 reference 1 : https://docs.gnosis-safe.io/contracts
-reference 2 : https://github.com/eth-infinitism/account-abstraction/blob/develop/contracts/samples/SimpleWallet.sol
+reference 2 : https://github.com/eth-infinitism/account-abstraction/blob/master/contracts/samples/SimpleAccount.sol
 notes: 
 1) reverting methods are used for gas estimations
 2) transactions happen via EOA signature by calling execTransaction or validateUserOp and execFromEntryPoint via entry point
@@ -49,11 +39,11 @@ notes:
 4) ECDSA used ofr signature verification. contract signatures are suppoprted using EIP1271 (not extensively tested on protocols!)
 
 #### EntryPoint.sol (344 sloc)
-EIP4337 Entry Point contract (https://blog.openzeppelin.com/eth-foundation-account-abstraction-audit/)
+EIP4337 Entry Point contract (https://blog.openzeppelin.com/eip-4337-ethereum-account-abstraction-incremental-audit/)
 
 #### StakeManager.sol (76 sloc)
 Stake Manager for wallet and paymaster deposits / stakes
-https://blog.openzeppelin.com/eth-foundation-account-abstraction-audit/
+https://blog.openzeppelin.com/eip-4337-ethereum-account-abstraction-incremental-audit/
 
 #### Executor.sol (25 sloc)
 helper contract to make calls and delegatecalls to dapp contracts
@@ -76,50 +66,11 @@ MultiSend functionality but reverts if a transaction tries to do delegatecall
  #### PaymasterHelpers.sol ()
  Library useful for decoding paymaster data and context
 
-
- ## Total Number of contracts and their respective paths in scope
- #### Please exclude everything else
-
- contracts/smart-contract-wallet/aa-4337/core/EntryPoint.sol
- contracts/smart-contract-wallet/aa-4337/core/SenderCreator.sol
- contracts/smart-contract-wallet/aa-4337/core/StakeManager.sol
- contracts/smart-contract-wallet/aa-4337/interfaces/IAccount.sol
- contracts/smart-contract-wallet/aa-4337/interfaces/IPaymaster.sol
- contracts/smart-contract-wallet/aa-4337/interfaces/IAggregatedAccount.sol
- contracts/smart-contract-wallet/aa-4337/interfaces/IEntryPoint.sol
- contracts/smart-contract-wallet/aa-4337/utils/Exec.sol
- contracts/smart-contract-wallet/aa-4337/interfaces/IStakeManager.sol 
- contracts/smart-contract-wallet/aa-4337/interfaces/UserOperation.sol
- contracts/smart-contract-wallet/aa-4337/interfaces/IAggregator.sol
- contracts/smart-contract-wallet/BaseSmartAccount.sol
- contracts/smart-contract-wallet/common/Enum.sol
- contracts/smart-contract-wallet/Proxy.sol
- contracts/smart-contract-wallet/SmartAccount.sol
- contracts/smart-contract-wallet/common/Singleton.sol 
- contracts/smart-contract-wallet/interfaces/IERC165.sol
- contracts/smart-contract-wallet/base/ModuleManager.sol
- contracts/smart-contract-wallet/base/FallbackManager.sol
- contracts/smart-contract-wallet/common/SignatureDecoder.sol
- contracts/smart-contract-wallet/common/SecuredTokenTransfer.sol
- contracts/smart-contract-wallet/interfaces/ISignatureValidator.sol
- contracts/smart-contract-wallet/SmartAccountFactory.sol
- contracts/smart-contract-wallet/base/Executor.sol
- contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol
- contracts/smart-contract-wallet/interfaces/IERC1155TokenReceiver.sol
- contracts/smart-contract-wallet/interfaces/IERC721TokenReceiver.sol
- contracts/smart-contract-wallet/interfaces/IERC777TokensRecipient.sol
- contracts/smart-contract-wallet/libs/LibAddress.sol
- contracts/smart-contract-wallet/libs/Math.sol
- contracts/smart-contract-wallet/libs/MultiSend.sol
- contracts/smart-contract-wallet/libs/MultiSendCallOnly.sol
- contracts/smart-contract-wallet/paymasters/BasePaymaster.sol
- contracts/smart-contract-wallet/paymasters/PaymasterHelpers.sol
- contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol
-
-
 # How to run the project
 
 This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
+
+You're going to need to place a mnemonic in .secret file in the root.
 
 The project comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts. It also comes with a variety of other tools, preconfigured to work with the project code.
 
