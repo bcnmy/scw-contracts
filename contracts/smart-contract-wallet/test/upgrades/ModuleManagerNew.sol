@@ -31,8 +31,8 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
     }
 
     /// @dev Allows to add a module to the whitelist.
-    ///      This can only be done via a Safe transaction.
-    /// @notice Enables the module `module` for the Safe.
+    ///      This can only be done via a wallet transaction.
+    /// @notice Enables the module `module` for the wallet.
     /// @param module Module to be whitelisted.
     function enableModule(address module) public authorized {
         // Module address cannot be null or sentinel.
@@ -45,8 +45,8 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
     }
 
     /// @dev Allows to remove a module from the whitelist.
-    ///      This can only be done via a Safe transaction.
-    /// @notice Disables the module `module` for the Safe.
+    ///      This can only be done via a wallet transaction.
+    /// @notice Disables the module `module` for the wallet.
     /// @param prevModule Module that pointed to the module to be removed in the linked list
     /// @param module Module to be removed.
     function disableModule(
@@ -61,7 +61,7 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         emit DisabledModule(module);
     }
 
-    /// @dev Allows a Module to execute a Safe transaction without any further confirmations.
+    /// @dev Allows a Module to execute a wallet transaction without any further confirmations.
     /// @param to Destination address of module transaction.
     /// @param value Ether value of module transaction.
     /// @param data Data payload of module transaction.
@@ -84,7 +84,7 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         else emit ExecutionFromModuleFailure(msg.sender);
     }
 
-    /// @dev Allows a Module to execute a Safe transaction without any further confirmations and return data
+    /// @dev Allows a Module to execute a wallet transaction without any further confirmations and return data
     /// @param to Destination address of module transaction.
     /// @param value Ether value of module transaction.
     /// @param data Data payload of module transaction.

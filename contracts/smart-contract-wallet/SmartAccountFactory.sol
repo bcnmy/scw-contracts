@@ -6,8 +6,10 @@ import "./BaseSmartAccount.sol";
 import {DefaultCallbackHandler} from "./handler/DefaultCallbackHandler.sol";
 import {SmartAccountFactoryErrors} from "./common/Errors.sol";
 
-/// @title Smart Account Factory - factory responsible for deploying smart account using CREATE2 and CREATE
-/// @author Chirag Titiya - <chirag@biconomy.io>
+/**
+ * @title Smart Account Factory - factory responsible for deploying smart account using CREATE2 and CREATE
+ * @author Chirag Titiya - <chirag@biconomy.io>
+ */
 contract SmartAccountFactory {
     address public immutable basicImplementation;
     DefaultCallbackHandler public immutable minimalHandler;
@@ -17,7 +19,6 @@ contract SmartAccountFactory {
         address indexed owner,
         uint256 indexed index
     );
-
     event AccountCreationWithoutIndex(
         address indexed account,
         address indexed owner
@@ -32,7 +33,10 @@ contract SmartAccountFactory {
         minimalHandler = new DefaultCallbackHandler();
     }
 
-    /// @dev Allows to retrieve the creation code used for the Proxy deployment.
+    /**
+     * @dev Allows to retrieve the creation code used for the Proxy deployment.
+     * @return The creation code for the Proxy.
+     */
     function accountCreationCode() public pure returns (bytes memory) {
         return type(Proxy).creationCode;
     }
@@ -95,6 +99,7 @@ contract SmartAccountFactory {
     /**
      * @notice Deploys account using create and points it to _implementation
      * @param _owner EOA signatory for the account to be deployed
+     * @return proxy address of the deployed account
      */
     function deployAccount(address _owner) public returns (address proxy) {
         bytes memory deploymentData = abi.encodePacked(
@@ -137,13 +142,18 @@ contract SmartAccountFactory {
         emit AccountCreationWithoutIndex(proxy, _owner);
     }
 
+    /**
+     * @dev Allows to retrieve the initializer data for the account.
+     * @param _owner EOA signatory for the account to be deployed
+     * @return initializer bytes for init method
+     */
     function getInitializer(
-        address owner
+        address _owner
     ) internal view returns (bytes memory) {
         return
             abi.encodeCall(
                 BaseSmartAccount.init,
-                (owner, address(minimalHandler))
+                (_owner, address(minimalHandler))
             );
     }
 

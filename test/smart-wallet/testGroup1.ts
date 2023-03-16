@@ -162,7 +162,7 @@ describe("Base Wallet Functionality", function () {
     ).to.be.reverted;
 
     // Without enabling module one can't send transactions
-    // invoking safe from module without enabling it!
+    // invoking wallet from module without enabling it!
     await expect(
       whitelistModule
         .connect(accounts[2])

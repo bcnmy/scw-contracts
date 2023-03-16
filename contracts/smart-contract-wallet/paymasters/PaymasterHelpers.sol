@@ -15,6 +15,9 @@ struct PaymasterContext {
     uint256 gasPrice;
 }
 
+/**
+ * @title PaymasterHelpers - helper functions for paymasters
+ */
 library PaymasterHelpers {
     using ECDSA for bytes32;
 
