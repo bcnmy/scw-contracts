@@ -7,9 +7,10 @@ import {FallbackManager} from "./base/FallbackManager.sol";
 import {SignatureDecoder} from "./common/SignatureDecoder.sol";
 import {SecuredTokenTransfer} from "./common/SecuredTokenTransfer.sol";
 import {LibAddress} from "./libs/LibAddress.sol";
-import {IERC165} from "./interfaces/IERC165.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
 import {ISignatureValidator, ISignatureValidatorConstants} from "./interfaces/ISignatureValidator.sol";
+import {IERC165} from "./interfaces/IERC165.sol";
+import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
+import {SmartAccountErrors} from "./common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract SmartAccount is
@@ -20,13 +21,13 @@ contract SmartAccount is
     SecuredTokenTransfer,
     ISignatureValidatorConstants,
     IERC165,
+    ReentrancyGuard,
     SmartAccountErrors
 {
     using ECDSA for bytes32;
     using LibAddress for address;
 
     // Storage
-
     // Version
     string public constant VERSION = "1.0.4"; // using AA 0.4.0
 
@@ -262,7 +263,7 @@ contract SmartAccount is
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         bytes memory signatures
-    ) public payable virtual returns (bool success) {
+    ) public payable virtual nonReentrant() returns (bool success) {
         uint256 startGas = gasleft();
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors

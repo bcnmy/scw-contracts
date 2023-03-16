@@ -7,6 +7,7 @@ import "../../base/ModuleManager.sol";
 import "../../base/FallbackManager.sol";
 import "../../common/SignatureDecoder.sol";
 import "../../common/SecuredTokenTransfer.sol";
+import {ReentrancyGuard} from "../../common/ReentrancyGuard.sol";
 import {SmartAccountErrors} from "../../common/Errors.sol";
 import "../../interfaces/ISignatureValidator.sol";
 import "../../interfaces/IERC165.sol";
@@ -19,6 +20,7 @@ contract SmartAccount10 is
     FallbackManager,
     SignatureDecoder,
     SecuredTokenTransfer,
+    ReentrancyGuard,
     ISignatureValidatorConstants,
     IERC165,
     SmartAccountErrors

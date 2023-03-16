@@ -11,6 +11,8 @@ contract SmartAccountStorage {
 
     uint256[24] private __fallbackManagerGap;
 
+    uint256 private reentrancyStatus;
+
     // Smart Account Storage
     address internal owner;
 
