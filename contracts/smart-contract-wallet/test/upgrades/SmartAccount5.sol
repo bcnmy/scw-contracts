@@ -20,9 +20,9 @@ contract SmartAccount5 is
     FallbackManager,
     SignatureDecoder,
     SecuredTokenTransfer,
-    ReentrancyGuard,
     ISignatureValidatorConstants,
     IERC165,
+    ReentrancyGuard,
     SmartAccountErrors
 {
     using ECDSA for bytes32;
