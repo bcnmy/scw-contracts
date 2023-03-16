@@ -65,7 +65,7 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
     );
 
     await walletFactory.deployCounterFactualAccount(walletOwnerAddress, 0);
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       walletOwnerAddress,
       0
     );

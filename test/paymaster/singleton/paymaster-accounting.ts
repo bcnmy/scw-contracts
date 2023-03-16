@@ -340,7 +340,7 @@ async function getCounterFactualAddress(
   ownerAddress: string,
   index: number
 ) {
-  return await accountFactory.getAddressForCounterfactualAccount(
+  return await accountFactory.getAddressForCounterFactualAccount(
     ownerAddress,
     index
   );

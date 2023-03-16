@@ -92,7 +92,7 @@ describe("Smart Account Factory", function () {
       const accounts = await ethers.getSigners();
       const owner = await accounts[0].getAddress();
 
-      const expected = await accountFactory.getAddressForCounterfactualAccount(
+      const expected = await accountFactory.getAddressForCounterFactualAccount(
         owner,
         indexForSalt
       );
@@ -139,7 +139,7 @@ describe("Smart Account Factory", function () {
       const owner = await accounts[0].getAddress();
       // const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 
-      const expected = await accountFactory.getAddressForCounterfactualAccount(
+      const expected = await accountFactory.getAddressForCounterFactualAccount(
         owner,
         indexForSalt
       );

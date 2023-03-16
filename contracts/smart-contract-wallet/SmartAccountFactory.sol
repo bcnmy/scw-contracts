@@ -152,7 +152,7 @@ contract SmartAccountFactory {
      * @param _owner EOA signatory for the account to be deployed
      * @param _index extra salt that allows to deploy more accounts if needed for same EOA (default 0)
      */
-    function getAddressForCounterfactualAccount(
+    function getAddressForCounterFactualAccount(
         address _owner,
         uint256 _index
     ) external view returns (address _account) {

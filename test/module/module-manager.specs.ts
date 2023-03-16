@@ -112,7 +112,7 @@ describe("Module transactions via AA flow", function () {
   describe("Module transactions from Smart Account", function () {
     it("can enable modules and accept transactions from it", async function () {
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 10);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 10);
 
       // deploying now
       await walletFactory.deployCounterFactualAccount(owner, 10);
@@ -185,7 +185,7 @@ describe("Module transactions via AA flow", function () {
     it("disable module", async function () {
       // Now here the wallet with owner and index 10 should have been deployed
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterfactualAccount(owner, 10);
+        await walletFactory.getAddressForCounterFactualAccount(owner, 10);
 
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",

@@ -99,7 +99,7 @@ describe("Upgradeability", function () {
 
   // describe("Wallet initialization", function () {
   it("Should set the correct states on proxy", async function () {
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       0
     );
