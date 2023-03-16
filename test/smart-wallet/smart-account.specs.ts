@@ -14,15 +14,6 @@ import {
   StorageSetter,
   DefaultCallbackHandler,
 } from "../../typechain";
-import {
-  SafeTransaction,
-  Transaction,
-  FeeRefund,
-  safeSignTypedData,
-  buildSafeTransaction,
-  executeContractCallWithSigners,
-} from "../../src/utils/execution";
-import { encodeTransfer } from "../smart-wallet/testUtils";
 import { fillAndSign } from "../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
@@ -37,43 +28,6 @@ export async function deployEntryPoint(
 
 export const AddressZero = "0x0000000000000000000000000000000000000000";
 export const AddressOne = "0x0000000000000000000000000000000000000001";
-
-async function getUserOpWithPaymasterData(
-  paymaster: VerifyingSingletonPaymaster,
-  smartAccountAddress: any,
-  userOp: UserOperation,
-  offchainPaymasterSigner: Signer,
-  paymasterAddress: string,
-  walletOwner: Signer,
-  entryPoint: EntryPoint
-) {
-  const nonceFromContract = await paymaster["getSenderPaymasterNonce(address)"](
-    smartAccountAddress
-  );
-
-  const hash = await paymaster.getHash(
-    userOp,
-    nonceFromContract.toNumber(),
-    await offchainPaymasterSigner.getAddress()
-  );
-  const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
-  const userOpWithPaymasterData = await fillAndSign(
-    {
-      // eslint-disable-next-line node/no-unsupported-features/es-syntax
-      ...userOp,
-      paymasterAndData: hexConcat([
-        paymasterAddress,
-        ethers.utils.defaultAbiCoder.encode(
-          ["address", "bytes"],
-          [await offchainPaymasterSigner.getAddress(), sig]
-        ),
-      ]),
-    },
-    walletOwner,
-    entryPoint
-  );
-  return userOpWithPaymasterData;
-}
 
 describe("Smart Account tests", function () {
   let entryPoint: EntryPoint;

@@ -13,7 +13,7 @@ import {
   MultiSend,
   StorageSetter,
   DefaultCallbackHandler,
-} from "../../typechain";
+} from "../../../typechain";
 import {
   SafeTransaction,
   Transaction,
@@ -23,10 +23,10 @@ import {
   executeContractCallWithSigners,
 } from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
-import { fillAndSign } from "../utils/userOp";
+import { fillAndSign } from "../../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
-import { UserOperation } from "../utils/userOpetation";
+import { UserOperation } from "../../utils/userOpetation";
 
 export async function deployEntryPoint(
   provider = ethers.provider
