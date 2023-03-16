@@ -494,7 +494,7 @@ contract SmartAccount7 is
         FeeRefund memory refundInfo,
         uint256 _nonce
     ) public view returns (bytes memory) {
-        bytes32 walletTxHash = keccak256(
+        bytes32 accountTxHash = keccak256(
             abi.encode(
                 ACCOUNT_TX_TYPEHASH,
                 _tx.to,
@@ -515,7 +515,7 @@ contract SmartAccount7 is
                 bytes1(0x19),
                 bytes1(0x01),
                 domainSeparator(),
-                walletTxHash
+                accountTxHash
             );
     }
 
