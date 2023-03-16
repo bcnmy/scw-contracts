@@ -42,7 +42,7 @@ describe("Optimized function name tests for gas estimation", function () {
   let hacker: string;
   let userSCW: any;
   let handler: DefaultCallbackHandler;
-  const VERSION = "2.0.0";
+  const VERSION = "1.0.0";
   const create2FactoryAddress = "0xce0042B868300000d44A59004Da54A005ffdcf9f";
   let accounts: any;
   let fakeSigner: FakeSigner;

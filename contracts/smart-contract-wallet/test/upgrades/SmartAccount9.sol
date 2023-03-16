@@ -72,11 +72,9 @@ contract SmartAccount9 is
     }
 
     // Events
-    // EOA + Version tracking
     event ImplementationUpdated(
-        address _scw,
-        string version,
-        address newImplementation
+        address indexed oldImplementation,
+        address indexed newImplementation
     );
     event EntryPointChanged(address oldEntryPoint, address newEntryPoint);
     event EOAChanged(
@@ -141,7 +139,7 @@ contract SmartAccount9 is
         assembly {
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // Getters

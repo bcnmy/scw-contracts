@@ -28,7 +28,7 @@ contract SmartAccountNoAuth is
     // Storage
 
     // Version
-    string public constant VERSION = "2.0.0"; // aa 0.4.0 rebase
+    string public constant VERSION = "1.0.0"; // aa 0.4.0 rebase
 
     // Domain Seperators
     // keccak256(
@@ -68,11 +68,8 @@ contract SmartAccountNoAuth is
     }
 
     // Events
-    // EOA + Version tracking
-    // Review when you keep it bytes32 it doesn't match with string value in testCase emit.withArgs
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
 
@@ -138,7 +135,7 @@ contract SmartAccountNoAuth is
             sstore(address(), _implementation)
         }
         // EOA + Version tracking
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // Getters

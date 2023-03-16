@@ -28,7 +28,7 @@ contract MaliciousAccount2 is
     // Storage
 
     // Version
-    string public constant VERSION = "2.0.0"; // using AA 0.3.0
+    string public constant VERSION = "1.0.0"; // using AA 0.3.0
 
     // Domain Seperators
     // keccak256(
@@ -66,10 +66,8 @@ contract MaliciousAccount2 is
     }
 
     // Events
-    // EOA + Version tracking
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
 
@@ -134,8 +132,7 @@ contract MaliciousAccount2 is
         assembly {
             sstore(address(), _implementation)
         }
-        // EOA + Version tracking
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // Getters

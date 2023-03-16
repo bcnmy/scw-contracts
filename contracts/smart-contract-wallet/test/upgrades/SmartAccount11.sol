@@ -30,7 +30,7 @@ contract SmartAccount11 is
     // Storage
 
     // Version
-    string public constant VERSION = "2.0.0"; // using AA 0.4.0
+    string public constant VERSION = "1.0.0"; // using AA 0.4.0
 
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
@@ -74,10 +74,8 @@ contract SmartAccount11 is
     }
 
     // Events
-    // EOA + Version tracking
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
 
@@ -162,7 +160,7 @@ contract SmartAccount11 is
         assembly {
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // either this and check for specific _data

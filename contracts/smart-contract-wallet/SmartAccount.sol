@@ -38,7 +38,7 @@ contract SmartAccount is
     using LibAddress for address;
 
     // Storage Version
-    string public constant VERSION = "2.0.0";
+    string public constant VERSION = "1.0.0";
 
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
@@ -67,10 +67,9 @@ contract SmartAccount is
     address private immutable _self;
 
     // Events
-    // EOA + Version tracking
+
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
     event EOAChanged(
@@ -169,8 +168,7 @@ contract SmartAccount is
         assembly {
             sstore(address(), _implementation)
         }
-        // review here the second argument it emits is: VERSION upgraded from but not the VERSION it's upgraded to
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     /// Getters

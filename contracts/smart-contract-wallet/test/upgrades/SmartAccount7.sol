@@ -31,7 +31,7 @@ contract SmartAccount7 is
     // Storage
 
     // Version
-    string public constant VERSION = "2.0.0"; // using AA 0.4.0
+    string public constant VERSION = "1.0.0"; // using AA 0.4.0
 
     // Domain Seperators
     // keccak256(
@@ -77,10 +77,8 @@ contract SmartAccount7 is
     }
 
     // Events
-    // EOA + Version tracking
     event ImplementationUpdated(
-        address indexed _scw,
-        string indexed version,
+        address indexed oldImplementation,
         address indexed newImplementation
     );
 
@@ -146,7 +144,7 @@ contract SmartAccount7 is
         assembly {
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), VERSION, _implementation);
+        emit ImplementationUpdated(address(this), _implementation);
     }
 
     // Getters
