@@ -32,7 +32,7 @@ contract VerifyingSingletonPaymaster is
     using PaymasterHelpers for PaymasterData;
 
     // Gas used in EntryPoint._handlePostOp() method (including this#postOp() call)
-    uint256 public unaccountedEPGasOverhead;
+    uint256 private unaccountedEPGasOverhead;
     mapping(address => uint256) public paymasterIdBalances;
 
     // review for immutable

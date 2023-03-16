@@ -13,7 +13,6 @@ struct PaymasterData {
 struct PaymasterContext {
     address paymasterId;
     uint256 gasPrice;
-    //@review
 }
 
 library PaymasterHelpers {
