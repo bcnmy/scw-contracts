@@ -1,6 +1,6 @@
 {
   "name": "@biconomy/wallet-contracts",
-  "version": "1.0.4",
+  "version": "2.0.0",
   "description": "SCW contracts for Biconomy SDK",
   "main": "index.js",
   "scripts": {

@@ -134,7 +134,7 @@ describe("Upgradeability", function () {
       userSCW.connect(accounts[0]).updateImplementation(baseImpl9.address)
     )
       .to.emit(userSCW, "ImplementationUpdated")
-      .withArgs(userSCW.address, "1.0.4", baseImpl9.address);
+      .withArgs(userSCW.address, "2.0.0", baseImpl9.address);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/test/upgrades/SmartAccount9.sol:SmartAccount9",

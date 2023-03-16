@@ -79,7 +79,7 @@ describe("Upgrade to enable Guards", function () {
   });
 
   it("Should deploy a wallet and validate entrypoint", async function () {
-    const expected = await walletFactory.getAddressForCounterfactualAccount(
+    const expected = await walletFactory.getAddressForCounterFactualAccount(
       owner,
       0
     );
