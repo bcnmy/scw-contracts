@@ -26,7 +26,7 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
-describe("Upgradeability", function () {
+describe("Upgradeability: test-upgrade", function () {
   // TODO
   let baseImpl: SmartAccount;
   let walletFactory: SmartAccountFactory;
