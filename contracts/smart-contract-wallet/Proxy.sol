@@ -2,12 +2,11 @@
 pragma solidity 0.8.17;
 
 /**
- * @title Proxy // This is the user's wallet
- * @notice Basic proxy that delegates all calls to a fixed implementing contract.
+ * @title Proxy // This is the user's Smart Account
+ * @notice Basic proxy that delegates all calls to a fixed implementation contract.
+ * @dev    Implementation address is stored in the slot defined by the Proxy's address
  */
 contract Proxy {
-    // no fixed address(0) storage slot
-    // address internal singleton;
 
     constructor(address _implementation) {
         require(

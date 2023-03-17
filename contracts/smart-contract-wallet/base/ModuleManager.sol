@@ -5,7 +5,10 @@ import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 import {Executor, Enum} from "./Executor.sol";
 import {ModuleManagerErrors} from "../common/Errors.sol";
 
-/// @title Module Manager - A contract that manages modules that can execute transactions via this contract
+/** 
+ * @title Module Manager - A contract that manages modules that can execute transactions
+ *        on behalf of the Smart Account via this contract.
+*/
 contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     address internal constant SENTINEL_MODULES = address(0x1);
 
@@ -59,7 +62,7 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     }
 
     /**
-     * @dev Allows to add a module to the allowlist.
+     * @dev Adds a module to the allowlist.
      * @notice This can only be done via a wallet transaction.
      * @notice Enables the module `module` for the wallet.
      * @param module Module to be allow-listed.
@@ -76,7 +79,7 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     }
 
     /**
-     * @dev Allows to remove a module from the allowlist.
+     * @dev Removes a module from the allowlist.
      * @notice This can only be done via a wallet transaction.
      * @notice Disables the module `module` for the wallet.
      * @param prevModule Module that pointed to the module to be removed in the linked list
@@ -101,7 +104,7 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     }
 
     /**
-     * @dev Allows a Module to execute a wallet transaction without any further confirmations.
+     * @dev Allows a Module to execute a Smart Account transaction without any further confirmations.
      * @param to Destination address of module transaction.
      * @param value Ether value of module transaction.
      * @param data Data payload of module transaction.
@@ -125,7 +128,7 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     }
 
     /**
-     * @dev Allows a Module to execute a wallet transaction without any further confirmations and return data
+     * @dev Allows a Module to execute a wallet transaction without any further confirmations and returns data
      * @param to Destination address of module transaction.
      * @param value Ether value of module transaction.
      * @param data Data payload of module transaction.
@@ -155,7 +158,7 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     }
 
     /**
-     * @dev Returns if an module is enabled
+     * @dev Returns if a module is enabled
      * @return True if the module is enabled
      */
     function isModuleEnabled(address module) public view returns (bool) {
