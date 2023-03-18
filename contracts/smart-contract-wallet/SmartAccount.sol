@@ -16,11 +16,12 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IModule} from "./test/IModule.sol";
 
 /**
- * @title SmartAccount - Implements a customizable wallet with modular functionality.
- * @dev This contract is the main entry point for the Smart Account.
- *         - It is responsible for managing the modules and fallbacks that are attached to the account.
- *         - It also provides the basic functionality to execute transactions and receive tokens.
- *         - The account can be used as with modules, such as SocialRecoveryModule.
+ * @title SmartAccount - EIP-4337 compatible smart contract wallet.
+ * @dev This contract is the base for the Smart Account functionality.
+ *         - It provides the functionality to execute both gnosis-style txns and AA (EIP-4337) userOps
+ *         - It allows to receive and manage assets.
+ *         - It is responsible for managing the modules and fallbacks.
+ *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
 contract SmartAccount is

@@ -7,7 +7,9 @@ import {DefaultCallbackHandler} from "./handler/DefaultCallbackHandler.sol";
 import {SmartAccountFactoryErrors} from "./common/Errors.sol";
 
 /**
- * @title Smart Account Factory - factory responsible for deploying smart account using CREATE2 and CREATE
+ * @title Smart Account Factory - factory responsible for deploying Smart Accounts using CREATE2 and CREATE
+ * @dev It deploys Smart Accounts as proxies pointing to `basicImplementation` that is immutable.
+ *      This allows keeping the same address for the same Smart Account owner on various chains via CREATE2
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
 contract SmartAccountFactory {

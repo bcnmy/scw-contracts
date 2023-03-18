@@ -316,7 +316,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
 
   describe("Upgrades using Entrypoint: Already Deployed Account", function () {
     // so far so good!
-    it("4337 flow: should be able to set implementation from executeCall() / execFromEntryPoint() method of AA flow", async () => {
+    it("4337 flow: should be able to set implementation from executeCall() method of AA flow", async () => {
       // Now the wallet with owner and index 0 is deployed!
 
       const expectedSmartAccountAddress =

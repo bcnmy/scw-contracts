@@ -30,8 +30,8 @@ struct FeeRefund {
 
 /**
  * Basic account implementation.
- * this contract provides the basic logic for implementing the IAccount interface  - validateUserOp
- * specific account implementation should inherit it and provide the account-specific logic
+ * This contract provides the basic logic for implementing the IAccount interface: validateUserOp function
+ * Specific account implementation should inherit it and provide the account-specific logic
  */
 abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     using UserOperationLib for UserOperation;

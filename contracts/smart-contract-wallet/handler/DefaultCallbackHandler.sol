@@ -8,8 +8,10 @@ import {IERC165} from "../interfaces/IERC165.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 import {SmartAccount} from "../SmartAccount.sol";
 
-/// @title Default Callback Handler - returns true for known token callbacks
-/// @author Richard Meissner - <richard@gnosis.pm>
+/** @title Default Callback Handler - returns true for known token callbacks
+ *   @dev Handles EIP-1271 compliant isValidSignature requests.
+ *  @notice inspired by Richard Meissner's <richard@gnosis.pm> implementation
+ */
 contract DefaultCallbackHandler is
     IERC1155TokenReceiver,
     IERC777TokensRecipient,

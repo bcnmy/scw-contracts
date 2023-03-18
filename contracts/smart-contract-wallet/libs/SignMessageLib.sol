@@ -4,8 +4,13 @@ pragma solidity ^0.8.0;
 import "./SmartAccountStorage.sol";
 import "../SmartAccount.sol";
 
-/// @title SignMessageLib - Allows to set an entry in the signedMessages
-/// @notice Inspired by Richard Meissner's (richard@gnosis.io) implementation
+/** @title SignMessageLib - Allows to set an entry in the signedMessages
+ *  @dev it uses SmartAccountStorage to mimic the storage of the
+ *       Smart Account Implementation to be able to set hash status as signed
+ *       This lib is being called from the Smart Account's execTransaction via
+ *       delegatecall transaction.
+ *  @notice Inspired by Richard Meissner's (richard@gnosis.io) implementation
+ */
 contract SignMessageLib is SmartAccountStorage {
     //keccak256(
     //    "SmartAccountMessage(bytes message)"
