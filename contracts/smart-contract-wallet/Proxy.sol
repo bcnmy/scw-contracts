@@ -7,7 +7,6 @@ pragma solidity 0.8.17;
  * @dev    Implementation address is stored in the slot defined by the Proxy's address
  */
 contract Proxy {
-
     constructor(address _implementation) {
         require(
             _implementation != address(0),

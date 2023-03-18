@@ -5,10 +5,10 @@ import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 import {Executor, Enum} from "./Executor.sol";
 import {ModuleManagerErrors} from "../common/Errors.sol";
 
-/** 
+/**
  * @title Module Manager - A contract that manages modules that can execute transactions
  *        on behalf of the Smart Account via this contract.
-*/
+ */
 contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     address internal constant SENTINEL_MODULES = address(0x1);
 

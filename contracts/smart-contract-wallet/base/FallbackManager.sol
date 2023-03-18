@@ -4,11 +4,11 @@ pragma solidity 0.8.17;
 import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 import {FallbackManagerErrors} from "../common/Errors.sol";
 
-/**  
+/**
  *   @title Fallback Manager - A contract that manages fallback calls made to the Smart Account
  *   @dev Fallback calls are handled by a `handler` contract that is stored at FALLBACK_HANDLER_STORAGE_SLOT
  *        fallback calls are not delegated to the `handler` so they can not directly change Smart Account storage
-*/
+ */
 contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     // keccak-256 hash of "fallback_manager.handler.address" subtracted by 1
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT =

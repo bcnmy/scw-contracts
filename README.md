@@ -34,7 +34,7 @@ reference 1 : https://docs.gnosis-safe.io/contracts
 reference 2 : https://github.com/eth-infinitism/account-abstraction/blob/master/contracts/samples/SimpleAccount.sol
 notes: 
 1) reverting methods are used for gas estimations
-2) transactions happen via EOA signature by calling execTransaction or validateUserOp and execFromEntryPoint via entry point
+2) transactions happen via EOA signature by calling execTransaction or validateUserOp and executeCall / executeBatchCall via entry point
 3) currently 1-1 multisig
 4) ECDSA used ofr signature verification. contract signatures are suppoprted using EIP1271 (not extensively tested on protocols!)
 
