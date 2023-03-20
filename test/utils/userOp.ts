@@ -12,7 +12,7 @@ import {
   callDataCost,
   HashZero,
   rethrow,
-} from "../smart-wallet/testutils";
+} from "../smart-wallet/testUtils";
 import {
   ecsign,
   toRpcSig,
