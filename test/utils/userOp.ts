@@ -18,6 +18,7 @@ import {
   toRpcSig,
   keccak256 as keccak256_buffer,
 } from "ethereumjs-util";
+import { ethers } from "hardhat";
 import { EntryPoint, VerifyingPaymaster } from "../../typechain";
 import { UserOperation } from "./userOpetation";
 import { Create2Factory } from "../../src/Create2Factory";
@@ -260,15 +261,16 @@ export async function fillUserOp(
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
       throw new Error("must have entryPoint for callGasLimit estimate");
-    const gasEtimated = await provider.estimateGas({
+    const gasEstimated = await provider.estimateGas({
       from: entryPoint?.address,
       to: op1.sender,
       data: op1.callData,
     });
 
-    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEtimated)
+    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEstimated)
     // estimateGas assumes direct call from entryPoint. add wrapper cost.
-    op1.callGasLimit = gasEtimated; // .add(55000)
+    op1.callGasLimit = gasEstimated; // .add(55000)
+    console.log("call gas estimated ", gasEstimated);
   }
   if (op1.maxFeePerGas == null) {
     if (provider == null)
@@ -302,11 +304,26 @@ export async function fillAndSign(
   const op2 = await fillUserOp(op, entryPoint);
   op2.preVerificationGas =
     Number(op2.preVerificationGas) + extraPreVerificationGas;
+
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+  const uerOpHash = await entryPoint?.getUserOpHash(op2);
   const chainId = await provider!.getNetwork().then((net) => net.chainId);
   const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
+  const userOpSignature = await signer.signMessage(message);
+  op2.signature = userOpSignature;
 
-  return {
-    ...op2,
-    signature: await signer.signMessage(message),
-  };
+  const validateUserOpData = SmartAccount.interface.encodeFunctionData(
+    "validateUserOp",
+    [op2, uerOpHash, 10]
+  );
+
+  const gasEstimatedValidateUserOp = await provider.estimateGas({
+    from: entryPoint?.address,
+    to: op2.sender,
+    data: validateUserOpData, // validateUserOp calldata
+  });
+
+  console.log("Gaslimit for validate userOp is: ", gasEstimatedValidateUserOp);
+
+  return op2;
 }
