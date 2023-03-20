@@ -26,7 +26,7 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
-describe("Upgradeability", function () {
+describe("Upgradeability: state upgrade", function () {
   let baseImpl: SmartAccount;
   let walletFactory: SmartAccountFactory;
   let entryPoint: EntryPoint;
@@ -129,7 +129,7 @@ describe("Upgradeability", function () {
 
     await expect(
       userSCW.connect(accounts[0]).updateImplementation(baseImpl6.address)
-    ).to.emit(userSCW, "ImplementationUpdated");
+    ).to.emit(userSCW, "ImplementationUpdated").withArgs(baseImpl.address, baseImpl6.address);;
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/test/upgrades/SmartAccount6.sol:SmartAccount6",
