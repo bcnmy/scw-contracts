@@ -33,7 +33,7 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
-describe("Upgradeability", function () {
+describe("Upgradeability 2d nonces", function () {
   // TODO
   let baseImpl: SmartAccount;
   let walletFactory: SmartAccountFactory;
@@ -172,7 +172,7 @@ describe("Upgradeability", function () {
     );
   });
 
-  it("Should deploy new entrypoint and does upgrade flow", async function () {
+  it("Should deploy new entrypoint and do upgrade flow to impl with 2d nonces", async function () {
     const priorEntryPoint = await userSCW.entryPoint();
     console.log("prior entrypoint ", priorEntryPoint);
     console.log(entryPoint.address);
@@ -193,7 +193,7 @@ describe("Upgradeability", function () {
 
     await expect(
       userSCW.connect(accounts[0]).updateImplementation(baseImpl5.address)
-    ).to.emit(userSCW, "ImplementationUpdated");
+    ).to.emit(userSCW, "ImplementationUpdated").withArgs(baseImpl.address, baseImpl5.address);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/test/upgrades/SmartAccount5.sol:SmartAccount5",

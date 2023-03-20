@@ -161,11 +161,13 @@ contract SmartAccount is
         require(_implementation != address(0), "Address cannot be zero");
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
+        address oldImplementation;
         // solhint-disable-next-line no-inline-assembly
         assembly {
+            oldImplementation := sload(address())
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), _implementation);
+        emit ImplementationUpdated(oldImplementation, _implementation);
     }
 
     /// Getters

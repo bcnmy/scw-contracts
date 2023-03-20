@@ -26,7 +26,7 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
-describe("Upgradeability", function () {
+describe("Upgradeability: upgrade and rollback", function () {
   // TODO
   let baseImpl: SmartAccount;
   let walletFactory: SmartAccountFactory;
@@ -42,6 +42,7 @@ describe("Upgradeability", function () {
   // let handler: DefaultCallbackHandler;
   let accounts: any;
   let globalImpl = "";
+  let baseImpl9 = "";
 
   before(async () => {
     accounts = await ethers.getSigners();
@@ -125,7 +126,7 @@ describe("Upgradeability", function () {
       "SmartAccount9"
     );
     // deployEntryPoint
-    const baseImpl9 = await BaseImplementation9.deploy(entryPoint.address);
+    baseImpl9 = await BaseImplementation9.deploy(entryPoint.address);
     await baseImpl9.deployed();
     console.log("base wallet upgraded impl deployed at: ", baseImpl9.address);
     globalImpl = baseImpl9.address;
@@ -134,7 +135,7 @@ describe("Upgradeability", function () {
       userSCW.connect(accounts[0]).updateImplementation(baseImpl9.address)
     )
       .to.emit(userSCW, "ImplementationUpdated")
-      .withArgs(userSCW.address, baseImpl9.address);
+      .withArgs(baseImpl.address, baseImpl9.address);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/test/upgrades/SmartAccount9.sol:SmartAccount9",
@@ -211,7 +212,7 @@ describe("Upgradeability", function () {
     )
       .to.emit(userSCW, "ImplementationUpdated")
       // emits implementation version it's upgraded from
-      .withArgs(userSCW.address, baseImpl10.address);
+      .withArgs(baseImpl9.address, baseImpl10.address);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/test/upgrades/SmartAccount10.sol:SmartAccount10",

@@ -130,11 +130,12 @@ contract SmartAccountNoAuth is
     function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
         // solhint-disable-next-line no-inline-assembly
+        address oldImplementation;
         assembly {
+            oldImplementation := sload(address())
             sstore(address(), _implementation)
         }
-        // EOA + Version tracking
-        emit ImplementationUpdated(address(this), _implementation);
+        emit ImplementationUpdated(oldImplementation, _implementation);
     }
 
     // Getters

@@ -115,7 +115,7 @@ describe("Upgrade to enable Guards", function () {
 
     await expect(
       userSCW.connect(accounts[0]).updateImplementation(baseImpl12.address)
-    ).to.emit(userSCW, "ImplementationUpdated");
+    ).to.emit(userSCW, "ImplementationUpdated").withArgs(baseImpl.address, baseImpl12.address);
 
     userSCW = await ethers.getContractAt(
       "contracts/smart-contract-wallet/test/upgrades/SmartAccount12Guard.sol:SmartAccount12Guard",

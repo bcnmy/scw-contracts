@@ -135,11 +135,13 @@ contract SmartAccount7 is
     // all the new implementations MUST have this method!
     function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
+        address oldImplementation;
         // solhint-disable-next-line no-inline-assembly
         assembly {
+            oldImplementation := sload(address())
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), _implementation);
+        emit ImplementationUpdated(oldImplementation, _implementation);
     }
 
     // Getters
