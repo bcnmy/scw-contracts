@@ -23,7 +23,7 @@ contract SignMessageLib is SmartAccountStorage {
     /// @dev Marks a message as signed, so that it can be used with EIP-1271
     /// @notice Marks a message (`_data`) as signed.
     /// @param _data Arbitrary length data that should be marked as signed on the behalf of address(this) smart account
-    function signMessage(bytes calldata _data) external {
+    function signMessageOnchain(bytes calldata _data) external {
         bytes32 msgHash = getMessageHash(_data);
         signedMessages[msgHash] = 1;
         emit MessageSigned(msgHash);
