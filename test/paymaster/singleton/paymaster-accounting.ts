@@ -183,6 +183,17 @@ describe("Upgrade functionality Via Entrypoint", function () {
         paymasterIdDepositAfter
       );
 
+      // TODO
+      // send preVerificationGas completely 0 and try to find accurate executionGas diff by checking paid vs refund.
+      /**
+       * the idea is submit a handleOps with preVerificationGas=0,
+       * and compare the transaction gasUsed with the gasUsed reported in the event.
+       * Then we need to split this value, to understand where it came from.
+       * The real calculation the bundler is in reverse -
+       * given a UserOperation, to determine if the preVerificationGas given is enough for this specific UserOp
+       * (and preferably, do this check statically, before running the simulateValidation()
+       */
+
       // Get actual transaction fee paid by bundler
       const transactionFee = await getTransactionFee(tx);
 

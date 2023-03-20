@@ -262,6 +262,34 @@ describe("Module transactions via AA flow", function () {
         walletOwner,
         entryPoint
       );
+
+      const uerOpHash = await entryPoint?.getUserOpHash(userOp);
+
+      const VerifyingPaymaster = await ethers.getContractFactory(
+        "VerifyingSingletonPaymaster"
+      );
+
+      const validatePaymasterUserOpData =
+        VerifyingPaymaster.interface.encodeFunctionData(
+          "validatePaymasterUserOp",
+          [userOp, uerOpHash, 10]
+        );
+
+      const gasEstimatedValidateUserOp = await ethers.provider.estimateGas({
+        from: entryPoint?.address,
+        to: paymasterAddress,
+        data: validatePaymasterUserOpData, // validatePaymasterUserOp calldata
+      });
+
+      console.log(
+        "Gaslimit for validate paymaster userOp is: ",
+        gasEstimatedValidateUserOp
+      );
+
+      // todo
+      // try and get for postOp as well
+      // get results for different parameters
+
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
       await expect(
         entryPoint.handleOps([userOp], await offchainSigner.getAddress())
@@ -325,6 +353,7 @@ describe("Module transactions via AA flow", function () {
         walletOwner,
         entryPoint
       );
+
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
 
       console.log(
