@@ -306,7 +306,7 @@ export async function fillAndSign(
     Number(op2.preVerificationGas) + extraPreVerificationGas;
 
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
-  const uerOpHash = await entryPoint?.getUserOpHash(op2);
+  const userOpHash = await entryPoint?.getUserOpHash(op2);
   const chainId = await provider!.getNetwork().then((net) => net.chainId);
   const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
   const userOpSignature = await signer.signMessage(message);
@@ -314,16 +314,18 @@ export async function fillAndSign(
 
   const validateUserOpData = SmartAccount.interface.encodeFunctionData(
     "validateUserOp",
-    [op2, uerOpHash, 10]
+    [op2, userOpHash, 10]
   );
 
+  /*
   const gasEstimatedValidateUserOp = await provider.estimateGas({
     from: entryPoint?.address,
     to: op2.sender,
     data: validateUserOpData, // validateUserOp calldata
   });
-
+  
   console.log("Gaslimit for validate userOp is: ", gasEstimatedValidateUserOp);
+  */
 
   return op2;
 }
