@@ -20,7 +20,7 @@ import {
   buildSafeTransaction,
 } from "../../src/utils/execution";
 import { encodeTransfer } from "./testUtils";
-import { fillAndSign, fillUserOp } from "../utils/userOp";
+import { fillAndSign } from "../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
 import { UserOperation } from "../utils/userOpetation";
@@ -582,6 +582,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // Now here also the wallet with owner and index 1 should have been deployed
       const expectedSmartAccountAddress =
         await walletFactory.getAddressForCounterFactualAccount(owner, 1);
+
       const userOp1 = await fillAndSign(
         {
           sender: expectedSmartAccountAddress,
