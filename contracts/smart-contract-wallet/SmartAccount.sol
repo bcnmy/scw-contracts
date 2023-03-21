@@ -742,18 +742,6 @@ contract SmartAccount is
     function _validateAndUpdateNonce(
         UserOperation calldata userOp
     ) internal override {
-        bytes calldata userOpData = userOp.callData;
-        if (userOpData.length > 0) {
-            bytes4 methodSig = bytes4(userOpData[:4]);
-            // If method to be called is executeCall then only check for module transaction
-            if (methodSig == this.executeCall.selector) {
-                (address _to, uint _amount, bytes memory _data) = abi.decode(
-                    userOpData[4:],
-                    (address, uint, bytes)
-                );
-                if (address(modules[_to]) != address(0)) return;
-            }
-        }
         if (nonces[0]++ != userOp.nonce)
             revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
     }
