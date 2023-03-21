@@ -354,7 +354,7 @@ describe("EIP-1271 Signatures Tests", function () {
     const message = "Some message from dApp";
     const signature = await accounts[0].signMessage(message);
 
-    // since signMessage actually signs the message hash prepended by
+    // since .signMessage actually signs the message hash prepended by
     // \x19Ethereum Signed Message:\n" and the length of the message
     // we use .hashMessage to get message hash to verify against
     const messageHash = ethers.utils.hashMessage(message);
