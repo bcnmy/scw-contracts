@@ -14,6 +14,7 @@ import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IModule} from "./test/IModule.sol";
+import {ISignatureValidator} from "./interfaces/ISignatureValidator.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -33,7 +34,8 @@ contract SmartAccount is
     ISignatureValidatorConstants,
     IERC165,
     ReentrancyGuard,
-    SmartAccountErrors
+    SmartAccountErrors,
+    ISignatureValidator
 {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -57,10 +59,6 @@ contract SmartAccount is
     // changed to 2D nonce below
     // @notice there is no _nonce
     mapping(uint256 => uint256) public nonces;
-
-    // Mapping to keep track of all message hashes that have been approved by the owner
-    // by ALL REQUIRED owners in a multisig flow
-    mapping(bytes32 => uint256) public signedMessages;
 
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
@@ -774,6 +772,30 @@ contract SmartAccount is
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
         return 0;
+    }
+
+    /**
+     * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
+     * @dev If owner is a smart-contract (other smart contract wallet or module, that controls 
+     *      signature verifications - like multisig), forward isValidSignature request to it.
+     *      In case of multisig, _signature can be several concatenated signatures
+     *      If owner is EOA, perform a regular ecrecover.    
+     * @param _dataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
+     * @param _signature Signature byte array associated with _dataHash
+     * @return bytes4 value.   
+     */
+    function isValidSignature(
+        bytes32 _dataHash,
+        bytes memory _signature
+    ) public view override returns (bytes4) {
+        
+        if (owner.code.length > 0) {
+            return ISignatureValidator(owner).isValidSignature(_dataHash, _signature);
+        }
+        if (owner == _dataHash.recover(_signature)) {
+            return EIP1271_MAGIC_VALUE;
+        }
+        return bytes4(0xffffffff);
     }
 
     /**

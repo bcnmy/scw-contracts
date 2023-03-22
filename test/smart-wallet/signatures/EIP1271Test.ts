@@ -7,8 +7,7 @@ import {
   MockToken,
   MultiSend,
   StorageSetter,
-  DefaultCallbackHandler,
-  SignMessageLib,
+  DefaultCallbackHandler
 } from "../../typechain";
 import { encodeTransfer, encodeSignMessage } from "../testUtils";
 import {
@@ -31,7 +30,6 @@ describe("EIP-1271 Signatures Tests", function () {
   let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
-  let signMessageLib: SignMessageLib;
   let owner: string;
   let bob: string;
   let charlie: string;
@@ -94,9 +92,6 @@ describe("EIP-1271 Signatures Tests", function () {
     const MultiSend = await ethers.getContractFactory("MultiSend");
     multiSend = await MultiSend.deploy();
     // console.log("Multisend helper contract deployed at: ", multiSend.address);
-
-    const SignMessageLib = await ethers.getContractFactory("SignMessageLib");
-    signMessageLib = await SignMessageLib.deploy();
 
     // console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
@@ -186,7 +181,7 @@ describe("EIP-1271 Signatures Tests", function () {
 
     const chainId = await mainSmartAccount.getChainId();
 
-    // BUILD 1271 SIGNATURE BY SIGNER SMART ACCOUNT
+    // BUILD CONTRACT SIGNATURE BY SIGNER SMART ACCOUNT
 
     const { signer, data } = await safeSignTypedData(
       accounts[0], // owner
@@ -204,11 +199,6 @@ describe("EIP-1271 Signatures Tests", function () {
     ).to.emit(mainSmartAccount, "ExecutionSuccess");
 
     expect(await token.balanceOf(charlie)).to.equal(tokensToBeTransferred);
-  });
-
-  it("Fallback handler reverts if called directly", async function () {
-    const dataHash = ethers.utils.keccak256("0xbaddad");
-    await expect(handler.isValidSignature(dataHash, "0x")).to.be.reverted;
   });
 
   // TODO: move from here to fallback-handler.specs.ts
@@ -258,99 +248,7 @@ describe("EIP-1271 Signatures Tests", function () {
     ).to.be.eq("0xbc197c81");
   });
 
-  it("Fallback handler returns 0xffffffff if the message has not been signed", async function () {
-    const dataHash = ethers.utils.keccak256("0xdeafbeef");
-
-    const smartAccountWithHandlerInterface = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol:DefaultCallbackHandler",
-      signerSmartAccount.address
-    );
-
-    const value = await smartAccountWithHandlerInterface.callStatic[
-      "isValidSignature(bytes32,bytes)"
-    ](dataHash, "0x");
-    const notMagicValue = "0xffffffff";
-    expect(value).to.be.equal(notMagicValue);
-  });
-
-  it("Fallback handler returns 0xffffffff if signature is not valid", async function () {
-    const dataHash = ethers.utils.keccak256("0xdeafbeef");
-    const invalidSignature = "0xabcdefdecafcafe0";
-
-    const smartAccountWithHandlerInterface = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol:DefaultCallbackHandler",
-      signerSmartAccount.address
-    );
-
-    const value = await smartAccountWithHandlerInterface.callStatic[
-      "isValidSignature(bytes32,bytes)"
-    ](dataHash, invalidSignature);
-    const notMagicValue = "0xffffffff";
-    expect(value).to.be.equal(notMagicValue);
-  });
-
-  it("Fallback handler returns magic value if message has been signed", async function () {
-    const delegateCall = 1;
-    const dataToSign = "0xdeafbeefdecaf0";
-
-    // prepare tx to call signMessageLib.signMessage from signerSmartAccount
-    // through delegate call
-    const safeTx: SafeTransaction = buildSafeTransaction({
-      to: signMessageLib.address,
-      data: encodeSignMessage(dataToSign),
-      operation: delegateCall,
-      nonce: await signerSmartAccount.getNonce(EOA_CONTROLLED_FLOW),
-    });
-
-    const transaction: Transaction = {
-      to: safeTx.to,
-      value: safeTx.value,
-      data: safeTx.data,
-      operation: safeTx.operation,
-      targetTxGas: safeTx.targetTxGas,
-    };
-    const refundInfo: FeeRefund = {
-      baseGas: safeTx.baseGas,
-      gasPrice: safeTx.gasPrice,
-      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
-      gasToken: safeTx.gasToken,
-      refundReceiver: safeTx.refundReceiver,
-    };
-
-    const chainId = await mainSmartAccount.getChainId();
-
-    const { signer, data } = await safeSignTypedData(
-      accounts[0],
-      signerSmartAccount,
-      safeTx,
-      chainId
-    );
-
-    let signature = "0x";
-    signature += data.slice(2);
-
-    const txSignMessage = await signerSmartAccount
-      .connect(accounts[0])
-      .execTransaction_S6W(transaction, refundInfo, signature);
-    const receipt = await txSignMessage.wait();
-
-    const smartAccountWithHandlerInterface = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol:DefaultCallbackHandler",
-      signerSmartAccount.address
-    );
-
-    const dataHash = await smartAccountWithHandlerInterface.callStatic[
-      "getMessageHash(bytes)"
-    ](dataToSign);
-
-    const eip1271MagicValue = "0x1626ba7e";
-    const value = await smartAccountWithHandlerInterface.callStatic[
-      "isValidSignature(bytes32,bytes)"
-    ](dataHash, "0x");
-    expect(value).to.be.equal(eip1271MagicValue);
-  });
-
-  it("Fallback handler returns magic value if correct signature has been provided directly to Smart Account", async function () {
+  it("Signer smart account returns magic value if correct signature has been provided", async function () {
     const message = "Some message from dApp";
     const signature = await accounts[0].signMessage(message);
 
@@ -359,19 +257,28 @@ describe("EIP-1271 Signatures Tests", function () {
     // we use .hashMessage to get message hash to verify against
     const messageHash = ethers.utils.hashMessage(message);
 
-    const smartAccountWithHandlerInterface = await ethers.getContractAt(
-      "contracts/smart-contract-wallet/handler/DefaultCallbackHandler.sol:DefaultCallbackHandler",
-      signerSmartAccount.address
-    );
-
     const eip1271MagicValue = "0x1626ba7e";
-    const value = await smartAccountWithHandlerInterface.callStatic[
-      "isValidSignature(bytes32,bytes)"
-    ](messageHash, signature);
+    const value = await signerSmartAccount.isValidSignature(messageHash, signature);
     expect(value).to.be.equal(eip1271MagicValue);
   });
 
-  it("Wont let the transaction to go through with manipulated signer contract address", async function () {
+  it("Signer smart account returns 0xffffffff if signature is not valid", async function () {
+    const message = "Some message from dApp";
+    let notOwner = accounts[1];
+    const invalidSignature = await notOwner.signMessage(message);
+
+    // since .signMessage actually signs the message hash prepended by
+    // \x19Ethereum Signed Message:\n" and the length of the message
+    // we use .hashMessage to get message hash to verify against
+    const messageHash = ethers.utils.hashMessage(message);
+
+    const value = await signerSmartAccount.isValidSignature(messageHash, invalidSignature);
+
+    const notMagicValue = "0xffffffff";
+    expect(value).to.be.equal(notMagicValue);
+  });
+
+  it("Wont let the transaction to go through with manipulated signer contract address in the contract signature", async function () {
     const deployWalletIndex = 1;
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
 
