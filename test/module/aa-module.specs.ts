@@ -758,7 +758,7 @@ describe("Module transactions via AA flow", function () {
       const currentNonce = await userSCW.nonce();
       console.log("latest nonce is: ", currentNonce.toNumber());
 
-      //now we increase nonce for module txns as well
+      // now we increase nonce for module txns as well
       expect(currentNonce).to.be.equal(prevNonce.add(1));
 
       // Balance should be 20 now
@@ -1069,7 +1069,7 @@ describe("Module transactions via AA flow", function () {
       const currentNonce = await userSCW.nonce();
       console.log("latest nonce is: ", currentNonce.toNumber());
 
-      //now we increase nonce for module txns as well
+      // now we increase nonce for module txns as well
       expect(currentNonce).to.be.equal(prevNonce.add(1));
 
       // Balance should remain 20
