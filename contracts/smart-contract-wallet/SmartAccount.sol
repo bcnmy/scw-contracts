@@ -773,21 +773,24 @@ contract SmartAccount is
 
     /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
-     * @dev If owner is a smart-contract (other smart contract wallet or module, that controls 
+     * @dev If owner is a smart-contract (other smart contract wallet or module, that controls
      *      signature verifications - like multisig), forward isValidSignature request to it.
      *      In case of multisig, _signature can be several concatenated signatures
-     *      If owner is EOA, perform a regular ecrecover.    
+     *      If owner is EOA, perform a regular ecrecover.
      * @param _dataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
      * @param _signature Signature byte array associated with _dataHash
-     * @return bytes4 value.   
+     * @return bytes4 value.
      */
     function isValidSignature(
         bytes32 _dataHash,
         bytes memory _signature
     ) public view override returns (bytes4) {
-        
         if (owner.code.length > 0) {
-            return ISignatureValidator(owner).isValidSignature(_dataHash, _signature);
+            return
+                ISignatureValidator(owner).isValidSignature(
+                    _dataHash,
+                    _signature
+                );
         }
         if (owner == _dataHash.recover(_signature)) {
             return EIP1271_MAGIC_VALUE;
