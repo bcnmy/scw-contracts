@@ -17,5 +17,4 @@ contract SmartAccountStorage {
     address internal owner;
 
     mapping(uint256 => uint256) internal nonces;
-    mapping(bytes32 => uint256) internal signedMessages;
 }
