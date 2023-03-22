@@ -214,7 +214,7 @@ contract SmartAccount is
      * @param batchId : the key of the user's batch being queried
      * @return nonce : the number of transactions made within said batch
      */
-    function getNonce(uint256 batchId) public view returns (uint256) {
+    function getNonce(uint256 batchId) public view virtual returns (uint256) {
         return nonces[batchId];
     }
 
@@ -741,7 +741,7 @@ contract SmartAccount is
      */
     function _validateAndUpdateNonce(
         UserOperation calldata userOp
-    ) internal override {
+    ) internal virtual override {
         if (nonces[0]++ != userOp.nonce)
             revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
     }
