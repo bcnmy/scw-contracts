@@ -684,8 +684,7 @@ contract SmartAccount is
             dest.length != value.length ||
             value.length != func.length
         ) revert WrongBatchProvided(dest.length, value.length, func.length);
-        uint256 arraysLength = dest.length;
-        for (uint256 i; i < arraysLength; ) {
+        for (uint256 i; i < dest.length; ) {
             _call(dest[i], value[i], func[i]);
             unchecked {
                 ++i;

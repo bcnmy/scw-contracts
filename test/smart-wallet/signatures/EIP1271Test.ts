@@ -262,6 +262,20 @@ describe("EIP-1271 Signatures Tests", function () {
     expect(value).to.be.equal(eip1271MagicValue);
   });
 
+  it("Main smart account owned by SignerSmartAccount returns magic value if a correct signature by SignerSmartAccount's owner has been provided", async function () {
+    const message = "Some message from dApp";
+    const signature = await accounts[0].signMessage(message);
+
+    // since .signMessage actually signs the message hash prepended by
+    // \x19Ethereum Signed Message:\n" and the length of the message
+    // we use .hashMessage to get message hash to verify against
+    const messageHash = ethers.utils.hashMessage(message);
+
+    const eip1271MagicValue = "0x1626ba7e";
+    const value = await mainSmartAccount.isValidSignature(messageHash, signature);
+    expect(value).to.be.equal(eip1271MagicValue);
+  });
+
   it("Signer smart account returns 0xffffffff if signature is not valid", async function () {
     const message = "Some message from dApp";
     let notOwner = accounts[1];
