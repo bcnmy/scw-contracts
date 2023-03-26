@@ -180,13 +180,13 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
     },
-    kovan: {
-      url: process.env.KOVAN_URL || "",
+    zkevm_testnet: {
+      url: process.env.ZKEVM_TESTNET_URL || "https://rpc.public.zkevm-test.net",
+      chainId: 1442,
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      chainId: 42,
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
