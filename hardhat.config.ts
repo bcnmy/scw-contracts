@@ -155,7 +155,9 @@ const config: HardhatUserConfig = {
       chainId: 42161,
     },
     bnb_testnet: {
-      url: "https://wandering-broken-tree.bsc-testnet.quiknode.pro/7992da20f9e4f97c2a117bea9af37c1c266f63ec/",
+      url:
+        process.env.BSC_TESTNET_URL ||
+        "https://wandering-broken-tree.bsc-testnet.quiknode.pro/7992da20f9e4f97c2a117bea9af37c1c266f63ec/",
       chainId: 97,
       accounts:
         process.env.PRIVATE_KEY !== undefined
@@ -178,13 +180,13 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
     },
-    kovan: {
-      url: process.env.KOVAN_URL || "",
+    zkevm_testnet: {
+      url: process.env.ZKEVM_TESTNET_URL || "https://rpc.public.zkevm-test.net",
+      chainId: 1442,
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      chainId: 42,
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
