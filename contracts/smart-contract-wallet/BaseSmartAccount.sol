@@ -66,7 +66,10 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
             revert CallerIsNotAnEntryPoint(msg.sender);
         validationData = _validateSignature(userOp, userOpHash);
         if (userOp.initCode.length == 0) {
-            _validateAndUpdateNonce(userOp);
+            (bool success, ) = address(entryPoint()).staticcall(
+                abi.encodeWithSignature("getNonce(address,uint192)", address(this), 0)
+            );
+            if (!success) _validateAndUpdateNonce(userOp);
         }
         _payPrefund(missingAccountFunds);
     }

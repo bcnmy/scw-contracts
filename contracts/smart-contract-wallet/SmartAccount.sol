@@ -210,15 +210,29 @@ contract SmartAccount is
      * @param batchId : the key of the user's batch being queried
      * @return nonce : the number of transactions made within said batch
      */
-    function getNonce(uint256 batchId) public view returns (uint256) {
-        return nonces[batchId];
+    function getNonce(uint256 batchId) public view virtual returns (uint256) {
+        (bool success, bytes memory data) = address(_entryPoint).staticcall(
+            abi.encodeWithSignature("getNonce(address,uint192)", address(this), 0)
+        );
+        if (!success) {
+            return nonces[batchId];
+        } else {
+            return abi.decode(data, (uint256));
+        }
     }
 
     /**
-     * @dev Standard interface for 1d nonces. Use it for Account Abstraction flow.
+     * @dev Returns a nonce from EntryPoint if EntryPoint supports it. Otherwise returns internal AA-flow nonce.
      */
     function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
+        (bool success, bytes memory data) = address(_entryPoint).staticcall(
+            abi.encodeWithSignature("getNonce(address,uint192)", address(this), 0)
+        );
+        if (!success) {
+            return nonces[0];
+        } else {
+            return abi.decode(data, (uint256));
+        }
     }
 
     /**
