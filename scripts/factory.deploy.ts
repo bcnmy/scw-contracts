@@ -5,7 +5,8 @@ import { BigNumber } from "ethers";
 
 async function main() {
   try {
-    const deploymentGasPrice = 30e9;
+    // TODO // fetch below two values from network config
+    const deploymentGasPrice = 100e9;
     const deploymentGasLimit = 287000;
     const DEPLOYMENT_FEE = BigNumber.from(
       (deploymentGasPrice * deploymentGasLimit).toString()
