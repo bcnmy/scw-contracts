@@ -2,11 +2,12 @@ import { ethers } from "hardhat";
 import { getContractAddress } from "ethers/lib/utils";
 import { Deployer__factory } from "../typechain";
 import { BigNumber } from "ethers";
+import hardhat from "hardhat";
 
 async function main() {
   try {
-    // TODO // fetch below two values from network config
-    const deploymentGasPrice = 100e9;
+    const deploymentGasPrice = getDeploymentGasPrice();
+    console.log("deploymentGasPrice ", deploymentGasPrice);
     const deploymentGasLimit = 287000;
     const DEPLOYMENT_FEE = BigNumber.from(
       (deploymentGasPrice * deploymentGasLimit).toString()
@@ -15,22 +16,23 @@ async function main() {
 
     const provider = ethers.provider;
 
-    const deployerKey = process.env.FACTORY_DEPLOYER_PRIVATE_KEY;
+    const deployerKey = process.env.DEPLOYER_CONTRACT_DEPLOYER_PRIVATE_KEY;
 
     if (!deployerKey) {
-      throw new Error("FACTORY_DEPLOYER_PRIVATE_KEY not set");
+      throw new Error("DEPLOYER_CONTRACT_DEPLOYER_PRIVATE_KEY not set");
     }
     const deployer = new ethers.Wallet(deployerKey, provider);
-    const factoryAddress = getContractAddress({
+    
+    const deployerContractAddress = getContractAddress({
       from: deployer.address,
       nonce: 0,
     });
 
     const chainId = (await provider.getNetwork()).chainId;
-    console.log(`Checking deployer ${factoryAddress} on chain ${chainId}...`);
-    const code = await provider.getCode(factoryAddress);
+    console.log(`Checking deployer contract ${deployerContractAddress} on chain ${chainId}...`);
+    const code = await provider.getCode(deployerContractAddress);
     if (code === "0x") {
-      console.log("Deployer not deployed");
+      console.log("Deployer contract has not been deployed yet");
       const signer = await provider.getSigner();
       const signerAddress = await signer.getAddress();
       console.log("signerAddress", signerAddress);
@@ -51,24 +53,38 @@ async function main() {
             to: deployer.address,
             value: fundsNeeded,
           });
-          await trx.wait(3);
+          await trx.wait();
           console.log("funds sent");
         }
       }
-      console.log("Deploying Deployer...");
-      const factoryDeployed = await new Deployer__factory(deployer).deploy();
-      await factoryDeployed.deployed();
+      console.log("Deploying Deployer Contract...");
+      const deployerContractDeployed = await new Deployer__factory(deployer).deploy();
+      await deployerContractDeployed.deployed();
       console.log(
-        `Deployer deployed at ${factoryDeployed.address} on chain ${chainId}`
+        "Deployed new Deployer Contract at %s on chain %s: %i", deployerContractDeployed.address, hardhat.network.name, chainId
       );
     } else {
       console.log(
-        `Deployer already deployed at  ${factoryAddress} on chain ${chainId}`
+        "Deployer Contract has already been deployed at %s on chain %s: %i", deployerContractAddress, hardhat.network.name, chainId
       );
     }
   } catch (error) {
-    console.log("error while deploying factory");
+    console.log("error while deploying Deployer Contract");
     console.log(error);
+  }
+}
+
+function getDeploymentGasPrice(): number {
+  if (hardhat.network.name === "polygon_mumbai" && hardhat.network.config.chainId === 80001) {
+    return 9e9;
+  } else if (hardhat.network.name === "goerli" && hardhat.network.config.chainId === 5) {
+    return 300e9;
+  } else if (hardhat.network.name === "arbitrumGoerli" && hardhat.network.config.chainId === 421613) {
+    return 14e8; //1.4 Gwei
+  } else if (hardhat.network.name === "avalancheTest" && hardhat.network.config.chainId === 43113) {
+    return 30e9; //30 nAvax
+  } else {
+    return hardhat.network.config.gasPrice === "auto" ? 100e9 : hardhat.network.config.gasPrice;
   }
 }
 

@@ -6,7 +6,7 @@ import {
   getDeployerInstance,
   isContract,
 } from "./utils";
-import { Deployer } from "../typechain";
+import { Deployer, Deployer__factory } from "../typechain";
 
 const provider = ethers.provider;
 let entryPointAddress =
@@ -16,9 +16,10 @@ let baseImpAddress = "";
 let fallBackHandlerAddress = "";
 const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
+const DEPLOYER_CONTRACT_ADDRESS = "0xa2aA15fc7B92B37635F2B55855Fa17764Ef1bD26"; // Deployer Contract Address mumbai only by now
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
-  if (network.name !== "hardhat" || network.name !== "ganache") {
+  if (network.name !== "hardhat" && network.name !== "ganache") {
     console.log("Entry Point Already Deployed Address: ", entryPointAddress);
     return;
   }
@@ -391,8 +392,28 @@ async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
   }
 }
 
+/*
+ *  This function is added to support the flow with pre-deploying the deployer contract
+ *  using the `deployer-contract.deploy.ts` script.
+ */
+async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
+  const code = await provider.getCode(DEPLOYER_CONTRACT_ADDRESS);
+  const chainId = (await provider.getNetwork()).chainId;
+  const [signer] = await ethers.getSigners();
+
+  if (code === "0x") {
+    console.log(`Deployer not deployed on chain ${chainId}, deploy it with deployer-contract.deploy.ts script before using this script.`);
+    throw new Error ('Deployer not deployed');
+  } else {
+    return Deployer__factory.connect(DEPLOYER_CONTRACT_ADDRESS, signer);
+  }
+
+}
+
+
 async function main() {
-  const deployerInstance = await getDeployerInstance();
+  //const deployerInstance = await getDeployerInstance();
+  const deployerInstance = await getPredeployedDeployerContractInstance();
   await deployEntryPointContract(deployerInstance);
   // await deployCallBackHandlerContract(deployerInstance);
   await deployBaseWalletImpContract(deployerInstance);

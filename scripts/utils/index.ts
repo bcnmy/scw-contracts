@@ -180,7 +180,7 @@ export const deployContract = async (
   console.log(name, deploymentStatus);
 
   if (!deploymentStatus) {
-    console.log(`Invalid ${name} Handler Deployment`);
+    console.log(`Invalid ${name} Deployment`);
   }
 
   return "0x";
