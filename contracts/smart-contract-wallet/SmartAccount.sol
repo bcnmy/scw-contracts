@@ -211,14 +211,7 @@ contract SmartAccount is
      * @return nonce : the number of transactions made within said batch
      */
     function getNonce(uint256 batchId) public view virtual returns (uint256) {
-        (bool success, bytes memory data) = address(_entryPoint).staticcall(
-            abi.encodeWithSignature("getNonce(address,uint192)", address(this), 0)
-        );
-        if (!success) {
-            return nonces[batchId];
-        } else {
-            return abi.decode(data, (uint256));
-        }
+        return nonces[batchId];
     }
 
     /**
