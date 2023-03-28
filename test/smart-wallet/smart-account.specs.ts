@@ -528,7 +528,12 @@ describe("Smart Account tests", function () {
 
       expect(await userSCW.getImplementation()).to.equal(baseImpl2.address);
       expect(await userSCW.nonce()).to.equal(0);
-      
+
+      // no problems with 0 being the working nonce again
+      // that cannot cause “replay attack”, since the authorization of this UserOp (signature) 
+      // should be valid for this EntryPoint, on this chainid only.
+      // https://docs.google.com/document/d/1MywdH_TCkyEjD3QusLZ_kUZg4ZEI00qp97mBze9JI4k
+    
     });
 
     it("can send a userOp with the new EP and it successfully goes thru", async () => {
