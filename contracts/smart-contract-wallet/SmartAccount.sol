@@ -206,7 +206,8 @@ contract SmartAccount is
     }
 
     /**
-     * @dev returns a value from the nonces 2d mapping
+     * @dev for batchId = 0 returns nonce(), that uses EntryPoint's nonce if EntryPoint supports it
+     *      for other batchIds returns a value from the nonces 2d mapping
      * @param batchId : the key of the user's batch being queried
      * @return nonce : the number of transactions made within said batch
      */
