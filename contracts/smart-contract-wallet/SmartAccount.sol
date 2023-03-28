@@ -211,6 +211,8 @@ contract SmartAccount is
      * @return nonce : the number of transactions made within said batch
      */
     function getNonce(uint256 batchId) public view virtual returns (uint256) {
+        if (batchId == 0) 
+            return nonce();
         return nonces[batchId];
     }
 
