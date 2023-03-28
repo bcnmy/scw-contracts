@@ -4,9 +4,11 @@ import {
   SmartAccount,
   SmartAccountFactory,
   EntryPoint,
+  EntryPointWithNonces,
   SocialRecoveryModule,
   WhitelistModule,
   EntryPoint__factory,
+  EntryPointWithNonces__factory,
   VerifyingSingletonPaymaster,
   VerifyingSingletonPaymaster__factory,
   MockToken,
@@ -14,8 +16,10 @@ import {
   StorageSetter,
 } from "../../typechain";
 import { Signer } from "ethers";
-import { parseEther } from "ethers/lib/utils";
+import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { encodeTransfer } from "./testUtils";
+import { fillAndSign, fillUserOp } from "../utils/userOp";
+import { UserOperation } from "../utils/userOperation";
 
 export async function deployEntryPoint(
   provider = ethers.provider
@@ -24,30 +28,107 @@ export async function deployEntryPoint(
   return EntryPoint__factory.connect(epf.address, provider.getSigner());
 }
 
+export async function deployEntryPointWithNonces(
+  provider = ethers.provider
+): Promise<EntryPointWithNonces> {
+  const epwnf = await (await ethers.getContractFactory("EntryPointWithNonces")).deploy();
+  return EntryPointWithNonces__factory.connect(epwnf.address, provider.getSigner());
+}
+
 export const AddressZero = "0x0000000000000000000000000000000000000000";
 export const AddressOne = "0x0000000000000000000000000000000000000001";
 
+async function getUserOpWithPaymasterData(
+  paymaster: VerifyingSingletonPaymaster,
+  smartAccountAddress: any,
+  userOp: UserOperation,
+  offchainPaymasterSigner: Signer,
+  paymasterAddress: string,
+  walletOwner: Signer,
+  entryPoint: EntryPoint
+) {
+  const nonceFromContract = await paymaster["getSenderPaymasterNonce(address)"](
+    smartAccountAddress
+  );
+
+  const hash = await paymaster.getHash(
+    userOp,
+    nonceFromContract.toNumber(),
+    await offchainPaymasterSigner.getAddress()
+  );
+  const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
+  const userOpWithPaymasterData = await fillAndSign(
+    {
+      // eslint-disable-next-line node/no-unsupported-features/es-syntax
+      ...userOp,
+      paymasterAndData: hexConcat([
+        paymasterAddress,
+        ethers.utils.defaultAbiCoder.encode(
+          ["address", "bytes"],
+          [await offchainPaymasterSigner.getAddress(), sig]
+        ),
+      ]),
+    },
+    walletOwner,
+    entryPoint
+  );
+  return userOpWithPaymasterData;
+}
+
 describe("Smart Account tests", function () {
   let entryPoint: EntryPoint;
+  let entryPointWithNonces: EntryPointWithNonces;
   let baseImpl: SmartAccount;
+  let baseImpl2: SmartAccount;
+  let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
+  let paymasterAddress: string;
+  let verifyingSingletonPaymaster2: VerifyingSingletonPaymaster;
+  let paymasterAddress2: string;
   let whitelistModule: WhitelistModule;
   let socialRecoveryModule: SocialRecoveryModule;
   let walletFactory: SmartAccountFactory;
   let token: MockToken;
   let multiSend: MultiSend;
   let storage: StorageSetter;
+  let offchainSigner: Signer; 
+  let deployer: Signer; 
   let owner: string;
   let bob: string;
+  let charlie: string;
   let userSCW: any;
   let accounts: any;
   let tx: any;
+  let prevNonce: any;
 
   before(async () => {
     accounts = await ethers.getSigners();
     entryPoint = await deployEntryPoint();
+    entryPointWithNonces = await deployEntryPointWithNonces();
 
     owner = await accounts[0].getAddress();
     bob = await accounts[1].getAddress();
+    charlie = await accounts[2].getAddress();
+
+    deployer = accounts[0];
+    offchainSigner = accounts[3];
+
+    const offchainSignerAddress = await offchainSigner.getAddress();
+
+    verifyingSingletonPaymaster =
+      await new VerifyingSingletonPaymaster__factory(deployer).deploy(
+        await deployer.getAddress(),
+        entryPoint.address,
+        offchainSignerAddress
+    );
+    paymasterAddress = verifyingSingletonPaymaster.address;
+
+    verifyingSingletonPaymaster2 =
+      await new VerifyingSingletonPaymaster__factory(deployer).deploy(
+        await deployer.getAddress(),
+        entryPointWithNonces.address,
+        offchainSignerAddress
+    );
+    paymasterAddress2 = verifyingSingletonPaymaster2.address;
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);
@@ -92,6 +173,30 @@ describe("Smart Account tests", function () {
 
     console.log("mint tokens to owner address..");
     await token.mint(owner, ethers.utils.parseEther("1000000"));
+
+    await verifyingSingletonPaymaster
+      .connect(deployer)
+      .addStake(10, { value: parseEther("2") });
+    console.log("paymaster staked");
+
+    await verifyingSingletonPaymaster.depositFor(
+      await offchainSigner.getAddress(),
+      { value: ethers.utils.parseEther("1") }
+    );
+
+    await verifyingSingletonPaymaster2
+      .connect(deployer)
+      .addStake(10, { value: parseEther("2") });
+    console.log("paymaster2 staked");
+
+    await verifyingSingletonPaymaster2.depositFor(
+      await offchainSigner.getAddress(),
+      { value: ethers.utils.parseEther("1") }
+    );
+
+    await entryPoint.depositTo(paymasterAddress, { value: parseEther("10") });
+    await entryPointWithNonces.depositTo(paymasterAddress2, { value: parseEther("10") });
+
   });
 
   describe("transfer: take native tokens out of Smart Account", function () {
@@ -246,4 +351,349 @@ describe("Smart Account tests", function () {
       expect(tx).to.equal(true);
     });
   });
+
+  describe("Nonces: local and semi-abstracted", function () {
+    it("can send the userOp while the EP does not support semi-abstracted nonces yet", async () => {
+
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
+
+      await accounts[1].sendTransaction({
+          from: bob,
+          to: expectedSmartAccountAddress,
+          value: ethers.utils.parseEther("5"),
+      });
+
+      const scwNonceBefore = await userSCW.nonce();
+      const charlieBalBefore = await ethers.provider.getBalance(charlie);
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+      const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+        charlie,
+        ethers.utils.parseEther("1"),
+        "0x",
+      ]);
+      
+      const userOp1 = await fillAndSign(
+        {
+          sender: expectedSmartAccountAddress,
+          callData: txnData,
+          verificationGasLimit: 200000,
+        },
+        accounts[0], //owner
+        entryPoint
+      );
+
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        expectedSmartAccountAddress,
+        userOp1,
+        offchainSigner,
+        paymasterAddress,
+        accounts[0], //owner
+        entryPoint
+      );
+
+      const uerOpHash = await entryPoint?.getUserOpHash(userOp);
+
+      const VerifyingPaymaster = await ethers.getContractFactory(
+        "VerifyingSingletonPaymaster"
+      );
+
+      const validatePaymasterUserOpData =
+        VerifyingPaymaster.interface.encodeFunctionData(
+          "validatePaymasterUserOp",
+          [userOp, uerOpHash, 10]
+        );
+
+      const gasEstimatedValidateUserOp = await ethers.provider.estimateGas({
+        from: entryPoint?.address,
+        to: paymasterAddress,
+        data: validatePaymasterUserOpData, // validatePaymasterUserOp calldata
+      });
+
+      console.log(
+        "Gaslimit for validate paymaster userOp is: ",
+        gasEstimatedValidateUserOp
+      );
+
+      await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+
+      const balCharlieActual = await ethers.provider.getBalance(charlie);
+      expect(balCharlieActual).to.be.equal(
+        charlieBalBefore.add(ethers.utils.parseEther("1"))
+      );
+
+      const scwNonceAfter = await userSCW.nonce();
+      expect(scwNonceAfter).to.be.equal(scwNonceBefore.add(1));
+      
+      //console.log("scwNonceAfter: ", scwNonceAfter.toString());
+
+      prevNonce = scwNonceAfter;
+      
+    });
+
+    it("can send the next userOp with the same EP and the nonce is increased", async () => {
+
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
+
+      await accounts[1].sendTransaction({
+          from: bob,
+          to: expectedSmartAccountAddress,
+          value: ethers.utils.parseEther("5"),
+      });
+
+      const scwNonceBefore = await userSCW.nonce();
+      const charlieBalBefore = await ethers.provider.getBalance(charlie);
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+      const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+        charlie,
+        ethers.utils.parseEther("1"),
+        "0x",
+      ]);
+      
+      const userOp1 = await fillAndSign(
+        {
+          sender: expectedSmartAccountAddress,
+          callData: txnData,
+          verificationGasLimit: 200000,
+        },
+        accounts[0], //owner
+        entryPoint
+      );
+
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster,
+        expectedSmartAccountAddress,
+        userOp1,
+        offchainSigner,
+        paymasterAddress,
+        accounts[0], //owner
+        entryPoint
+      );
+
+      const uerOpHash = await entryPoint?.getUserOpHash(userOp);
+
+      const VerifyingPaymaster = await ethers.getContractFactory(
+        "VerifyingSingletonPaymaster"
+      );
+
+      const validatePaymasterUserOpData =
+        VerifyingPaymaster.interface.encodeFunctionData(
+          "validatePaymasterUserOp",
+          [userOp, uerOpHash, 10]
+        );
+
+      const gasEstimatedValidateUserOp = await ethers.provider.estimateGas({
+        from: entryPoint?.address,
+        to: paymasterAddress,
+        data: validatePaymasterUserOpData, // validatePaymasterUserOp calldata
+      });
+
+      console.log(
+        "Gaslimit for validate paymaster userOp is: ",
+        gasEstimatedValidateUserOp
+      );
+
+      await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
+
+      const balCharlieActual = await ethers.provider.getBalance(charlie);
+      expect(balCharlieActual).to.be.equal(
+        charlieBalBefore.add(ethers.utils.parseEther("1"))
+      );
+
+      const scwNonceAfter = await userSCW.nonce();
+      expect(scwNonceAfter).to.be.equal(scwNonceBefore.add(1));
+      expect(scwNonceAfter).to.be.equal(prevNonce.add(1));
+      
+      //console.log("scwNonceAfter: ", scwNonceAfter.toString());
+      
+    });
+
+    // can update wallet to a new implementation (with a new EP)
+    it("Can update wallet to a new implementation (with a new EP)", async () => {
+
+      const BaseImplementation = await ethers.getContractFactory("SmartAccount");
+      baseImpl2 = await BaseImplementation.deploy(entryPointWithNonces.address);
+      await baseImpl2.deployed();
+      console.log("base wallet impl with new EntryPointWithNonces deployed at: ", baseImpl2.address);
+
+      await userSCW.updateImplementation(baseImpl2.address);
+
+      expect(await userSCW.getImplementation()).to.equal(baseImpl2.address);
+      expect(await userSCW.nonce()).to.equal(0);
+      
+    });
+
+    it("can send a userOp with the new EP and it successfully goes thru", async () => {
+
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
+
+      await accounts[1].sendTransaction({
+          from: bob,
+          to: expectedSmartAccountAddress,
+          value: ethers.utils.parseEther("5"),
+      });
+
+      const scwNonceBefore = await userSCW.nonce();
+      const charlieBalBefore = await ethers.provider.getBalance(charlie);
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+      const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+        charlie,
+        ethers.utils.parseEther("1"),
+        "0x",
+      ]);
+      
+      const userOp1 = await fillAndSign(
+        {
+          sender: expectedSmartAccountAddress,
+          callData: txnData,
+          verificationGasLimit: 200000,
+        },
+        accounts[0], //owner
+        entryPointWithNonces
+      );
+
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster2,
+        expectedSmartAccountAddress,
+        userOp1,
+        offchainSigner,
+        paymasterAddress2,
+        accounts[0], //owner
+        entryPointWithNonces
+      );
+
+      const uerOpHash = await entryPointWithNonces?.getUserOpHash(userOp);
+
+      const VerifyingPaymaster = await ethers.getContractFactory(
+        "VerifyingSingletonPaymaster"
+      );
+
+      const validatePaymasterUserOpData =
+        VerifyingPaymaster.interface.encodeFunctionData(
+          "validatePaymasterUserOp",
+          [userOp, uerOpHash, 10]
+        );
+      
+      const gasEstimatedValidateUserOp = await ethers.provider.estimateGas({
+        from: entryPointWithNonces?.address,
+        to: paymasterAddress2,
+        data: validatePaymasterUserOpData, // validatePaymasterUserOp calldata
+      });
+
+      console.log(
+        "Gaslimit for validate paymaster userOp is: ",
+        gasEstimatedValidateUserOp
+      );
+
+      await entryPointWithNonces.handleOps([userOp], await offchainSigner.getAddress());
+
+      const balCharlieActual = await ethers.provider.getBalance(charlie);
+      expect(balCharlieActual).to.be.equal(
+        charlieBalBefore.add(ethers.utils.parseEther("1"))
+      );
+
+      const scwNonceAfter = await userSCW.nonce();
+      expect(scwNonceAfter).to.be.equal(scwNonceBefore.add(1));
+      
+      //console.log("scwNonceAfter: ", scwNonceAfter.toString());
+
+      prevNonce = scwNonceAfter;
+      
+    });
+
+    it("can send the next userOp with the new EP and it successfully goes thru with the increased nonce", async () => {
+
+      const expectedSmartAccountAddress =
+        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
+
+      await accounts[1].sendTransaction({
+          from: bob,
+          to: expectedSmartAccountAddress,
+          value: ethers.utils.parseEther("5"),
+      });
+
+      const scwNonceBefore = await userSCW.nonce();
+      const charlieBalBefore = await ethers.provider.getBalance(charlie);
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+      const txnData = SmartAccount.interface.encodeFunctionData("executeCall", [
+        charlie,
+        ethers.utils.parseEther("1"),
+        "0x",
+      ]);
+      
+      const userOp1 = await fillAndSign(
+        {
+          sender: expectedSmartAccountAddress,
+          callData: txnData,
+          verificationGasLimit: 200000,
+        },
+        accounts[0], //owner
+        entryPointWithNonces
+      );
+
+      // Set paymaster data in UserOp
+      const userOp = await getUserOpWithPaymasterData(
+        verifyingSingletonPaymaster2,
+        expectedSmartAccountAddress,
+        userOp1,
+        offchainSigner,
+        paymasterAddress2,
+        accounts[0], //owner
+        entryPointWithNonces
+      );
+
+      const uerOpHash = await entryPointWithNonces?.getUserOpHash(userOp);
+
+      const VerifyingPaymaster = await ethers.getContractFactory(
+        "VerifyingSingletonPaymaster"
+      );
+
+      const validatePaymasterUserOpData =
+        VerifyingPaymaster.interface.encodeFunctionData(
+          "validatePaymasterUserOp",
+          [userOp, uerOpHash, 10]
+        );
+      
+      const gasEstimatedValidateUserOp = await ethers.provider.estimateGas({
+        from: entryPointWithNonces?.address,
+        to: paymasterAddress2,
+        data: validatePaymasterUserOpData, // validatePaymasterUserOp calldata
+      });
+
+      console.log(
+        "Gaslimit for validate paymaster userOp is: ",
+        gasEstimatedValidateUserOp
+      );
+
+      await entryPointWithNonces.handleOps([userOp], await offchainSigner.getAddress());
+
+      const balCharlieActual = await ethers.provider.getBalance(charlie);
+      expect(balCharlieActual).to.be.equal(
+        charlieBalBefore.add(ethers.utils.parseEther("1"))
+      );
+
+      const scwNonceAfter = await userSCW.nonce();
+      expect(scwNonceAfter).to.be.equal(scwNonceBefore.add(1));
+      expect(scwNonceAfter).to.be.equal(prevNonce.add(1));
+
+      //console.log("scwNonceAfter: ", scwNonceAfter.toString());
+
+    });
+
+  });
+
 });

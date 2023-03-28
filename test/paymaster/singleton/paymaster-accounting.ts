@@ -34,7 +34,7 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { fillAndSign, fillUserOp } from "../../utils/userOp";
 import { arrayify, formatEther, hexConcat, parseEther } from "ethers/lib/utils";
 import { BigNumber, Signer } from "ethers";
-import { UserOperation } from "../../utils/userOpetation";
+import { UserOperation } from "../../utils/userOperation";
 
 describe("Upgrade functionality Via Entrypoint", function () {
   let entryPoint: EntryPoint;

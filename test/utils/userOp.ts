@@ -20,7 +20,7 @@ import {
 } from "ethereumjs-util";
 import { ethers } from "hardhat";
 import { EntryPoint, VerifyingPaymaster } from "../../typechain";
-import { UserOperation } from "./userOpetation";
+import { UserOperation } from "./userOperation";
 import { Create2Factory } from "../../src/Create2Factory";
 
 function encode(

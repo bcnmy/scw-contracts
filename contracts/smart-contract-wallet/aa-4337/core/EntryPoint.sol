@@ -519,6 +519,7 @@ contract EntryPoint is IEntryPoint, StakeManager {
         uint256 requiredPrefund
     )
         internal
+        virtual
         returns (
             uint256 gasUsedByValidateAccountPrepayment,
             uint256 validationData

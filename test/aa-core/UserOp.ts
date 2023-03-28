@@ -243,7 +243,7 @@ export async function fillUserOp(
       throw new Error("must have entryPoint to autofill nonce");
     const c = new Contract(
       op.sender!,
-      ["function nonce() view returns(address)"],
+      ["function nonce() view returns(uint256)"],
       provider
     );
     op1.nonce = await c.nonce().catch(rethrow());
