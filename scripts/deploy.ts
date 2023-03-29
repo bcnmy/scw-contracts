@@ -9,14 +9,11 @@ import {
 import { Deployer, Deployer__factory } from "../typechain";
 
 const provider = ethers.provider;
-let entryPointAddress =
-  process.env.ENTRY_POINT_ADDRESS ||
-  "0x0576a174D229E3cFA37253523E645A78A0C91B57";
 let baseImpAddress = "";
-let fallBackHandlerAddress = "";
+let entryPointAddress = process.env.ENTRY_POINT_ADDRESS || "0x0576a174D229E3cFA37253523E645A78A0C91B57";
 const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
 const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
-const DEPLOYER_CONTRACT_ADDRESS = "0xa2aA15fc7B92B37635F2B55855Fa17764Ef1bD26"; // Deployer Contract Address mumbai only by now
+const DEPLOYER_CONTRACT_ADDRESS = process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
   if (network.name !== "hardhat" && network.name !== "ganache") {
@@ -52,46 +49,6 @@ async function deployEntryPointContract(deployerInstance: Deployer) {
       console.log(
         "Entry Point is Already deployed with address ",
         entryPointAddress
-      );
-    }
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-async function deployCallBackHandlerContract(deployerInstance: Deployer) {
-  try {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.FallBACK_HANDLER)
-    );
-
-    const callBackHandler = await ethers.getContractFactory(
-      "DefaultCallbackHandler"
-    );
-    const callBackHandlerBytecode = `${callBackHandler.bytecode}`;
-    fallBackHandlerAddress = await deployerInstance.addressOf(salt);
-    console.log("CallBack Handler Computed Address: ", fallBackHandlerAddress);
-
-    const isCallBackHandlerDeployed = await isContract(
-      fallBackHandlerAddress,
-      provider
-    ); // true (deployed on-chain)
-    if (!isCallBackHandlerDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.FallBACK_HANDLER,
-        fallBackHandlerAddress,
-        salt,
-        callBackHandlerBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: fallBackHandlerAddress,
-        constructorArguments: [],
-      });
-    } else {
-      console.log(
-        "CallBack Handler is Already deployed with address ",
-        fallBackHandlerAddress
       );
     }
   } catch (err) {
@@ -405,17 +362,15 @@ async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
     console.log(`Deployer not deployed on chain ${chainId}, deploy it with deployer-contract.deploy.ts script before using this script.`);
     throw new Error ('Deployer not deployed');
   } else {
+    console.log('Deploying with EOA %s through Deployer Contract %s', signer.address, DEPLOYER_CONTRACT_ADDRESS);
     return Deployer__factory.connect(DEPLOYER_CONTRACT_ADDRESS, signer);
   }
 
 }
 
-
 async function main() {
-  //const deployerInstance = await getDeployerInstance();
   const deployerInstance = await getPredeployedDeployerContractInstance();
   await deployEntryPointContract(deployerInstance);
-  // await deployCallBackHandlerContract(deployerInstance);
   await deployBaseWalletImpContract(deployerInstance);
   await deployWalletFactoryContract(deployerInstance);
   await deployGasEstimatorContract(deployerInstance);
