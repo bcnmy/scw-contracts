@@ -39,6 +39,8 @@ contract VerifyingSingletonPaymaster is
     // paymaster nonce for account
     mapping(address => uint256) private paymasterNonces;
 
+    mapping(address=>uint256) private activeEntryPoints;
+
     event EPGasOverheadChanged(
         uint256 indexed _oldValue,
         uint256 indexed _newValue
@@ -237,6 +239,15 @@ contract VerifyingSingletonPaymaster is
 
     function _updateNonce(UserOperation calldata userOp) internal {
         ++paymasterNonces[userOp.getSender()];
+    }
+
+    function setEntryPointStatus(address entryPoint, uint256 newStatus) public onlyOwner {
+        activeEntryPoints[entryPoint] = newStatus;
+    }
+
+    function _requireFromEntryPoint() internal virtual override {
+        if (msg.sender != address(entryPoint) && activeEntryPoints[msg.sender] == 0)
+            revert CallerIsNotAnEntryPoint(msg.sender);
     }
 
     /**
