@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.17;
 import "../SmartAccount.sol";
-import {IModule} from "./IModule.sol";
+import {IModule} from "../interfaces/IModule.sol";
 
 contract WhitelistModule {
     mapping(address => bool) public whitelisted;

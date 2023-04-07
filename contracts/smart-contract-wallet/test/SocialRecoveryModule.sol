@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 import "../SmartAccount.sol";
-import {IModule} from "./IModule.sol";
+import {IModule} from "../interfaces/IModule.sol";
 
 contract SocialRecoveryModule is IModule {
     string public constant NAME = "Social Recovery Module";
