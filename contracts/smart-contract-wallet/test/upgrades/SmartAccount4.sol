@@ -552,15 +552,6 @@ contract SmartAccount4 is
     }
 
     /// implement template method of BaseAccount
-    // @notice Nonce space is locked to 0 for AA transactions
-    // userOp could have batchId as well
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal override {
-        require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
-    }
-
-    /// implement template method of BaseAccount
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash

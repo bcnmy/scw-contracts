@@ -12,8 +12,9 @@ pragma solidity 0.8.17;
 import "./UserOperation.sol";
 import "./IStakeManager.sol";
 import "./IAggregator.sol";
+import "./INonceManager.sol";
 
-interface IEntryPoint is IStakeManager {
+interface IEntryPoint is IStakeManager, INonceManager {
     /***
      * An event emitted after each successful request
      * @param userOpHash - unique identifier for the request (hash its entire content, except signature).
@@ -61,6 +62,12 @@ interface IEntryPoint is IStakeManager {
         uint256 nonce,
         bytes revertReason
     );
+
+    /**
+     * an event emitted by handleOps(), before starting the execution loop.
+     * any event emitted before this event, is part of the validation.
+     */
+    event BeforeExecution();
 
     /**
      * signature aggregator used by the following UserOperationEvents within this bundle.

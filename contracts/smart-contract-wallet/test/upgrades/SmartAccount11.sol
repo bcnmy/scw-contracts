@@ -684,21 +684,6 @@ contract SmartAccount11 is
 
     /**
      * @dev implement template method of BaseAccount
-     * @notice Nonce space is locked to 0 for AA transactions
-     */
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal override {
-        if (nonces[0]++ != userOp.nonce)
-            revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
-
-        // Compatiblity options, should choose one
-        //if(nonces[0]++ != userOp.nonce) revert ("account: invalid nonce");
-        //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
-    }
-
-    /**
-     * @dev implement template method of BaseAccount
      */
     function _validateSignature(
         UserOperation calldata userOp,

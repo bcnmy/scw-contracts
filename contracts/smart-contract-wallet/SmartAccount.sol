@@ -731,17 +731,6 @@ contract SmartAccount is
     }
 
     /**
-     * @dev implement template method of BaseAccount
-     * @notice Nonce space is locked to 0 for AA transactions
-     */
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal virtual override {
-        if (nonces[0]++ != userOp.nonce)
-            revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
-    }
-
-    /**
      * @dev Implements the template method of BaseAccount and validates the user's signature for a given operation.
      * @notice This function is marked as internal and virtual, and it overrides the BaseAccount function of the same name.
      * @param userOp The user operation to be validated, provided as a `UserOperation` calldata struct.
