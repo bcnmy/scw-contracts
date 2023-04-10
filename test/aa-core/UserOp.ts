@@ -15,78 +15,65 @@ import { EntryPoint } from "../../typechain";
 import { UserOperation } from "./UserOperation";
 import { Create2Factory } from "../../src/Create2Factory";
 
-function encode(
-  typevalues: Array<{ type: string; val: any }>,
-  forSignature: boolean
-): string {
-  const types = typevalues.map((typevalue) =>
-    typevalue.type === "bytes" && forSignature ? "bytes32" : typevalue.type
-  );
-  const values = typevalues.map((typevalue) =>
-    typevalue.type === "bytes" && forSignature
-      ? keccak256(typevalue.val)
-      : typevalue.val
-  );
-  return defaultAbiCoder.encode(types, values);
-}
-
-// export function packUserOp(op: UserOperation, hashBytes = true): string {
-//   if ( !hashBytes || true ) {
-//     return packUserOp1(op, hashBytes)
-//   }
-//
-//   const opEncoding = Object.values(testUtil.interface.functions).find(func => func.name == 'packUserOp')!.inputs[0]
-//   let packed = defaultAbiCoder.encode([opEncoding], [{...op, signature:'0x'}])
-//   packed = '0x'+packed.slice(64+2) //skip first dword (length)
-//   packed = packed.slice(0,packed.length-64) //remove signature (the zero-length)
-//   return packed
-// }
-
 export function packUserOp(op: UserOperation, forSignature = true): string {
   if (forSignature) {
-    // lighter signature scheme (must match UserOperation#pack): do encode a zero-length signature, but strip afterwards the appended zero-length value
-    const userOpType = {
-      components: [
-        { type: "address", name: "sender" },
-        { type: "uint256", name: "nonce" },
-        { type: "bytes", name: "initCode" },
-        { type: "bytes", name: "callData" },
-        { type: "uint256", name: "callGasLimit" },
-        { type: "uint256", name: "verificationGasLimit" },
-        { type: "uint256", name: "preVerificationGas" },
-        { type: "uint256", name: "maxFeePerGas" },
-        { type: "uint256", name: "maxPriorityFeePerGas" },
-        { type: "bytes", name: "paymasterAndData" },
-        { type: "bytes", name: "signature" },
+    return defaultAbiCoder.encode(
+      [
+        "address",
+        "uint256",
+        "bytes32",
+        "bytes32",
+        "uint256",
+        "uint256",
+        "uint256",
+        "uint256",
+        "uint256",
+        "bytes32",
       ],
-      name: "userOp",
-      type: "tuple",
-    };
-    let encoded = defaultAbiCoder.encode(
-      [userOpType as any],
-      [{ ...op, signature: "0x" }]
+      [
+        op.sender,
+        op.nonce,
+        keccak256(op.initCode),
+        keccak256(op.callData),
+        op.callGasLimit,
+        op.verificationGasLimit,
+        op.preVerificationGas,
+        op.maxFeePerGas,
+        op.maxPriorityFeePerGas,
+        keccak256(op.paymasterAndData),
+      ]
     );
-    // remove leading word (total length) and trailing word (zero-length signature)
-    encoded = "0x" + encoded.slice(66, encoded.length - 64);
-    return encoded;
+  } else {
+    // for the purpose of calculating gas cost encode also signature (and no keccak of bytes)
+    return defaultAbiCoder.encode(
+      [
+        "address",
+        "uint256",
+        "bytes",
+        "bytes",
+        "uint256",
+        "uint256",
+        "uint256",
+        "uint256",
+        "uint256",
+        "bytes",
+        "bytes",
+      ],
+      [
+        op.sender,
+        op.nonce,
+        op.initCode,
+        op.callData,
+        op.callGasLimit,
+        op.verificationGasLimit,
+        op.preVerificationGas,
+        op.maxFeePerGas,
+        op.maxPriorityFeePerGas,
+        op.paymasterAndData,
+        op.signature,
+      ]
+    );
   }
-  const typevalues = [
-    { type: "address", val: op.sender },
-    { type: "uint256", val: op.nonce },
-    { type: "bytes", val: op.initCode },
-    { type: "bytes", val: op.callData },
-    { type: "uint256", val: op.callGasLimit },
-    { type: "uint256", val: op.verificationGasLimit },
-    { type: "uint256", val: op.preVerificationGas },
-    { type: "uint256", val: op.maxFeePerGas },
-    { type: "uint256", val: op.maxPriorityFeePerGas },
-    { type: "bytes", val: op.paymasterAndData },
-  ];
-  if (!forSignature) {
-    // for the purpose of calculating gas cost, also hash signature
-    typevalues.push({ type: "bytes", val: op.signature });
-  }
-  return encode(typevalues, forSignature);
 }
 
 export function packUserOp1(op: UserOperation): string {
@@ -97,8 +84,8 @@ export function packUserOp1(op: UserOperation): string {
       "bytes32", // initCode
       "bytes32", // callData
       "uint256", // callGasLimit
-      "uint", // verificationGasLimit
-      "uint", // preVerificationGas
+      "uint256", // verificationGasLimit
+      "uint256", // preVerificationGas
       "uint256", // maxFeePerGas
       "uint256", // maxPriorityFeePerGas
       "bytes32", // paymasterAndData
@@ -137,7 +124,7 @@ export const DefaultsForUserOp: UserOperation = {
   initCode: "0x",
   callData: "0x",
   callGasLimit: 0,
-  verificationGasLimit: 100000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
+  verificationGasLimit: 150000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
   preVerificationGas: 21000, // should also cover calldata cost.
   maxFeePerGas: 0,
   maxPriorityFeePerGas: 1e9,
@@ -193,15 +180,16 @@ export function fillUserOpDefaults(
 //  - calculate sender by eth_call the deployment code
 //  - default verificationGasLimit estimateGas of deployment code plus default 100000
 // no initCode:
-//  - update nonce from account.nonce()
+//  - update nonce from account.getNonce()
 // entryPoint param is only required to fill in "sender address when specifying "initCode"
-// nonce: assume contract as "nonce()" function, and fill in.
+// nonce: assume contract as "getNonce()" function, and fill in.
 // sender - only in case of construction: fill sender from initCode.
 // callGasLimit: VERY crude estimation (by estimating call to account, and add rough entryPoint overhead
 // verificationGasLimit: hard-code default at 100k. should add "create2" cost
 export async function fillUserOp(
   op: Partial<UserOperation>,
-  entryPoint?: EntryPoint
+  entryPoint?: EntryPoint,
+  getNonceFunction = "getNonce"
 ): Promise<UserOperation> {
   const op1 = { ...op };
   const provider = entryPoint?.provider;
@@ -243,23 +231,23 @@ export async function fillUserOp(
       throw new Error("must have entryPoint to autofill nonce");
     const c = new Contract(
       op.sender!,
-      ["function nonce() view returns(address)"],
+      [`function ${getNonceFunction}() view returns(uint256)`],
       provider
     );
-    op1.nonce = await c.nonce().catch(rethrow());
+    op1.nonce = await c[getNonceFunction]().catch(rethrow());
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
       throw new Error("must have entryPoint for callGasLimit estimate");
-    const gasEstimated = await provider.estimateGas({
+    const gasEtimated = await provider.estimateGas({
       from: entryPoint?.address,
       to: op1.sender,
       data: op1.callData,
     });
 
-    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEstimated)
+    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEtimated)
     // estimateGas assumes direct call from entryPoint. add wrapper cost.
-    op1.callGasLimit = gasEstimated; // .add(55000)
+    op1.callGasLimit = gasEtimated; // .add(55000)
   }
   if (op1.maxFeePerGas == null) {
     if (provider == null)
@@ -286,10 +274,11 @@ export async function fillUserOp(
 export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
-  entryPoint?: EntryPoint
+  entryPoint?: EntryPoint,
+  getNonceFunction = "getNonce"
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
-  const op2 = await fillUserOp(op, entryPoint);
+  const op2 = await fillUserOp(op, entryPoint, getNonceFunction);
 
   const chainId = await provider!.getNetwork().then((net) => net.chainId);
   const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));

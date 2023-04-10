@@ -160,11 +160,10 @@ describe("Account Functionality: 4337", function () {
       ethers.utils.parseEther("1"),
     ]);
     // encode executeCall function data with transfer erc20 token data
-    const txnData = SmartAccount.interface.encodeFunctionData("executeCall_s1m", [
-      token.address,
-      0,
-      transferData,
-    ]);
+    const txnData = SmartAccount.interface.encodeFunctionData(
+      "executeCall_s1m",
+      [token.address, 0, transferData]
+    );
 
     const userOp1 = await fillAndSign(
       {
@@ -173,7 +172,8 @@ describe("Account Functionality: 4337", function () {
         verificationGasLimit: 200000,
       },
       walletOwner,
-      entryPoint
+      entryPoint,
+      "nonce"
     );
 
     const hash = await verifyingSingletonPaymaster.getHash(
@@ -193,7 +193,8 @@ describe("Account Functionality: 4337", function () {
         ]),
       },
       walletOwner,
-      entryPoint
+      entryPoint,
+      "nonce"
     );
 
     const tx = await entryPoint.handleOps(
@@ -239,11 +240,10 @@ describe("Account Functionality: 4337", function () {
       ethers.utils.parseEther("1"),
     ]);
     // encode executeCall function data with transfer erc20 token data
-    const txnData = SmartAccount.interface.encodeFunctionData("executeCall_s1m", [
-      token.address,
-      0,
-      transferData,
-    ]);
+    const txnData = SmartAccount.interface.encodeFunctionData(
+      "executeCall_s1m",
+      [token.address, 0, transferData]
+    );
 
     const WalletFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
@@ -263,7 +263,8 @@ describe("Account Functionality: 4337", function () {
         initCode: hexConcat([walletFactory.address, encodedData]),
       },
       accounts[2],
-      entryPoint
+      entryPoint,
+      "nonce"
     );
 
     const hash = await verifyingSingletonPaymaster.getHash(
@@ -283,7 +284,8 @@ describe("Account Functionality: 4337", function () {
         ]),
       },
       accounts[2],
-      entryPoint
+      entryPoint,
+      "nonce"
     );
 
     const tx = await entryPoint.handleOps(
@@ -352,7 +354,8 @@ describe("Account Functionality: 4337", function () {
         // initCode: hexConcat([walletFactory.address, encodedData]),
       },
       accounts[2],
-      entryPoint
+      entryPoint,
+      "nonce"
     );
 
     const hash = await verifyingSingletonPaymaster.getHash(
@@ -372,7 +375,8 @@ describe("Account Functionality: 4337", function () {
         ]),
       },
       accounts[2],
-      entryPoint
+      entryPoint,
+      "nonce"
     );
 
     const tx = await entryPoint.handleOps(
@@ -451,7 +455,8 @@ describe("Account Functionality: 4337", function () {
         initCode: hexConcat([walletFactory.address, encodedData]),
       },
       accounts[2],
-      entryPoint
+      entryPoint,
+      "nonce"
     );
 
     const hash = await verifyingSingletonPaymaster.getHash(
@@ -471,7 +476,8 @@ describe("Account Functionality: 4337", function () {
         ]),
       },
       accounts[2],
-      entryPoint
+      entryPoint,
+      "nonce"
     );
 
     const tx = await entryPoint.handleOps(
@@ -615,7 +621,7 @@ describe("Account Functionality: 4337", function () {
       `Forward flow: [send erc20] tx execTransaction_S6W: ${receipt.gasUsed.toString()}`
     );
 
-    console.log(token.balanceOf(john));
+    console.log(await token.balanceOf(john));
     expect(await token.balanceOf(john)).to.equal(ethers.utils.parseEther("5"));
   });
 

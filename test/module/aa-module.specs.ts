@@ -65,7 +65,8 @@ async function getUserOpWithPaymasterData(
       ]),
     },
     walletOwner,
-    entryPoint
+    entryPoint,
+    'nonce'
   );
   return userOpWithPaymasterData;
 }
@@ -189,7 +190,8 @@ describe("Module transactions via AA flow", function () {
           verificationGasLimit: 350000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       // Set paymaster data in UserOp
@@ -244,7 +246,8 @@ describe("Module transactions via AA flow", function () {
           verificationGasLimit: 200000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       // Set paymaster data in UserOp
@@ -335,7 +338,8 @@ describe("Module transactions via AA flow", function () {
           verificationGasLimit: 200000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       // Set paymaster data in UserOp
@@ -605,7 +609,8 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       const hash = await verifyingSingletonPaymaster.getHash(
@@ -625,7 +630,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOp);
       // const userOpHash = await entryPoint.getUserOpHash(userOp);
@@ -709,7 +715,8 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         accounts[7], // not an owner // as good as overriding later with fake sig!
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       const hash = await verifyingSingletonPaymaster.getHash(
@@ -729,7 +736,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOp);
       // TODO: Replace signature with mock signature..
@@ -807,7 +815,8 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       const hash = await verifyingSingletonPaymaster.getHash(
@@ -827,7 +836,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOpAA1);
       await entryPoint.handleOps(
@@ -881,7 +891,8 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       const hash2 = await verifyingSingletonPaymaster.getHash(
@@ -901,7 +912,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOpAA2);
       await entryPoint.handleOps(
@@ -1008,7 +1020,8 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         accounts[8], // not an owner
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       const hash = await verifyingSingletonPaymaster.getHash(
@@ -1028,7 +1041,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOp);
       // TODO: Replace signature with mock signature..
