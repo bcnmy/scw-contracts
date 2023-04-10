@@ -100,10 +100,6 @@ contract MaliciousAccount2 is
         _;
     }
 
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }

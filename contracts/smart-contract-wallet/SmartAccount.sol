@@ -215,13 +215,6 @@ contract SmartAccount is
     }
 
     /**
-     * @dev Standard interface for 1d nonces. Use it for Account Abstraction flow.
-     */
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
-    /**
      * @dev Returns the current entry point used by this account.
      * @return EntryPoint as an `IEntryPoint` interface.
      * @dev This function should be implemented by the subclass to return the current entry point used by this account.

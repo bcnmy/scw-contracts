@@ -167,11 +167,6 @@ contract SmartAccount7 is
         return nonces[batchId];
     }
 
-    // Standard interface for 1d nonces. Use it for Account Abstraction flow.
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }
