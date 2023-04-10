@@ -175,13 +175,9 @@ describe("Account Functionality: 4337", function () {
       walletOwner,
       entryPoint
     );
-    const nonceFromContract = await verifyingSingletonPaymaster[
-      "getSenderPaymasterNonce(address)"
-    ](walletAddress);
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      nonceFromContract.toNumber(),
       await offchainSigner.getAddress()
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
@@ -269,12 +265,9 @@ describe("Account Functionality: 4337", function () {
       accounts[2],
       entryPoint
     );
-    const nonceFromContract = await verifyingSingletonPaymaster[
-      "getSenderPaymasterNonce(address)"
-    ](newUserSCW.address);
+
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      nonceFromContract.toNumber(),
       await offchainSigner.getAddress()
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
@@ -362,13 +355,8 @@ describe("Account Functionality: 4337", function () {
       entryPoint
     );
 
-    const nonceFromContract = await verifyingSingletonPaymaster[
-      "getSenderPaymasterNonce(address)"
-    ](newUserSCW.address);
-
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      nonceFromContract.toNumber(),
       await offchainSigner.getAddress()
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
@@ -466,13 +454,8 @@ describe("Account Functionality: 4337", function () {
       entryPoint
     );
 
-    const nonceFromContract = await verifyingSingletonPaymaster[
-      "getSenderPaymasterNonce(address)"
-    ](newUserSCW.address);
-
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      nonceFromContract.toNumber(),
       await offchainSigner.getAddress()
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
