@@ -41,13 +41,8 @@ async function getUserOpWithPaymasterData(
   walletOwner: Signer,
   entryPoint: EntryPoint
 ) {
-  const nonceFromContract = await paymaster["getSenderPaymasterNonce(address)"](
-    smartAccountAddress
-  );
-
   const hash = await paymaster.getHash(
     userOp,
-    nonceFromContract.toNumber(),
     await offchainPaymasterSigner.getAddress()
   );
   const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
