@@ -80,6 +80,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
+      //: 200e9,    
     },
     polygon_mumbai: {
       url: process.env.POLYGON_MUMBAI_URL || "",
@@ -139,7 +140,7 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
       chainId: 421613,
-      gasPrice: 2e9, //2 gwei
+      //gasPrice: 2e9, //2 gwei
     },
     arbitrumTest: {
       url: "https://rinkeby.arbitrum.io/rpc",
@@ -148,6 +149,14 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
       chainId: 421611,
+    },
+    arbitrumNova: {
+      url: "https://nova.arbitrum.io/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 42170,
     },
     zkevm_mainnet: {
       url: process.env.ZKEVM_MAINNET_URL || "https://zkevm-rpc.com",
@@ -164,7 +173,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      gasPrice: 50e9,    
+      //gasPrice: 50e9,    
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
