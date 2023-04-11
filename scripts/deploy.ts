@@ -11,8 +11,8 @@ import { Deployer, Deployer__factory } from "../typechain";
 const provider = ethers.provider;
 let baseImpAddress = "";
 let entryPointAddress = process.env.ENTRY_POINT_ADDRESS || "0x0576a174D229E3cFA37253523E645A78A0C91B57";
-const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
-const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
+const owner = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
+const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_DEV || "";
 const DEPLOYER_CONTRACT_ADDRESS = process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
@@ -371,12 +371,19 @@ async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
 async function main() {
   const deployerInstance = await getPredeployedDeployerContractInstance();
   await deployEntryPointContract(deployerInstance);
+  console.log("=========================================");
   await deployBaseWalletImpContract(deployerInstance);
+  console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
+  console.log("=========================================");
   await deployGasEstimatorContract(deployerInstance);
+  console.log("=========================================");
   await deployDecoderContract(deployerInstance);
+  console.log("=========================================");
   await deployMultiSendContract(deployerInstance);
+  console.log("=========================================");
   await deployMultiSendCallOnlyContract(deployerInstance);
+  console.log("=========================================");
   await deployVerifySingeltonPaymaster(deployerInstance);
 }
 

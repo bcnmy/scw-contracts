@@ -64,6 +64,7 @@ async function main() {
         }
       }
       console.log("Deploying Deployer Contract...");
+      //const deployerContractDeployed = await new Deployer__factory(deployer).deploy({maxFeePerGas: 350e9, maxPriorityFeePerGas: 100e9, nonce: 0});
       const deployerContractDeployed = await new Deployer__factory(deployer).deploy();
       await deployerContractDeployed.deployed();
       console.log(

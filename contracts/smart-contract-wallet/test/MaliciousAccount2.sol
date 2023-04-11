@@ -100,10 +100,6 @@ contract MaliciousAccount2 is
         _;
     }
 
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }
@@ -541,19 +537,6 @@ contract MaliciousAccount2 is
             msg.sender == address(entryPoint()) || msg.sender == owner,
             "account: not Owner or EntryPoint"
         );
-    }
-
-    /// implement template method of BaseAccount
-    // @notice Nonce space is locked to 0 for AA transactions
-    // userOp could have batchId as well
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal override {
-        // No nonce to REUSE THE GAS PAYMENT
-        //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
-        // bytes calldata userOpData = userOp.callData;
-        // (address _to, uint256 _amount, bytes memory _data) = abi.decode(userOpData[4:], (address, uint256, bytes));
-        // if(address(modules[_to]) != address(0)) return;
     }
 
     /// implement template method of BaseAccount
