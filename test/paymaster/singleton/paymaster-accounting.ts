@@ -243,7 +243,8 @@ async function getUserOpWithInitCodeAndPaymasterData(
     },
     walletOwner,
     entryPoint,
-    21685 // _validateAccountAndPaymasterValidationData + compensate + anything unaccounted
+    "nonce",
+    31685 // _validateAccountAndPaymasterValidationData + compensate + anything unaccounted
   );
 
   // Set paymaster data in UserOp
@@ -277,15 +278,7 @@ async function getUserOpWithPaymasterData(
   walletOwner: Signer,
   entryPoint: EntryPoint
 ) {
-  const nonceFromContract = await paymaster["getSenderPaymasterNonce(address)"](
-    smartAccountAddress
-  );
-
-  const hash = await paymaster.getHash(
-    userOp,
-    nonceFromContract.toNumber(),
-    paymasterId
-  );
+  const hash = await paymaster.getHash(userOp, paymasterId);
   const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
   const userOpWithPaymasterData = await fillAndSign(
     {
@@ -300,7 +293,8 @@ async function getUserOpWithPaymasterData(
       ]),
     },
     walletOwner,
-    entryPoint
+    entryPoint,
+    "nonce"
   );
   return userOpWithPaymasterData;
 }

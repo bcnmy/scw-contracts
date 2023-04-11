@@ -202,13 +202,6 @@ contract SmartAccount11 is
     }
 
     /**
-     * @dev Standard interface for 1d nonces. Use it for Account Abstraction flow.
-     */
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
-    /**
      * return the entryPoint used by this account.
      * subclass should return the current entryPoint used by this account.
      */
@@ -680,21 +673,6 @@ contract SmartAccount11 is
         // Compatiblity options, should choose one
         //if(msg.sender != address(entryPoint()) && msg.sender != owner) revert ("account: not Owner or EntryPoint");
         //require(msg.sender == address(entryPoint()) || msg.sender == owner, "account: not Owner or EntryPoint");
-    }
-
-    /**
-     * @dev implement template method of BaseAccount
-     * @notice Nonce space is locked to 0 for AA transactions
-     */
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal override {
-        if (nonces[0]++ != userOp.nonce)
-            revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
-
-        // Compatiblity options, should choose one
-        //if(nonces[0]++ != userOp.nonce) revert ("account: invalid nonce");
-        //require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /**
