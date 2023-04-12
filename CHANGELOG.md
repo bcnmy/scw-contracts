@@ -166,6 +166,13 @@ Those steps assume that you have successfully installed dependencies and all the
 - You will get address for the `DEPLOYER_CONTRACT_ADDRESS_` entries after deploying your Deployer contract.
 
 #### Deploy the Deployer Contract running `deployer-contract.deploy.ts` script from the `scripts` folder.
+You can use Biconomy Deployer Contracts:
+DEV: `0xD3f89753278E419c8bda1eFe1366206B3D30C44f`
+PROD: `0x988C135a1049Ce61730724afD342fb7C56CD2776`
+Deployed on testnets, all both dev and prod: Polygon Mumbai, Ethereum Goerli, Avalanche Fuji, Arbitrum Goerli, Optimism Goerli, BSC Testnet, ZkEVM Testnet.
+Deployed on mainnets: Polygon (dev and prod). Ethereum (prod), Avalanche(prod), Arbitrum One(prod), Arbitrum Nova(prod), Optimism(prod), BSC(prod).
+
+Steps to deploy your own Deployer Contract:
 -  Gas parameters located in the bottom of the file are used to calculate the gas cost of the deployment and transfer appropriate amount from the Funding EOA to the Deployer EOA. 
 - Deployer EOA, that is set up using `DEPLOYER_CONTRACT_DEPLOYER_PRIVATE_KEY` entry.
 - If you want your deployer contract to have the same address accross chains (thus allowing you to deploy other contracts with the persistent address accross chains) this Deployer EOA should be a fresh EOA that had no transactions.
