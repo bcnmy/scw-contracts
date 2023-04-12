@@ -78,6 +78,11 @@ According to [EIP-1271](https://eips.ethereum.org/EIPS/eip-1271).
 
 Expected behaviour: Smart Accounts are able to confirm whether the signature is valid or not. Under normal conditions just checks that the messages has been signed by the Smart Account `owner`. If the signature verification has been granted to module (Smart Account owner is active module), passes the verification flow to the module's `isValidSignature()` method.
 
+#### `_validateSignature()` method redesign
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
+
+Expected behaviour: If this method is called for the `userOp` that will `executeCall` to one of the enabled modules, the signature validation flow is passed to the module via `IModule(_to).validateSignature`. This approach allows for the alternative signing schemes (i.e. using passkeys) to be enabled as modules.
+
 #### Make `execTransaction_S6W()` non reentrant
 File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
 
@@ -186,24 +191,6 @@ Steps to deploy your own Deployer Contract:
 - You can manually set gas for the deployment in the `deployContract` function of `index.ts`
 - In the beginning of the `deploy.ts` set the correct `consts`. Mind the DEV/PROD suffixes. You don't need to set 'baseImpAddress'.
 - Run the script with `npx hardhat run --network _network_name_ scripts/deploy.ts`. Contract addresses will be persistent accross networks.
-
-### Libraries
-
-The following libraries have been marked as production ready.
-
-#### 
-
-File: [`<PATH>`](<GITHUB>)
-
-Expected behaviour:
-
-
-#### 
-
-
-File: [`contracts/<PATH>`](<GITHUB>)
-
-Expected behaviour:
 
 
 
