@@ -37,34 +37,128 @@ Solidity optimizer: `{ enabled: true, runs: 800 }`
 
 ### Core contracts
 
-#### Remove batchId from execTransaction()
-File: [`contracts/smart-contract-wallet/SmartAccount.sol`](<GITHUB>)
+#### Remove batchId from `execTransaction()`
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
 
-Issue: [#](<C4_ISSUE_LINK>)
+Issue: [#485](https://github.com/code-423n4/2023-01-biconomy-findings/issues/485)
 
-Expected behaviour:
+Expected behaviour: Smart Account is not vulnerable to replay attacks using different batchId.
 
-#### Rename execTransaction() to execTransaction_S6W()
-File: [`contracts/smart-contract-wallet/SmartAccount.sol`](<GITHUB>)
+#### Add `init` method
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
+
+Issue: [#496](https://github.com/code-423n4/2023-01-biconomy-findings/issues/496)
+
+- Removed OZ `Initializable.sol` dependency. 
+- If the `owner` has been set, Smart Account can not be initialized anymore.
+- `Owner` is set to `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` in the constructor.
+
+**!Attention:** never set `owner` to `address(0)` for the Smart Account (implementation or proxy), as it allows to call `init()` and set the new owner, thus get full ownership of the Smart Account. If you want to fully renounce ownership, set `owner` to ``0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE`. If you want to pass signature verification and ownership to a module, set the module address as an `owner`.
+
+Expected behaviour: Smart Account implementation is not left uninitialized. Can not initialize when `owner` is not `address(0)`.
+
+#### Remove `validateAndUpdateNonce()` method
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
+
+Issue: [AA-161](https://github.com/eth-infinitism/account-abstraction/pull/247)
+
+Expected behaviour: Nonces are handled by the EntryPoint, not a Wallet contract. [Details](https://docs.google.com/document/d/1MywdH_TCkyEjD3QusLZ_kUZg4ZEI00qp97mBze9JI4k/edit#).
+
+#### Rename `execTransaction()` to `execTransaction_S6W()`
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
 
 Issue: [#434](https://github.com/code-423n4/2023-01-biconomy-findings/blob/main/data/0xSmartContract-G.md#g-26-optimize-names-to-save-gas)
 
 Expected behaviour: execTransaction_S6W() is cheaper to call externally. For the compatibility, the `execTransaction()` wrapper function is introduced.
 
-#### Add tokenGasPriceFactor in getTransactionHash 
+#### Add `tokenGasPriceFactor` in `getTransactionHash()` 
 
-File: [`contracts/smart-contract-wallet/SmartAccount.sol`](<GITHUB>)
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
 
-Issue: [#](h<C$_ISSUE_LINK>)
+Issue: [#492](https://github.com/code-423n4/2023-01-biconomy-findings/issues/492)
 
-Expected behaviour:
+Expected behaviour: Relayer can not take extra refund as tokenGasPriceFactor is signed now.
 
-#### Add isValidSignature() method
-File: [`contracts/smart-contract-wallet/SmartAccount.sol`](<GITHUB>)
+#### Add `isValidSignature()` method
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
 
-According to [EIP-1271](https://eips.ethereum.org/EIPS/eip-1271):
+According to [EIP-1271](https://eips.ethereum.org/EIPS/eip-1271).
 
 Expected behaviour: Smart Accounts are able to confirm whether the signature is valid or not. Under normal conditions just checks that the messages has been signed by the Smart Account `owner`. If the signature verification has been granted to module (Smart Account owner is active module), passes the verification flow to the module's `isValidSignature()` method.
+
+#### Make `execTransaction_S6W()` non reentrant
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
+
+Custom realization of `nonReentrant` modifier. 
+
+#### Redesign of the `checkSignatures()` method
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
+
+- `signatureSplit` is now exepcting only one signature, not several, so there's no lopping over signatures inside.
+- outdated signatures kinds handling removed
+- common owner vs signer check added as per [Issue #175](https://github.com/code-423n4/2023-01-biconomy-findings/issues/175)
+
+#### `execute()` and `executeBatch()` methods renamed
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
+
+They are now `executeCall_s1m()` and `executeBatchCall_4by()`. 
+In order to avoid mixing them with the `execute()` method of executor contract and to make external call to them cheaper.
+For those who are scared by suffixes, `executeCall()` and `executeBatchCall()` wrapper methods are kept.
+
+#### `receive()` methods emits `SmartAccountReceivedNativeToken` event
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
+
+In order to avoid empty methods and provide trackable info on native tokens incoming flow
+Event signature is `SmartAccountReceivedNativeToken(msg.sender, msg.value)`. So it emits token sender and amount.
+
+#### Using `Math.sol` implementation of `max()` method instead of the custom one
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol)
+
+#### Using custom error messages with `revert` staeents instead of `require` statements
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol), [`contracts/smart-contract-wallet/BaseSmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/BaseSmartAccount.sol)
+
+Makes reverts cheaper and more informative. [Details](https://blog.soliditylang.org/2021/04/21/custom-errors/).
+
+#### `Proxy.sol` redesign
+File: [`contracts/smart-contract-wallet/Proxy.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/Proxy.sol)
+
+Redesigned `Proxy.sol` to make new Smart Account deployment cheaper.
+- Implementation address is now stored in the slot, that is defined by the address of this newly deployed proxy.
+- `receive()` method moved to implementation
+
+#### `SmartAccountFactory.sol` redesign
+File: [`contracts/smart-contract-wallet/SmartAccountFactory.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccountFactory.sol)
+
+Redesigned `SmartAccountFactory.sol` to make new Smart Account deployment efficient and safe against frontrunning attacks.
+- Minimal Handler is deployed along with the Smart Account Factory deployment.
+- Salt now consists of `index` and `initializer` data, that is used to initialize the deployed Proxy. This data contains owner info.
+- Removed `VERSION` constant 
+- In order to keep the consistent user's address accross chains it is recommended to use the same factory (thus the same implementation) for all the new Proxy (Smart Account) deployments and upgrade if there's new implementation deployed.
+
+#### QA Fixed
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol), [`contracts/smart-contract-wallet/BaseSmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/BaseSmartAccount.sol), [`contracts/smart-contract-wallet/SmartAccountFactory.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccountFactory.sol), [`contracts/smart-contract-wallet/Proxy.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/Proxy.sol), [`contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol)
+
+- Solidity 0.8.17
+- Using named imports
+- Open todo
+- Disallow setting the exact same owner as new owner
+- And several others
+
+#### Gas optimization related changes
+File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol), [`contracts/smart-contract-wallet/BaseSmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/BaseSmartAccount.sol), [`contracts/smart-contract-wallet/SmartAccountFactory.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccountFactory.sol), [`contracts/smart-contract-wallet/Proxy.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/Proxy.sol), [`contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol)
+
+- Use `!= 0` instead of `> 0` for Unsigned Integer Comparison
+- Use Shift Right/Left instead of Division/Multiplication if possible
+- Change increment/decrement operations to regular addition/subtraction
+- Uncheck Arithmetic Operation which will never Underflow/Overflow
+- Use `++var` instead of `var++` when it does not affect logic
+- Do not initialize vars with default values
+- Protected functions marked payable
+- Low level calls implemented with assembly
+- Use assembly to write `address` storage values
+- Use `uint256` instead of `bool`
+- And others
+
 
 TODO
 #### (and so forth..)
