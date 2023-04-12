@@ -127,6 +127,12 @@ Redesigned `SmartAccountFactory.sol` to make new Smart Account deployment effici
 - Removed `VERSION` constant 
 - In order to keep the consistent user's address accross chains it is recommended to use the same factory (thus the same implementation) for all the new Proxy (Smart Account) deployments and upgrade if there's new implementation deployed.
 
+#### Removed nonces handling from `VerifyingSingletonPaymaster.sol`
+File: [`contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol)
+
+The reason for adding a nonce to the paymaster was to handle cases where the nonce was not unique: a wallet could support static nonce, and it could re-use the VerifyingPaymaster validation multiple times.
+But now nonces uniqueness is validated by Entrypoint. So a paymaster no longer need to check for uniqueness by itself.
+
 #### QA Fixed
 File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccount.sol), [`contracts/smart-contract-wallet/BaseSmartAccount.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/BaseSmartAccount.sol), [`contracts/smart-contract-wallet/SmartAccountFactory.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/SmartAccountFactory.sol), [`contracts/smart-contract-wallet/Proxy.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/Proxy.sol), [`contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol`](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/paymasters/verifying/singleton/VerifyingSingletonPaymaster.sol)
 
@@ -153,6 +159,26 @@ File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bc
 
 ### Deployment process
 
+Those steps assume that you have successfully installed dependencies and all the tests via `npx hardhat test` pass.
+
+#### Prepare the `.env` file according to the `.env` example structure.
+- Comments regarding usage of FUNDING ACCOUNT and DEPLOYER CONTRACT DEPLOYER ACCOUNT are be given below.
+- You will get address for the `DEPLOYER_CONTRACT_ADDRESS_` entries after deploying your Deployer contract.
+
+#### Deploy the Deployer Contract running `deployer-contract.deploy.ts` script from the `scripts` folder.
+-  Gas parameters located in the bottom of the file are used to calculate the gas cost of the deployment and transfer appropriate amount from the Funding EOA to the Deployer EOA. 
+- Deployer EOA, that is set up using `DEPLOYER_CONTRACT_DEPLOYER_PRIVATE_KEY` entry.
+- If you want your deployer contract to have the same address accross chains (thus allowing you to deploy other contracts with the persistent address accross chains) this Deployer EOA should be a fresh EOA that had no transactions.
+- You can fund your Deployr EOA manually (only IN txns allowed), or you can fund Funding EOA and Deployer EOA will be funded from it in the course of script executing.
+- You can manually setup gas for deploying the Deployer contract in the tx parameters after the `console.log("Deploying Deployer Contract...");` line like this: `{maxFeePerGas: 350e9, maxPriorityFeePerGas: 100e9, nonce: 0}`.
+- When your Deployer Contract is deployed, fill the appropriate .env entries.
+
+#### Deploy the protocol contracts running `deploy.ts`
+- Select the contracts you want to deploy by commenting out the contracts you do not need in the bottom of the script.
+- In the `utils/index.ts` set the deployment salts in the `enum DEPLOYMENT_SALTS`.
+- You can manually set gas for the deployment in the `deployContract` function of `index.ts`
+- In the beginning of the `deploy.ts` set the correct `consts`. Mind the DEV/PROD suffixes. You don't need to set 'baseImpAddress'.
+- Run the script with `npx hardhat run --network _network_name_ scripts/deploy.ts`. Contract addresses will be persistent accross networks.
 
 ### Libraries
 
