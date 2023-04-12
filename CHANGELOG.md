@@ -12,17 +12,9 @@ Solidity optimizer: `{ enabled: true, runs: 800 }`
 
 ## Expected addresses with [Create3 Deployer](https://github.com/bcnmy/scw-contracts/blob/master/contracts/smart-contract-wallet/deployer/Deployer.sol) (default)
 
-### Using below salts
+### Addresses and salts
 
-  DECODER = "DEVX_DECODER_V0_30032023",
-  GAS_ESTIMATOR = "DEVX_GAS_ESTIMATOR_V0_30032023",
-  MULTI_SEND = "DEVX_MULTI_SEND_V0_30032023",
-  MULTI_SEND_CALLONLY = "DEVX_MULTI_SEND_CALLONLY_V0_30032023",
-  WALLET_FACTORY = "DEVX_WALLET_FACTORY_V0_30032023",
-  WALLET_IMP = "DEVX_WALLET_IMP_V0_30032023",
-  SINGELTON_PAYMASTER = "DEVX_SINGELTON_PAYMASTER_V0_30032023"
-
-| Contract name                      | Address                                    | Implementation                               |
+| Contract name                      | Address                                    | Salts                                        |
 |------------------------------------|--------------------------------------------|----------------------------------------------|
 | Smart Account Implementation       | 0x00006B7e42e01957dA540Dc6a8F7C30c4D816af5 | PROD_WALLET_IMP_V0_11042023_ukWhPDF          |
 | Smart Account Factory              | 0x000000F9eE1842Bb72F6BBDD75E6D3d4e3e9594C | PROD_WALLET_FACTORY_V0_11042023_Wfv6UKG      |
@@ -53,7 +45,7 @@ Issue: [#496](https://github.com/code-423n4/2023-01-biconomy-findings/issues/496
 - If the `owner` has been set, Smart Account can not be initialized anymore.
 - `Owner` is set to `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE` in the constructor.
 
-**!Attention:** never set `owner` to `address(0)` for the Smart Account (implementation or proxy), as it allows to call `init()` and set the new owner, thus get full ownership of the Smart Account. If you want to fully renounce ownership, set `owner` to ``0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE`. If you want to pass signature verification and ownership to a module, set the module address as an `owner`.
+**!Attention:** never set `owner` to `address(0)` for the Smart Account (implementation or proxy), as it allows to call `init()` and set the new owner, thus get full ownership of the Smart Account. If you want to fully renounce ownership, set `owner` to `0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE`. If you want to pass signature verification and ownership to a module, set the module address as an `owner`.
 
 Expected behaviour: Smart Account implementation is not left uninitialized. Can not initialize when `owner` is not `address(0)`.
 
@@ -159,12 +151,8 @@ File: [`contracts/smart-contract-wallet/SmartAccount.sol`](https://github.com/bc
 - Use `uint256` instead of `bool`
 - And others
 
-
-TODO
-#### (and so forth..)
-
-
 ### Deployment process
+
 
 ### Libraries
 
