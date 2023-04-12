@@ -70,7 +70,7 @@ MultiSend functionality but reverts if a transaction tries to do delegatecall
 
 This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
 
-You're going to need to place a mnemonic in .secret file in the root.
+#### You're going to need to place a mnemonic in .secret file in the root. ####
 
 The project comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts. It also comes with a variety of other tools, preconfigured to work with the project code.
 
