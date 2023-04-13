@@ -9,6 +9,7 @@ import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/in
 import {BasePaymaster, IEntryPoint} from "../../BasePaymaster.sol";
 import {PaymasterHelpers, PaymasterData, PaymasterContext} from "../../PaymasterHelpers.sol";
 import {SingletonPaymasterErrors} from "../../../common/Errors.sol";
+import "./Whitelist.sol";
 
 /**
  * @title A sample paymaster that uses external service to decide whether to pay for the UserOp.
@@ -222,7 +223,7 @@ contract VerifyingSingletonPaymaster is
         PostOpMode mode,
         bytes calldata context,
         uint256 actualGasCost
-    ) internal virtual override {
+    ) internal virtual override onlyWhitelisted {
         PaymasterContext memory data = context._decodePaymasterContext();
         address extractedPaymasterId = data.paymasterId;
         uint256 balToDeduct = actualGasCost +
