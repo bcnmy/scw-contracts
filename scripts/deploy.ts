@@ -10,7 +10,7 @@ import { Deployer, Deployer__factory } from "../typechain";
 
 const provider = ethers.provider;
 let baseImpAddress = "";
-let entryPointAddress = process.env.ENTRY_POINT_ADDRESS || "0x0576a174D229E3cFA37253523E645A78A0C91B57";
+let entryPointAddress = process.env.ENTRY_POINT_ADDRESS || "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 const owner = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
 const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_DEV || "";
 const DEPLOYER_CONTRACT_ADDRESS = process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
