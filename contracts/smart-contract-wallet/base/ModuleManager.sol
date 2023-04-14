@@ -127,6 +127,9 @@ contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
         } else emit ExecutionFromModuleFailure(msg.sender);
     }
 
+    // TODO: Add execBatchTransactionFromModule
+    // can use not executor.execute, but SmartAccount._call for the unification
+
     /**
      * @dev Allows a Module to execute a wallet transaction without any further confirmations and returns data
      * @param to Destination address of module transaction.

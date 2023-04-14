@@ -241,7 +241,7 @@ export async function fillUserOp(
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
       throw new Error("must have entryPoint for callGasLimit estimate");
-    const gasEtimated = await provider.estimateGas({
+      const gasEtimated = await provider.estimateGas({
       from: entryPoint?.address,
       to: op1.sender,
       data: op1.callData,

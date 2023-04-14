@@ -23,7 +23,7 @@ import { encodeTransfer } from "./testUtils";
 import { fillAndSign } from "../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
-import { UserOperation } from "../utils/userOpetation";
+import { UserOperation } from "../utils/userOperation";
 
 export async function deployEntryPoint(
   provider = ethers.provider
