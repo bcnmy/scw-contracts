@@ -20,13 +20,12 @@ defines set of methods (compatible with EIP and Biconomy SDK) that all Smart Wal
 lightweight Proxy which can be upgraded using UUPS pattern
 
 #### SmartAccountFactory.sol (38 sloc)
-Constract responsible for deploying smart wallets aka accounts using create2 and create
-Has a method to compute conter factual wallet of the address before deploying
+Factory Contract is the one responsible for deploying smart wallets aka accounts using create2 and create
+Has a method to compute counter factual address of the wallet before deploying
 
 function deployCounterFactualAccount(address _implementation, bytes memory initializer, uint256 _index) public returns(address proxy)
 
 salt consists of _owner and _index. _entryPoint and _handler are required to init the wallet. 
-(contest bonus : showcase any potential front running in wallet deployment)
 
 #### SmartAccount.sol (332 sloc)
 Base implementation contract for smart wallet
