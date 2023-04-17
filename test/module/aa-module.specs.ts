@@ -47,13 +47,8 @@ async function getUserOpWithPaymasterData(
   walletOwner: Signer,
   entryPoint: EntryPoint
 ) {
-  const nonceFromContract = await paymaster["getSenderPaymasterNonce(address)"](
-    smartAccountAddress
-  );
-
   const hash = await paymaster.getHash(
     userOp,
-    nonceFromContract.toNumber(),
     await offchainPaymasterSigner.getAddress()
   );
   const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
@@ -70,7 +65,8 @@ async function getUserOpWithPaymasterData(
       ]),
     },
     walletOwner,
-    entryPoint
+    entryPoint,
+    'nonce'
   );
   return userOpWithPaymasterData;
 }
@@ -194,7 +190,8 @@ describe("Module transactions via AA flow", function () {
           verificationGasLimit: 350000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       // Set paymaster data in UserOp
@@ -249,7 +246,8 @@ describe("Module transactions via AA flow", function () {
           verificationGasLimit: 200000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       // Set paymaster data in UserOp
@@ -262,6 +260,34 @@ describe("Module transactions via AA flow", function () {
         walletOwner,
         entryPoint
       );
+
+      const uerOpHash = await entryPoint?.getUserOpHash(userOp);
+
+      const VerifyingPaymaster = await ethers.getContractFactory(
+        "VerifyingSingletonPaymaster"
+      );
+
+      const validatePaymasterUserOpData =
+        VerifyingPaymaster.interface.encodeFunctionData(
+          "validatePaymasterUserOp",
+          [userOp, uerOpHash, 10]
+        );
+
+      const gasEstimatedValidateUserOp = await ethers.provider.estimateGas({
+        from: entryPoint?.address,
+        to: paymasterAddress,
+        data: validatePaymasterUserOpData, // validatePaymasterUserOp calldata
+      });
+
+      console.log(
+        "Gaslimit for validate paymaster userOp is: ",
+        gasEstimatedValidateUserOp
+      );
+
+      // todo
+      // try and get for postOp as well
+      // get results for different parameters
+
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
       await expect(
         entryPoint.handleOps([userOp], await offchainSigner.getAddress())
@@ -312,7 +338,8 @@ describe("Module transactions via AA flow", function () {
           verificationGasLimit: 200000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
 
       // Set paymaster data in UserOp
@@ -325,6 +352,7 @@ describe("Module transactions via AA flow", function () {
         walletOwner,
         entryPoint
       );
+
       await entryPoint.handleOps([userOp], await offchainSigner.getAddress());
 
       console.log(
@@ -581,16 +609,12 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
-
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expectedSmartAccountAddress);
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        nonceFromContract.toNumber(),
         await offchainSigner.getAddress()
       );
       const sig = await offchainSigner.signMessage(arrayify(hash));
@@ -606,7 +630,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOp);
       // const userOpHash = await entryPoint.getUserOpHash(userOp);
@@ -690,16 +715,12 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         accounts[7], // not an owner // as good as overriding later with fake sig!
-        entryPoint
+        entryPoint,
+        'nonce'
       );
-
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expectedSmartAccountAddress);
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        nonceFromContract.toNumber(),
         await offchainSigner.getAddress()
       );
       const sig = await offchainSigner.signMessage(arrayify(hash));
@@ -715,7 +736,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOp);
       // TODO: Replace signature with mock signature..
@@ -729,7 +751,8 @@ describe("Module transactions via AA flow", function () {
       const currentNonce = await userSCW.nonce();
       console.log("latest nonce is: ", currentNonce.toNumber());
 
-      expect(currentNonce).to.be.equal(prevNonce);
+      // now we increase nonce for module txns as well
+      expect(currentNonce).to.be.equal(prevNonce.add(1));
 
       // Balance should be 20 now
       expect(await token.balanceOf(charlie)).to.equal(
@@ -792,16 +815,12 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
-
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expectedSmartAccountAddress);
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        nonceFromContract.toNumber(),
         await offchainSigner.getAddress()
       );
       const sig = await offchainSigner.signMessage(arrayify(hash));
@@ -817,7 +836,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOpAA1);
       await entryPoint.handleOps(
@@ -871,16 +891,12 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
-
-      const nonceFromContract2 = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expectedSmartAccountAddress);
 
       const hash2 = await verifyingSingletonPaymaster.getHash(
         userOp2,
-        nonceFromContract2.toNumber(),
         await offchainSigner.getAddress()
       );
       const sig2 = await offchainSigner.signMessage(arrayify(hash2));
@@ -896,7 +912,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOpAA2);
       await entryPoint.handleOps(
@@ -1003,16 +1020,12 @@ describe("Module transactions via AA flow", function () {
           // no callGasLImit override as wallet is deployed
         },
         accounts[8], // not an owner
-        entryPoint
+        entryPoint,
+        'nonce'
       );
-
-      const nonceFromContract = await verifyingSingletonPaymaster[
-        "getSenderPaymasterNonce(address)"
-      ](expectedSmartAccountAddress);
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        nonceFromContract.toNumber(),
         await offchainSigner.getAddress() // paymaster id is still same as previous offchain signer
       );
       const sig = await offchainSigner2.signMessage(arrayify(hash));
@@ -1028,7 +1041,8 @@ describe("Module transactions via AA flow", function () {
           ]),
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        'nonce'
       );
       console.log(userOp);
       // TODO: Replace signature with mock signature..
@@ -1039,7 +1053,8 @@ describe("Module transactions via AA flow", function () {
       const currentNonce = await userSCW.nonce();
       console.log("latest nonce is: ", currentNonce.toNumber());
 
-      expect(currentNonce).to.be.equal(prevNonce);
+      // now we increase nonce for module txns as well
+      expect(currentNonce).to.be.equal(prevNonce.add(1));
 
       // Balance should remain 20
       expect(await token.balanceOf(charlie)).to.equal(

@@ -20,13 +20,12 @@ defines set of methods (compatible with EIP and Biconomy SDK) that all Smart Wal
 lightweight Proxy which can be upgraded using UUPS pattern
 
 #### SmartAccountFactory.sol (38 sloc)
-Constract responsible for deploying smart wallets aka accounts using create2 and create
-Has a method to compute conter factual wallet of the address before deploying
+Factory Contract is the one responsible for deploying smart wallets aka accounts using create2 and create
+Has a method to compute counter factual address of the wallet before deploying
 
 function deployCounterFactualAccount(address _implementation, bytes memory initializer, uint256 _index) public returns(address proxy)
 
 salt consists of _owner and _index. _entryPoint and _handler are required to init the wallet. 
-(contest bonus : showcase any potential front running in wallet deployment)
 
 #### SmartAccount.sol (332 sloc)
 Base implementation contract for smart wallet
@@ -70,7 +69,7 @@ MultiSend functionality but reverts if a transaction tries to do delegatecall
 
 This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
 
-You're going to need to place a mnemonic in .secret file in the root.
+#### You're going to need to place a mnemonic in .secret file in the root. ####
 
 The project comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts. It also comes with a variety of other tools, preconfigured to work with the project code.
 

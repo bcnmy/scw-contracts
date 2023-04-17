@@ -57,114 +57,9 @@ const config: HardhatUserConfig = {
         count: 20,
       },
     },
-    ropsten: {
-      url: process.env.ROPSTEN_URL || "",
-      chainId: 3,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
-    rinkeby: {
-      url: process.env.RINKEBY_URL || "",
-      chainId: 4,
-      gas: 5000000,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
     eth_mainnet: {
       url: process.env.ETH_MAINNET_URL || "",
       chainId: 1,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
-    polygon_mumbai: {
-      url: process.env.POLYGON_MUMBAI_URL || "",
-      chainId: 80001,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
-    polygon_mainnet: {
-      url: process.env.POLYGON_URL || "",
-      chainId: 137,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
-    bnb_mainnet: {
-      url: "https://bsc-dataseed2.binance.org",
-      chainId: 56,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
-    moonbeamTest: {
-      url: "https://rpc.api.moonbase.moonbeam.network",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-      chainId: 1287,
-    },
-    avalancheTest: {
-      url: "https://api.avax-test.network/ext/bc/C/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-      chainId: 43113,
-    },
-    avalancheMain: {
-      url: "https://api.avax.network/ext/bc/C/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-      chainId: 43114,
-    },
-    arbitrumGoerli: {
-      url: "https://goerli-rollup.arbitrum.io/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-      chainId: 421613,
-    },
-    arbitrumTest: {
-      url: "https://rinkeby.arbitrum.io/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-      chainId: 421611,
-    },
-    arbitrumMain: {
-      url: "https://arb1.arbitrum.io/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-      chainId: 42161,
-    },
-    bnb_testnet: {
-      url: "https://wandering-broken-tree.bsc-testnet.quiknode.pro/7992da20f9e4f97c2a117bea9af37c1c266f63ec/",
-      chainId: 97,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
-    },
-    moonbeam_mainnet: {
-      url: "https://rpc.api.moonbeam.network",
-      chainId: 1284,
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
@@ -178,25 +73,133 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
     },
-    kovan: {
-      url: process.env.KOVAN_URL || "",
+    polygon_mainnet: {
+      url: process.env.POLYGON_URL || "",
+      chainId: 137,
       accounts:
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      chainId: 42,
+      //: 200e9,    
+    },
+    polygon_mumbai: {
+      url: process.env.POLYGON_MUMBAI_URL || "",
+      chainId: 80001,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    bnb_mainnet: {
+      url: "https://bsc-dataseed2.binance.org",
+      chainId: 56,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    bnb_testnet: {
+      url:
+        process.env.BSC_TESTNET_URL ||
+        "https://wandering-broken-tree.bsc-testnet.quiknode.pro/7992da20f9e4f97c2a117bea9af37c1c266f63ec/",
+      chainId: 97,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+          gasPrice: 50e9
+    },
+    avalancheMain: {
+      url: "https://api.avax.network/ext/bc/C/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 43114,
+    },
+    avalancheTest: {
+      url: "https://api.avax-test.network/ext/bc/C/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 43113,
+    },
+    arbitrumMain: {
+      url: "https://arb1.arbitrum.io/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 42161,
+    },
+    arbitrumGoerli: {
+      url: "https://goerli-rollup.arbitrum.io/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 421613,
+      //gasPrice: 2e9, //2 gwei
+    },
+    arbitrumTest: {
+      url: "https://rinkeby.arbitrum.io/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 421611,
+    },
+    arbitrumNova: {
+      url: "https://nova.arbitrum.io/rpc",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 42170,
+    },
+    zkevm_mainnet: {
+      url: process.env.ZKEVM_MAINNET_URL || "https://zkevm-rpc.com",
+      chainId: 1101,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    zkevm_testnet: {
+      url: process.env.ZKEVM_TESTNET_URL || "https://rpc.public.zkevm-test.net",
+      chainId: 1442,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      //gasPrice: 50e9,    
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
       accounts: walletUtils.makeKeyList(),
       chainId: 420,
-      gasPrice: 6400000,
     },
     optimismMainnet: {
       url: `https://mainnet.optimism.io`,
       accounts: walletUtils.makeKeyList(),
       chainId: 10,
-      // gasPrice: 6400000
+    },
+    moonbeam_mainnet: {
+      url: "https://rpc.api.moonbeam.network",
+      chainId: 1284,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+    },
+    moonbeamTest: {
+      url: "https://rpc.api.moonbase.moonbeam.network",
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 1287,
     },
     celoTestnet: {
       url: `https://alfajores-forno.celo-testnet.org`,

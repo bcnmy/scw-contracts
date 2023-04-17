@@ -101,10 +101,6 @@ contract SmartAccountNoAuth is
         _;
     }
 
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }
@@ -527,15 +523,6 @@ contract SmartAccountNoAuth is
             msg.sender == address(entryPoint()) || msg.sender == owner,
             "account: not Owner or EntryPoint"
         );
-    }
-
-    /// implement template method of BaseAccount
-    // @notice Nonce space is locked to 0 for AA transactions
-    // userOp could have batchId as well
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal override {
-        require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /**

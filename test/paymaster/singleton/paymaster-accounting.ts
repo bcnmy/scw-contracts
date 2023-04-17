@@ -183,6 +183,17 @@ describe("Upgrade functionality Via Entrypoint", function () {
         paymasterIdDepositAfter
       );
 
+      // TODO
+      // send preVerificationGas completely 0 and try to find accurate executionGas diff by checking paid vs refund.
+      /**
+       * the idea is submit a handleOps with preVerificationGas=0,
+       * and compare the transaction gasUsed with the gasUsed reported in the event.
+       * Then we need to split this value, to understand where it came from.
+       * The real calculation the bundler is in reverse -
+       * given a UserOperation, to determine if the preVerificationGas given is enough for this specific UserOp
+       * (and preferably, do this check statically, before running the simulateValidation()
+       */
+
       // Get actual transaction fee paid by bundler
       const transactionFee = await getTransactionFee(tx);
 
@@ -232,7 +243,8 @@ async function getUserOpWithInitCodeAndPaymasterData(
     },
     walletOwner,
     entryPoint,
-    21685 // _validateAccountAndPaymasterValidationData + compensate + anything unaccounted
+    "nonce",
+    31685 // _validateAccountAndPaymasterValidationData + compensate + anything unaccounted
   );
 
   // Set paymaster data in UserOp
@@ -266,15 +278,7 @@ async function getUserOpWithPaymasterData(
   walletOwner: Signer,
   entryPoint: EntryPoint
 ) {
-  const nonceFromContract = await paymaster["getSenderPaymasterNonce(address)"](
-    smartAccountAddress
-  );
-
-  const hash = await paymaster.getHash(
-    userOp,
-    nonceFromContract.toNumber(),
-    paymasterId
-  );
+  const hash = await paymaster.getHash(userOp, paymasterId);
   const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
   const userOpWithPaymasterData = await fillAndSign(
     {
@@ -289,7 +293,8 @@ async function getUserOpWithPaymasterData(
       ]),
     },
     walletOwner,
-    entryPoint
+    entryPoint,
+    "nonce"
   );
   return userOpWithPaymasterData;
 }

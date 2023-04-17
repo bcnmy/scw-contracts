@@ -166,11 +166,6 @@ contract SmartAccount4 is
         return nonces[batchId];
     }
 
-    // Standard interface for 1d nonces. Use it for Account Abstraction flow.
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
-    }
-
     function entryPoint() public view virtual override returns (IEntryPoint) {
         return _entryPoint;
     }
@@ -549,15 +544,6 @@ contract SmartAccount4 is
             msg.sender == address(entryPoint()) || msg.sender == owner,
             "account: not Owner or EntryPoint"
         );
-    }
-
-    /// implement template method of BaseAccount
-    // @notice Nonce space is locked to 0 for AA transactions
-    // userOp could have batchId as well
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal override {
-        require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /// implement template method of BaseAccount

@@ -7,13 +7,13 @@ import {FallbackManager} from "./base/FallbackManager.sol";
 import {SignatureDecoder} from "./common/SignatureDecoder.sol";
 import {SecuredTokenTransfer} from "./common/SecuredTokenTransfer.sol";
 import {LibAddress} from "./libs/LibAddress.sol";
-import {ISignatureValidator, ISignatureValidatorConstants} from "./interfaces/ISignatureValidator.sol";
+import {ISignatureValidator} from "./interfaces/ISignatureValidator.sol";
 import {Math} from "./libs/Math.sol";
 import {IERC165} from "./interfaces/IERC165.sol";
 import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IModule} from "./test/IModule.sol";
+import {IModule} from "./interfaces/IModule.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -30,10 +30,10 @@ contract SmartAccount is
     FallbackManager,
     SignatureDecoder,
     SecuredTokenTransfer,
-    ISignatureValidatorConstants,
     IERC165,
     ReentrancyGuard,
-    SmartAccountErrors
+    SmartAccountErrors,
+    ISignatureValidator
 {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -57,10 +57,6 @@ contract SmartAccount is
     // changed to 2D nonce below
     // @notice there is no _nonce
     mapping(uint256 => uint256) public nonces;
-
-    // Mapping to keep track of all message hashes that have been approved by the owner
-    // by ALL REQUIRED owners in a multisig flow
-    mapping(bytes32 => uint256) public signedMessages;
 
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
@@ -214,15 +210,8 @@ contract SmartAccount is
      * @param batchId : the key of the user's batch being queried
      * @return nonce : the number of transactions made within said batch
      */
-    function getNonce(uint256 batchId) public view returns (uint256) {
+    function getNonce(uint256 batchId) public view virtual returns (uint256) {
         return nonces[batchId];
-    }
-
-    /**
-     * @dev Standard interface for 1d nonces. Use it for Account Abstraction flow.
-     */
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
     }
 
     /**
@@ -686,8 +675,7 @@ contract SmartAccount is
             dest.length != value.length ||
             value.length != func.length
         ) revert WrongBatchProvided(dest.length, value.length, func.length);
-        uint256 arraysLength = dest.length;
-        for (uint256 i; i < arraysLength; ) {
+        for (uint256 i; i < dest.length; ) {
             _call(dest[i], value[i], func[i]);
             unchecked {
                 ++i;
@@ -736,29 +724,6 @@ contract SmartAccount is
     }
 
     /**
-     * @dev implement template method of BaseAccount
-     * @notice Nonce space is locked to 0 for AA transactions
-     */
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal override {
-        bytes calldata userOpData = userOp.callData;
-        if (userOpData.length > 0) {
-            bytes4 methodSig = bytes4(userOpData[:4]);
-            // If method to be called is executeCall then only check for module transaction
-            if (methodSig == this.executeCall.selector) {
-                (address _to, uint _amount, bytes memory _data) = abi.decode(
-                    userOpData[4:],
-                    (address, uint, bytes)
-                );
-                if (address(modules[_to]) != address(0)) return;
-            }
-        }
-        if (nonces[0]++ != userOp.nonce)
-            revert InvalidUserOpNonceProvided(userOp.nonce, nonces[0]);
-    }
-
-    /**
      * @dev Implements the template method of BaseAccount and validates the user's signature for a given operation.
      * @notice This function is marked as internal and virtual, and it overrides the BaseAccount function of the same name.
      * @param userOp The user operation to be validated, provided as a `UserOperation` calldata struct.
@@ -786,6 +751,33 @@ contract SmartAccount is
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;
         return 0;
+    }
+
+    /**
+     * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
+     * @dev If owner is a smart-contract (other smart contract wallet or module, that controls
+     *      signature verifications - like multisig), forward isValidSignature request to it.
+     *      In case of multisig, _signature can be several concatenated signatures
+     *      If owner is EOA, perform a regular ecrecover.
+     * @param _dataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
+     * @param _signature Signature byte array associated with _dataHash
+     * @return bytes4 value.
+     */
+    function isValidSignature(
+        bytes32 _dataHash,
+        bytes memory _signature
+    ) public view override returns (bytes4) {
+        if (owner.code.length > 0) {
+            return
+                ISignatureValidator(owner).isValidSignature(
+                    _dataHash,
+                    _signature
+                );
+        }
+        if (owner == _dataHash.recover(_signature)) {
+            return EIP1271_MAGIC_VALUE;
+        }
+        return bytes4(0xffffffff);
     }
 
     /**

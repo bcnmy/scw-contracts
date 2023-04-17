@@ -35,15 +35,14 @@ const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
 // TODO
 // remove TEST for production deployments
 export enum DEPLOYMENT_SALTS {
-  FallBACK_HANDLER = "TEST_CALLBACK_HANDLER_V0_1103",
-  DECODER = "TEST_DECODER_V0_1103",
-  ENTRY_POINT = "TEST_ENTRY_POINT_V0_1103",
-  GAS_ESTIMATOR = "TEST_GAS_ESTIMATOR_V0_1103",
-  MULTI_SEND = "TEST_MULTI_SEND_V0_1103",
-  MULTI_SEND_CALLONLY = "TEST_MULTI_SEND_CALLONLY_V0_1103",
-  WALLET_FACTORY = "TEST_WALLET_FACTORY_V0_1103",
-  WALLET_IMP = "TEST_WALLET_IMP_V0_1103",
-  SINGELTON_PAYMASTER = "TEST_SINGELTON_PAYMASTER_V0_1103",
+  DECODER = "DEVX_DECODER_V0_30032023",
+  ENTRY_POINT = "DEVX_ENTRY_POINT_V0_30032023",
+  GAS_ESTIMATOR = "DEVX_GAS_ESTIMATOR_V0_30032023",
+  MULTI_SEND = "DEVX_MULTI_SEND_V0_30032023",
+  MULTI_SEND_CALLONLY = "DEVX_MULTI_SEND_CALLONLY_V0_30032023",
+  WALLET_FACTORY = "DEVX_WALLET_FACTORY_V0_30032023",
+  WALLET_IMP = "DEVX_WALLET_IMP_V0_30032023",
+  SINGELTON_PAYMASTER = "DEVX_SINGELTON_PAYMASTER_V0_30032023",
 }
 
 export const factoryAbi = [
@@ -146,7 +145,8 @@ export const deployContract = async (
   contractByteCode: string,
   deployerInstance: Deployer
 ): Promise<string> => {
-  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode);
+  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {maxFeePerGas: 200e9, maxPriorityFeePerGas: 75e9});
+  //const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode);
 
   console.log(`Submitted transaction ${hash} for deployment`);
 
@@ -180,7 +180,7 @@ export const deployContract = async (
   console.log(name, deploymentStatus);
 
   if (!deploymentStatus) {
-    console.log(`Invalid ${name} Handler Deployment`);
+    console.log(`Invalid ${name} Deployment`);
   }
 
   return "0x";
