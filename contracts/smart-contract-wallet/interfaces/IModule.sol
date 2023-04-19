@@ -12,6 +12,7 @@ interface IModule {
      */
     function validateSignature(
         UserOperation calldata userOp,
-        bytes32 userOpHash
+        bytes32 userOpHash,
+        bytes calldata moduleSignature
     ) external returns (uint256 sigValidationResult);
 }

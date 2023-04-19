@@ -724,7 +724,8 @@ contract SmartAccount is
     }
 
     /**
-     * @dev Implements the template method of BaseAccount and validates the user's signature for a given operation.
+     * @dev Implements the template method of BaseAccount. It identifies which Authorization Module to use to validate
+     *      the signature and then calls the `validateSignature` method of that module.
      * @notice This function is marked as internal and virtual, and it overrides the BaseAccount function of the same name.
      * @param userOp The user operation to be validated, provided as a `UserOperation` calldata struct.
      * @param userOpHash The hashed version of the user operation, provided as a `bytes32` value.
@@ -733,24 +734,18 @@ contract SmartAccount is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal virtual override returns (uint256 validationData) {
-        // below changes need formal verification.
-        bytes calldata userOpData = userOp.callData;
-        if (userOpData.length > 0) {
-            bytes4 methodSig = bytes4(userOpData[:4]);
-            // If method to be called is executeCall then only check for module transaction
-            if (methodSig == this.executeCall.selector) {
-                (address _to, uint _amount, bytes memory _data) = abi.decode(
-                    userOpData[4:],
-                    (address, uint, bytes)
+        (bytes memory moduleSignature, address authorizationModule) = abi
+            .decode(userOp.signature, (bytes, address));
+        if (address(modules[authorizationModule]) != address(0)) {
+            return
+                IModule(authorizationModule).validateSignature(
+                    userOp,
+                    userOpHash,
+                    moduleSignature
                 );
-                if (address(modules[_to]) != address(0))
-                    return IModule(_to).validateSignature(userOp, userOpHash);
-            }
+        } else {
+            revert WrongAuthorizationModule(authorizationModule);
         }
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (owner != hash.recover(userOp.signature))
-            return SIG_VALIDATION_FAILED;
-        return 0;
     }
 
     /**
@@ -767,17 +762,17 @@ contract SmartAccount is
         bytes32 _dataHash,
         bytes memory _signature
     ) public view override returns (bytes4) {
-        if (owner.code.length > 0) {
+        (bytes memory moduleSignature, address authorizationModule) = abi
+            .decode(_signature, (bytes, address));
+        if (address(modules[authorizationModule]) != address(0)) {
             return
-                ISignatureValidator(owner).isValidSignature(
+                ISignatureValidator(authorizationModule).isValidSignature(
                     _dataHash,
-                    _signature
+                    moduleSignature
                 );
+        } else {
+            revert WrongAuthorizationModule(authorizationModule);
         }
-        if (owner == _dataHash.recover(_signature)) {
-            return EIP1271_MAGIC_VALUE;
-        }
-        return bytes4(0xffffffff);
     }
 
     /**

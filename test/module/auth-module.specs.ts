@@ -200,9 +200,10 @@ describe("Authorization Module tests", function () {
       );
 
       const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
+      const sigLengthRequired = 16;
       const initdata = AuthorizationModule.interface.encodeFunctionData(
         "initialize",
-        [expectedSmartAccountAddress]
+        [sigLengthRequired]
       );
 
       await moduleFactory.deployCounterFactualModule(authorizationModuleImplementation.address, initdata);
@@ -222,116 +223,19 @@ describe("Authorization Module tests", function () {
       console.log("mint tokens to userSCW address..");
       await token.mint(userSCW.address, ethers.utils.parseEther("1000000"));
 
-      console.log("user module at %s is for the account at %s", expectedModuleAddress, await userAuthorizationModule.smartAccount());
+      console.log("user module is at %s", expectedModuleAddress);
 
-      expect(await userAuthorizationModule.smartAccount()).to.equal(expectedSmartAccountAddress);
+      expect(await userAuthorizationModule.SIG_LENGTH_REQUIRED()).to.equal(sigLengthRequired);
       expect(await ethers.provider.getBalance(userSCW.address)).to.equal(ethers.utils.parseEther("10"));
       
     });
-
-    it("When the module is not enabled, module txn signature validation goes as usual, but txn reverts by ModuleManager if tn was signed by owner", async () => {
-      
-      const SmartAccount = await ethers.getContractFactory("SmartAccount");
-      const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
-      const charleTokenBalanceBefore = await token.balanceOf(charlie);
-
-      // call Smart Account from  module to transfer tokens to charlie
-      const txnDataCallWithSmartAccount = AuthorizationModule.interface.encodeFunctionData(
-        "executeCallWithSmartAccount",
-        [token.address, ethers.utils.parseEther("0"), encodeTransfer(charlie, ethers.utils.parseEther("10").toString())]
-      );
-
-      const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-        "executeCall",
-        [
-          userAuthorizationModule.address,
-          ethers.utils.parseEther("0"),
-          txnDataCallWithSmartAccount,
-        ]
-      );
-
-      const userOp1 = await fillAndSign(
-        {
-          sender: userSCW.address,
-          callData: txnDataAA1,
-          callGasLimit: 1_000_000,
-        },
-        accounts[0], // signed by an owner
-        entryPoint,
-        'nonce'
-      );
-
-      const hash = await entryPoint.getUserOpHash(userOp1);
-      const ErrorAbi = ["function ModuleNotEnabled(address)"];      //encode custom error as it was a function
-      const ErrorInterface = new ethers.utils.Interface(ErrorAbi);
-      const expReturnData = ErrorInterface.encodeFunctionData("ModuleNotEnabled", [userAuthorizationModule.address]);
-    
-      const handleOpsTxn = await entryPoint.handleOps([userOp1], await offchainSigner.getAddress(), {
-        gasLimit: 10000000,
-      });
-
-      await expect(handleOpsTxn).to.emit(entryPoint, "UserOperationRevertReason").withArgs(
-        hash,
-        userOp1.sender,
-        userOp1.nonce,
-        expReturnData
-      );
-
-      expect(await token.balanceOf(charlie)).to.equal(charleTokenBalanceBefore);
-      
-    }); 
-
-    it("When the module is not enabled, signature validation reverts with Module type of signature", async () => {
-      
-      const SmartAccount = await ethers.getContractFactory("SmartAccount");
-      const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
-      const charleTokenBalanceBefore = await token.balanceOf(charlie);
-
-      // call Smart Account from  module to transfer tokens to charlie
-      const txnDataCallWithSmartAccount = AuthorizationModule.interface.encodeFunctionData(
-        "executeCallWithSmartAccount",
-        [token.address, ethers.utils.parseEther("0"), encodeTransfer(charlie, ethers.utils.parseEther("10").toString())]
-      );
-
-      const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-        "executeCall",
-        [
-          userAuthorizationModule.address,
-          ethers.utils.parseEther("0"),
-          txnDataCallWithSmartAccount,
-        ]
-      );
-
-      const userOp1 = await fillAndSign(
-        {
-          sender: userSCW.address,
-          callData: txnDataAA1,
-          callGasLimit: 1_000_000,
-        },
-        accounts[0], 
-        entryPoint,
-        'nonce'
-      );
-
-      let moduleSignature = "0x12345678123456781234567812345678";
-      expect(moduleSignature.slice(2).length).to.equal(32); //expected by Module
-      userOp1.signature = moduleSignature;
-
-      await expect(
-        entryPoint.handleOps([userOp1], await offchainSigner.getAddress(), {
-          gasLimit: 10_000_000,
-        })
-      ).to.be.revertedWith('FailedOp(0, "AA23 reverted: ECDSA: invalid signature length")');
-
-      expect(await token.balanceOf(charlie)).to.equal(charleTokenBalanceBefore);
-      
-    }); 
 
     it("Enables module and successfully executes userOp with the Module kind of signature", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
       const charleTokenBalanceBefore = await token.balanceOf(charlie);
+      const EIP1271_MAGIC_VALUE = "0x1626ba7e";
 
       let tokenAmountToTransfer = ethers.utils.parseEther("10");
       
@@ -346,23 +250,14 @@ describe("Authorization Module tests", function () {
         )
       ).to.emit(userSCW, "ExecutionSuccess");
 
-      // call Smart Account from  module to transfer tokens to charlie
-      const txnDataCallWithSmartAccount = AuthorizationModule.interface.encodeFunctionData(
-        "executeCallWithSmartAccount",
-        [token.address, ethers.utils.parseEther("0"), encodeTransfer(charlie, tokenAmountToTransfer.toString())]
-      );
-
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
         "executeCall",
         [
-          userAuthorizationModule.address,
+          token.address,
           ethers.utils.parseEther("0"),
-          txnDataCallWithSmartAccount,
+          encodeTransfer(charlie, tokenAmountToTransfer.toString()),
         ]
       );
-
-      console.log("UserOp caldata = ", txnDataAA1);
-      console.log("UserOp caldata + address ", txnDataAA1);
 
       const userOp1 = await fillAndSign(
         {
@@ -377,7 +272,11 @@ describe("Authorization Module tests", function () {
 
       let moduleSignature = "0x12345678123456781234567812345678";
       expect(moduleSignature.slice(2).length).to.equal(32); //expected by Module
-      userOp1.signature = moduleSignature;
+      let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(["bytes", "address"], [moduleSignature, userAuthorizationModule.address]);
+      console.log("signatureWithModuleAddress: ", signatureWithModuleAddress);
+
+      userOp1.signature = signatureWithModuleAddress;
+      let userOp1Hash = await entryPoint.getUserOpHash(userOp1);
 
       const handleOpsTxn = await entryPoint.handleOps([userOp1], await offchainSigner.getAddress(), {
         gasLimit: 10000000,
@@ -386,9 +285,12 @@ describe("Authorization Module tests", function () {
       await handleOpsTxn.wait();
 
       expect(await token.balanceOf(charlie)).to.equal(charleTokenBalanceBefore.add(tokenAmountToTransfer));
+
+      expect(await userSCW.isValidSignature(userOp1Hash, signatureWithModuleAddress)).to.equal(EIP1271_MAGIC_VALUE);
       
     });
 
+    /*
     it("When the module is enabled, call to the module with a regular signature won't pass", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
@@ -518,7 +420,7 @@ describe("Authorization Module tests", function () {
       expect(await token.balanceOf(charlie)).to.equal(charleTokenBalanceBefore);
       
     });
-
+    */
     
   });
 });

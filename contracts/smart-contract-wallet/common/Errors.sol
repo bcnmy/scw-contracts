@@ -139,15 +139,7 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
         uint256 funcLength
     );
 
-    /**
-     * @notice Throws when invalid nonce has been provided in an AA flow
-     * @param nonceProvided nonce that has been provided within User Operation
-     * @param nonceExpected expected nonce
-     */
-    error InvalidUserOpNonceProvided(
-        uint256 nonceProvided,
-        uint256 nonceExpected
-    );
+    error WrongAuthorizationModule(address moduleAddressProvided);
 }
 
 contract SmartAccountFactoryErrors is SmartAccountErrors {

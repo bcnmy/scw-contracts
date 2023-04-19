@@ -59,7 +59,8 @@ contract SocialRecoveryModule is IModule {
      */
     function validateSignature(
         UserOperation calldata userOp,
-        bytes32 userOpHash
+        bytes32 userOpHash,
+        bytes calldata moduleSignature
     ) external virtual returns (uint256 sigValidationResult) {
         if (opsSeen[userOpHash] == true) return SIG_VALIDATION_FAILED;
         opsSeen[userOpHash] = true;
