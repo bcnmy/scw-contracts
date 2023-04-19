@@ -65,6 +65,12 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
     error CallerIsNotEntryPointOrOwner(address caller);
 
     /**
+     * @notice Throws at _requireFromEntryPointOrSelf when msg.sender is not an EntryPoint neither self
+     * @param caller address that tried to call _requireFromEntryPointOrSelf-protected method
+     */
+    error CallerIsNotEntryPointOrSelf(address caller);
+
+    /**
      * @notice Throws if trying to initialize a Smart Account that has already been initialized
      * @param smartAccount Smart Account Address
      */

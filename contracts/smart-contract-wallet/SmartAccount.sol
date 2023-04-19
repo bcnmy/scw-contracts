@@ -126,6 +126,16 @@ contract SmartAccount is
     }
 
     /**
+     * @dev This function allows the owner or entry point to execute certain actions.
+     * If the caller is not authorized, the function will revert with an error message.
+     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     */
+    function _requireFromEntryPointOrSelf() internal view {
+        if (msg.sender != address(entryPoint()) && msg.sender != address(this))
+            revert CallerIsNotEntryPointOrSelf(msg.sender);
+    }
+
+    /**
      * @dev Allows to change the owner of the smart account by current owner or self-call (modules)
      * @param _newOwner Address of the new signatory
      */
@@ -225,18 +235,21 @@ contract SmartAccount is
 
     /**
      * @dev Initialize the Smart Account with required states
-     * @param _owner Signatory of the Smart Account
-     * @param _handler Default fallback handler provided in Smart Account
+     * @param handler Default fallback handler provided in Smart Account
+     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
+     *                            a registry module that serves several smart accounts
+     * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
      * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
      * @notice any further implementations that introduces a new state must have a reinit method
      * @notice init is prevented here by setting owner in the constructor and checking here for address(0)
      */
-    function init(address _owner, address _handler) external virtual override {
-        if (owner != address(0)) revert AlreadyInitialized(address(this));
-        if (_owner == address(0)) revert OwnerCannotBeZero();
-        owner = _owner;
-        _setFallbackHandler(_handler);
-        _setupModules(address(0), bytes(""));
+    function init(
+        address handler,
+        address moduleSetupContract,
+        bytes calldata moduleSetupData
+    ) external virtual override returns (address) {
+        _setFallbackHandler(handler);
+        return _initialSetupModules(moduleSetupContract, moduleSetupData);
     }
 
     /**
@@ -799,6 +812,43 @@ contract SmartAccount is
         uint256 amount
     ) public payable onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
+    }
+
+    /**
+     * @dev Adds a module to the allowlist.
+     * @notice This can only be done via a userOp or a selfcall.
+     * @notice Enables the module `module` for the wallet.
+     * @param module Module to be allow-listed.
+     */
+    function enableModule(address module) public virtual {
+        _requireFromEntryPointOrSelf();
+        _enableModule(module);
+    }
+
+    /**
+     * @dev Setups module for this Smart Account and enables it.
+     * @notice This can only be done via userOp or a selfcall.
+     * @notice Enables the module `module` for the wallet.
+    
+     */
+    function setupAndEnableModule(
+        address setupContract,
+        bytes memory setupData
+    ) public virtual returns (address) {
+        _requireFromEntryPointOrSelf();
+        return _setupAndEnableModule(setupContract, setupData);
+    }
+
+    /**
+     * @dev Removes a module from the allowlist.
+     * @notice This can only be done via a wallet transaction.
+     * @notice Disables the module `module` for the wallet.
+     * @param prevModule Module that pointed to the module to be removed in the linked list
+     * @param module Module to be removed.
+     */
+    function disableModule(address prevModule, address module) public virtual {
+        _requireFromEntryPointOrSelf();
+        _disableModule(prevModule, module);
     }
 
     /**

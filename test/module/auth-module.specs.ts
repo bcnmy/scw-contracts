@@ -84,6 +84,7 @@ describe("Authorization Module tests", function () {
   let baseImpl: SmartAccount;
   let whitelistModule: WhitelistModule;
   let authorizationModuleImplementation: AuthorizationModule;
+  let eoaOwnersRegistryModule: EOAOwnershipRegistryModule;
   let walletFactory: SmartAccountFactory;
   let moduleFactory: ModuleFactory;
   let token: MockToken;
@@ -150,16 +151,13 @@ describe("Authorization Module tests", function () {
     whitelistModule = await WhitelistModule.deploy(bob);
     console.log("Test module deployed at ", whitelistModule.address);
 
-    const AuthorizationModule = await ethers.getContractFactory(
-      "AuthorizationModule"
-    );
-    authorizationModuleImplementation = await AuthorizationModule.connect(
-      accounts[0]
-    ).deploy();
-    console.log(
-      "AuthorizationModule deployed at ",
-      authorizationModuleImplementation.address
-    );
+    const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
+    authorizationModuleImplementation = await AuthorizationModule.connect(accounts[0]).deploy();
+    console.log("AuthorizationModule deployed at ", authorizationModuleImplementation.address);
+
+    const EOAOwnersModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    eoaOwnersRegistryModule = await EOAOwnersModule.connect(accounts[0]).deploy();
+    console.log("EOA Owners Registry Module deployed at ", eoaOwnersRegistryModule.address);
 
     const ModuleFactory = await ethers.getContractFactory(
       "ModuleFactory"
@@ -189,27 +187,40 @@ describe("Authorization Module tests", function () {
 
   describe("Test Validation With Authorization Module", function () {
     it("Deploys user Smart Account and Module", async () => {
-      // deploying wallet first
-      await walletFactory.deployCounterFactualAccount(owner, 0);
+
+      // CREATE MODULE INIT DATA AND CHECK ADDRESS
+      const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
+      const sigLengthRequired = 16;
+      
+      const moduleInitData = AuthorizationModule.interface.encodeFunctionData(
+        "initialize",
+        [sigLengthRequired]
+      );
+
+      const expectedModuleAddress = 
+          await moduleFactory.getAddressForCounterFactualModule(authorizationModuleImplementation.address, moduleInitData);
+
+      // CREATE MODULE SETUP DATA AND DEPLOY ACCOUNT
+
+      const ModuleFactory = await ethers.getContractFactory("ModuleFactory");
+      const moduleSetupData = ModuleFactory.interface.encodeFunctionData(
+        "deployCounterFactualModule",
+        [authorizationModuleImplementation.address, moduleInitData]
+      );
+
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterFactualAccount(owner, 0);
+        await walletFactory.getAddressForCounterFactualAccount(moduleFactory.address, moduleSetupData, 0);
+
+      let smartAccountDeployTx = await walletFactory.deployCounterFactualAccount(moduleFactory.address, moduleSetupData, 0);
+      expect(smartAccountDeployTx).to.emit(walletFactory, "AccountCreation")
+        .withArgs(expectedSmartAccountAddress, expectedModuleAddress, 0);
 
       userSCW = await ethers.getContractAt(
         "contracts/smart-contract-wallet/SmartAccount.sol:SmartAccount",
         expectedSmartAccountAddress
       );
-
-      const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
-      const sigLengthRequired = 16;
-      const initdata = AuthorizationModule.interface.encodeFunctionData(
-        "initialize",
-        [sigLengthRequired]
-      );
-
-      await moduleFactory.deployCounterFactualModule(authorizationModuleImplementation.address, initdata);
-      const expectedModuleAddress = 
-          await moduleFactory.getAddressForCounterFactualModule(authorizationModuleImplementation.address, initdata);
       
+      // module should have been deployed in course of smart account deployment
       userAuthorizationModule = await ethers.getContractAt(
         "contracts/smart-contract-wallet/test/AuthorizationModules/AuthorizationModule.sol:AuthorizationModule",
         expectedModuleAddress
@@ -226,11 +237,12 @@ describe("Authorization Module tests", function () {
       console.log("user module is at %s", expectedModuleAddress);
 
       expect(await userAuthorizationModule.SIG_LENGTH_REQUIRED()).to.equal(sigLengthRequired);
+      expect(await userSCW.isModuleEnabled(userAuthorizationModule.address)).to.equal(true);
       expect(await ethers.provider.getBalance(userSCW.address)).to.equal(ethers.utils.parseEther("10"));
       
     });
 
-    it("Enables module and successfully executes userOp with the Module kind of signature", async () => {
+    it("Successfully executes userOp with the Example Auth Module kind of signature", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
@@ -238,17 +250,6 @@ describe("Authorization Module tests", function () {
       const EIP1271_MAGIC_VALUE = "0x1626ba7e";
 
       let tokenAmountToTransfer = ethers.utils.parseEther("10");
-      
-      //Enable module via self call
-      await expect(
-        executeContractCallWithSigners(
-          userSCW,
-          userSCW,
-          "enableModule",
-          [userAuthorizationModule.address],
-          [accounts[0]]
-        )
-      ).to.emit(userSCW, "ExecutionSuccess");
 
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
         "executeCall",
@@ -288,6 +289,104 @@ describe("Authorization Module tests", function () {
 
       expect(await userSCW.isValidSignature(userOp1Hash, signatureWithModuleAddress)).to.equal(EIP1271_MAGIC_VALUE);
       
+    });
+
+    it("Can setup and enable registry module", async () => {
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+      
+      let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [accounts[0].address]
+      );
+
+      const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+        "setupAndEnableModule",
+        [
+          eoaOwnersRegistryModule.address,
+          eoaOwnershipSetupData
+        ]
+      );
+
+      const userOp1 = await fillAndSign(
+        {
+          sender: userSCW.address,
+          callData: txnDataAA1,
+          callGasLimit: 1_000_000,
+        },
+        accounts[0], 
+        entryPoint,
+        'nonce'
+      );
+
+      let moduleSignature = "0x12345678123456781234567812345678";
+      expect(moduleSignature.slice(2).length).to.equal(32); //expected by Module
+      let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(["bytes", "address"], [moduleSignature, userAuthorizationModule.address]);
+      userOp1.signature = signatureWithModuleAddress;
+
+      const handleOpsTxn = await entryPoint.handleOps([userOp1], await offchainSigner.getAddress(), {
+        gasLimit: 10000000,
+      });
+      await handleOpsTxn.wait();
+
+      expect(await eoaOwnersRegistryModule.smartAccountOwners(userSCW.address)).to.equal(accounts[0].address);
+      expect(await userSCW.isModuleEnabled(eoaOwnersRegistryModule.address)).to.equal(true);
+      
+    });
+
+    it("Can send a userOp signed for the newly connected module", async () => {
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+      const charlieTokenBalanceBefore = await token.balanceOf(charlie);
+      const EIP1271_MAGIC_VALUE = "0x1626ba7e";
+
+      let tokenAmountToTransfer = ethers.utils.parseEther("1");
+
+      const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+        "executeCall",
+        [
+          token.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie, tokenAmountToTransfer.toString()),
+        ]
+      );
+
+      const userOp1 = await fillAndSign(
+        {
+          sender: userSCW.address,
+          callData: txnDataAA1,
+          callGasLimit: 1_000_000,
+        },
+        accounts[0],  //signed by owner, that is set in the EOAOwnershipRegistryModule
+        entryPoint,
+        'nonce'
+      );
+
+      console.log("owner sig in the test ", userOp1.signature);
+      console.log("restoring against this hash ", await entryPoint.getUserOpHash(userOp1));
+      let addressRestored = ethers.utils.recoverAddress(await entryPoint.getUserOpHash(userOp1), userOp1.signature);
+      console.log("restored address in the test ", addressRestored);
+      console.log("accounts[0] is ", accounts[0].address);
+
+      // add validator module address to the signature
+      let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"], 
+        [userOp1.signature, eoaOwnersRegistryModule.address]
+      );
+      userOp1.signature = signatureWithModuleAddress;
+
+      let userOp1Hash = await entryPoint.getUserOpHash(userOp1);
+
+      const handleOpsTxn = await entryPoint.handleOps([userOp1], await offchainSigner.getAddress(), {
+        gasLimit: 10000000,
+      });
+      await handleOpsTxn.wait();
+
+      expect(await token.balanceOf(charlie)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+      
+
+      expect(await userSCW.isValidSignature(userOp1Hash, signatureWithModuleAddress)).to.equal(EIP1271_MAGIC_VALUE);
     });
 
     /*
@@ -336,7 +435,7 @@ describe("Authorization Module tests", function () {
       expect(await token.balanceOf(charlie)).to.equal(charleTokenBalanceBefore);
       
     });
-
+*/
     it("When the module is enabled, but the owner is still EOA, not module call with not module signature will still pass", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
@@ -346,7 +445,7 @@ describe("Authorization Module tests", function () {
       let tokenAmountToTransfer = ethers.utils.parseEther("10");
 
       // Module is enabled at this point
-      expect(await userSCW.owner()).to.equal(accounts[0].address);
+      //expect(await userSCW.owner()).to.equal(accounts[0].address);
 
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
         "executeCall",
@@ -368,6 +467,11 @@ describe("Authorization Module tests", function () {
         'nonce'
       );
 
+      let addressRestored = ethers.utils.recoverAddress(await entryPoint.getUserOpHash(userOp1), userOp1.signature);
+      console.log("control: signer address   :", accounts[0].address);
+      console.log("control: restored address :", addressRestored);
+
+      /*
       let txnHandleOps = await
         entryPoint.handleOps([userOp1], await offchainSigner.getAddress(), {
           gasLimit: 10_000_000,
@@ -375,9 +479,10 @@ describe("Authorization Module tests", function () {
       await txnHandleOps.wait();
 
       expect(await token.balanceOf(charlie)).to.equal(charleTokenBalanceBefore.add(tokenAmountToTransfer.toString()));
+      */
       
     });
-
+/*
     it("When the module is enabled, and module is set as owner, not module call with not module signature won't pass", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");

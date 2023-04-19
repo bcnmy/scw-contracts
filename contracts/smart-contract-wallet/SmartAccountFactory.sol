@@ -45,18 +45,21 @@ contract SmartAccountFactory {
 
     /**
      * @notice Deploys account using create2 and points it to basicImplementation
-     * @param _owner EOA signatory for the account to be deployed
-     * @param _index extra salt that allows to deploy more account if needed for same EOA (default 0)
+     *
+     * @param index extra salt that allows to deploy more account if needed for same EOA (default 0)
      */
     function deployCounterFactualAccount(
-        address _owner,
-        uint256 _index
+        address moduleSetupContract,
+        bytes calldata moduleSetupData,
+        uint256 index
     ) public returns (address proxy) {
-        // create initializer data based on init method, _owner and minimalHandler
-        bytes memory initializer = getInitializer(_owner);
-
+        // create initializer data based on init method and parameters
+        bytes memory initializer = getInitializer(
+            moduleSetupContract,
+            moduleSetupData
+        );
         bytes32 salt = keccak256(
-            abi.encodePacked(keccak256(initializer), _index)
+            abi.encodePacked(keccak256(initializer), index)
         );
 
         bytes memory deploymentData = abi.encodePacked(
@@ -75,35 +78,40 @@ contract SmartAccountFactory {
         }
         require(address(proxy) != address(0), "Create2 call failed");
 
-        // calldata for init method
+        address initialAuthorizationModule;
+
         if (initializer.length > 0) {
             // solhint-disable-next-line no-inline-assembly
             assembly {
-                if eq(
-                    call(
-                        gas(),
-                        proxy,
-                        0,
-                        add(initializer, 0x20),
-                        mload(initializer),
-                        0,
-                        0
-                    ),
+                let success := call(
+                    gas(),
+                    proxy,
+                    0,
+                    add(initializer, 0x20),
+                    mload(initializer),
+                    0,
                     0
-                ) {
-                    revert(0, 0)
+                )
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0, returndatasize())
+                if iszero(success) {
+                    revert(ptr, returndatasize())
                 }
+                initialAuthorizationModule := mload(ptr)
             }
         }
-        emit AccountCreation(proxy, _owner, _index);
+        emit AccountCreation(proxy, initialAuthorizationModule, index);
     }
 
     /**
      * @notice Deploys account using create and points it to _implementation
-     * @param _owner EOA signatory for the account to be deployed
+     
      * @return proxy address of the deployed account
      */
-    function deployAccount(address _owner) public returns (address proxy) {
+    function deployAccount(
+        address moduleSetupContract,
+        bytes calldata moduleSetupData
+    ) public returns (address proxy) {
         bytes memory deploymentData = abi.encodePacked(
             type(Proxy).creationCode,
             uint256(uint160(basicImplementation))
@@ -119,63 +127,74 @@ contract SmartAccountFactory {
         }
         require(address(proxy) != address(0), "Create call failed");
 
-        bytes memory initializer = getInitializer(_owner);
+        bytes memory initializer = getInitializer(
+            moduleSetupContract,
+            moduleSetupData
+        );
+        address initialAuthorizationModule;
 
-        // calldata for init method
         if (initializer.length > 0) {
             // solhint-disable-next-line no-inline-assembly
             assembly {
-                if eq(
-                    call(
-                        gas(),
-                        proxy,
-                        0,
-                        add(initializer, 0x20),
-                        mload(initializer),
-                        0,
-                        0
-                    ),
+                let success := call(
+                    gas(),
+                    proxy,
+                    0,
+                    add(initializer, 0x20),
+                    mload(initializer),
+                    0,
                     0
-                ) {
-                    revert(0, 0)
+                )
+                let ptr := mload(0x40)
+                returndatacopy(ptr, 0, returndatasize())
+                if iszero(success) {
+                    revert(ptr, returndatasize())
                 }
+                initialAuthorizationModule := mload(ptr)
             }
         }
-        emit AccountCreationWithoutIndex(proxy, _owner);
+        emit AccountCreationWithoutIndex(proxy, initialAuthorizationModule);
     }
 
     /**
      * @dev Allows to retrieve the initializer data for the account.
-     * @param _owner EOA signatory for the account to be deployed
+     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
+     *                            a registry module that serves several smart accounts
+     * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
      * @return initializer bytes for init method
      */
     function getInitializer(
-        address _owner
+        address moduleSetupContract,
+        bytes calldata moduleSetupData
     ) internal view returns (bytes memory) {
         return
             abi.encodeCall(
                 BaseSmartAccount.init,
-                (_owner, address(minimalHandler))
+                (address(minimalHandler), moduleSetupContract, moduleSetupData)
             );
     }
 
     /**
      * @notice Allows to find out account address prior to deployment
-     * @param _owner EOA signatory for the account to be deployed
-     * @param _index extra salt that allows to deploy more accounts if needed for same EOA (default 0)
+     
+     * @param index extra salt that allows to deploy more accounts if needed for same EOA (default 0)
      */
     function getAddressForCounterFactualAccount(
-        address _owner,
-        uint256 _index
+        address moduleSetupContract,
+        bytes calldata moduleSetupData,
+        uint256 index
     ) external view returns (address _account) {
         // create initializer data based on init method, _owner and minimalHandler
-        bytes memory initializer = getInitializer(_owner);
+        bytes memory initializer = getInitializer(
+            moduleSetupContract,
+            moduleSetupData
+        );
         bytes memory code = abi.encodePacked(
             type(Proxy).creationCode,
             uint256(uint160(basicImplementation))
         );
         bytes32 salt = keccak256(
-            abi.encodePacked(keccak256(initializer), _index)
+            abi.encodePacked(keccak256(initializer), index)
         );
         bytes32 hash = keccak256(
             abi.encodePacked(bytes1(0xff), address(this), salt, keccak256(code))

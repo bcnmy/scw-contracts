@@ -165,12 +165,13 @@ contract SmartAccountNoAuth is
     // Initialize / Setup
     // Used to setup
     // i. owner ii. entry point address iii. handler
-    function init(address _owner, address _handler) external virtual override {
-        require(owner == address(0), "Already initialized");
-        require(_owner != address(0), "Invalid owner");
-        owner = _owner;
-        _setFallbackHandler(_handler);
-        _setupModules(address(0), bytes(""));
+    function init(
+        address handler,
+        address moduleSetupContract,
+        bytes calldata moduleSetupData
+    ) external virtual override returns (address) {
+        _setFallbackHandler(handler);
+        return _initialSetupModules(moduleSetupContract, moduleSetupData);
     }
 
     // Gnosis style transaction with optional repay in native tokens OR ERC20

@@ -220,10 +220,12 @@ const config: HardhatUserConfig = {
       // gasPrice: 6400000
     },
   },
+  /*
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     currency: "USD",
   },
+  */
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY || "",

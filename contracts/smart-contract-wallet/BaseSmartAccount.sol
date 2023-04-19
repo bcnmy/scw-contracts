@@ -128,11 +128,17 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
 
     /**
      * @dev Initialize the Smart Account with required states
-     * @param _owner Signatory of the Smart Account
-     * @param _handler Default fallback handler provided in Smart Account
+     * @param handler Default fallback handler provided in Smart Account
+     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
+     *                            a registry module that serves several smart accounts.
+     * @param moduleSetupData data containing address of the Setup Contract and a setup data
      * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
      */
-    function init(address _owner, address _handler) external virtual;
+    function init(
+        address handler,
+        address moduleSetupContract,
+        bytes calldata moduleSetupData
+    ) external virtual returns (address);
 
     /**
      * @dev Gnosis style transaction with optional repay in native tokens OR ERC20

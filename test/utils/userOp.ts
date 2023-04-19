@@ -117,6 +117,7 @@ export function getUserOpHash(
     ["bytes32", "address", "uint256"],
     [userOpHash, entryPoint, chainId]
   );
+  console.log("signing this hash: ", keccak256(enc));
   return keccak256(enc);
 }
 
