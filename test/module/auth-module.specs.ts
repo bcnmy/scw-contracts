@@ -229,7 +229,7 @@ describe("Authorization Module tests", function () {
       
     });
 
-    it("When the module is not enabled, signature validation goes as usual, but txn reverts by ModuleManager", async () => {
+    it("When the module is not enabled, module txn signature validation goes as usual, but txn reverts by ModuleManager if tn was signed by owner", async () => {
       
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
@@ -281,7 +281,7 @@ describe("Authorization Module tests", function () {
       
     }); 
 
-    it("When the module is not enabled, signature validation reverts with Module kind of signature", async () => {
+    it("When the module is not enabled, signature validation reverts with Module type of signature", async () => {
       
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
@@ -327,7 +327,7 @@ describe("Authorization Module tests", function () {
       
     }); 
 
-    it("Enables module and sends userOp", async () => {
+    it("Enables module and successfully executes userOp with the Module kind of signature", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");
@@ -360,6 +360,9 @@ describe("Authorization Module tests", function () {
           txnDataCallWithSmartAccount,
         ]
       );
+
+      console.log("UserOp caldata = ", txnDataAA1);
+      console.log("UserOp caldata + address ", txnDataAA1);
 
       const userOp1 = await fillAndSign(
         {
@@ -473,7 +476,7 @@ describe("Authorization Module tests", function () {
       
     });
 
-    it("When the module is enabled, and set as owner, not module call with not module signature won't pass", async () => {
+    it("When the module is enabled, and module is set as owner, not module call with not module signature won't pass", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const AuthorizationModule = await ethers.getContractFactory("AuthorizationModule");

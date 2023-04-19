@@ -6,8 +6,6 @@ import {Enum} from "../../common/Enum.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ISmartAccount} from "./ISmartAccount.sol";
 
-import "hardhat/console.sol";
-
 contract AuthorizationModule is BaseAuthorizationModule {
     string public constant NAME = "Authorization Module";
     string public constant VERSION = "0.1.0";
@@ -84,9 +82,6 @@ contract AuthorizationModule is BaseAuthorizationModule {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view virtual returns (uint256 sigValidationResult) {
-        //temporary
-        console.log("validating signature in the module");
-        console.log("userOp Sig length ", userOp.signature.length);
         if (userOp.signature.length == 16) {
             return 0;
         }
