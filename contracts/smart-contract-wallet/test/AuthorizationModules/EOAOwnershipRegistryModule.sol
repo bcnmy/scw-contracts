@@ -6,8 +6,6 @@ import {Enum} from "../../common/Enum.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import "hardhat/console.sol";
-
 contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
     string public constant NAME = "EOA Ownership Registry Module";
     string public constant VERSION = "0.1.0";
@@ -17,8 +15,6 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
     using ECDSA for bytes32;
 
     mapping(address => address) public smartAccountOwners;
-
-    constructor() {}
 
     function initForSmartAccount(address owner) external returns (address) {
         smartAccountOwners[msg.sender] = owner;
@@ -34,18 +30,7 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
         bytes32 userOpHash,
         bytes calldata moduleSignature
     ) external view virtual returns (uint256 sigValidationResult) {
-        console.log("entered EOA sig validation");
-        console.log("owner in the mapping ", smartAccountOwners[userOp.sender]);
-        console.log("restored ", userOpHash.recover(moduleSignature));
-        console.logBytes32(userOpHash);
-        console.logBytes(moduleSignature);
-
-        if (smartAccountOwners[userOp.sender] == address(0))
-            revert NoOwnerRegisteredForSmartAccount(userOp.sender);
-        if (
-            smartAccountOwners[userOp.sender] ==
-            userOpHash.recover(moduleSignature)
-        ) {
+        if (verifySignature(userOpHash, moduleSignature, userOp.sender)) {
             return 0;
         }
         return SIG_VALIDATION_FAILED;
@@ -63,15 +48,21 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
         bytes memory moduleSignature,
         address smartAccount
     ) public view virtual returns (bytes4) {
-        console.logBytes32(_hash);
-        console.logBytes(moduleSignature);
-        if (smartAccountOwners[smartAccount] == address(0))
-            revert NoOwnerRegisteredForSmartAccount(smartAccount);
-        if (
-            smartAccountOwners[smartAccount] == _hash.recover(moduleSignature)
-        ) {
+        if (verifySignature(_hash, moduleSignature, smartAccount)) {
             return EIP1271_MAGIC_VALUE;
         }
         return bytes4(0xffffffff);
+    }
+
+    function verifySignature(
+        bytes32 _hash,
+        bytes memory _signature,
+        address account
+    ) internal view returns (bool) {
+        address expectedSigner = smartAccountOwners[account];
+        if (expectedSigner == address(0))
+            revert NoOwnerRegisteredForSmartAccount(account);
+        bytes32 hash = _hash.toEthSignedMessageHash();
+        return expectedSigner == hash.recover(_signature);
     }
 }

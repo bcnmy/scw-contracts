@@ -52,7 +52,7 @@ contract SmartAccount is
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     // Owner storage
-    address public owner;
+    address public ownerDeprecated;
 
     // changed to 2D nonce below
     // @notice there is no _nonce
@@ -133,27 +133,6 @@ contract SmartAccount is
     function _requireFromEntryPointOrSelf() internal view {
         if (msg.sender != address(entryPoint()) && msg.sender != address(this))
             revert CallerIsNotEntryPointOrSelf(msg.sender);
-    }
-
-    /**
-     * @dev Allows to change the owner of the smart account by current owner or self-call (modules)
-     * @param _newOwner Address of the new signatory
-     */
-    function setOwner(address _newOwner) public mixedAuth {
-        if (_newOwner == address(0)) revert OwnerCannotBeZero();
-        require(
-            _newOwner != address(this),
-            "Smart Account:: new Signatory address cannot be self"
-        );
-        require(
-            _newOwner != owner,
-            "new Signatory address cannot be same as old one"
-        );
-        address oldOwner = owner;
-        assembly {
-            sstore(owner.slot, _newOwner)
-        }
-        emit EOAChanged(address(this), oldOwner, _newOwner);
     }
 
     /**
@@ -241,7 +220,8 @@ contract SmartAccount is
      * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
      * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
      * @notice any further implementations that introduces a new state must have a reinit method
-     * @notice init is prevented here by setting owner in the constructor and checking here for address(0)
+     * @notice reinit is not possible, as _initialSetupModules reverts if the account is already initialized
+     *         which is when there is at least one enabled module
      */
     function init(
         address handler,
