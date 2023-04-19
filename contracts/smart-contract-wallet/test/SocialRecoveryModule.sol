@@ -51,17 +51,28 @@ contract SocialRecoveryModule is IModule {
         entry.threshold = _threshold;
     }
 
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external virtual returns (uint256) {
+        (bytes memory moduleSignature, ) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        return _validateSignature(userOp, userOpHash, moduleSignature);
+    }
+
     /**
      * @dev standard validateSignature for modules to validate and mark userOpHash as seen
      * @param userOp the operation that is about to be executed.
      * @param userOpHash hash of the user's request data. can be used as the basis for signature.
      * @return sigValidationResult sigAuthorizer to be passed back to trusting Account, aligns with validationData
      */
-    function validateSignature(
+    function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash,
-        bytes calldata moduleSignature
-    ) external virtual returns (uint256 sigValidationResult) {
+        bytes memory moduleSignature
+    ) internal virtual returns (uint256 sigValidationResult) {
         if (opsSeen[userOpHash] == true) return SIG_VALIDATION_FAILED;
         opsSeen[userOpHash] = true;
         // can perform it's own access control logic, verify agaisnt expected signer and return SIG_VALIDATION_FAILED

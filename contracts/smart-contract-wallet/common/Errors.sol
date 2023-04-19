@@ -145,7 +145,11 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
         uint256 funcLength
     );
 
-    error WrongAuthorizationModule(address moduleAddressProvided);
+    /**
+     * @notice Throws when module address taken from signature is not enabled
+     * @param moduleAddressProvided module address taken from signature
+     */
+    error WrongValidationModule(address moduleAddressProvided);
 }
 
 contract SmartAccountFactoryErrors is SmartAccountErrors {

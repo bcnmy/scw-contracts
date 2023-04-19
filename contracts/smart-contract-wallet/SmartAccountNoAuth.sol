@@ -11,6 +11,7 @@ import {SmartAccountErrors} from "./common/Errors.sol";
 import "./interfaces/ISignatureValidator.sol";
 import "./interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IModule} from "./interfaces/IModule.sol";
 
 contract SmartAccountNoAuth is
     BaseSmartAccount,
@@ -526,13 +527,37 @@ contract SmartAccountNoAuth is
         );
     }
 
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external virtual override returns (uint256 validationData) {
+        if (msg.sender != address(entryPoint()))
+            revert CallerIsNotAnEntryPoint(msg.sender);
+
+        (, address validationModule) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        if (address(modules[validationModule]) != address(0)) {
+            validationData = IModule(validationModule).validateUserOp(
+                userOp,
+                userOpHash
+            );
+        } else {
+            revert WrongValidationModule(validationModule);
+        }
+        _validateNonce(userOp.nonce);
+        _payPrefund(missingAccountFunds);
+    }
+
     /**
      * @dev implement template method of BaseAccount
      */
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) internal virtual override returns (uint256 validationData) {
+    ) internal virtual returns (uint256 validationData) {
         bytes32 hash = userOpHash.toEthSignedMessageHash();
         if (owner != hash.recover(userOp.signature))
             return SIG_VALIDATION_FAILED;

@@ -25,11 +25,22 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
         smartAccountOwners[msg.sender] = owner;
     }
 
-    function validateSignature(
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external view virtual returns (uint256) {
+        (bytes memory moduleSignature, ) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        return _validateSignature(userOp, userOpHash, moduleSignature);
+    }
+
+    function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash,
-        bytes calldata moduleSignature
-    ) external view virtual returns (uint256 sigValidationResult) {
+        bytes memory moduleSignature
+    ) internal view virtual returns (uint256 sigValidationResult) {
         if (verifySignature(userOpHash, moduleSignature, userOp.sender)) {
             return 0;
         }

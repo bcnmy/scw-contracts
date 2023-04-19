@@ -22,11 +22,22 @@ contract AuthorizationModule is BaseAuthorizationModule {
         SIG_LENGTH_REQUIRED = sigLengthRequired;
     }
 
-    function validateSignature(
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external view virtual returns (uint256) {
+        (bytes memory moduleSignature, ) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        return _validateSignature(userOp, userOpHash, moduleSignature);
+    }
+
+    function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash,
-        bytes calldata moduleSignature
-    ) external view virtual returns (uint256 sigValidationResult) {
+        bytes memory moduleSignature
+    ) internal view virtual returns (uint256 sigValidationResult) {
         if (moduleSignature.length == SIG_LENGTH_REQUIRED) {
             return 0;
         }

@@ -52,7 +52,7 @@ contract SmartAccount is
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     // Owner storage
-    address public ownerDeprecated;
+    address public owner;
 
     // changed to 2D nonce below
     // @notice there is no _nonce
@@ -716,29 +716,28 @@ contract SmartAccount is
         }
     }
 
-    /**
-     * @dev Implements the template method of BaseAccount. It identifies which Authorization Module to use to validate
-     *      the signature and then calls the `validateSignature` method of that module.
-     * @notice This function is marked as internal and virtual, and it overrides the BaseAccount function of the same name.
-     * @param userOp The user operation to be validated, provided as a `UserOperation` calldata struct.
-     * @param userOpHash The hashed version of the user operation, provided as a `bytes32` value.
-     */
-    function _validateSignature(
+    function validateUserOp(
         UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal virtual override returns (uint256 validationData) {
-        (bytes memory moduleSignature, address authorizationModule) = abi
-            .decode(userOp.signature, (bytes, address));
-        if (address(modules[authorizationModule]) != address(0)) {
-            return
-                IModule(authorizationModule).validateSignature(
-                    userOp,
-                    userOpHash,
-                    moduleSignature
-                );
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external virtual override returns (uint256 validationData) {
+        if (msg.sender != address(entryPoint()))
+            revert CallerIsNotAnEntryPoint(msg.sender);
+
+        (, address validationModule) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        if (address(modules[validationModule]) != address(0)) {
+            validationData = IModule(validationModule).validateUserOp(
+                userOp,
+                userOpHash
+            );
         } else {
-            revert WrongAuthorizationModule(authorizationModule);
+            revert WrongValidationModule(validationModule);
         }
+        _validateNonce(userOp.nonce);
+        _payPrefund(missingAccountFunds);
     }
 
     /**
@@ -755,16 +754,18 @@ contract SmartAccount is
         bytes32 _dataHash,
         bytes memory _signature
     ) public view override returns (bytes4) {
-        (bytes memory moduleSignature, address authorizationModule) = abi
-            .decode(_signature, (bytes, address));
-        if (address(modules[authorizationModule]) != address(0)) {
+        (bytes memory moduleSignature, address validationModule) = abi.decode(
+            _signature,
+            (bytes, address)
+        );
+        if (address(modules[validationModule]) != address(0)) {
             return
-                ISignatureValidator(authorizationModule).isValidSignature(
+                ISignatureValidator(validationModule).isValidSignature(
                     _dataHash,
                     moduleSignature
                 );
         } else {
-            revert WrongAuthorizationModule(authorizationModule);
+            revert WrongValidationModule(validationModule);
         }
     }
 
