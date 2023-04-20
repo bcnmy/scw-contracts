@@ -118,10 +118,8 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
     /**
      * @notice Throws when the address that signed the data (restored from signature)
      * differs from the address we expected to sign the data (i.e. some authorized address)
-     * @param restoredSigner the signer address restored from signature
-     * @param expectedSigner the address that was expected to be a signer
      */
-    error InvalidSignature(address restoredSigner, address expectedSigner);
+    error InvalidSignature();
 
     /**
      * @notice Throws when the transaction execution fails

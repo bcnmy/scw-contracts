@@ -33,47 +33,67 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
             userOp.signature,
             (bytes, address)
         );
-        return _validateSignature(userOp, userOpHash, moduleSignature);
+        // validateUserOp gets a hash not prepended with 'x\x19Ethereum Signed Message:\n32'
+        // so we have to do it manually
+        bytes32 ethSignedHash = userOpHash.toEthSignedMessageHash();
+        return _validateSignature(userOp, ethSignedHash, moduleSignature);
     }
 
     function _validateSignature(
         UserOperation calldata userOp,
-        bytes32 userOpHash,
+        bytes32 ethSignedUserOpHash,
         bytes memory moduleSignature
     ) internal view virtual returns (uint256 sigValidationResult) {
-        if (verifySignature(userOpHash, moduleSignature, userOp.sender)) {
+        if (
+            _verifySignature(
+                ethSignedUserOpHash,
+                moduleSignature,
+                userOp.sender
+            )
+        ) {
             return 0;
         }
         return SIG_VALIDATION_FAILED;
     }
 
+    // isValidSignature expects a hash prepended with 'x\x19Ethereum Signed Message:\n32'
     function isValidSignature(
-        bytes32 _hash,
+        bytes32 ethSignedDataHash,
         bytes memory moduleSignature
     ) public view virtual override returns (bytes4) {
-        return isValidSignatureForAddress(_hash, moduleSignature, msg.sender);
+        return
+            isValidSignatureForAddress(
+                ethSignedDataHash,
+                moduleSignature,
+                msg.sender
+            );
     }
 
     function isValidSignatureForAddress(
-        bytes32 _hash,
+        bytes32 ethSignedDataHash,
         bytes memory moduleSignature,
         address smartAccount
     ) public view virtual returns (bytes4) {
-        if (verifySignature(_hash, moduleSignature, smartAccount)) {
+        if (
+            _verifySignature(ethSignedDataHash, moduleSignature, smartAccount)
+        ) {
             return EIP1271_MAGIC_VALUE;
         }
         return bytes4(0xffffffff);
     }
 
-    function verifySignature(
-        bytes32 _hash,
-        bytes memory _signature,
+    // Only EOA owners supported, no smart contracts.
+    // To support smart contracts, can add a check if expectedSigner.isContract()
+    // then call expectedSigner.isValidSignature(ethSignedHash, signature)
+    // to check if the signature is valid.
+    function _verifySignature(
+        bytes32 ethSignedHash,
+        bytes memory signature,
         address account
     ) internal view returns (bool) {
         address expectedSigner = smartAccountOwners[account];
         if (expectedSigner == address(0))
             revert NoOwnerRegisteredForSmartAccount(account);
-        bytes32 hash = _hash.toEthSignedMessageHash();
-        return expectedSigner == hash.recover(_signature);
+        return expectedSigner == ethSignedHash.recover(signature);
     }
 }

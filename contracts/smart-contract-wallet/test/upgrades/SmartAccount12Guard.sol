@@ -26,7 +26,8 @@ contract SmartAccount12Guard is SmartAccount, GuardManager {
                 nonces[1]++
             );
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, signatures);
+            if (isValidSignature(txHash, signatures) != EIP1271_MAGIC_VALUE)
+                revert InvalidSignature();
         }
 
         address guard = getGuard();

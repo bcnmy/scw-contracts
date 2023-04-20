@@ -73,7 +73,7 @@ async function getUserOpWithPaymasterData(
   return userOpWithPaymasterData;
 }
 
-describe("Authorization Module tests", function () {
+describe("Ownerless Smart Account tests", function () {
   let entryPoint: EntryPoint;
   let latestEntryPoint: EntryPoint;
   let walletOwner: Signer;
@@ -370,8 +370,6 @@ describe("Authorization Module tests", function () {
       );
       userOp1.signature = signatureWithModuleAddress;
 
-      let userOp1Hash = await entryPoint.getUserOpHash(userOp1);
-
       const handleOpsTxn = await entryPoint.handleOps([userOp1], await offchainSigner.getAddress(), {
         gasLimit: 10000000,
       });
@@ -379,7 +377,68 @@ describe("Authorization Module tests", function () {
 
       expect(await token.balanceOf(charlie)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
       
-      expect(await userSCW.isValidSignature(userOp1Hash, signatureWithModuleAddress)).to.equal(EIP1271_MAGIC_VALUE);
+      // we sign userOpHash with signer.signMessage, which adds a prefix to the message
+      // so we need to use 'ethers.utils.hashMessage' to get the same hash,
+      // as isValidSignature expects the prefixed message hash
+      let userOp1Hash = await entryPoint.getUserOpHash(userOp1);
+      const message = arrayify(userOp1Hash);
+      const ethSignedUserOpHash = ethers.utils.hashMessage(message);
+
+      expect(await userSCW.isValidSignature(ethSignedUserOpHash, signatureWithModuleAddress)).to.equal(EIP1271_MAGIC_VALUE);
+    });
+
+    it("Can use forward flow with modules", async () => {
+
+      const EOA_CONTROLLED_FLOW = 1;
+      const charlieTokenBalanceBefore = await token.balanceOf(charlie);
+
+      let tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
+
+      const safeTx: SafeTransaction = buildSafeTransaction({
+        to: token.address,
+        data: encodeTransfer(charlie, tokenAmountToTransfer.toString()),
+        nonce: await userSCW.getNonce(EOA_CONTROLLED_FLOW),
+      });
+  
+      const chainId = await userSCW.getChainId();
+      const { signer, data } = await safeSignTypedData(
+        accounts[0],
+        userSCW,
+        safeTx,
+        chainId
+      );
+
+      const transaction: Transaction = {
+        to: safeTx.to,
+        value: safeTx.value,
+        data: safeTx.data,
+        operation: safeTx.operation,
+        targetTxGas: safeTx.targetTxGas,
+      };
+      const refundInfo: FeeRefund = {
+        baseGas: safeTx.baseGas,
+        gasPrice: safeTx.gasPrice,
+        tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+        gasToken: safeTx.gasToken,
+        refundReceiver: safeTx.refundReceiver,
+      };
+  
+      let signature = "0x";
+      signature += data.slice(2);
+      // add validator module address to the signature
+      let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"], 
+        [signature, eoaOwnersRegistryModule.address]
+      );
+  
+      await expect(
+        userSCW
+          .connect(accounts[0])
+          .execTransaction_S6W(transaction, refundInfo, signatureWithModuleAddress)
+      ).to.emit(userSCW, "ExecutionSuccess");
+
+      expect(await token.balanceOf(charlie)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+      
     });
 
     

@@ -258,8 +258,10 @@ contract SmartAccount is
                 // Signature info
                 nonces[1]++
             );
+
             txHash = keccak256(txHashData);
-            checkSignatures(txHash, signatures);
+            if (isValidSignature(txHash, signatures) != EIP1271_MAGIC_VALUE)
+                revert InvalidSignature();
         }
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
@@ -411,71 +413,6 @@ contract SmartAccount is
             requiredGas = startGas - gasleft();
         }
         revert(string(abi.encodePacked(requiredGas)));
-    }
-
-    /**
-     * @dev Checks whether the signature provided is valid for the provided data, hash. Will revert otherwise.
-     * @param dataHash Hash of the data (could be either a message hash or transaction hash)
-     * @param signatures Signature data that should be verified. Can be ECDSA signature, contract signature (EIP-1271) or approved hash.
-     */
-    function checkSignatures(
-        bytes32 dataHash,
-        bytes memory signatures
-    ) public view virtual {
-        require(signatures.length >= 65, "Invalid signatures length");
-        uint8 v;
-        bytes32 r;
-        bytes32 s;
-        address _signer;
-        (v, r, s) = signatureSplit(signatures);
-        if (v == 0) {
-            // If v is 0 then it is a contract signature
-            // When handling contract signatures the address of the signer contract is encoded into r
-            _signer = address(uint160(uint256(r)));
-
-            // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
-            // Here we check that the pointer is not pointing inside the part that is being processed
-            if (uint256(s) < 65)
-                revert WrongContractSignatureFormat(uint256(s), 0, 0);
-
-            // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
-            uint256 contractSignatureLen;
-            // solhint-disable-next-line no-inline-assembly
-            assembly {
-                contractSignatureLen := mload(add(add(signatures, s), 0x20))
-            }
-            if (uint256(s) + 32 + contractSignatureLen > signatures.length)
-                revert WrongContractSignatureFormat(
-                    uint256(s),
-                    contractSignatureLen,
-                    signatures.length
-                );
-
-            // Check signature
-            bytes memory contractSignature;
-            // solhint-disable-next-line no-inline-assembly
-            assembly {
-                // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
-                contractSignature := add(add(signatures, s), 0x20)
-            }
-            if (
-                ISignatureValidator(_signer).isValidSignature(
-                    dataHash,
-                    contractSignature
-                ) != EIP1271_MAGIC_VALUE
-            ) revert WrongContractSignature(contractSignature);
-        } else if (v > 30) {
-            // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
-            // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
-            (_signer, ) = dataHash.toEthSignedMessageHash().tryRecover(
-                v - 4,
-                r,
-                s
-            );
-        } else {
-            (_signer, ) = dataHash.tryRecover(v, r, s);
-        }
-        if (_signer != owner) revert InvalidSignature(_signer, owner);
     }
 
     /**
@@ -746,22 +683,23 @@ contract SmartAccount is
      *      signature verifications - like multisig), forward isValidSignature request to it.
      *      In case of multisig, _signature can be several concatenated signatures
      *      If owner is EOA, perform a regular ecrecover.
-     * @param _dataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
-     * @param _signature Signature byte array associated with _dataHash
+     * @param ethSignedDataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
+     *                          prepended with '\x19Ethereum Signed Message:\n'
+     * @param signature Signature byte array associated with ethSignedDataHash
      * @return bytes4 value.
      */
     function isValidSignature(
-        bytes32 _dataHash,
-        bytes memory _signature
+        bytes32 ethSignedDataHash,
+        bytes memory signature
     ) public view override returns (bytes4) {
         (bytes memory moduleSignature, address validationModule) = abi.decode(
-            _signature,
+            signature,
             (bytes, address)
         );
         if (address(modules[validationModule]) != address(0)) {
             return
                 ISignatureValidator(validationModule).isValidSignature(
-                    _dataHash,
+                    ethSignedDataHash,
                     moduleSignature
                 );
         } else {
