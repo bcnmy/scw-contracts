@@ -52,7 +52,7 @@ contract SmartAccount is
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     // Owner storage
-    address public owner;
+    address public deprecatedOwner;
 
     // changed to 2D nonce below
     // @notice there is no _nonce
@@ -82,47 +82,16 @@ contract SmartAccount is
 
     /**
      * @dev Constructor that sets the owner of the contract and the entry point contract.
+     *      modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
      * @param anEntryPoint The address of the entry point contract.
      */
     constructor(IEntryPoint anEntryPoint) {
+        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         _self = address(this);
-        // By setting the owner it is not possible to call init anymore,
-        // so we create an account with fixed non-zero owner.
-        // This is an unusable account, perfect for the singleton
-        owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
         _entryPoint = anEntryPoint;
         _chainId = block.chainid;
-    }
-
-    /// modifiers
-    /**
-     * @dev Modifier to allow only the owner to call the function.
-     * Reverts with CallerIsNotOwner if the caller is not the owner.
-     */
-    modifier onlyOwner() {
-        if (msg.sender != owner) revert CallerIsNotOwner(msg.sender);
-        _;
-    }
-    /**
-     * @dev Modifier to allow only the owner or the contract itself to call the function.
-     * Reverts with MixedAuthFail if the caller is not the owner or the contract itself.
-     */
-    modifier mixedAuth() {
-        if (msg.sender != owner && msg.sender != address(this))
-            revert MixedAuthFail(msg.sender);
-        _;
-    }
-
-    /**
-     * @dev This function allows the owner or entry point to execute certain actions.
-     * If the caller is not authorized, the function will revert with an error message.
-     * @notice This modifier is marked as internal and can only be called within the contract itself.
-     */
-    function _requireFromEntryPointOrOwner() internal view {
-        if (msg.sender != address(entryPoint()) && msg.sender != owner)
-            revert CallerIsNotEntryPointOrOwner(msg.sender);
     }
 
     /**
@@ -136,13 +105,22 @@ contract SmartAccount is
     }
 
     /**
+     * @dev This function allows the owner or entry point to execute certain actions.
+     * If the caller is not authorized, the function will revert with an error message.
+     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     */
+    function _requireFromEntryPoint() internal view {
+        if (msg.sender != address(entryPoint()))
+            revert CallerIsNotEntryPoint(msg.sender);
+    }
+
+    /**
      * @notice All the new implementations MUST have this method!
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    function updateImplementation(
-        address _implementation
-    ) public virtual mixedAuth {
+    function updateImplementation(address _implementation) public virtual {
+        _requireFromEntryPointOrSelf();
         require(_implementation != address(0), "Address cannot be zero");
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
@@ -524,40 +502,6 @@ contract SmartAccount is
     }
 
     /**
-     * @dev Utility method to be able to transfer native tokens out of Smart Account
-     * @notice only owner/ signatory of Smart Account with enough gas to spend can call this method
-     * @notice While enabling multisig module and renouncing ownership this will not work
-     * @param dest Destination address
-     * @param amount Amount of native tokens
-     */
-    function transfer(address payable dest, uint256 amount) external onlyOwner {
-        if (dest == address(0)) revert TransferToZeroAddressAttempt();
-        bool success;
-        assembly {
-            success := call(gas(), dest, amount, 0, 0, 0, 0)
-        }
-        if (!success) revert TokenTransferFailed(address(0), dest, amount);
-    }
-
-    /**
-     * @dev Utility method to be able to transfer ERC20 tokens out of Smart Account
-     * @notice only owner/ signatory of Smart Account with enough gas to spend can call this method
-     * @notice While enabling multisig module and renouncing ownership this will not work
-     * @param token Token address
-     * @param dest Destination/ Receiver address
-     * @param amount Amount of tokens
-     */
-    function pullTokens(
-        address token,
-        address dest,
-        uint256 amount
-    ) external onlyOwner {
-        if (dest == address(0)) revert TransferToZeroAddressAttempt();
-        if (!transferToken(token, dest, amount))
-            revert TokenTransferFailed(token, dest, amount);
-    }
-
-    /**
      * @dev Execute a transaction (called directly from owner, or by entryPoint)
      * @notice Name is optimized for this method to be cheaper to be called
      * @param dest Address of the contract to call
@@ -569,7 +513,7 @@ contract SmartAccount is
         uint256 value,
         bytes calldata func
     ) public {
-        _requireFromEntryPointOrOwner();
+        _requireFromEntryPoint();
         _call(dest, value, func);
     }
 
@@ -599,7 +543,7 @@ contract SmartAccount is
         uint256[] calldata value,
         bytes[] calldata func
     ) public {
-        _requireFromEntryPointOrOwner();
+        _requireFromEntryPoint();
         if (
             dest.length == 0 ||
             dest.length != value.length ||
@@ -729,7 +673,8 @@ contract SmartAccount is
     function withdrawDepositTo(
         address payable withdrawAddress,
         uint256 amount
-    ) public payable onlyOwner {
+    ) public payable {
+        _requireFromEntryPointOrSelf();
         entryPoint().withdrawTo(withdrawAddress, amount);
     }
 
