@@ -131,14 +131,8 @@ contract SmartAccount is
      */
     function setOwner(address _newOwner) public mixedAuth {
         if (_newOwner == address(0)) revert OwnerCannotBeZero();
-        require(
-            _newOwner != address(this),
-            "Smart Account:: new Signatory address cannot be self"
-        );
-        require(
-            _newOwner != owner,
-            "new Signatory address cannot be same as old one"
-        );
+        if (_newOwner == address(this)) revert OwnerCanNotBeSelf();
+        if (_newOwner == owner) revert OwnerProvidedIsSame();
         address oldOwner = owner;
         assembly {
             sstore(owner.slot, _newOwner)
@@ -346,7 +340,7 @@ contract SmartAccount is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
-        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
+        if (tokenGasPriceFactor == 0) revert TokenGasPriceFactorCanNotBeZero();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0)
             ? payable(tx.origin)
@@ -824,7 +818,7 @@ contract SmartAccount is
      * sources and accepts Ether as payment.
      */
     receive() external payable {
-        require(address(this) != _self, "only allowed via delegateCall");
+        if (address(this) == _self) revert DelegateCallsOnly();
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
 }
