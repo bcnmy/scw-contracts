@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccount.sol";
-import {ModuleManager} from "./base/ModuleManager.sol";
-import {FallbackManager} from "./base/FallbackManager.sol";
-import {SignatureDecoder} from "./common/SignatureDecoder.sol";
-import {SecuredTokenTransfer} from "./common/SecuredTokenTransfer.sol";
-import {LibAddress} from "./libs/LibAddress.sol";
-import {ISignatureValidator} from "./interfaces/ISignatureValidator.sol";
-import {Math} from "./libs/Math.sol";
-import {IERC165} from "./interfaces/IERC165.sol";
-import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
+import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccountV1.sol";
+import {ModuleManager} from "./ModuleManagerV1.sol";
+import {FallbackManager} from "../../../base/FallbackManager.sol";
+import {SignatureDecoder} from "../../../common/SignatureDecoder.sol";
+import {SecuredTokenTransfer} from "../../../common/SecuredTokenTransfer.sol";
+import {LibAddress} from "../../../libs/LibAddress.sol";
+import {ISignatureValidator} from "../../../interfaces/ISignatureValidator.sol";
+import {Math} from "../../../libs/Math.sol";
+import {IERC165} from "../../../interfaces/IERC165.sol";
+import {ReentrancyGuard} from "../../../common/ReentrancyGuard.sol";
+import {SmartAccountErrors} from "../../../common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IModule} from "./interfaces/IModule.sol";
+import {IModule} from "./IModuleV1.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -24,7 +24,7 @@ import {IModule} from "./interfaces/IModule.sol";
  *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
-contract SmartAccount is
+contract SmartAccountV1 is
     BaseSmartAccount,
     ModuleManager,
     FallbackManager,
@@ -52,7 +52,7 @@ contract SmartAccount is
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     // Owner storage
-    address public deprecatedOwner;
+    address public owner;
 
     // changed to 2D nonce below
     // @notice there is no _nonce
@@ -69,6 +69,11 @@ contract SmartAccount is
         address indexed oldImplementation,
         address indexed newImplementation
     );
+    event EOAChanged(
+        address indexed _scw,
+        address indexed _oldEOA,
+        address indexed _newEOA
+    );
     event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(
         address indexed sender,
@@ -77,26 +82,37 @@ contract SmartAccount is
 
     /**
      * @dev Constructor that sets the owner of the contract and the entry point contract.
-     *      modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
      * @param anEntryPoint The address of the entry point contract.
      */
     constructor(IEntryPoint anEntryPoint) {
-        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         _self = address(this);
+        // By setting the owner it is not possible to call init anymore,
+        // so we create an account with fixed non-zero owner.
+        // This is an unusable account, perfect for the singleton
+        owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
         _entryPoint = anEntryPoint;
         _chainId = block.chainid;
     }
 
+    /// modifiers
     /**
-     * @dev This function allows the owner or entry point to execute certain actions.
-     * If the caller is not authorized, the function will revert with an error message.
-     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     * @dev Modifier to allow only the owner to call the function.
+     * Reverts with CallerIsNotOwner if the caller is not the owner.
      */
-    function _requireFromEntryPointOrSelf() internal view {
-        if (msg.sender != address(entryPoint()) && msg.sender != address(this))
-            revert CallerIsNotEntryPointOrSelf(msg.sender);
+    modifier onlyOwner() {
+        if (msg.sender != owner) revert CallerIsNotOwner(msg.sender);
+        _;
+    }
+    /**
+     * @dev Modifier to allow only the owner or the contract itself to call the function.
+     * Reverts with MixedAuthFail if the caller is not the owner or the contract itself.
+     */
+    modifier mixedAuth() {
+        if (msg.sender != owner && msg.sender != address(this))
+            revert MixedAuthFail(msg.sender);
+        _;
     }
 
     /**
@@ -104,9 +120,24 @@ contract SmartAccount is
      * If the caller is not authorized, the function will revert with an error message.
      * @notice This modifier is marked as internal and can only be called within the contract itself.
      */
-    function _requireFromEntryPoint() internal view {
-        if (msg.sender != address(entryPoint()))
-            revert CallerIsNotEntryPoint(msg.sender);
+    function _requireFromEntryPointOrOwner() internal view {
+        if (msg.sender != address(entryPoint()) && msg.sender != owner)
+            revert CallerIsNotEntryPointOrOwner(msg.sender);
+    }
+
+    /**
+     * @dev Allows to change the owner of the smart account by current owner or self-call (modules)
+     * @param _newOwner Address of the new signatory
+     */
+    function setOwner(address _newOwner) public mixedAuth {
+        if (_newOwner == address(0)) revert OwnerCannotBeZero();
+        if (_newOwner == address(this)) revert OwnerCanNotBeSelf();
+        if (_newOwner == owner) revert OwnerProvidedIsSame();
+        address oldOwner = owner;
+        assembly {
+            sstore(owner.slot, _newOwner)
+        }
+        emit EOAChanged(address(this), oldOwner, _newOwner);
     }
 
     /**
@@ -114,8 +145,9 @@ contract SmartAccount is
      * @notice Updates the implementation of the base wallet
      * @param _implementation New wallet implementation
      */
-    function updateImplementation(address _implementation) public virtual {
-        _requireFromEntryPointOrSelf();
+    function updateImplementation(
+        address _implementation
+    ) public virtual mixedAuth {
         require(_implementation != address(0), "Address cannot be zero");
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
@@ -187,22 +219,18 @@ contract SmartAccount is
 
     /**
      * @dev Initialize the Smart Account with required states
-     * @param handler Default fallback handler provided in Smart Account
-     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts
-     * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
+     * @param _owner Signatory of the Smart Account
+     * @param _handler Default fallback handler provided in Smart Account
      * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
      * @notice any further implementations that introduces a new state must have a reinit method
-     * @notice reinit is not possible, as _initialSetupModules reverts if the account is already initialized
-     *         which is when there is at least one enabled module
+     * @notice init is prevented here by setting owner in the constructor and checking here for address(0)
      */
-    function init(
-        address handler,
-        address moduleSetupContract,
-        bytes calldata moduleSetupData
-    ) external virtual override returns (address) {
-        _setFallbackHandler(handler);
-        return _initialSetupModules(moduleSetupContract, moduleSetupData);
+    function init(address _owner, address _handler) external virtual override {
+        if (owner != address(0)) revert AlreadyInitialized(address(this));
+        if (_owner == address(0)) revert OwnerCannotBeZero();
+        owner = _owner;
+        _setFallbackHandler(_handler);
+        _setupModules(address(0), bytes(""));
     }
 
     /**
@@ -231,10 +259,8 @@ contract SmartAccount is
                 // Signature info
                 nonces[1]++
             );
-
             txHash = keccak256(txHashData);
-            if (isValidSignature(txHash, signatures) != EIP1271_MAGIC_VALUE)
-                revert InvalidSignature();
+            checkSignatures(txHash, signatures);
         }
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
@@ -389,6 +415,71 @@ contract SmartAccount is
     }
 
     /**
+     * @dev Checks whether the signature provided is valid for the provided data, hash. Will revert otherwise.
+     * @param dataHash Hash of the data (could be either a message hash or transaction hash)
+     * @param signatures Signature data that should be verified. Can be ECDSA signature, contract signature (EIP-1271) or approved hash.
+     */
+    function checkSignatures(
+        bytes32 dataHash,
+        bytes memory signatures
+    ) public view virtual {
+        require(signatures.length >= 65, "Invalid signatures length");
+        uint8 v;
+        bytes32 r;
+        bytes32 s;
+        address _signer;
+        (v, r, s) = signatureSplit(signatures);
+        if (v == 0) {
+            // If v is 0 then it is a contract signature
+            // When handling contract signatures the address of the signer contract is encoded into r
+            _signer = address(uint160(uint256(r)));
+
+            // Check that signature data pointer (s) is not pointing inside the static part of the signatures bytes
+            // Here we check that the pointer is not pointing inside the part that is being processed
+            if (uint256(s) < 65)
+                revert WrongContractSignatureFormat(uint256(s), 0, 0);
+
+            // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
+            uint256 contractSignatureLen;
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                contractSignatureLen := mload(add(add(signatures, s), 0x20))
+            }
+            if (uint256(s) + 32 + contractSignatureLen > signatures.length)
+                revert WrongContractSignatureFormat(
+                    uint256(s),
+                    contractSignatureLen,
+                    signatures.length
+                );
+
+            // Check signature
+            bytes memory contractSignature;
+            // solhint-disable-next-line no-inline-assembly
+            assembly {
+                // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
+                contractSignature := add(add(signatures, s), 0x20)
+            }
+            if (
+                ISignatureValidator(_signer).isValidSignature(
+                    dataHash,
+                    contractSignature
+                ) != EIP1271_MAGIC_VALUE
+            ) revert WrongContractSignature(contractSignature);
+        } else if (v > 30) {
+            // If v > 30 then default va (27,28) has been adjusted for eth_sign flow
+            // To support eth_sign and similar we adjust v and hash the messageHash with the Ethereum message prefix before applying ecrecover
+            (_signer, ) = dataHash.toEthSignedMessageHash().tryRecover(
+                v - 4,
+                r,
+                s
+            );
+        } else {
+            (_signer, ) = dataHash.tryRecover(v, r, s);
+        }
+        if (_signer != owner) revert InvalidSignature();
+    }
+
+    /**
      * @dev Allows to estimate a transaction.
      *      This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
      *      Since the `estimateGas` function includes refunds, call this method to get an estimated of the costs that are deducted from the wallet with `execTransaction`
@@ -497,6 +588,40 @@ contract SmartAccount is
     }
 
     /**
+     * @dev Utility method to be able to transfer native tokens out of Smart Account
+     * @notice only owner/ signatory of Smart Account with enough gas to spend can call this method
+     * @notice While enabling multisig module and renouncing ownership this will not work
+     * @param dest Destination address
+     * @param amount Amount of native tokens
+     */
+    function transfer(address payable dest, uint256 amount) external onlyOwner {
+        if (dest == address(0)) revert TransferToZeroAddressAttempt();
+        bool success;
+        assembly {
+            success := call(gas(), dest, amount, 0, 0, 0, 0)
+        }
+        if (!success) revert TokenTransferFailed(address(0), dest, amount);
+    }
+
+    /**
+     * @dev Utility method to be able to transfer ERC20 tokens out of Smart Account
+     * @notice only owner/ signatory of Smart Account with enough gas to spend can call this method
+     * @notice While enabling multisig module and renouncing ownership this will not work
+     * @param token Token address
+     * @param dest Destination/ Receiver address
+     * @param amount Amount of tokens
+     */
+    function pullTokens(
+        address token,
+        address dest,
+        uint256 amount
+    ) external onlyOwner {
+        if (dest == address(0)) revert TransferToZeroAddressAttempt();
+        if (!transferToken(token, dest, amount))
+            revert TokenTransferFailed(token, dest, amount);
+    }
+
+    /**
      * @dev Execute a transaction (called directly from owner, or by entryPoint)
      * @notice Name is optimized for this method to be cheaper to be called
      * @param dest Address of the contract to call
@@ -508,7 +633,7 @@ contract SmartAccount is
         uint256 value,
         bytes calldata func
     ) public {
-        _requireFromEntryPoint();
+        _requireFromEntryPointOrOwner();
         _call(dest, value, func);
     }
 
@@ -538,7 +663,7 @@ contract SmartAccount is
         uint256[] calldata value,
         bytes[] calldata func
     ) public {
-        _requireFromEntryPoint();
+        _requireFromEntryPointOrOwner();
         if (
             dest.length == 0 ||
             dest.length != value.length ||
@@ -592,28 +717,34 @@ contract SmartAccount is
         }
     }
 
-    function validateUserOp(
+    /**
+     * @dev Implements the template method of BaseAccount and validates the user's signature for a given operation.
+     * @notice This function is marked as internal and virtual, and it overrides the BaseAccount function of the same name.
+     * @param userOp The user operation to be validated, provided as a `UserOperation` calldata struct.
+     * @param userOpHash The hashed version of the user operation, provided as a `bytes32` value.
+     */
+    function _validateSignature(
         UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 missingAccountFunds
-    ) external virtual override returns (uint256 validationData) {
-        if (msg.sender != address(entryPoint()))
-            revert CallerIsNotAnEntryPoint(msg.sender);
-
-        (, address validationModule) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
-        if (address(modules[validationModule]) != address(0)) {
-            validationData = IModule(validationModule).validateUserOp(
-                userOp,
-                userOpHash
-            );
-        } else {
-            revert WrongValidationModule(validationModule);
+        bytes32 userOpHash
+    ) internal virtual override returns (uint256 validationData) {
+        // below changes need formal verification.
+        bytes calldata userOpData = userOp.callData;
+        if (userOpData.length > 0) {
+            bytes4 methodSig = bytes4(userOpData[:4]);
+            // If method to be called is executeCall then only check for module transaction
+            if (methodSig == this.executeCall.selector) {
+                (address _to, uint _amount, bytes memory _data) = abi.decode(
+                    userOpData[4:],
+                    (address, uint, bytes)
+                );
+                if (address(modules[_to]) != address(0))
+                    return IModule(_to).validateSignature(userOp, userOpHash);
+            }
         }
-        _validateNonce(userOp.nonce);
-        _payPrefund(missingAccountFunds);
+        bytes32 hash = userOpHash.toEthSignedMessageHash();
+        if (owner != hash.recover(userOp.signature))
+            return SIG_VALIDATION_FAILED;
+        return 0;
     }
 
     /**
@@ -622,28 +753,25 @@ contract SmartAccount is
      *      signature verifications - like multisig), forward isValidSignature request to it.
      *      In case of multisig, _signature can be several concatenated signatures
      *      If owner is EOA, perform a regular ecrecover.
-     * @param ethSignedDataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
-     *                          prepended with '\x19Ethereum Signed Message:\n'
-     * @param signature Signature byte array associated with ethSignedDataHash
+     * @param _dataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
+     * @param _signature Signature byte array associated with _dataHash
      * @return bytes4 value.
      */
     function isValidSignature(
-        bytes32 ethSignedDataHash,
-        bytes memory signature
+        bytes32 _dataHash,
+        bytes memory _signature
     ) public view override returns (bytes4) {
-        (bytes memory moduleSignature, address validationModule) = abi.decode(
-            signature,
-            (bytes, address)
-        );
-        if (address(modules[validationModule]) != address(0)) {
+        if (owner.code.length > 0) {
             return
-                ISignatureValidator(validationModule).isValidSignature(
-                    ethSignedDataHash,
-                    moduleSignature
+                ISignatureValidator(owner).isValidSignature(
+                    _dataHash,
+                    _signature
                 );
-        } else {
-            revert WrongValidationModule(validationModule);
         }
+        if (owner == _dataHash.recover(_signature)) {
+            return EIP1271_MAGIC_VALUE;
+        }
+        return bytes4(0xffffffff);
     }
 
     /**
@@ -668,45 +796,8 @@ contract SmartAccount is
     function withdrawDepositTo(
         address payable withdrawAddress,
         uint256 amount
-    ) public payable {
-        _requireFromEntryPointOrSelf();
+    ) public payable onlyOwner {
         entryPoint().withdrawTo(withdrawAddress, amount);
-    }
-
-    /**
-     * @dev Adds a module to the allowlist.
-     * @notice This can only be done via a userOp or a selfcall.
-     * @notice Enables the module `module` for the wallet.
-     * @param module Module to be allow-listed.
-     */
-    function enableModule(address module) external virtual override {
-        _requireFromEntryPointOrSelf();
-        _enableModule(module);
-    }
-
-    /**
-     * @dev Setups module for this Smart Account and enables it.
-     * @notice This can only be done via userOp or a selfcall.
-     * @notice Enables the module `module` for the wallet.
-     */
-    function setupAndEnableModule(
-        address setupContract,
-        bytes memory setupData
-    ) external virtual override returns (address) {
-        _requireFromEntryPointOrSelf();
-        return _setupAndEnableModule(setupContract, setupData);
-    }
-
-    /**
-     * @dev Removes a module from the allowlist.
-     * @notice This can only be done via a wallet transaction.
-     * @notice Disables the module `module` for the wallet.
-     * @param prevModule Module that pointed to the module to be removed in the linked list
-     * @param module Module to be removed.
-     */
-    function disableModule(address prevModule, address module) public virtual {
-        _requireFromEntryPointOrSelf();
-        _disableModule(prevModule, module);
     }
 
     /**

@@ -1,19 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.17;
 
-import {SelfAuthorized} from "../common/SelfAuthorized.sol";
-import {Executor, Enum} from "./Executor.sol";
-import {ModuleManagerErrors} from "../common/Errors.sol";
+import {SelfAuthorized} from "../../../common/SelfAuthorized.sol";
+import {Executor, Enum} from "../../../base/Executor.sol";
+import {ModuleManagerErrors} from "../../../common/Errors.sol";
 
 /**
  * @title Module Manager - A contract that manages modules that can execute transactions
  *        on behalf of the Smart Account via this contract.
  */
-abstract contract ModuleManager is
-    SelfAuthorized,
-    Executor,
-    ModuleManagerErrors
-{
+contract ModuleManager is SelfAuthorized, Executor, ModuleManagerErrors {
     address internal constant SENTINEL_MODULES = address(0x1);
 
     mapping(address => address) internal modules;
@@ -67,60 +63,19 @@ abstract contract ModuleManager is
 
     /**
      * @dev Adds a module to the allowlist.
-     * @notice This SHOULD only be done via userOp or a selfcall.
-     */
-    function enableModule(address module) external virtual;
-
-    /**
-     * @dev Adds a module to the allowlist.
-     * @notice This can only be done via a userOp or a selfcall.
+     * @notice This can only be done via a wallet transaction.
      * @notice Enables the module `module` for the wallet.
      * @param module Module to be allow-listed.
      */
-    function _enableModule(address module) internal virtual {
+    function enableModule(address module) public authorized {
         // Module address cannot be null or sentinel.
         if (module == address(0) || module == SENTINEL_MODULES)
             revert ModuleCannotBeZeroOrSentinel(module);
         // Module cannot be added twice.
         if (modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
-
         modules[module] = modules[SENTINEL_MODULES];
         modules[SENTINEL_MODULES] = module;
-
         emit EnabledModule(module);
-    }
-
-    /**
-     * @dev Setups module for this Smart Account and enables it.
-     * @notice This SHOULD only be done via userOp or a selfcall.
-     */
-    function setupAndEnableModule(
-        address setupContract,
-        bytes memory setupData
-    ) external virtual returns (address);
-
-    /**
-     * @dev Setups module for this Smart Account and enables it.
-     * @notice This can only be done via userOp or a selfcall.
-     */
-    function _setupAndEnableModule(
-        address setupContract,
-        bytes memory setupData
-    ) internal virtual returns (address) {
-        if (setupContract == address(0)) revert("Wrong Module Setup Address");
-        address module = _setupModule(setupContract, setupData);
-
-        // Module address cannot be null or sentinel.
-        if (module == address(0) || module == SENTINEL_MODULES)
-            revert ModuleCannotBeZeroOrSentinel(module);
-        // Module cannot be added twice.
-        if (modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
-
-        modules[module] = modules[SENTINEL_MODULES];
-        modules[SENTINEL_MODULES] = module;
-
-        emit EnabledModule(module);
-        return module;
     }
 
     /**
@@ -130,10 +85,10 @@ abstract contract ModuleManager is
      * @param prevModule Module that pointed to the module to be removed in the linked list
      * @param module Module to be removed.
      */
-    function _disableModule(
+    function disableModule(
         address prevModule,
         address module
-    ) internal virtual {
+    ) public authorized {
         // Validate module address and check that it corresponds to module index.
         if (module == address(0) || module == SENTINEL_MODULES)
             revert ModuleCannotBeZeroOrSentinel(module);
@@ -171,9 +126,6 @@ abstract contract ModuleManager is
             emit ExecutionFromModuleSuccess(msg.sender);
         } else emit ExecutionFromModuleFailure(msg.sender);
     }
-
-    // TODO: Add execBatchTransactionFromModule
-    // can use not executor.execute, but SmartAccount._call for the unification
 
     /**
      * @dev Allows a Module to execute a wallet transaction without any further confirmations and returns data
@@ -216,49 +168,17 @@ abstract contract ModuleManager is
     /**
      * @notice Setup function sets the initial storage of the contract.
      *         Optionally executes a delegate call to another contract to setup the modules.
-     * @param setupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts
-     * @param setupData modules setup data (a standard calldata for the module setup contract)
+     * @param to Optional destination address of call to execute.
+     * @param data Optional data of call to execute.
      */
-    function _initialSetupModules(
-        address setupContract,
-        bytes memory setupData
-    ) internal virtual returns (address) {
+    function _setupModules(address to, bytes memory data) internal {
         if (modules[SENTINEL_MODULES] != address(0))
             revert ModulesAlreadyInitialized();
-
-        if (setupContract == address(0)) revert("Wrong Module Setup Address");
-        address initialAuthorizationModule = _setupModule(
-            setupContract,
-            setupData
-        );
-        modules[initialAuthorizationModule] = SENTINEL_MODULES;
-        modules[SENTINEL_MODULES] = initialAuthorizationModule;
-        return initialAuthorizationModule;
-    }
-
-    function _setupModule(
-        address setupContract,
-        bytes memory setupData
-    ) internal returns (address module) {
-        if (setupContract == address(0)) revert("Wrong Module Setup Address");
-        assembly {
-            let success := call(
-                gas(),
-                setupContract,
-                0,
-                add(setupData, 0x20),
-                mload(setupData),
-                0,
-                0
-            )
-            let ptr := mload(0x40)
-            returndatacopy(ptr, 0, returndatasize())
-            if iszero(success) {
-                revert(ptr, returndatasize())
-            }
-            module := mload(ptr)
-        }
+        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
+        if (to != address(0))
+            if (!execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()))
+                // Setup has to complete successfully or transaction fails.
+                revert ModulesSetupExecutionFailed();
     }
 
     uint256[24] private __gap;

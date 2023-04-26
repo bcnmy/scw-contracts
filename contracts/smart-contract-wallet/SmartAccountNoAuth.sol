@@ -13,7 +13,7 @@ import "./interfaces/IERC165.sol";
 import "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IModule} from "./interfaces/IModule.sol";
 
-contract SmartAccountNoAuth is
+abstract contract SmartAccountNoAuth is
     BaseSmartAccount,
     ModuleManager,
     FallbackManager,
