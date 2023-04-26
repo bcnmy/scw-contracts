@@ -319,7 +319,7 @@ contract SmartAccount is
         address gasToken,
         address payable refundReceiver
     ) private returns (uint256 payment) {
-        require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
+        if (tokenGasPriceFactor == 0) revert TokenGasPriceFactorCanNotBeZero();
         // solhint-disable-next-line avoid-tx-origin
         address payable receiver = refundReceiver == address(0)
             ? payable(tx.origin)
@@ -733,7 +733,7 @@ contract SmartAccount is
      * sources and accepts Ether as payment.
      */
     receive() external payable {
-        require(address(this) != _self, "only allowed via delegateCall");
+        if (address(this) == _self) revert DelegateCallsOnly();
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
 }

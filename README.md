@@ -1,7 +1,7 @@
 
 # Biconomy Smart Account (Smart Contract Wallet) Overview
 
-Biconomy Smart Account is a smart contract wallet that builds on core concepts of Gnosis / Argent safes and implements an interface to support calls from [account abstraction](https://eips.ethereum.org/EIPS/eip-4337) Entry Point contract. We took all the the good parts of existing smart contract wallets. 
+Biconomy Smart Account is a smart contract wallet that builds on core concepts of Gnosis / Argent safes and implements an interface to support calls from [account abstraction](https://eips.ethereum.org/EIPS/eip-4337) Entry Point contract. We took all the good parts of existing smart contract wallets. 
 
 These smart wallets have a single owner (1/1 Multisig) and are designed in such a way that it is
 
@@ -13,7 +13,7 @@ These smart wallets have a single owner (1/1 Multisig) and are designed in such 
 ## Smart Contracts
 
 #### BaseSmartAccount.sol (51 sloc)
-Abstract contract that implements EIP4337 IWallet interface 
+Abstract contract that implements the EIP4337 IWallet interface 
 defines set of methods (compatible with EIP and Biconomy SDK) that all Smart Wallets must implement
 
 #### Proxy.sol (26 sloc)
@@ -28,26 +28,26 @@ function deployCounterFactualAccount(address _implementation, bytes memory initi
 salt consists of _owner and _index. _entryPoint and _handler are required to init the wallet. 
 
 #### SmartAccount.sol (332 sloc)
-Base implementation contract for smart wallet
-reference 1 : https://docs.gnosis-safe.io/contracts
-reference 2 : https://github.com/eth-infinitism/account-abstraction/blob/master/contracts/samples/SimpleAccount.sol
+Base implementation contract for a smart wallet
+reference 1: https://docs.gnosis-safe.io/contracts
+reference 2: https://github.com/eth-infinitism/account-abstraction/blob/master/contracts/samples/SimpleAccount.sol
 notes: 
 1) reverting methods are used for gas estimations
 2) transactions happen via EOA signature by calling execTransaction or validateUserOp and executeCall / executeBatchCall via entry point
-3) currently 1-1 multisig
-4) ECDSA used ofr signature verification. contract signatures are suppoprted using EIP1271 (not extensively tested on protocols!)
+3) currently 1-1 multi-sig
+4) ECDSA used for signature verification. contract signatures are supported using EIP1271 (not extensively tested on protocols!)
 
 #### EntryPoint.sol (344 sloc)
 EIP4337 Entry Point contract (https://blog.openzeppelin.com/eip-4337-ethereum-account-abstraction-incremental-audit/)
 
 #### StakeManager.sol (76 sloc)
-Stake Manager for wallet and paymaster deposits / stakes
+Stake Manager for wallet and paymaster deposits/stakes
 https://blog.openzeppelin.com/eip-4337-ethereum-account-abstraction-incremental-audit/
 
 #### Executor.sol (25 sloc)
 helper contract to make calls and delegatecalls to dapp contracts
 #### FallbackManager.sol (34 sloc)
-Fallback manager manages a fallback handler to fallback to (delegate call) when a method is not found in wallet implementation contract
+Fallback manager manages a fallback handler to fallback to (delegate call) when a method is not found in the wallet implementation contract
 #### ModuleManager.sol (75 sloc)
 Gnosis Safe module manager
 #### DefaultCallbackHandler.sol (50 sloc)
@@ -60,7 +60,7 @@ Allows to batch multiple transactions into one. Relayer -> Smart Wallet - > Mult
 MultiSend functionality but reverts if a transaction tries to do delegatecall
 
 #### VerifyingSingletonPaymaster.sol (74 sloc)
- A paymaster that uses external service to decide whether to pay for the UserOp. The paymaster trusts an external signer to sign the transaction. The calling user must pass the UserOp to that external signer first, which performs whatever off-chain verification before signing the UserOp. Singleton Paymaster is biconomy Paymaster which can be used by all the Dapps and manages gas accounting for their corresponding paymasterId. 
+ A paymaster uses an external service to decide whether to pay for the UserOp. The paymaster trusts an external signer to sign the transaction. The calling user must pass the UserOp to that external signer first, which performs whatever off-chain verification before signing the UserOp. Singleton Paymaster is biconomy Paymaster which can be used by all the Dapps and manages gas accounting for their corresponding paymasterId. 
 
  #### PaymasterHelpers.sol ()
  Library useful for decoding paymaster data and context
@@ -69,7 +69,7 @@ MultiSend functionality but reverts if a transaction tries to do delegatecall
 
 This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
 
-#### You're going to need to place a mnemonic in .secret file in the root. ####
+#### You're going to need to place a mnemonic in a .secret file in the root. ####
 
 The project comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts. It also comes with a variety of other tools, preconfigured to work with the project code.
 

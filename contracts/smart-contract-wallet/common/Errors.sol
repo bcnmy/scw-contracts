@@ -83,7 +83,7 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
     error AlreadyInitialized(address smartAccount);
 
     /**
-     * @notice Throws if not if enough gas is left at some point
+     * @notice Throws if not enough gas is left at some point
      * @param gasLeft how much gas left at the moment of a check
      * @param gasRequired how much gas required to proceed
      */
@@ -92,7 +92,7 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
     /**
      * @notice Throws if not able to estimate gas
      * It can be when amount of gas and its price are both zero and at the same time
-     * Transaction has failed to be executed
+     * transaction has failed to be executed
      * @param targetTxGas gas required for target transaction
      * @param gasPrice gas price passed in Refund Info
      * @param success whether transaction has been executed successfully or not
@@ -154,11 +154,31 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
      * @param moduleAddressProvided module address taken from signature
      */
     error WrongValidationModule(address moduleAddressProvided);
+
+    /**
+     * @notice Thrown when the function that must be called only via delegatecall is called directly
+     */
+    error DelegateCallsOnly();
+
+    /**
+     * @notice Thrown when trying to use address of the Smart Account as an owner for itself
+     */
+    error OwnerCanNotBeSelf();
+
+    /**
+     * @notice Thrown when trying to use current owner as a new owner in a _setOwner() call
+     */
+    error OwnerProvidedIsSame();
+
+    /**
+     * @notice Thrown when trying to use 0 as tokenGasPriceFactor
+     */
+    error TokenGasPriceFactorCanNotBeZero();
 }
 
 contract SmartAccountFactoryErrors is SmartAccountErrors {
     /**
-     * @notice Throws when data for executeBatchCall provided in wrong format (i.e. empty array or lengths mismatch)
+     * @notice Throws when the new Proxy deployment fails
      * @param owner Owner of a Proxy (Smart Account)
      * @param index Deployment index
      */
