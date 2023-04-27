@@ -16,7 +16,63 @@ contract FallbackManagerErrors {
     error HandlerCannotBeZero();
 }
 
-contract SmartAccountErrors is BaseSmartAccountErrors {
+contract ModuleManagerErrors {
+    /**
+     * @notice Throws when trying to initialize module manager that already been initialized
+     */
+    error ModulesAlreadyInitialized();
+
+    /**
+     * @notice Throws when a delegatecall in course of module manager initialization has failed
+     */
+    error ModulesSetupExecutionFailed();
+
+    /**
+     * @notice Throws when address(0) or SENTINEL_MODULES constant has been provided as a module address
+     * @param module Module address provided
+     */
+    error ModuleCannotBeZeroOrSentinel(address module);
+
+    /**
+     * @notice Throws when trying to enable module that has already been enabled
+     * @param module Module address provided
+     */
+    error ModuleAlreadyEnabled(address module);
+
+    /**
+     * @notice Throws when module and previous module mismatch
+     * @param expectedModule expected module at modules[prevModule]
+     * @param returnedModule the module that has been found at modules[prevModule]
+     * @param prevModule previous module address provided at call
+     */
+    error ModuleAndPrevModuleMismatch(
+        address expectedModule,
+        address returnedModule,
+        address prevModule
+    );
+
+    /**
+     * @notice Throws when trying to execute transaction from module that is not enabled
+     * @param module Module address provided
+     */
+    error ModuleNotEnabled(address module);
+
+    /**
+     * @notice Throws when data for executeBatchCall provided in wrong format (i.e. empty array or lengths mismatch)
+     * @param destLength length of destination contracts array
+     * @param valueLength length of txn values array
+     * @param funcLength length of function signatures array
+     * @param operationLength length of operation types array. 0 if there's no operations
+     */
+    error WrongBatchProvided(
+        uint256 destLength,
+        uint256 valueLength,
+        uint256 funcLength,
+        uint256 operationLength
+    );
+}
+
+contract SmartAccountErrors is BaseSmartAccountErrors, ModuleManagerErrors {
     /**
      * @notice Throws if zero address has been provided as Entry Point address
      */
@@ -138,18 +194,6 @@ contract SmartAccountErrors is BaseSmartAccountErrors {
     error TransferToZeroAddressAttempt();
 
     /**
-     * @notice Throws when data for executeBatchCall provided in wrong format (i.e. empty array or lengths mismatch)
-     * @param destLength length of destination contracts array
-     * @param valueLength length of txn values array
-     * @param funcLength length of function signatures array
-     */
-    error WrongBatchProvided(
-        uint256 destLength,
-        uint256 valueLength,
-        uint256 funcLength
-    );
-
-    /**
      * @notice Throws when module address taken from signature is not enabled
      * @param moduleAddressProvided module address taken from signature
      */
@@ -183,48 +227,6 @@ contract SmartAccountFactoryErrors is SmartAccountErrors {
      * @param index Deployment index
      */
     error ProxyDeploymentFailed(address owner, uint256 index);
-}
-
-contract ModuleManagerErrors {
-    /**
-     * @notice Throws when trying to initialize module manager that already been initialized
-     */
-    error ModulesAlreadyInitialized();
-
-    /**
-     * @notice Throws when a delegatecall in course of module manager initialization has failed
-     */
-    error ModulesSetupExecutionFailed();
-
-    /**
-     * @notice Throws when address(0) or SENTINEL_MODULES constant has been provided as a module address
-     * @param module Module address provided
-     */
-    error ModuleCannotBeZeroOrSentinel(address module);
-
-    /**
-     * @notice Throws when trying to enable module that has already been enabled
-     * @param module Module address provided
-     */
-    error ModuleAlreadyEnabled(address module);
-
-    /**
-     * @notice Throws when module and previous module mismatch
-     * @param expectedModule expected module at modules[prevModule]
-     * @param returnedModule the module that has been found at modules[prevModule]
-     * @param prevModule previous module address provided at call
-     */
-    error ModuleAndPrevModuleMismatch(
-        address expectedModule,
-        address returnedModule,
-        address prevModule
-    );
-
-    /**
-     * @notice Throws when trying to execute transaction from module that is not enabled
-     * @param module Module address provided
-     */
-    error ModuleNotEnabled(address module);
 }
 
 contract SelfAuthorizedErrors {

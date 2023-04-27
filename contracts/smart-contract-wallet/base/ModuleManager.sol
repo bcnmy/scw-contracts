@@ -148,6 +148,8 @@ abstract contract ModuleManager is
         emit DisabledModule(module);
     }
 
+    // TODO: can use not executor.execute, but SmartAccount._call for the unification
+
     /**
      * @dev Allows a Module to execute a Smart Account transaction without any further confirmations.
      * @param to Destination address of module transaction.
@@ -171,9 +173,6 @@ abstract contract ModuleManager is
             emit ExecutionFromModuleSuccess(msg.sender);
         } else emit ExecutionFromModuleFailure(msg.sender);
     }
-
-    // TODO: Add execBatchTransactionFromModule
-    // can use not executor.execute, but SmartAccount._call for the unification
 
     /**
      * @dev Allows a Module to execute a wallet transaction without any further confirmations and returns data
@@ -202,6 +201,61 @@ abstract contract ModuleManager is
             returndatacopy(add(ptr, 0x20), 0, returndatasize())
             // Point the return data to the correct memory location
             returnData := ptr
+        }
+    }
+
+    /**
+     * @dev Allows a Module to execute a batch of Smart Account transactions without any further confirmations.
+     * @param to Destination address of module transaction.
+     * @param value Ether value of module transaction.
+     * @param data Data payload of module transaction.
+     * @param operations Operation type of module transaction.
+     */
+    function execBatchTransactionFromModule(
+        address[] calldata to,
+        uint256[] calldata value,
+        bytes[] calldata data,
+        Enum.Operation[] calldata operations
+    ) public virtual returns (bool success) {
+        if (
+            to.length == 0 ||
+            to.length != value.length ||
+            value.length != data.length ||
+            data.length != operations.length
+        )
+            revert WrongBatchProvided(
+                to.length,
+                value.length,
+                data.length,
+                operations.length
+            );
+
+        // Only whitelisted modules are allowed.
+        if (msg.sender == SENTINEL_MODULES || modules[msg.sender] == address(0))
+            revert ModuleNotEnabled(msg.sender);
+
+        for (uint256 i; i < to.length; ) {
+            // Execute transaction without further confirmations.
+            success = execute(
+                to[i],
+                value[i],
+                data[i],
+                operations[i],
+                gasleft()
+            );
+            if (success) {
+                emit ModuleTransaction(
+                    msg.sender,
+                    to[i],
+                    value[i],
+                    data[i],
+                    operations[i]
+                );
+                emit ExecutionFromModuleSuccess(msg.sender);
+            } else emit ExecutionFromModuleFailure(msg.sender);
+            unchecked {
+                ++i;
+            }
         }
     }
 

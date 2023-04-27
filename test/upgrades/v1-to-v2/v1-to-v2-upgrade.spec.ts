@@ -160,7 +160,7 @@ describe("Upgrade EOA Owned (v1) to Ownerless (v2)", function () {
         
     });
 
-    it("Upgrades to SA V2 and it is working", async () => {
+    it("Upgrades to SA v2 and transfers ownership info from SA to the module", async () => {
 
         const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
         const SmartAccount = await ethers.getContractFactory("SmartAccount");
@@ -221,7 +221,7 @@ describe("Upgrade EOA Owned (v1) to Ownerless (v2)", function () {
         
     });
 
-    it("Can send txns to upgraded SA", async () => {
+    it("Can send native tokens and erc20 tokens to SA v2", async () => {
 
         const scwNativeBalanceBefore = await ethers.provider.getBalance(userSCW.address);
         const scwTokenBalanceBefore = await token.balanceOf(userSCW.address);
@@ -249,7 +249,7 @@ describe("Upgrade EOA Owned (v1) to Ownerless (v2)", function () {
         
     });
 
-    it("Can execute userOp signed by the same owner with an upgraded SA", async () => {
+    it("Can execute userOp signed by the same owner from SA v2", async () => {
 
         const SmartAccount = await ethers.getContractFactory("SmartAccount");
         const charlieTokenBalanceBefore = await token.balanceOf(charlie);
