@@ -5,41 +5,18 @@ import {
   SmartAccountFactoryV1,
   SmartAccount,
   SmartAccountFactory,
-  EntryPoint,
-  EntryPoint__factory,
-  VerifyingSingletonPaymaster,
-  VerifyingSingletonPaymaster__factory,
   MockToken,
-  DefaultCallbackHandler,
   EOAOwnershipRegistryModule,
 } from "../../../typechain";
-import {
-  SafeTransaction,
-  Transaction,
-  FeeRefund,
-  safeSignTypedData,
-  buildSafeTransaction,
-} from "../../../src/utils/execution";
 import { encodeTransfer } from "../../smart-wallet/testUtils";
 import { fillAndSign } from "../../utils/userOp";
-import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
-import { UserOperation } from "../../utils/userOperation";
-
-export async function deployEntryPoint(
-  provider = ethers.provider
-): Promise<EntryPoint> {
-  const epf = await (await ethers.getContractFactory("EntryPoint")).deploy();
-  return EntryPoint__factory.connect(epf.address, provider.getSigner());
-}
+import { EntryPoint } from "@account-abstraction/contracts/core/EntryPoint.sol";
 
 describe("Upgrade EOA Owned (v1) to Ownerless (v2)", function () {
   let entryPoint: EntryPoint;
-  let latestEntryPoint: EntryPoint;
   let walletOwner: Signer;
-  let paymasterAddress: string;
   let offchainSigner: Signer, deployer: Signer;
-  let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
   let baseImplV1: SmartAccountV1;
   let walletFactoryV1: SmartAccountFactoryV1;
   let baseImpl: SmartAccount;
@@ -54,7 +31,6 @@ describe("Upgrade EOA Owned (v1) to Ownerless (v2)", function () {
 
   before(async () => {
     accounts = await ethers.getSigners();
-    entryPoint = await deployEntryPoint();
 
     deployer = accounts[0];
     offchainSigner = accounts[1];
@@ -64,7 +40,10 @@ describe("Upgrade EOA Owned (v1) to Ownerless (v2)", function () {
     charlie = await accounts[2].getAddress();
     walletOwnerAddress = await accounts[5].getAddress();
 
-    const offchainSignerAddress = await offchainSigner.getAddress();
+    const EntryPoint = await ethers.getContractFactory("EntryPoint");
+    entryPoint = await EntryPoint.deploy();
+    await entryPoint.deployed();
+    console.log("EntryPoint deployed at: ", entryPoint.address);
     
     //  ====== v1 ===========  
 

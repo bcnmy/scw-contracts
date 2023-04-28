@@ -3,14 +3,7 @@ import { ethers } from "hardhat";
 import {
   SmartAccount,
   SmartAccountFactory,
-  EntryPoint,
-  WhitelistModule,
-  EntryPoint__factory,
-  VerifyingSingletonPaymaster,
-  VerifyingSingletonPaymaster__factory,
   MockToken,
-  MultiSend,
-  StorageSetter,
   EOAOwnershipRegistryModule,
 } from "../../typechain";
 import {
@@ -21,48 +14,32 @@ import {
   buildSafeTransaction,
 } from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
-import { fillAndSign, fillUserOp } from "../utils/userOp";
-import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
+import { fillAndSign } from "../utils/userOp";
+import { arrayify } from "ethers/lib/utils";
 import { Signer } from "ethers";
-import { UserOperation } from "../utils/userOperation";
-
-export async function deployEntryPoint(
-  provider = ethers.provider
-): Promise<EntryPoint> {
-  const epf = await (await ethers.getContractFactory("EntryPoint")).deploy();
-  return EntryPoint__factory.connect(epf.address, provider.getSigner());
-}
+import { EntryPoint } from "@account-abstraction/contracts/core/EntryPoint.sol";
 
 export const AddressZero = "0x0000000000000000000000000000000000000000";
 export const AddressOne = "0x0000000000000000000000000000000000000001";
 
 describe("Ownerless Smart Account tests", function () {
   let entryPoint: EntryPoint;
-  let latestEntryPoint: EntryPoint;
   let walletOwner: Signer;
-  let paymasterAddress: string;
   let offchainSigner: Signer, deployer: Signer;
   let offchainSigner2: Signer;
-  let verifyingSingletonPaymaster: VerifyingSingletonPaymaster;
   let baseImpl: SmartAccount;
-  let whitelistModule: WhitelistModule;
   let eoaOwnersRegistryModule: EOAOwnershipRegistryModule;
   let walletFactory: SmartAccountFactory;
   let token: MockToken;
-  let multiSend: MultiSend;
-  let storage: StorageSetter;
   let owner: string;
   let bob: string;
   let charlie: string;
   let newAuthority: string;
   let userSCW: any;
-  let userAuthorizationModule: any;
   let accounts: any;
-  let tx: any;
 
   before(async () => {
     accounts = await ethers.getSigners();
-    entryPoint = await deployEntryPoint();
 
     deployer = accounts[0];
     offchainSigner = accounts[1];
@@ -73,6 +50,11 @@ describe("Ownerless Smart Account tests", function () {
     bob = await accounts[1].getAddress();
     charlie = await accounts[2].getAddress();
     newAuthority = await accounts[3].getAddress();
+
+    const EntryPoint = await ethers.getContractFactory("EntryPoint");
+    entryPoint = await EntryPoint.deploy();
+    await entryPoint.deployed();
+    console.log("EntryPoint deployed at: ", entryPoint.address);
 
     const BaseImplementation = await ethers.getContractFactory("SmartAccount");
     baseImpl = await BaseImplementation.deploy(entryPoint.address);

@@ -51,7 +51,7 @@ contract SmartAccount is
     bytes32 internal constant ACCOUNT_TX_TYPEHASH =
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
-    // Owner storage
+    // Owner storage. Deprecated. Left for storage layout compatibility
     address public deprecatedOwner;
 
     // changed to 2D nonce below
