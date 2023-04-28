@@ -1,7 +1,50 @@
-import hre from "hardhat";
-import { Wallet, Contract } from "ethers";
+import hre, { deployments } from "hardhat";
+import { Wallet, Contract, BytesLike } from "ethers";
 import { AddressZero } from "@ethersproject/constants";
 const solc = require("solc");
+
+export const getEntryPoint = async () => {
+  const EntryPointDeployment = await deployments.get("EntryPoint");
+  const EntryPoint = await hre.ethers.getContractFactory("EntryPoint");
+  return EntryPoint.attach(EntryPointDeployment.address);
+};
+
+export const getSmartAccountImplementation = async () => {
+  const SmartAccountImplDeployment = await deployments.get("SmartAccount");
+  const SmartAccountImpl = await hre.ethers.getContractFactory("SmartAccount");
+  return SmartAccountImpl.attach(SmartAccountImplDeployment.address);
+};
+
+export const getSmartAccountFactory = async () => {
+  const SAFactoryDeployment = await deployments.get("SmartAccountFactory");
+  const SmartAccountFactory = await hre.ethers.getContractFactory("SmartAccountFactory");
+  return SmartAccountFactory.attach(SAFactoryDeployment.address);
+};
+
+export const getMockToken = async () => {
+  const MockTokenDeployment = await deployments.get("MockToken");
+  const MockToken = await hre.ethers.getContractFactory("MockToken");
+  return MockToken.attach(MockTokenDeployment.address);
+};
+
+export const getEOAOwnershipRegistryModule = async () => {
+  const EOAOwnershipRegistryModuleDeployment = await deployments.get("EOAOwnershipRegistryModule");
+  const EOAOwnershipRegistryModule = await hre.ethers.getContractFactory("EOAOwnershipRegistryModule");
+  return EOAOwnershipRegistryModule.attach(EOAOwnershipRegistryModuleDeployment.address);
+};
+
+export const getSmartAccountWithModule = async (
+  moduleSetupContract: string,
+  moduleSetupData: BytesLike,
+  index: number,
+) => {
+  const factory = await getSmartAccountFactory();
+  const expectedSmartAccountAddress =
+        await factory.getAddressForCounterFactualAccount(moduleSetupContract, moduleSetupData, index);
+        await factory.deployCounterFactualAccount(moduleSetupContract, moduleSetupData, index);
+        return await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+}
+
 
 export const compile = async (source: string) => {
   const input = JSON.stringify({

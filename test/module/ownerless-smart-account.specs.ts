@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers, deployments } from "hardhat";
 import {
   SmartAccount,
   SmartAccountFactory,
@@ -18,11 +18,11 @@ import { fillAndSign } from "../utils/userOp";
 import { arrayify } from "ethers/lib/utils";
 import { Signer } from "ethers";
 import { EntryPoint } from "@account-abstraction/contracts/core/EntryPoint.sol";
-
 export const AddressZero = "0x0000000000000000000000000000000000000000";
 export const AddressOne = "0x0000000000000000000000000000000000000001";
 
-describe("Ownerless Smart Account tests", function () {
+
+describe("Ownerless SA Basics", function () {
   let entryPoint: EntryPoint;
   let walletOwner: Signer;
   let offchainSigner: Signer, deployer: Signer;
@@ -82,8 +82,8 @@ describe("Ownerless Smart Account tests", function () {
 
   });
 
-  describe("Test UserOp Validation With Authorization Module", function () {
-    it("Deploys user Smart Account and Module", async () => {
+  describe("Deploy and Perform Actions", function () {
+    it("Deploys Ownerless Smart Account and Default Validation Module", async () => {
 
       const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
       const eoaOwner = await accounts[1].getAddress();
@@ -126,7 +126,7 @@ describe("Ownerless Smart Account tests", function () {
     });
 
 
-    it("Can send a userOp signed for the newly connected module", async () => {
+    it("Can send a userOp with a default validation module", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const charlieTokenBalanceBefore = await token.balanceOf(charlie);

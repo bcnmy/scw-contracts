@@ -7,6 +7,10 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
+import 'hardhat-deploy';
+import '@nomiclabs/hardhat-ethers';
+import 'hardhat-deploy-ethers';
+import 'hardhat-dependency-compiler';
 
 const walletUtils = require("./walletUtils");
 
@@ -26,7 +30,15 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
 // Go to https://hardhat.org/config/ to learn more
 
 const config: HardhatUserConfig = {
-  // defaultNetwork: "ganache",
+  paths: {
+    artifacts: "artifacts",
+    cache: "cache",
+    deploy: "src/deploy",
+    sources: "contracts",
+  },
+  namedAccounts: {
+		deployer: 0,
+	},
   solidity: {
     compilers: [
       {
@@ -226,6 +238,11 @@ const config: HardhatUserConfig = {
     currency: "USD",
   },
   */
+  dependencyCompiler: {
+    paths: [
+      '@account-abstraction/contracts/core/EntryPoint.sol',
+    ],
+  },
   etherscan: {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY || "",
