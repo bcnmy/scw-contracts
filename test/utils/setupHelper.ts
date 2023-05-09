@@ -1,12 +1,12 @@
-import hre, { deployments } from "hardhat";
-import { Wallet, Contract, BytesLike } from "ethers";
-import { AddressZero } from "@ethersproject/constants";
+import hre, { deployments, ethers } from "hardhat";
+import { Wallet, Contract, BytesLike, Signer } from "ethers";
+import {EntryPoint__factory,} from "../../typechain";
 const solc = require("solc");
 
 export const getEntryPoint = async () => {
   const EntryPointDeployment = await deployments.get("EntryPoint");
   const EntryPoint = await hre.ethers.getContractFactory("EntryPoint");
-  return EntryPoint.attach(EntryPointDeployment.address);
+  return EntryPoint__factory.connect(EntryPointDeployment.address, ethers.provider.getSigner());
 };
 
 export const getSmartAccountImplementation = async () => {
@@ -33,6 +33,31 @@ export const getEOAOwnershipRegistryModule = async () => {
   return EOAOwnershipRegistryModule.attach(EOAOwnershipRegistryModuleDeployment.address);
 };
 
+export const getVerifyingPaymaster = async (
+  owner: Wallet,
+  verifiedSigner: Wallet,
+) => {
+  const entryPoint = await getEntryPoint();
+  const VerifyingSingletonPaymaster = await hre.ethers.getContractFactory("VerifyingSingletonPaymaster");
+  const verifyingSingletonPaymaster = await VerifyingSingletonPaymaster.deploy(owner.address, entryPoint.address, verifiedSigner.address);
+  
+  await verifyingSingletonPaymaster
+    .connect(owner)
+    .addStake(10, { value: ethers.utils.parseEther("2") });
+
+  await verifyingSingletonPaymaster.depositFor(
+    verifiedSigner.address,
+    { value: ethers.utils.parseEther("1") }
+  );
+
+  await entryPoint.depositTo(
+    verifyingSingletonPaymaster.address, 
+    { value: ethers.utils.parseEther("10") }
+  );  
+
+  return verifyingSingletonPaymaster;
+};
+
 export const getSmartAccountWithModule = async (
   moduleSetupContract: string,
   moduleSetupData: BytesLike,
@@ -41,8 +66,8 @@ export const getSmartAccountWithModule = async (
   const factory = await getSmartAccountFactory();
   const expectedSmartAccountAddress =
         await factory.getAddressForCounterFactualAccount(moduleSetupContract, moduleSetupData, index);
-        await factory.deployCounterFactualAccount(moduleSetupContract, moduleSetupData, index);
-        return await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+  await factory.deployCounterFactualAccount(moduleSetupContract, moduleSetupData, index);
+  return await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
 }
 
 

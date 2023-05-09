@@ -38,6 +38,7 @@ const config: HardhatUserConfig = {
   },
   namedAccounts: {
 		deployer: 0,
+    verifiedSigner: 5,
 	},
   solidity: {
     compilers: [

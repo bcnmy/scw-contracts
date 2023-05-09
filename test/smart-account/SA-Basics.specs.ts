@@ -9,12 +9,13 @@ import {
   getMockToken, 
   getEOAOwnershipRegistryModule,
   getSmartAccountWithModule,
+  getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeEOAModuleUserOp } from "../utils/userOp";
+import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "../utils/userOp";
 
 describe("Ownerless Smart Account Basics: ", async () => {
 
-  const [deployer, smartAccountOwner, alice, bob, charlie] = waffle.provider.getWallets();
+  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     
@@ -48,10 +49,11 @@ describe("Ownerless Smart Account Basics: ", async () => {
       mockToken: mockToken,
       eoaModule: eoaModule,
       userSA: userSA,
+      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
   });
 
-  it ("Should deploy SA with default module", async () => {
+  it ("Can deploy SA with default module", async () => {
     const { 
       mockToken,
       eoaModule,
@@ -96,15 +98,48 @@ describe("Ownerless Smart Account Basics: ", async () => {
 
   });
 
-  it ("Can verify a signature through isValidSignature", async () => {
+  it ("Can send a userOp with Paymaster payment", async () => {
     
+    const { 
+      entryPoint, 
+      mockToken,
+      userSA,
+      eoaModule,
+      verifyingPaymaster
+    } = await setupTests();
+
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
+
+    const userOp = await makeEOAModuleUserOpWithPaymaster(
+      "executeCall",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      eoaModule.address,
+      verifyingPaymaster,
+      verifiedSigner,
+    );
+
+    const handleOpsTxn = await entryPoint.handleOps([userOp], verifiedSigner.address);
+    await handleOpsTxn.wait();
+
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+    
+  });
+
+  it ("Can verify a signature through isValidSignature", async () => {    
     const { 
       userSA,
       eoaModule
     } = await setupTests();
 
     const eip1271MagicValue = "0x1626ba7e";
-
     const message = "Some message from dApp";
     const messageHash = ethers.utils.hashMessage(message);
 

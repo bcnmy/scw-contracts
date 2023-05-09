@@ -15,7 +15,7 @@ import {
   toRpcSig,
   keccak256 as keccak256_buffer,
 } from "ethereumjs-util";
-import { EntryPoint } from "../../typechain";
+import { EntryPoint, VerifyingSingletonPaymaster } from "../../typechain";
 import { UserOperation } from "./UserOperation";
 import { Create2Factory } from "../../src/Create2Factory";
 
@@ -330,6 +330,67 @@ export async function makeEOAModuleUserOp(
   userOp.signature = signatureWithModuleAddress;
 
   return userOp;
+
+}
+
+export async function makeEOAModuleUserOpWithPaymaster(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+  paymaster: Contract,
+  verifiedSigner: Wallet,
+) : Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+  
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+    
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1
+    },
+    userOpSigner,
+    entryPoint,
+    'nonce'
+  );
+
+  const hash = await paymaster.getHash(
+    userOp,
+    verifiedSigner.address
+  );
+  const paymasterSig = await verifiedSigner.signMessage(arrayify(hash));
+  const userOpWithPaymasterData = await fillAndSign(
+    {
+      // eslint-disable-next-line node/no-unsupported-features/es-syntax
+      ...userOp,
+      paymasterAndData: hexConcat([
+        paymaster.address,
+        ethers.utils.defaultAbiCoder.encode(
+          ["address", "bytes"],
+          [verifiedSigner.address, paymasterSig]
+        ),
+      ]),
+    },
+    userOpSigner,
+    entryPoint,
+    'nonce'
+  );  
+
+  // add validator module address to the signature
+  let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"], 
+    [userOpWithPaymasterData.signature, moduleAddress]
+  );
+
+  userOpWithPaymasterData.signature = signatureWithModuleAddress;
+
+  return userOpWithPaymasterData;
 
 }
 
