@@ -7,6 +7,7 @@ import {
   BigNumberish,
   Signer,
   PopulatedTransaction,
+  BytesLike,
 } from "ethers";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
@@ -86,6 +87,12 @@ export interface WalletTransaction {
 export interface SafeSignature {
   signer: string;
   data: string;
+}
+
+export interface SmartAccountSignedForwardTransaction {
+  transaction: Transaction;
+  feeRefund: FeeRefund;
+  signature: string;
 }
 
 export const calculateSafeDomainSeparator = (
@@ -401,3 +408,55 @@ export const buildSafeTransaction = (template: {
     nonce: template.nonce,
   };
 };
+
+export async function buildEOAModuleAuthorizedForwardTx(
+  destinationContract: string,
+  callData: string,
+  smartAccount: Contract,
+  smartAccountOwner: Signer & TypedDataSigner,
+  moduleAddress: string,
+  ): Promise<SmartAccountSignedForwardTransaction> {
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: destinationContract,
+      data: callData,
+      nonce: await smartAccount.getNonce(EOA_CONTROLLED_FLOW),
+
+    });
+
+    const { signer, data } = await safeSignTypedData(
+      smartAccountOwner,
+      smartAccount,
+      safeTx,
+      await smartAccount.getChainId()
+    );
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    let signature = "0x";
+    signature += data.slice(2);
+    // add validator module address to the signature
+    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"], 
+      [signature, moduleAddress]
+    );
+  
+    return {
+      transaction: transaction, 
+      feeRefund: refundInfo, 
+      signature: signatureWithModuleAddress
+    };
+} 

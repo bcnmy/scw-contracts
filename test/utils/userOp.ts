@@ -1,5 +1,6 @@
 import {
   arrayify,
+  BytesLike,
   defaultAbiCoder,
   getCreate2Address,
   hexConcat,
@@ -7,6 +8,7 @@ import {
   keccak256,
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
+import { ethers } from "hardhat";
 import { AddressZero, callDataCost, HashZero, rethrow } from "../smart-wallet/testutils";
 import {
   ecsign,
@@ -293,3 +295,41 @@ export async function fillAndSign(
     signature: await signer.signMessage(message),
   };
 }
+
+export async function makeEOAModuleUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+) : Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+  
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+    
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1
+    },
+    userOpSigner,
+    entryPoint,
+    'nonce'
+  );
+
+  // add validator module address to the signature
+  let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"], 
+    [userOp.signature, moduleAddress]
+  );
+
+  userOp.signature = signatureWithModuleAddress;
+
+  return userOp;
+
+}
+

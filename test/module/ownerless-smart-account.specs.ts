@@ -235,7 +235,5 @@ describe("Ownerless SA Basics", function () {
       
     });
 
-    
-    
   });
 });
