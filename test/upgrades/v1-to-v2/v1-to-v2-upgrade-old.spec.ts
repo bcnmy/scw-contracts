@@ -13,7 +13,7 @@ import { fillAndSign } from "../../utils/userOp";
 import { Signer } from "ethers";
 import { EntryPoint } from "@account-abstraction/contracts/core/EntryPoint.sol";
 
-describe("Upgrade EOA Owned (v1) to Ownerless (v2)", function () {
+describe("Old:Upgrade EOA Owned (v1) to Ownerless (v2)", function () {
   let entryPoint: EntryPoint;
   let walletOwner: Signer;
   let offchainSigner: Signer, deployer: Signer;
