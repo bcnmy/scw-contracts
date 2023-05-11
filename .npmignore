@@ -2,7 +2,6 @@ hardhat.config.ts
 scripts
 test
 artifacts
-typechain
 cache
 coverage
 .env
