@@ -52,7 +52,7 @@ contract SmartAccount is
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     // Owner storage. Deprecated. Left for storage layout compatibility
-    address public deprecatedOwner;
+    address public owner_deprecated;
 
     // changed to 2D nonce below
     // @notice there is no _nonce
