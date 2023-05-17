@@ -43,7 +43,7 @@ export async function calculateProxyAddress(
   );
 }
 
-describe("Smart Account Factory", function () {
+describe("OLDSmart AccountFactory", function () {
   let entryPoint: EntryPoint;
   let walletOwner: Signer;
   let baseImpl: SmartAccount;
