@@ -65,7 +65,7 @@ describe("Smart Account Factory", async () => {
 
   describe("Deploy CounterFactual Account", async () => { 
 
-    it ("should deploy Smart Account and initialize it with the correct init data", async () => {
+    it ("should deploy and init Smart Account and emit event", async () => {
       const { smartAccountFactory, eoaModule } = await setupTests();
       const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
       
@@ -81,12 +81,103 @@ describe("Smart Account Factory", async () => {
 
       const deploymentTx = await smartAccountFactory.deployCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
       expect(deploymentTx).to.emit(smartAccountFactory, "AccountCreation").withArgs(expectedSmartAccountAddress, eoaModule.address, smartAccountDeploymentIndex);
-
+      
+      const smartAccount = await ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+      expect(await smartAccount.isModuleEnabled(eoaModule.address)).to.equal(true);
+      expect(await eoaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
     });
 
-    
+    it ("should revert if already deployed", async () => {   
+      const { smartAccountFactory, eoaModule } = await setupTests();
+      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+      
+      let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
+      );
+      const smartAccountDeploymentIndex = 0;
 
-    // should revert if wrong setup contract or data provided
+      const expectedSmartAccountAddress =
+        await smartAccountFactory.getAddressForCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+      await smartAccountFactory.deployCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+
+      const expectedSmartAccountAddress2 = 
+        await smartAccountFactory.getAddressForCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+
+      expect(expectedSmartAccountAddress).to.equal(expectedSmartAccountAddress2);
+      await expect(smartAccountFactory.deployCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex)).
+        to.be.revertedWith("Create2 call failed");
+    });
+
+    it ("should lead to different SA address when deploying SA with other owner", async () => {   
+      const { smartAccountFactory, eoaModule } = await setupTests();
+      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+      
+      let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
+      );
+      let eoaOwnershipSetupData2 = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await alice.getAddress()]
+      );
+      const smartAccountDeploymentIndex = 0;
+
+      const expectedSmartAccountAddress =
+        await smartAccountFactory.getAddressForCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+
+      const expectedSmartAccountAddress2 = 
+        await smartAccountFactory.getAddressForCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData2, smartAccountDeploymentIndex);
+
+      expect(expectedSmartAccountAddress).to.not.equal(expectedSmartAccountAddress2);
+    });
+    
+    it ("should revert if wrong setup data provided", async () => { 
+      const { smartAccountFactory, eoaModule } = await setupTests();
+      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+      
+      let eoaOwnershipSetupData = "0xeEeEeEeEeEeEeEeEeEeEeEeEeEeEeEeE";
+      const smartAccountDeploymentIndex = 0;
+
+      await expect(smartAccountFactory.deployCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex)).
+        to.be.revertedWith("");
+    });
+
+    it ("does not not allow to steal funds from counterfactual account", async () => { 
+      const { smartAccountFactory, mockToken, eoaModule } = await setupTests();
+      const mockTokensToMint = ethers.utils.parseEther("1000000");
+
+      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+      let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
+      );
+      const smartAccountDeploymentIndex = 0;
+
+      const expectedSmartAccountAddress =
+        await smartAccountFactory.getAddressForCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+
+      await mockToken.mint(expectedSmartAccountAddress, mockTokensToMint);
+
+      const fakeSetupData = (await ethers.getContractFactory("MockToken")).interface.encodeFunctionData(
+        "transfer",
+        [await alice.getAddress(), mockTokensToMint]
+      );
+
+      await expect(smartAccountFactory.deployCounterFactualAccount(mockToken.address, fakeSetupData, smartAccountDeploymentIndex)).
+        to.be.revertedWith("ERC20: transfer amount exceeds balance");
+      expect(await mockToken.balanceOf(expectedSmartAccountAddress)).to.equal(mockTokensToMint);
+      expect(await mockToken.balanceOf(alice.address)).to.equal(0);
+    });
+
+    // can not steal funds from undeployed account through initialization call 
+    // because changing setupContract and setupCallData leads to different address 
+
+  });
+
+
+  describe("Deploy Account", async () => { 
+
 
   });
 
