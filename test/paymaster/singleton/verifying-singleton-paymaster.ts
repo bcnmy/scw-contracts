@@ -18,7 +18,7 @@ import {
   MaliciousAccount2__factory,
   EntryPoint__factory,
 } from "../../../typechain";
-import { AddressZero } from "../../smart-wallet/testutils";
+import { AddressZero } from "../../smart-wallet/testUtils";
 import { simulationResultCatch } from "../../aa-core/testutils";
 import { fillAndSign, fillUserOp } from "../../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";

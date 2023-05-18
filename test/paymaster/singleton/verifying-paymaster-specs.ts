@@ -12,7 +12,7 @@ import {
   MaliciousAccount2__factory,
   EntryPoint__factory,
 } from "../../../typechain";
-import { AddressZero } from "../../smart-wallet/testutils";
+import { AddressZero } from "../../smart-wallet/testUtils";
 // import { fillAndSign } from "../../utils/userOp";
 import { parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";

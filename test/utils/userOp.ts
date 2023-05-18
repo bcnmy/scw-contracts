@@ -7,7 +7,7 @@ import {
   keccak256,
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
-import { AddressZero, callDataCost, HashZero, rethrow } from "../smart-wallet/testutils";
+import { AddressZero, callDataCost, HashZero, rethrow } from "../smart-wallet/testUtils";
 import {
   ecsign,
   toRpcSig,
