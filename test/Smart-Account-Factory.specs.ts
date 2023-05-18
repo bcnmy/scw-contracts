@@ -186,9 +186,12 @@ describe("Smart Account Factory", async () => {
       const deploymentTx = await smartAccountFactory.deployAccount(eoaModule.address, eoaOwnershipSetupData);
       expect(deploymentTx).to.emit(smartAccountFactory, "AccountCreationWithoutIndex");
       
-      //const smartAccount = await ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
-      //expect(await smartAccount.isModuleEnabled(eoaModule.address)).to.equal(true);
-      //expect(await eoaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
+      const receipt = await deploymentTx.wait();
+      const deployedSmartAccountAddress = receipt.events[0].args[0];
+
+      const smartAccount = await ethers.getContractAt("SmartAccount", deployedSmartAccountAddress);
+      expect(await smartAccount.isModuleEnabled(eoaModule.address)).to.equal(true);
+      expect(await eoaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
     });
 
   });
