@@ -170,14 +170,26 @@ describe("Smart Account Factory", async () => {
       expect(await mockToken.balanceOf(alice.address)).to.equal(0);
     });
 
-    // can not steal funds from undeployed account through initialization call 
-    // because changing setupContract and setupCallData leads to different address 
-
   });
 
 
   describe("Deploy Account", async () => { 
+    it ("should deploy and init Smart Account and emit event", async () => {
+      const { smartAccountFactory, eoaModule } = await setupTests();
+      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+      
+      let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
+      );
 
+      const deploymentTx = await smartAccountFactory.deployAccount(eoaModule.address, eoaOwnershipSetupData);
+      expect(deploymentTx).to.emit(smartAccountFactory, "AccountCreationWithoutIndex");
+      
+      //const smartAccount = await ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+      //expect(await smartAccount.isModuleEnabled(eoaModule.address)).to.equal(true);
+      //expect(await eoaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
+    });
 
   });
 
