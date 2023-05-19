@@ -194,6 +194,16 @@ describe("Smart Account Factory", async () => {
       expect(await eoaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
     });
 
+    it ("should revert if wrong setup data provided", async () => { 
+      const { smartAccountFactory, eoaModule } = await setupTests();
+      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+      
+      let eoaOwnershipSetupData = "0xeEeEeEeEeEeEeEeEeEeEeEeEeEeEeEeE";
+
+      await expect(smartAccountFactory.deployAccount(eoaModule.address, eoaOwnershipSetupData)).
+        to.be.revertedWith("");
+    });
+
   });
 
 

@@ -176,7 +176,6 @@ contract SmartAccountFactory {
 
     /**
      * @notice Allows to find out account address prior to deployment
-     
      * @param index extra salt that allows to deploy more accounts if needed for same EOA (default 0)
      */
     function getAddressForCounterFactualAccount(
@@ -201,6 +200,4 @@ contract SmartAccountFactory {
         );
         _account = address(uint160(uint256(hash)));
     }
-    // off-chain calculation
-    // return ethers.utils.getCreate2Address(<factory address>, <create2 salt>, ethers.utils.keccak256(creationCode + implementation));
 }
