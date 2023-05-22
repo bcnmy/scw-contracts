@@ -39,7 +39,7 @@ import { provider } from "ganache";
 import { sign } from "crypto";
 
 const GasEstimatorArtifact = artifacts.require("GasEstimator");
-const SCWNoAuth = require("../../artifacts/contracts/smart-contract-wallet/SmartAccountNoAuth.sol/SmartAccountNoAuth.json");
+const SCWNoAuth = require("../../artifacts/contracts/smart-contract-wallet/estimation/SmartAccountNoAuth.sol/SmartAccountNoAuth.json");
 const GasEstimatorSmartWalletArtifact = artifacts.require(
   "GasEstimatorSmartAccount"
 );

@@ -87,11 +87,11 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      * The actual nonce uniqueness is managed by the EntryPoint, and thus no other
      * action is needed by the account itself.
      *
-     * @param nonce to validate
+     * @param _nonce to validate
      *
      * solhint-disable-next-line no-empty-blocks
      */
-    function _validateNonce(uint256 nonce) internal view virtual {}
+    function _validateNonce(uint256 _nonce) internal view virtual {}
 
     /**
      * sends to the entrypoint (msg.sender) the missing funds for this transaction.

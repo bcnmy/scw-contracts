@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccount.sol";
-import {ModuleManager} from "./base/ModuleManager.sol";
-import {FallbackManager} from "./base/FallbackManager.sol";
-import {SignatureDecoder} from "./common/SignatureDecoder.sol";
-import {SecuredTokenTransfer} from "./common/SecuredTokenTransfer.sol";
-import {LibAddress} from "./libs/LibAddress.sol";
-import {ISignatureValidator} from "./interfaces/ISignatureValidator.sol";
-import {Math} from "./libs/Math.sol";
-import {IERC165} from "./interfaces/IERC165.sol";
-import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
+import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "../BaseSmartAccount.sol";
+import {ModuleManager} from "../base/ModuleManager.sol";
+import {FallbackManager} from "../base/FallbackManager.sol";
+import {SignatureDecoder} from "../common/SignatureDecoder.sol";
+import {SecuredTokenTransfer} from "../common/SecuredTokenTransfer.sol";
+import {LibAddress} from "../libs/LibAddress.sol";
+import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
+import {Math} from "../libs/Math.sol";
+import {IERC165} from "../interfaces/IERC165.sol";
+import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
+import {SmartAccountErrors} from "../common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
+import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -24,7 +24,7 @@ import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
  *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
-contract SmartAccount is
+contract SmartAccountNoAuth is
     BaseSmartAccount,
     ModuleManager,
     FallbackManager,
@@ -233,8 +233,11 @@ contract SmartAccount is
             );
 
             txHash = keccak256(txHashData);
-            if (isValidSignature(txHash, signatures) != EIP1271_MAGIC_VALUE)
-                revert InvalidSignature();
+            if (isValidSignature(txHash, signatures) != EIP1271_MAGIC_VALUE) {
+                // Do not revert even if the signature is invalid (not magic value returned)
+                // For estimation purposes
+                // revert InvalidSignature();
+            }
         }
 
         // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
