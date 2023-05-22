@@ -81,12 +81,12 @@ contract SmartAccount is
      * @param anEntryPoint The address of the entry point contract.
      */
     constructor(IEntryPoint anEntryPoint) {
-        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         _self = address(this);
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
         _entryPoint = anEntryPoint;
         _chainId = block.chainid;
+        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
     }
 
     /**
@@ -191,9 +191,9 @@ contract SmartAccount is
      * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
      *                            a registry module that serves several smart accounts
      * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
-     * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
+     * @notice devs need to make sure it is only callable once by initializer or state check restrictions
      * @notice any further implementations that introduces a new state must have a reinit method
-     * @notice reinit is not possible, as _initialSetupModules reverts if the account is already initialized
+     * @notice reinitialization is not possible, as _initialSetupModules reverts if the account is already initialized
      *         which is when there is at least one enabled module
      */
     function init(
@@ -201,6 +201,10 @@ contract SmartAccount is
         address moduleSetupContract,
         bytes calldata moduleSetupData
     ) external virtual override returns (address) {
+        if (
+            modules[SENTINEL_MODULES] != address(0) ||
+            getFallbackHandler() != address(0)
+        ) revert AlreadyInitialized();
         _setFallbackHandler(handler);
         return _initialSetupModules(moduleSetupContract, moduleSetupData);
     }

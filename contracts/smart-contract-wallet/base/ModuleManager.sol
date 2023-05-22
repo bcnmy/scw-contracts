@@ -107,7 +107,6 @@ abstract contract ModuleManager is
         address setupContract,
         bytes memory setupData
     ) internal virtual returns (address) {
-        if (setupContract == address(0)) revert("Wrong Module Setup Address");
         address module = _setupModule(setupContract, setupData);
 
         // Module address cannot be null or sentinel.
@@ -269,7 +268,6 @@ abstract contract ModuleManager is
 
     /**
      * @notice Setup function sets the initial storage of the contract.
-     *         Optionally executes a delegate call to another contract to setup the modules.
      * @param setupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
      *                            a registry module that serves several smart accounts
      * @param setupData modules setup data (a standard calldata for the module setup contract)
@@ -278,14 +276,17 @@ abstract contract ModuleManager is
         address setupContract,
         bytes memory setupData
     ) internal virtual returns (address) {
-        if (modules[SENTINEL_MODULES] != address(0))
-            revert ModulesAlreadyInitialized();
-
-        if (setupContract == address(0)) revert("Wrong Module Setup Address");
         address initialAuthorizationModule = _setupModule(
             setupContract,
             setupData
         );
+
+        // Module address cannot be null or sentinel.
+        if (
+            initialAuthorizationModule == address(0) ||
+            initialAuthorizationModule == SENTINEL_MODULES
+        ) revert ModuleCannotBeZeroOrSentinel(initialAuthorizationModule);
+
         modules[initialAuthorizationModule] = SENTINEL_MODULES;
         modules[SENTINEL_MODULES] = initialAuthorizationModule;
         return initialAuthorizationModule;

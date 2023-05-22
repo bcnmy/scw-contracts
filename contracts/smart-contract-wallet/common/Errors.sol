@@ -134,9 +134,8 @@ contract SmartAccountErrors is BaseSmartAccountErrors, ModuleManagerErrors {
 
     /**
      * @notice Throws if trying to initialize a Smart Account that has already been initialized
-     * @param smartAccount Smart Account Address
      */
-    error AlreadyInitialized(address smartAccount);
+    error AlreadyInitialized();
 
     /**
      * @notice Throws if not enough gas is left at some point

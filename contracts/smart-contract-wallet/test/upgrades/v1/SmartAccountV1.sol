@@ -226,7 +226,7 @@ contract SmartAccountV1 is
      * @notice init is prevented here by setting owner in the constructor and checking here for address(0)
      */
     function init(address _owner, address _handler) external virtual override {
-        if (owner != address(0)) revert AlreadyInitialized(address(this));
+        if (owner != address(0)) revert AlreadyInitialized();
         if (_owner == address(0)) revert OwnerCannotBeZero();
         owner = _owner;
         _setFallbackHandler(_handler);

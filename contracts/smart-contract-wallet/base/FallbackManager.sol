@@ -50,7 +50,7 @@ contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
         }
     }
 
-    function getFallbackHandler() external view returns (address _handler) {
+    function getFallbackHandler() public view returns (address _handler) {
         // solhint-disable-next-line no-inline-assembly
         assembly {
             _handler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
