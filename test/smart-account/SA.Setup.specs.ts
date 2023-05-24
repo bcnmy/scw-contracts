@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { encodeTransfer } from "../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
   getSmartAccountImplementation, 
@@ -11,7 +10,7 @@ import {
   getVerifyingPaymaster,
   deployContract
 } from "../utils/setupHelper";
-import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "../utils/userOp";
+import { makeEOAModuleUserOp } from "../utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
 
 describe("NEW::: Smart Account Setup ", async () => {
