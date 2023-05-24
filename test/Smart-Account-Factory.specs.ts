@@ -59,7 +59,7 @@ describe("NEW::: Smart Account Factory", async () => {
   describe("Deploy CounterFactual Account", async () => { 
 
     it ("should deploy and init Smart Account and emit event", async () => {
-      const { smartAccountFactory, eoaModule } = await setupTests();
+      const { smartAccountFactory, eoaModule, smartAccountImplementation } = await setupTests();
       const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
       
       let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
@@ -76,8 +76,13 @@ describe("NEW::: Smart Account Factory", async () => {
       expect(deploymentTx).to.emit(smartAccountFactory, "AccountCreation").withArgs(expectedSmartAccountAddress, eoaModule.address, smartAccountDeploymentIndex);
       
       const smartAccount = await ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+      expect(await smartAccount.getImplementation()).to.equal(await smartAccountFactory.basicImplementation());
+      expect(await smartAccount.entryPoint()).to.equal(await smartAccountImplementation.entryPoint());
       expect(await smartAccount.isModuleEnabled(eoaModule.address)).to.equal(true);
       expect(await eoaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
+      expect(await smartAccount.nonce()).to.equal(0);
+      const forwardFlowNonceBatchId = 1;
+      expect(await smartAccount.getNonce(forwardFlowNonceBatchId)).to.equal(0);
     });
 
     it ("should revert if already deployed", async () => {   

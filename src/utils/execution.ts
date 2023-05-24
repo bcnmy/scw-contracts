@@ -13,7 +13,7 @@ import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
 
 export const ACCOUNT_ABSTRACTION_FLOW = 0;
-export const EOA_CONTROLLED_FLOW = 1;
+export const FORWARD_FLOW = 1;
 
 export const EIP_DOMAIN = {
   EIP712Domain: [
@@ -374,7 +374,7 @@ export const executeContractCallWithSigners = async (
     contract,
     method,
     params,
-    await safe.getNonce(EOA_CONTROLLED_FLOW),
+    await safe.getNonce(FORWARD_FLOW),
     delegateCall,
     overrides
   );
@@ -415,13 +415,14 @@ export async function buildEOAModuleAuthorizedForwardTx(
   smartAccount: Contract,
   smartAccountOwner: Signer & TypedDataSigner,
   moduleAddress: string,
+  value: number | string = 0,
   ): Promise<SmartAccountSignedForwardTransaction> {
 
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: destinationContract,
+      value: value,
       data: callData,
-      nonce: await smartAccount.getNonce(EOA_CONTROLLED_FLOW),
-
+      nonce: await smartAccount.getNonce(FORWARD_FLOW),
     });
 
     const { signer, data } = await safeSignTypedData(
