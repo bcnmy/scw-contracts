@@ -13,7 +13,7 @@ import {
 } from "../utils/setupHelper";
 import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster, fillAndSign } from "../utils/userOp";
 
-describe("NEW::: Basic Gas Estimations: ", async () => {
+describe("Gas Estimations. Basic: ", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
   

@@ -10,12 +10,15 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
     string public constant VERSION = "0.1.0";
 
     error NoOwnerRegisteredForSmartAccount(address smartAccount);
+    error AlreadyInitedForSmartAccount(address smartAccount);
 
     using ECDSA for bytes32;
 
     mapping(address => address) public smartAccountOwners;
 
     function initForSmartAccount(address owner) external returns (address) {
+        if (smartAccountOwners[msg.sender] != address(0))
+            revert AlreadyInitedForSmartAccount(msg.sender);
         smartAccountOwners[msg.sender] = owner;
         return address(this);
     }

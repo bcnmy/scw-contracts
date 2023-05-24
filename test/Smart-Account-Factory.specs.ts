@@ -1,19 +1,12 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildEOAModuleAuthorizedForwardTx } from "../src/utils/execution";
-import { encodeTransfer } from "./smart-wallet/testUtils";
 import { 
-  getEntryPoint, 
   getSmartAccountImplementation, 
   getSmartAccountFactory, 
   getMockToken, 
   getEOAOwnershipRegistryModule,
-  getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "./utils/setupHelper";
-import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "./utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
-import { Contract } from "ethers";
 
 describe("NEW::: Smart Account Factory", async () => {
 

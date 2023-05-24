@@ -117,7 +117,7 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
      *                            a registry module that serves several smart accounts.
      * @param moduleSetupData data containing address of the Setup Contract and a setup data
-     * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
+     * @notice devs need to make sure it is only callable once (use initializer modifier or state check restrictions)
      */
     function init(
         address handler,
