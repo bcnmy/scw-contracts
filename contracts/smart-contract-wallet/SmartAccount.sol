@@ -151,11 +151,7 @@ contract SmartAccount is
     function domainSeparator() public view returns (bytes32) {
         return
             keccak256(
-                abi.encode(
-                    DOMAIN_SEPARATOR_TYPEHASH,
-                    block.chainid,
-                    address(this)
-                )
+                abi.encode(DOMAIN_SEPARATOR_TYPEHASH, _chainId, address(this))
             );
     }
 
