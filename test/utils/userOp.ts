@@ -243,15 +243,21 @@ export async function fillUserOp(
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
       throw new Error("must have entryPoint for callGasLimit estimate");
-      const gasEtimated = await provider.estimateGas({
-      from: entryPoint?.address,
-      to: op1.sender,
-      data: op1.callData,
-    });
+    let gasEstimated;
+    try { 
+      gasEstimated = await provider.estimateGas({
+        from: entryPoint?.address,
+        to: op1.sender,
+        data: op1.callData,
+      })
+    } catch(error) {
+      //to handle the case when we need to build an userOp that is expected to fail
+      gasEstimated = 3_000_000;
+    }
 
-    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEtimated)
+    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEstimated)
     // estimateGas assumes direct call from entryPoint. add wrapper cost.
-    op1.callGasLimit = gasEtimated; // .add(55000)
+    op1.callGasLimit = gasEstimated; // .add(55000)
   }
   if (op1.maxFeePerGas == null) {
     if (provider == null)
@@ -310,7 +316,7 @@ export async function makeEOAModuleUserOp(
     functionName,
     functionParams
   );
-    
+  
   const userOp = await fillAndSign(
     {
       sender: userOpSender,

@@ -103,14 +103,72 @@ describe("NEW::: Smart Account Setup ", async () => {
         )
       ).to.be.revertedWith("AlreadyInitialized");
     });
+  });
 
-    describe("Update Implementation", async () => {
+  describe("Update Implementation", async () => {
 
+    it ("Can not be called not from EntryPoint or Self", async () => {
+      const { 
+        smartAccountImplementation,
+        userSA,
+      } = await setupTests();
 
+      await expect(
+        userSA.updateImplementation(AddressZero)
+      ).to.be.revertedWith("CallerIsNotEntryPointOrSelf").withArgs(deployer.address);
+      expect(await userSA.getImplementation()).to.equal(smartAccountImplementation.address);
     });
     
+    it ("can not set address(0) as implementation", async () => {
+      const { 
+        entryPoint,
+        eoaModule,
+        userSA,
+      } = await setupTests();
 
-});
+      const userOp = await makeEOAModuleUserOp(
+        "updateImplementation",
+        [
+          AddressZero
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        eoaModule.address
+      )
+      const implementationInSaBefore = await userSA.getImplementation();
+      const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
+      expect(handleOpsTx).to.emit(entryPoint, "UserOperationRevertReason");
+      expect(await userSA.getImplementation()).to.equal(implementationInSaBefore);
+    });
+
+    //can not set eoa as implementation
+    it ("can not set EOA as implementation", async () => {
+      const { 
+        entryPoint,
+        eoaModule,
+        userSA,
+      } = await setupTests();
+
+      const userOp = await makeEOAModuleUserOp(
+        "updateImplementation",
+        [
+          bob.address
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        eoaModule.address
+      )
+      const implementationInSaBefore = await userSA.getImplementation();
+      const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
+      expect(handleOpsTx).to.emit(entryPoint, "UserOperationRevertReason");
+      expect(await userSA.getImplementation()).to.equal(implementationInSaBefore);
+    });
+
+    //updates the implementation and calls are forwarded to the new implementation and the event 
+      
+  });
 
   
 
