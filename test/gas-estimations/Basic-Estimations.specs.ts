@@ -57,6 +57,7 @@ describe("NEW::: Basic Gas Estimations: ", async () => {
     });
 
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
+    await mockToken.mint(charlie.address, ethers.utils.parseEther("1"));
     
     return {
       entryPoint: await getEntryPoint(),
@@ -197,9 +198,6 @@ describe("NEW::: Basic Gas Estimations: ", async () => {
 
   });
 
-  
-
-  /*
   it ("Can send a userOp with Paymaster payment", async () => {
     
     const { 
@@ -229,59 +227,11 @@ describe("NEW::: Basic Gas Estimations: ", async () => {
     );
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], verifiedSigner.address);
-    await handleOpsTxn.wait();
+    const receipt = await handleOpsTxn.wait();
+    console.log("UserOp ERC20 Token transfer with Paymaster gas used: ", receipt.gasUsed.toString());
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
     
   });
-
-  it ("Can verify a signature through isValidSignature", async () => {    
-    const { 
-      userSA,
-      eoaModule
-    } = await setupTests();
-
-    const eip1271MagicValue = "0x1626ba7e";
-    const message = "Some message from dApp";
-    const messageHash = ethers.utils.hashMessage(message);
-
-    const signature = await smartAccountOwner.signMessage(message);
-    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-      ["bytes", "address"], 
-      [signature, eoaModule.address]
-    );
-
-    const returnedValue = await userSA.isValidSignature(messageHash, signatureWithModuleAddress);
-    expect(returnedValue).to.be.equal(eip1271MagicValue);
-
-  });
-
-  it ("Can use forward flow with modules authorization", async () => { 
-    
-    const { 
-      mockToken,
-      userSA,
-      eoaModule
-    } = await setupTests();
-    
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
-    
-    const { transaction, feeRefund, signature } = await buildEOAModuleAuthorizedForwardTx(
-      mockToken.address,
-      encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      userSA,
-      smartAccountOwner,
-      eoaModule.address
-    );
-
-    await expect(
-      userSA.execTransaction_S6W(transaction, feeRefund, signature)
-    ).to.emit(userSA, "ExecutionSuccess");
-
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
-
-  });
-*/
 
 });
