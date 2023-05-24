@@ -9,6 +9,7 @@ import {
   getEOAOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
+  deployContract
 } from "../utils/setupHelper";
 import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "../utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
@@ -167,6 +168,54 @@ describe("NEW::: Smart Account Setup ", async () => {
     });
 
     //updates the implementation and calls are forwarded to the new implementation and the event 
+    it ("can not set EOA as implementation", async () => {
+      const { 
+        entryPoint,
+        eoaModule,
+        userSA,
+      } = await setupTests();
+
+      const NEW_IMPL_SOURCE = `
+        contract Impl2 {
+          function selfIdentify() public returns (string memory) {
+              return "implementation 2";
+          }
+          function getImplementation()
+            external
+            view
+            returns (address _implementation)
+          {
+              assembly {
+                  _implementation := sload(address())
+              }
+          }
+        }`;
+      const impl2 = await deployContract(deployer, NEW_IMPL_SOURCE);
+      
+      const implementationInSaBefore = await userSA.getImplementation();
+
+      const userOp = await makeEOAModuleUserOp(
+        "updateImplementation",
+        [
+          impl2.address
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        eoaModule.address
+      )
+  
+      const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
+      expect(handleOpsTx).to.emit(userSA, "ImplementationUpdated").withArgs(implementationInSaBefore, impl2.address);
+
+      const abi = [
+        'function selfIdentify() view returns(string memory)'
+      ];
+      const userSAImpl2 = new ethers.Contract(userSA.address, abi, deployer);
+      
+      expect(await userSA.getImplementation()).to.equal(impl2.address);
+      expect(await userSAImpl2.selfIdentify()).to.equal("implementation 2");
+    });
       
   });
 
