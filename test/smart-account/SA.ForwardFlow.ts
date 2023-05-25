@@ -272,7 +272,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
 
     await expect(
       userSA.execTransaction_S6W(transaction, refundInfo, signatureWithModuleAddress)
-    ).to.emit("ExecutionSuccess");
+    ).to.emit(userSA, "ExecutionSuccess");
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   }); 
 

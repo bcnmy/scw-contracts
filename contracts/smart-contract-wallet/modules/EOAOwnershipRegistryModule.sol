@@ -11,6 +11,7 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
 
     error NoOwnerRegisteredForSmartAccount(address smartAccount);
     error AlreadyInitedForSmartAccount(address smartAccount);
+    error WrongSignatureLength();
 
     using ECDSA for bytes32;
 
@@ -89,13 +90,44 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
     // then call expectedSigner.isValidSignature(ethSignedHash, signature)
     // to check if the signature is valid.
     function _verifySignature(
-        bytes32 ethSignedHash,
+        bytes32 dataHash,
         bytes memory signature,
         address account
     ) internal view returns (bool) {
         address expectedSigner = smartAccountOwners[account];
         if (expectedSigner == address(0))
             revert NoOwnerRegisteredForSmartAccount(account);
-        return expectedSigner == ethSignedHash.recover(signature);
+        if (signature.length < 65) revert WrongSignatureLength();
+        (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signature);
+        if (v > 30) {
+            //eth_sign flow
+            (address _signer, ) = dataHash.toEthSignedMessageHash().tryRecover(
+                v - 4,
+                r,
+                s
+            );
+            return expectedSigner == _signer;
+        } else {
+            return expectedSigner == dataHash.recover(signature);
+        }
+    }
+
+    function signatureSplit(
+        bytes memory signature
+    ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+        // The signature format is a compact form of:
+        //   {bytes32 r}{bytes32 s}{uint8 v}
+        // Compact means, uint8 is not padded to 32 bytes.
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r := mload(add(signature, 0x20))
+            s := mload(add(signature, 0x40))
+            // Here we are loading the last 32 bytes, including 31 bytes
+            // of 's'. There is no 'mload8' to do this.
+            //
+            // 'byte' is not working due to the Solidity parser, so let's
+            // use the second best option, 'and'
+            v := and(mload(add(signature, 0x41)), 0xff)
+        }
     }
 }

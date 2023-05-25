@@ -620,13 +620,12 @@ contract SmartAccount is
      *      signature verifications - like multisig), forward isValidSignature request to it.
      *      In case of multisig, _signature can be several concatenated signatures
      *      If owner is EOA, perform a regular ecrecover.
-     * @param ethSignedDataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
-     *                          prepended with '\x19Ethereum Signed Message:\n'
-     * @param signature Signature byte array associated with ethSignedDataHash
+     * @param dataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
+     * @param signature Signature byte array associated with dataHash
      * @return bytes4 value.
      */
     function isValidSignature(
-        bytes32 ethSignedDataHash,
+        bytes32 dataHash,
         bytes memory signature
     ) public view override returns (bytes4) {
         (bytes memory moduleSignature, address validationModule) = abi.decode(
@@ -636,7 +635,7 @@ contract SmartAccount is
         if (address(modules[validationModule]) != address(0)) {
             return
                 ISignatureValidator(validationModule).isValidSignature(
-                    ethSignedDataHash,
+                    dataHash,
                     moduleSignature
                 );
         } else {
