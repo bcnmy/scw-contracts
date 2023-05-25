@@ -18,7 +18,6 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
-    
     await deployments.fixture();
 
     const mockToken = await getMockToken();
@@ -67,7 +66,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     expect(await mockToken.balanceOf(userSA.address)).to.equal(ethers.utils.parseEther("1000000"));
   });
 
-  it ("Can send a userOp", async () => {
+  it ("Can send an ERC20 Transfer userOp", async () => {
     const { 
       entryPoint, 
       mockToken,
@@ -95,11 +94,37 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     await handleOpsTxn.wait();
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+  });
 
+  it ("Can send a Native Token Transfer userOp", async () => {
+    const { 
+      entryPoint, 
+      userSA,
+      eoaModule
+    } = await setupTests();
+
+    const charlieBalanceBefore = await charlie.getBalance();
+    const amountToTransfer = ethers.utils.parseEther("0.5345");
+
+    const userOp = await makeEOAModuleUserOp(
+      "executeCall",
+      [
+        charlie.address,
+        amountToTransfer,
+        "0x",
+      ],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      eoaModule.address
+    );
+
+    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
+    await handleOpsTxn.wait();
+    expect(await charlie.getBalance()).to.equal(charlieBalanceBefore.add(amountToTransfer));
   });
 
   it ("Can send a userOp with Paymaster payment", async () => {
-    
     const { 
       entryPoint, 
       mockToken,
@@ -130,7 +155,6 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     await handleOpsTxn.wait();
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
-    
   });
 
   it ("Can verify a signature through isValidSignature", async () => {    
@@ -151,11 +175,9 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
 
     const returnedValue = await userSA.isValidSignature(messageHash, signatureWithModuleAddress);
     expect(returnedValue).to.be.equal(eip1271MagicValue);
-
   });
 
   it ("Can use forward flow with modules authorization", async () => { 
-    
     const { 
       mockToken,
       userSA,
@@ -178,7 +200,6 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     ).to.emit(userSA, "ExecutionSuccess");
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
-
   });
 
 });

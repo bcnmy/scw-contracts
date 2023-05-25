@@ -9,7 +9,7 @@ import {
   MultiSend,
   StorageSetter,
   DefaultCallbackHandler,
-} from "../../typechain";
+} from "../../../typechain";
 
 export async function deployEntryPoint(
   provider = ethers.provider
