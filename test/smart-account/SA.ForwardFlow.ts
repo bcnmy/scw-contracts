@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildEOAModuleAuthorizedForwardTx, buildSafeTransaction, SafeTransaction, safeSignTypedData, Transaction, FeeRefund, FORWARD_FLOW } from "../../src/utils/execution";
+import { buildEOAModuleAuthorizedForwardTx, buildSafeTransaction, SafeTransaction, safeSignTypedData, safeSignMessage, Transaction, FeeRefund, FORWARD_FLOW } from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
@@ -11,7 +11,6 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "../utils/userOp";
 
 describe("NEW::: Smart Account Forward Flow", async () => {
 
@@ -53,7 +52,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     };
   });
 
-  it ("Can process txn with value (native token transfer)", async () => { 
+  it ("Can process EIP712-signed txn with value (native token transfer)", async () => { 
     const { 
       userSA,
       eoaModule
@@ -78,7 +77,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
 
   });
 
-  it ("Can process txn with data (ERC20 token transfer)", async () => { 
+  it ("Can process EIP712-signed txn with data (ERC20 token transfer)", async () => { 
     const { 
       mockToken,
       userSA,
@@ -221,6 +220,61 @@ describe("NEW::: Smart Account Forward Flow", async () => {
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer).add(tokenAmountToTransfer2));
   });
+
+  it("Can process Personal-signed txn", async () => {
+    const { 
+      mockToken,
+      userSA,
+      eoaModule
+    } = await setupTests();
+    
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
+    
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: mockToken.address,
+      data: encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      nonce: await userSA.getNonce(FORWARD_FLOW),
+    });
+
+    const chainId = await userSA.getChainId();
+    const { signer, data } = await safeSignMessage(
+      smartAccountOwner,
+      userSA,
+      safeTx,
+      chainId
+    );
+
+    console.log(safeTx);
+
+    const transaction: Transaction = {
+      to: safeTx.to,
+      value: safeTx.value,
+      data: safeTx.data,
+      operation: safeTx.operation,
+      targetTxGas: safeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: safeTx.baseGas,
+      gasPrice: safeTx.gasPrice,
+      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+      gasToken: safeTx.gasToken,
+      refundReceiver: safeTx.refundReceiver,
+    };
+
+    let signature = "0x";
+    signature += data.slice(2);
+    
+    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"], 
+      [signature, eoaModule.address]
+    );
+
+    await expect(
+      userSA.execTransaction_S6W(transaction, refundInfo, signatureWithModuleAddress)
+    ).to.emit("ExecutionSuccess");
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+  }); 
 
 
 });
