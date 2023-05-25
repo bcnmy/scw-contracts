@@ -15,6 +15,8 @@ import {SmartAccountErrors} from "./common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
  * @dev This contract is the base for the Smart Account functionality.
@@ -220,6 +222,7 @@ contract SmartAccount is
         bytes memory signatures
     ) public payable virtual nonReentrant returns (bool success) {
         uint256 startGas = gasleft();
+        console.log("contract: startGas: %s", startGas);
         bytes32 txHash;
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
@@ -271,6 +274,7 @@ contract SmartAccount is
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment;
             if (refundInfo.gasPrice != 0) {
+                console.log("contract: gas refunded: %s", startGas - gasleft());
                 payment = handlePayment(
                     startGas - gasleft(),
                     refundInfo.baseGas,
@@ -324,6 +328,12 @@ contract SmartAccount is
             payment =
                 (gasUsed + baseGas) *
                 (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
+            console.log("contract: refund: %s", payment);
+            console.log("contract: gas repaid: %s", gasUsed + baseGas);
+            console.log(
+                "contract: gas price: %s",
+                (gasPrice < tx.gasprice ? gasPrice : tx.gasprice)
+            );
             bool success;
             assembly {
                 success := call(gas(), receiver, payment, 0, 0, 0, 0)
