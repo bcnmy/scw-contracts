@@ -1,6 +1,17 @@
 import { expect } from "chai";
+import { BigNumber } from "ethers";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildEOAModuleAuthorizedForwardTx, buildSafeTransaction, SafeTransaction, safeSignTypedData, safeSignMessage, Transaction, FeeRefund, FORWARD_FLOW } from "../../src/utils/execution";
+import { 
+  buildEOAModuleAuthorizedForwardTx, 
+  buildSafeTransaction, 
+  getTransactionAndRefundInfoFromSafeTransactionObject, 
+  SafeTransaction, 
+  safeSignTypedData, 
+  safeSignMessage, 
+  Transaction, 
+  FeeRefund, 
+  FORWARD_FLOW 
+} from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
@@ -15,6 +26,7 @@ import {
 describe("NEW::: Smart Account Forward Flow", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver] = waffle.provider.getWallets();
+  let erc20TransferForwardTxnNoRefundGasCost = BigNumber.from("0");
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     
@@ -69,7 +81,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       eoaModule.address,
       tokenAmountToTransfer.toString(),
     );
-
+    
     await expect(
       userSA.execTransaction_S6W(transaction, feeRefund, signature)
     ).to.emit(userSA, "ExecutionSuccess");
@@ -95,9 +107,10 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       eoaModule.address
     );
 
-    await expect(
-      userSA.execTransaction_S6W(transaction, feeRefund, signature)
-    ).to.emit(userSA, "ExecutionSuccess");
+    const tx = await userSA.execTransaction_S6W(transaction, feeRefund, signature);
+    await expect(tx).to.emit(userSA, "ExecutionSuccess");
+    const receipt = await tx.wait();
+    erc20TransferForwardTxnNoRefundGasCost = receipt.gasUsed;
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   });
 
@@ -154,20 +167,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
         chainId
       );
   
-      const transaction: Transaction = {
-        to: safeTx.to,
-        value: safeTx.value,
-        data: safeTx.data,
-        operation: safeTx.operation,
-        targetTxGas: safeTx.targetTxGas,
-      };
-      const refundInfo: FeeRefund = {
-        baseGas: safeTx.baseGas,
-        gasPrice: safeTx.gasPrice,
-        tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
-        gasToken: safeTx.gasToken,
-        refundReceiver: safeTx.refundReceiver,
-      };
+      const {transaction, refundInfo} = await getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
   
       let signature = "0x";
       signature += data.slice(2);
@@ -243,20 +243,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       chainId
     );
 
-    const transaction: Transaction = {
-      to: safeTx.to,
-      value: safeTx.value,
-      data: safeTx.data,
-      operation: safeTx.operation,
-      targetTxGas: safeTx.targetTxGas,
-    };
-    const refundInfo: FeeRefund = {
-      baseGas: safeTx.baseGas,
-      gasPrice: safeTx.gasPrice,
-      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
-      gasToken: safeTx.gasToken,
-      refundReceiver: safeTx.refundReceiver,
-    };
+    const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
 
     let signature = "0x";
     signature += data.slice(2);
@@ -279,7 +266,6 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       mockToken,
     } = await setupTests();
     const balanceRRBefore = await refundReceiver.getBalance();
-    console.log("balanceRRBefore", ethers.utils.formatEther(balanceRRBefore));
 
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: mockToken.address,
@@ -291,13 +277,12 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       data: encodeTransfer(charlie.address, ethers.utils.parseEther("10").toString()),
       from: userSA.address,
     });
-    console.log("gasEstimation", gasEstimation.toString());
 
     safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
     safeTx.gasToken = "0x0000000000000000000000000000000000000000";
     safeTx.gasPrice = 10000000000;
     safeTx.targetTxGas = gasEstimation.toNumber();
-    safeTx.baseGas = 21000 + 21000; // base plus eth transfer
+    safeTx.baseGas = 21000 + 21000 + 25000; // base + eth transfer + ~cost of handlePayment itself
 
     const { signer, data } = await safeSignTypedData(
       smartAccountOwner,
@@ -313,20 +298,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       [signature, eoaModule.address]
     );
 
-    const transaction: Transaction = {
-      to: safeTx.to,
-      value: safeTx.value,
-      data: safeTx.data,
-      operation: safeTx.operation,
-      targetTxGas: safeTx.targetTxGas,
-    };
-    const refundInfo: FeeRefund = {
-      baseGas: safeTx.baseGas,
-      gasPrice: safeTx.gasPrice,
-      tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
-      gasToken: safeTx.gasToken,
-      refundReceiver: safeTx.refundReceiver,
-    };
+    const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
 
     const tx = await userSA
       .connect(refundReceiver)
@@ -336,16 +308,88 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     );
     await expect(tx).to.emit(userSA, "ExecutionSuccess");
     const receipt = await tx.wait();
-    console.log("gasUsed", receipt.gasUsed.toString());
+
+    const gasPaidForTx = receipt.gasUsed.mul(safeTx.gasPrice);
+    const expectedRRBalanceAfterPayingForTx = balanceRRBefore.sub(gasPaidForTx);
+    const defactoRRBalanceAfterPayingForTx = await refundReceiver.getBalance();
+    
+    /*
+    console.log("gas used", receipt.gasUsed.toString());
     console.log("Gas used in ETH", ethers.utils.formatEther(receipt.gasUsed.mul(safeTx.gasPrice)));
     console.log("Balances difference ", ethers.utils.formatEther(balanceRRBefore.sub(await refundReceiver.getBalance())));
+    //if balances difference is less than gas used, it means that some refund was received
+    */
 
-    console.log("balanceRRAfter", ethers.utils.formatEther(await refundReceiver.getBalance()));
-    console.log("refund is ", ethers.utils.formatEther(1151690000000000));
+    //if defacto Refund Receiver (RR) balance is higher than expected, it means that some refund was received
 
-    expect((await refundReceiver.getBalance()).gt(balanceRRBefore)).to.be.true;
+    expect(defactoRRBalanceAfterPayingForTx.gt(expectedRRBalanceAfterPayingForTx)).to.be.true;
+  });
 
-  
+  it("can send transactions and charge smart account for fees in ERC20 tokens", async function () {
+    const { 
+      userSA,
+      eoaModule,
+      mockToken,
+    } = await setupTests();
+
+    const balanceRRBefore = await mockToken.balanceOf(refundReceiver.address);
+
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: mockToken.address,
+      data: encodeTransfer(charlie.address, ethers.utils.parseEther("10").toString()),
+      nonce: await userSA.getNonce(FORWARD_FLOW),
+    });
+    const gasEstimation1 = await ethers.provider.estimateGas({
+      to: mockToken.address,
+      data: encodeTransfer(charlie.address, ethers.utils.parseEther("10").toString()),
+      from: userSA.address,
+    });
+
+    safeTx.refundReceiver = "0x0000000000000000000000000000000000000000";
+    safeTx.gasToken = mockToken.address;
+    safeTx.gasPrice = 10000000000;
+
+    const approxRefundAmount =  erc20TransferForwardTxnNoRefundGasCost.add(25000).add(gasEstimation1);  //forward tx cost + handle payment cost + erc20 refund cost
+
+    //estimate refund
+    const gasEstimation2 = await ethers.provider.estimateGas({
+      to: mockToken.address,
+      data: encodeTransfer(userSA.address, approxRefundAmount.toString()),
+      from: userSA.address,
+    });
+
+    safeTx.targetTxGas = gasEstimation1.toNumber(); // gas spent to target txn itself
+    safeTx.baseGas = 21000 + (gasEstimation2.toNumber() - 21000 + 55000); // additional gas: (base) + (refund erc20 token transfer - base) + ~(handlePayment cost)
+
+    const { signer, data } = await safeSignTypedData(
+      smartAccountOwner,
+      userSA,
+      safeTx,
+      await userSA.getChainId()
+    );
+
+    let signature = "0x";
+    signature += data.slice(2);
+    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"], 
+      [signature, eoaModule.address]
+    );
+
+    const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
+    const tx = await userSA
+      .connect(refundReceiver)
+      .execTransaction_S6W(transaction, refundInfo, signatureWithModuleAddress, {
+        gasPrice: safeTx.gasPrice,
+      }
+    );
+    await expect(tx).to.emit(userSA, "ExecutionSuccess");
+
+    const balanceRRAfter = await mockToken.balanceOf(refundReceiver.address);
+    expect(balanceRRAfter.gt(balanceRRBefore)).to.be.true;
+
+    //const receipt = await tx.wait();
+    //console.log("Gas used in Token ", ethers.utils.formatEther(receipt.gasUsed.mul(safeTx.gasPrice))); // 1 MockToken = 1 ETH
+    //console.log("Refund amount is: ", ethers.utils.formatEther(balanceRRAfter.sub(balanceRRBefore)));
   });
 
 

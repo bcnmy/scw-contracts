@@ -461,3 +461,22 @@ export async function buildEOAModuleAuthorizedForwardTx(
       signature: signatureWithModuleAddress
     };
 } 
+
+export function getTransactionAndRefundInfoFromSafeTransactionObject(SafeTx: SafeTransaction):
+  {transaction: Transaction, refundInfo: FeeRefund} {
+    const transaction: Transaction = {
+      to: SafeTx.to,
+      value: SafeTx.value,
+      data: SafeTx.data,
+      operation: SafeTx.operation,
+      targetTxGas: SafeTx.targetTxGas,
+    };
+    const refundInfo: FeeRefund = {
+      baseGas: SafeTx.baseGas,
+      gasPrice: SafeTx.gasPrice,
+      tokenGasPriceFactor: SafeTx.tokenGasPriceFactor,
+      gasToken: SafeTx.gasToken,
+      refundReceiver: SafeTx.refundReceiver,
+    };
+    return {transaction, refundInfo};
+} 

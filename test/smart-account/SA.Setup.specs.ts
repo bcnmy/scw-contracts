@@ -115,7 +115,7 @@ describe("NEW::: Smart Account Setup ", async () => {
 
       await expect(
         userSA.updateImplementation(AddressZero)
-      ).to.be.revertedWith("CallerIsNotEntryPointOrSelf").withArgs(deployer.address);
+      ).to.be.revertedWith("CallerIsNotEntryPoint").withArgs(deployer.address);
       expect(await userSA.getImplementation()).to.equal(smartAccountImplementation.address);
     });
     
