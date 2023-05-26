@@ -115,7 +115,7 @@ contract SmartAccount is
      * @param _implementation New wallet implementation
      */
     function updateImplementation(address _implementation) public virtual {
-        _requireFromEntryPoint();
+        _requireFromEntryPointOrSelf();
         require(_implementation != address(0), "Address cannot be zero");
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
@@ -704,6 +704,16 @@ contract SmartAccount is
     function disableModule(address prevModule, address module) public virtual {
         _requireFromEntryPointOrSelf();
         _disableModule(prevModule, module);
+    }
+
+    /**
+     * @dev Sets the fallback handler.
+     * @notice This can only be done via a UserOp sent by EntryPoint.
+     * @param handler Handler to be set.
+     */
+    function setFallbackHandler(address handler) external virtual override {
+        _requireFromEntryPoint();
+        _setFallbackHandler(handler);
     }
 
     /**

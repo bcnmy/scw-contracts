@@ -18,12 +18,12 @@ contract SmartAccountFactory {
 
     event AccountCreation(
         address indexed account,
-        address indexed owner,
+        address indexed initialAuthModule,
         uint256 indexed index
     );
     event AccountCreationWithoutIndex(
         address indexed account,
-        address indexed owner
+        address indexed initialAuthModule
     );
 
     constructor(address _basicImplementation) {

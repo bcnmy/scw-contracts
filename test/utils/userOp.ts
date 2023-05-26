@@ -219,12 +219,17 @@ export async function fillUserOp(
     }
     if (op1.verificationGasLimit == null) {
       if (provider == null) throw new Error("no entrypoint/provider");
-      const initEstimate = await provider.estimateGas({
-        from: entryPoint?.address,
-        to: initAddr,
-        data: initCallData,
-        gasLimit: 10e6,
-      });
+      let initEstimate;
+      try {
+        initEstimate = await provider.estimateGas({
+          from: entryPoint?.address,
+          to: initAddr,
+          data: initCallData,
+          gasLimit: 10e6,
+        })
+      } catch (error) {
+        initEstimate = 1_000_000;
+      };
       op1.verificationGasLimit = BigNumber.from(
         DefaultsForUserOp.verificationGasLimit
       ).add(initEstimate);

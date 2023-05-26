@@ -710,6 +710,11 @@ contract SmartAccountNoAuth is
         _disableModule(prevModule, module);
     }
 
+    function setFallbackHandler(address handler) external virtual override {
+        _requireFromEntryPoint();
+        _setFallbackHandler(handler);
+    }
+
     /**
      * @notice Query if a contract implements an interface
      * @param _interfaceId The interface identifier, as specified in ERC165

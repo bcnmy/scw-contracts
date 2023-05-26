@@ -2,8 +2,8 @@
 pragma solidity 0.8.17;
 
 import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccountV1.sol";
-import {ModuleManager} from "./ModuleManagerV1.sol";
-import {FallbackManager} from "../../../base/FallbackManager.sol";
+import {ModuleManagerV1} from "./ModuleManagerV1.sol";
+import {FallbackManagerV1} from "./FallbackManagerV1.sol";
 import {SignatureDecoder} from "../../../common/SignatureDecoder.sol";
 import {SecuredTokenTransfer} from "../../../common/SecuredTokenTransfer.sol";
 import {LibAddress} from "../../../libs/LibAddress.sol";
@@ -26,8 +26,8 @@ import {IModule} from "./IModuleV1.sol";
  */
 contract SmartAccountV1 is
     BaseSmartAccount,
-    ModuleManager,
-    FallbackManager,
+    ModuleManagerV1,
+    FallbackManagerV1,
     SignatureDecoder,
     SecuredTokenTransfer,
     IERC165,

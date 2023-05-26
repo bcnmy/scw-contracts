@@ -170,7 +170,6 @@ describe("NEW::: Smart Account Factory", async () => {
 
   });
 
-
   describe("Deploy Account", async () => { 
     it ("should deploy and init Smart Account and emit event", async () => {
       const { smartAccountFactory, eoaModule } = await setupTests();
@@ -185,7 +184,7 @@ describe("NEW::: Smart Account Factory", async () => {
       expect(deploymentTx).to.emit(smartAccountFactory, "AccountCreationWithoutIndex");
       
       const receipt = await deploymentTx.wait();
-      const deployedSmartAccountAddress = receipt.events[0].args[0];
+      const deployedSmartAccountAddress = receipt.events[1].args[0];
 
       const smartAccount = await ethers.getContractAt("SmartAccount", deployedSmartAccountAddress);
       expect(await smartAccount.isModuleEnabled(eoaModule.address)).to.equal(true);

@@ -1,15 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.17;
 
-import {SelfAuthorized} from "../common/SelfAuthorized.sol";
-import {FallbackManagerErrors} from "../common/Errors.sol";
+import {SelfAuthorized} from "../../../common/SelfAuthorized.sol";
+import {FallbackManagerErrors} from "../../../common/Errors.sol";
 
 /**
  *   @title Fallback Manager - A contract that manages fallback calls made to the Smart Account
  *   @dev Fallback calls are handled by a `handler` contract that is stored at FALLBACK_HANDLER_STORAGE_SLOT
  *        fallback calls are not delegated to the `handler` so they can not directly change Smart Account storage
  */
-abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
+abstract contract FallbackManagerV1 is SelfAuthorized, FallbackManagerErrors {
     // keccak-256 hash of "fallback_manager.handler.address" subtracted by 1
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT =
         0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d4;
@@ -60,7 +60,9 @@ abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     /// @dev Allows to add a contract to handle fallback calls.
     ///      Only fallback calls without value and with data will be forwarded
     /// @param handler contract to handle fallback calls.
-    function setFallbackHandler(address handler) external virtual;
+    function setFallbackHandler(address handler) public authorized {
+        _setFallbackHandler(handler);
+    }
 
     function _setFallbackHandler(address handler) internal {
         if (handler == address(0)) revert HandlerCannotBeZero();
@@ -68,10 +70,10 @@ abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
         // solhint-disable-next-line no-inline-assembly
         assembly {
             previousHandler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
-            //}
-            //bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
-            // solhint-disable-next-line no-inline-assembly
-            //assembly {
+        }
+        //bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
             sstore(FALLBACK_HANDLER_STORAGE_SLOT, handler)
         }
         emit ChangedFallbackHandler(previousHandler, handler);
