@@ -1,19 +1,22 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccount.sol";
-import {ModuleManager} from "./base/ModuleManager.sol";
-import {FallbackManager} from "./base/FallbackManager.sol";
-import {SignatureDecoder} from "./common/SignatureDecoder.sol";
-import {SecuredTokenTransfer} from "./common/SecuredTokenTransfer.sol";
-import {LibAddress} from "./libs/LibAddress.sol";
-import {ISignatureValidator} from "./interfaces/ISignatureValidator.sol";
-import {Math} from "./libs/Math.sol";
-import {IERC165} from "./interfaces/IERC165.sol";
-import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
+import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "../../../BaseSmartAccount.sol";
+import {ModuleManager} from "../../../base/ModuleManager.sol";
+import {FallbackManager} from "../../../base/FallbackManager.sol";
+import {SignatureDecoder} from "../../../common/SignatureDecoder.sol";
+import {SecuredTokenTransfer} from "../../../common/SecuredTokenTransfer.sol";
+import {LibAddress} from "../../../libs/LibAddress.sol";
+import {ISignatureValidator} from "../../../interfaces/ISignatureValidator.sol";
+import {Math} from "../../../libs/Math.sol";
+import {IERC165} from "../../../interfaces/IERC165.sol";
+import {ReentrancyGuard} from "../../../common/ReentrancyGuard.sol";
+import {SmartAccountErrors} from "../../../common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
+import {IAuthorizationModule} from "../../../interfaces/IAuthorizationModule.sol";
+import {IHooks} from "./IHooks.sol";
+
+import "hardhat/console.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -24,7 +27,7 @@ import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
  *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
-contract SmartAccount is
+contract SmartAccountV3 is
     BaseSmartAccount,
     ModuleManager,
     FallbackManager,
@@ -509,7 +512,9 @@ contract SmartAccount is
         bytes calldata func
     ) public {
         _requireFromEntryPoint();
+        _executePreHooks(dest, value, func);
         _call(dest, value, func);
+        //_executePostHooks(dest, value, func);
     }
 
     /**
@@ -592,6 +597,27 @@ contract SmartAccount is
         }
     }
 
+    function _executePreHooks(
+        address target,
+        uint256 value,
+        bytes memory data
+    ) internal {
+        address module = SENTINEL_MODULES;
+        console.log("PreHooks:");
+        while (modules[module] != SENTINEL_MODULES) {
+            module = modules[module];
+            console.log("module: %s", module);
+            console.log("next module: %s", modules[module]);
+            try IHooks(module).preHook(target, value, data) {} catch Error(
+                string memory reason
+            ) {
+                console.log("Error: %s", reason);
+            } catch {
+                console.log("Unknown error");
+            }
+        }
+    }
+
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash,
@@ -604,7 +630,6 @@ contract SmartAccount is
             userOp.signature,
             (bytes, address)
         );
-        //TODO: USE if(isModuleEnabled()) instead?
         if (address(modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
