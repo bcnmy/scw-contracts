@@ -1,19 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccount.sol";
-import {ModuleManager} from "./base/ModuleManager.sol";
-import {FallbackManager} from "./base/FallbackManager.sol";
-import {SignatureDecoder} from "./common/SignatureDecoder.sol";
-import {SecuredTokenTransfer} from "./common/SecuredTokenTransfer.sol";
-import {LibAddress} from "./libs/LibAddress.sol";
-import {ISignatureValidator} from "./interfaces/ISignatureValidator.sol";
-import {Math} from "./libs/Math.sol";
-import {IERC165} from "./interfaces/IERC165.sol";
-import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
-import {SmartAccountErrors} from "./common/Errors.sol";
+import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "../BaseSmartAccount.sol";
+import {ModuleManager} from "../base/ModuleManager.sol";
+import {FallbackManager} from "../base/FallbackManager.sol";
+import {SignatureDecoder} from "../common/SignatureDecoder.sol";
+import {SecuredTokenTransfer} from "../common/SecuredTokenTransfer.sol";
+import {LibAddress} from "../libs/LibAddress.sol";
+import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
+import {Math} from "../libs/Math.sol";
+import {IERC165} from "../interfaces/IERC165.sol";
+import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
+import {SmartAccountErrors} from "../common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IDeploymentModule} from "./interfaces/IModule.sol";
+import {IDeploymentModule} from "../interfaces/IModule.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.

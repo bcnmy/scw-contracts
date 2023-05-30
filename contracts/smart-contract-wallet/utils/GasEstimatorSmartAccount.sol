@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "../SmartAccountFactory.sol";
+import "../factory/SmartAccountFactory.sol";
 
 // Contract for estimating gas on undeployed smart account
 // Deploys a smart account and then calls the appropriate method
