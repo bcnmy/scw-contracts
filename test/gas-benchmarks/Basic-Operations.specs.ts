@@ -100,7 +100,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     await tx.wait();
 
     const charlieTokenBalanceBefore = await charlie.getBalance();
-    console.log("Charlie balance before: ", charlieTokenBalanceBefore.toString());
+    //console.log("Charlie balance before: ", charlieTokenBalanceBefore.toString());
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEOAModuleUserOp(
@@ -131,6 +131,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
       eoaModule
     } = await setupTests();
 
+    console.log("Factory address ", smartAccountFactory.address);
+
     const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
     const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
@@ -152,6 +154,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
     
     const expectedSmartAccountAddress =
         await smartAccountFactory.getAddressForCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+
+    console.log("SA owner address", alice.address);
 
     await deployer.sendTransaction({
       to: expectedSmartAccountAddress,
@@ -195,6 +199,115 @@ describe("Gas Benchmarking. Basic operations", async () => {
     console.log("Deploy + token transfer userop gas used: ", receipt.gasUsed.toString());
 
     expect(await charlie.getBalance()).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+
+  });
+
+  it ("Can deploy account with temp implementation and send a native token transfer userOp", async () => {
+    const { 
+      entryPoint,
+      eoaModule,
+      smartAccountImplementation,
+      mockToken
+    } = await setupTests();
+
+    //deploy smart Account temp Implementation
+    const SmartAccountTempImplementation = await ethers.getContractFactory("SmartAccountTemp");
+    const smartAccountTempImplementation = await SmartAccountTempImplementation.deploy(entryPoint.address, smartAccountImplementation.address);
+
+    //deploy smart Account factory with temp implementation
+    const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
+    const smartAccountFactory = await SmartAccountFactory.deploy(smartAccountTempImplementation.address);
+
+    const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    //const SmartAccountFactory = await ethers.getContractFactory("SmartAccountFactory");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+    const charlieTokenBalanceBefore = await charlie.getBalance();
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
+
+    let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+      "initForSmartAccount",
+      [await alice.getAddress()]
+    );
+
+    const smartAccountDeploymentIndex = 0;
+    
+    let deploymentData = SmartAccountFactory.interface.encodeFunctionData(
+      "deployCounterFactualAccount",
+      [eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex]
+    );
+    
+    const expectedSmartAccountAddress =
+        await smartAccountFactory.getAddressForCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+
+    //console.log("SA owner address", alice.address);
+
+    await deployer.sendTransaction({
+      to: expectedSmartAccountAddress,
+      value: ethers.utils.parseEther("10"),
+    });
+
+    const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+      "executeCall",
+      [
+        charlie.address,
+        tokenAmountToTransfer,
+        "0x",
+      ]
+    );  
+
+    const userOp = await fillAndSign(
+      {
+        sender: expectedSmartAccountAddress,
+        callGasLimit: 1_000_000,
+        initCode: ethers.utils.hexConcat([smartAccountFactory.address, deploymentData]),
+        callData: txnDataAA1
+      },
+      alice,
+      entryPoint,
+      'nonce'
+    );
+  
+    // add validator module address to the signature
+    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"], 
+      [userOp.signature, eoaModule.address]
+    );
+  
+    userOp.signature = signatureWithModuleAddress;    
+
+    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
+      gasLimit: 10000000,
+    });
+    const receipt = await handleOpsTxn.wait();
+    const aliceSA = await ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+    console.log("Deploy + token transfer userop gas used: ", receipt.gasUsed.toString());
+
+    expect(await aliceSA.getImplementation()).to.equal(smartAccountImplementation.address);
+    expect(await charlie.getBalance()).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+
+    // try sending another userOp;
+    await mockToken.mint(aliceSA.address, ethers.utils.parseEther("10"));
+    const tokenAmountToTransfer2 = ethers.utils.parseEther("0.1234");
+    const charlieTokenBalanceBefore2 = await mockToken.balanceOf(charlie.address);
+    
+    const userOp2 = await makeEOAModuleUserOp(
+      "executeCall",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer2.toString()),
+      ],
+      aliceSA.address,
+      alice,
+      entryPoint,
+      eoaModule.address
+    )
+
+    const handleOpsTxn2 = await entryPoint.handleOps([userOp2], alice.address);
+    await handleOpsTxn2.wait();
+
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore2.add(tokenAmountToTransfer2));
 
   });
 

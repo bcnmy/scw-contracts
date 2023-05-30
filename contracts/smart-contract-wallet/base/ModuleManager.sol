@@ -289,6 +289,7 @@ abstract contract ModuleManager is
 
         modules[initialAuthorizationModule] = SENTINEL_MODULES;
         modules[SENTINEL_MODULES] = initialAuthorizationModule;
+
         return initialAuthorizationModule;
     }
 

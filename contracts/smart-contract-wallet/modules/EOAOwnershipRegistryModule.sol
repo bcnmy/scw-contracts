@@ -42,6 +42,30 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
         return _validateSignature(userOp, ethSignedHash, moduleSignature);
     }
 
+    function validateDeploymentUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external view virtual returns (uint256) {
+        (bytes memory moduleSignature, ) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        bytes32 ethSignedHash = userOpHash.toEthSignedMessageHash();
+        if (userOp.initCode.length != 0) {
+            address eoaOwnerFromInitcode = address(
+                bytes20(userOp.initCode[168:188])
+            );
+            if (
+                eoaOwnerFromInitcode == ethSignedHash.recover(moduleSignature)
+            ) {
+                return 0;
+            }
+            return SIG_VALIDATION_FAILED;
+        } else {
+            return _validateSignature(userOp, ethSignedHash, moduleSignature);
+        }
+    }
+
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 ethSignedUserOpHash,

@@ -8,4 +8,9 @@ interface IAuthorizationModule {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external returns (uint256 validationData);
+
+    function validateDeploymentUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external returns (uint256 validationData);
 }

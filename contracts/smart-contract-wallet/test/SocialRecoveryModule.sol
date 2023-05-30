@@ -62,6 +62,17 @@ contract SocialRecoveryModule is IAuthorizationModule {
         return _validateSignature(userOp, userOpHash, moduleSignature);
     }
 
+    function validateDeploymentUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) external virtual returns (uint256) {
+        (bytes memory moduleSignature, ) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        return _validateSignature(userOp, userOpHash, moduleSignature);
+    }
+
     /**
      * @dev standard validateSignature for modules to validate and mark userOpHash as seen
      * @param userOp the operation that is about to be executed.
