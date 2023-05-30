@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
+import {IAuthorizationModule} from "../interfaces/IModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 
 abstract contract BaseAuthorizationModule is

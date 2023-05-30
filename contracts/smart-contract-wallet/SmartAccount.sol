@@ -13,7 +13,7 @@ import {IERC165} from "./interfaces/IERC165.sol";
 import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
+import {IAuthorizationModule} from "./interfaces/IModule.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -52,7 +52,7 @@ contract SmartAccount is
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
     // Owner storage. Deprecated. Left for storage layout compatibility
-    address public owner_deprecated;
+    address private owner_deprecated;
 
     // changed to 2D nonce below
     // @notice there is no _nonce

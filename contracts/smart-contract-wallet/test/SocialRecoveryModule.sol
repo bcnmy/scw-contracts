@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 import "../SmartAccount.sol";
-import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
+import {IAuthorizationModule} from "../interfaces/IModule.sol";
 
 contract SocialRecoveryModule is IAuthorizationModule {
     string public constant NAME = "Social Recovery Module";
@@ -52,17 +52,6 @@ contract SocialRecoveryModule is IAuthorizationModule {
     }
 
     function validateUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) external virtual returns (uint256) {
-        (bytes memory moduleSignature, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
-        return _validateSignature(userOp, userOpHash, moduleSignature);
-    }
-
-    function validateDeploymentUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256) {

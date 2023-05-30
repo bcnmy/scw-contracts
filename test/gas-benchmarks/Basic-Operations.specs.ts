@@ -211,7 +211,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     } = await setupTests();
 
     //deploy smart Account temp Implementation
-    const SmartAccountTempImplementation = await ethers.getContractFactory("SmartAccountTemp");
+    const SmartAccountTempImplementation = await ethers.getContractFactory("SmartAccountTempImplementation");
     const smartAccountTempImplementation = await SmartAccountTempImplementation.deploy(entryPoint.address, smartAccountImplementation.address);
 
     //deploy smart Account factory with temp implementation

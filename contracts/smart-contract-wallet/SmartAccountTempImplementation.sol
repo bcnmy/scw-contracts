@@ -13,7 +13,7 @@ import {IERC165} from "./interfaces/IERC165.sol";
 import {ReentrancyGuard} from "./common/ReentrancyGuard.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
+import {IDeploymentModule} from "./interfaces/IModule.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -24,7 +24,7 @@ import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
  *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
-contract SmartAccountTemp is
+contract SmartAccountTempImplementation is
     BaseSmartAccount,
     ModuleManager,
     FallbackManager,
@@ -612,19 +612,19 @@ contract SmartAccountTemp is
             userOp.signature,
             (bytes, address)
         );
-        //TODO: USE if(isModuleEnabled()) instead?
+        //TODO: USE if(isModuleEnabled()) instead? adds ~200 gas to every call
         if (address(modules[validationModule]) != address(0)) {
-            validationData = IAuthorizationModule(validationModule)
-                .validateUserOp(userOp, userOpHash);
+            validationData = IDeploymentModule(validationModule)
+                .validateDeploymentUserOp(userOp, userOpHash);
         } else {
             revert WrongValidationModule(validationModule);
         }
         _validateNonce(userOp.nonce);
         _payPrefund(missingAccountFunds);
 
-        address regularImplementation = _regularImplementation;
+        address regularImpl = _regularImplementation;
         assembly {
-            sstore(address(), regularImplementation)
+            sstore(address(), regularImpl)
         }
     }
 
