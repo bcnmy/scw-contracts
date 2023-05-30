@@ -219,7 +219,7 @@ describe("NEW::: Smart Account Setup ", async () => {
   });
 
   //update callback handler
-  describe("Update Implementation", async () => {
+  describe("setFallbackHandler", async () => {
     it ("Can not be called not from EntryPoint", async () => {
       const { 
         userSA,

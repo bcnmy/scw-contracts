@@ -124,14 +124,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     await tx.wait();
 
     const charlieTokenBalanceBefore = await charlie.getBalance();
-<<<<<<< HEAD
     //console.log("Charlie balance before: ", charlieTokenBalanceBefore.toString());
-=======
-    console.log(
-      "Charlie balance before: ",
-      charlieTokenBalanceBefore.toString()
-    );
->>>>>>> Ownerless-SA-Auth-Modules-hardhat-deploy
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEOAModuleUserOp(
@@ -275,7 +268,6 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
   });
 
-<<<<<<< HEAD
   it ("Can deploy account with temp implementation and send a native token transfer userOp", async () => {
     const { 
       entryPoint,
@@ -394,11 +386,6 @@ describe("Gas Benchmarking. Basic operations", async () => {
       eoaModule,
       verifyingPaymaster
     } = await setupTests();
-=======
-  it("Can send a userOp with Paymaster payment", async () => {
-    const { entryPoint, mockToken, userSA, eoaModule, verifyingPaymaster } =
-      await setupTests();
->>>>>>> Ownerless-SA-Auth-Modules-hardhat-deploy
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(
       charlie.address
