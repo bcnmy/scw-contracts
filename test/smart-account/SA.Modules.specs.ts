@@ -214,4 +214,19 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
     });
   });
 
+  // Don't test until I remove delegatecalls from ModuleManager
+  /*
+  describe ("execTransactionFromModule: ", async () => { 
+     
+
+
+  });
+
+  describe ("execBatchTransactionFromModule: ", async () => { 
+    
+
+
+  });
+  */
+
 });
