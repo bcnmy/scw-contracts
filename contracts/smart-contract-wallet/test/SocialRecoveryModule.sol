@@ -3,6 +3,8 @@ pragma solidity 0.8.17;
 import "../SmartAccount.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 
+// TODO: To be rebuilt for an ownerless setup => like which validation method does it recover?
+
 contract SocialRecoveryModule is IAuthorizationModule {
     string public constant NAME = "Social Recovery Module";
     string public constant VERSION = "0.1.0";
@@ -27,9 +29,12 @@ contract SocialRecoveryModule is IAuthorizationModule {
     mapping(address => uint256) internal walletsNonces;
 
     /**
-     * @dev Setup function sets initial storage of contract. Only by SCW owner.
+     * @dev Setup function sets initial storage of contract.
      */
-    function setup(address[] memory _friends, uint256 _threshold) public {
+    function setup(
+        address[] memory _friends,
+        uint256 _threshold
+    ) public returns (address) {
         require(
             _threshold <= _friends.length,
             "Threshold exceeds friends count"
@@ -49,6 +54,7 @@ contract SocialRecoveryModule is IAuthorizationModule {
         // update friends list and threshold for smart account
         entry.friends = _friends;
         entry.threshold = _threshold;
+        return address(this);
     }
 
     function validateUserOp(

@@ -89,7 +89,8 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       eoaModule,
       userSA,
       userSAV3,
-      entryPoint
+      entryPoint,
+      mockToken
     } = await setupTests();
 
     //enable two fake modules
@@ -99,8 +100,12 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     const mockHookModule1 = await MockHookModule.deploy();
     const mockHookModule2 = await MockHookModule.deploy();
 
-    //const fakeModule1 = "0xffffffffffffffffffffffffffffffffffff1846";
-    //const fakeModule2 = "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeee9524";
+    const SpendingLimitsModule = await ethers.getContractFactory("SpendingLimitsModule");
+    const spendingLimitsModule = await SpendingLimitsModule.deploy(mockToken.address);
+
+    // Deploy spender module
+    const SpenderModule = await ethers.getContractFactory("SpenderModule");
+    const spenderModule = await SpenderModule.deploy();
 
     const userOp = await makeEOAModuleUserOp(
       "enableModule",
@@ -127,22 +132,60 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     await entryPoint.handleOps([userOp2], alice.address);
 
     const userOp3 = await makeEOAModuleUserOp(
-      "executeCall_s1m",
+      "enableModule",
       [
-        charlie.address,
-        ethers.utils.parseEther("0.11"),
-        "0x"
+        spendingLimitsModule.address
       ],
       userSAV3.address,
       smartAccountOwner,
       entryPoint,
       eoaModule.address
-      //"0x0000000000000000000000000000000000000001"
     )
     await entryPoint.handleOps([userOp3], alice.address);
-    //await expect(entryPoint.handleOps([userOp3], alice.address)).to.be.reverted;
 
+    const userOp4 = await makeEOAModuleUserOp(
+      "enableModule",
+      [
+        spenderModule.address
+      ],
+      userSAV3.address,
+      smartAccountOwner,
+      entryPoint,
+      eoaModule.address
+    )
+    await entryPoint.handleOps([userOp4], alice.address);
 
+    let limitSetData = spendingLimitsModule.interface.encodeFunctionData(
+      "setLimits",
+      [spenderModule.address, ethers.utils.parseEther("10"), 24*60*60]
+    );
+    
+    //make set limit userOp
+    const userOp5 = await makeEOAModuleUserOp(
+      "executeCall_s1m",
+      [
+        spendingLimitsModule.address,
+        ethers.utils.parseEther("0"),
+        limitSetData
+      ],
+      userSAV3.address,
+      smartAccountOwner,
+      entryPoint,
+      eoaModule.address
+    )
+    await entryPoint.handleOps([userOp5], alice.address);
+    expect(await spendingLimitsModule.getLimits(userSAV3.address, spenderModule.address)).to.equal(ethers.utils.parseEther("10"));
+
+    const spendingTxn = await spenderModule.spend(mockToken.address, charlie.address, ethers.utils.parseEther("10"), userSAV3.address);
+    await spendingTxn.wait();
+
+    const leftToSpend = (await spendingLimitsModule.getLimits(userSAV3.address, spenderModule.address)).sub(await spendingLimitsModule.calculateSpendingsForPeriod(userSAV3.address, spenderModule.address));
+    console.log("leftToSpend", leftToSpend.toString());
+    expect (leftToSpend).to.equal(ethers.utils.parseEther("0"));
+
+    await expect(
+      spenderModule.spend(mockToken.address, charlie.address, ethers.utils.parseEther("10"), userSAV3.address)
+    ).to.be.revertedWith("Spending limit exceeded");
   
   });
 

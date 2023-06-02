@@ -512,7 +512,7 @@ contract SmartAccountV3 is
         bytes calldata func
     ) public {
         _requireFromEntryPoint();
-        _executePreHooks(dest, value, func);
+        //_executePreHooks(dest, value, func);
         _call(dest, value, func);
         //_executePostHooks(dest, value, func);
     }
@@ -597,6 +597,17 @@ contract SmartAccountV3 is
         }
     }
 
+    function execTransactionFromModule(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) public virtual override returns (bool success) {
+        _executePreHooks(to, value, data);
+        success = super.execTransactionFromModule(to, value, data, operation);
+        _executePostHooks(to, value, data);
+    }
+
     function _executePreHooks(
         address target,
         uint256 value,
@@ -607,11 +618,38 @@ contract SmartAccountV3 is
         while (modules[module] != SENTINEL_MODULES) {
             module = modules[module];
             console.log("module: %s", module);
-            console.log("next module: %s", modules[module]);
-            try IHooks(module).preHook(target, value, data) {} catch Error(
-                string memory reason
-            ) {
+            //console.log("next module: %s", modules[module]);
+
+            //TODO: How to handle reverts from hooks and at the same time effectively skip modules that do not implement hooks?
+            try
+                IHooks(module).preHook(target, value, data, msg.sender)
+            {} catch Error(string memory reason) {
                 console.log("Error: %s", reason);
+                revert(reason);
+            } catch {
+                console.log("Unknown error");
+            }
+        }
+    }
+
+    function _executePostHooks(
+        address target,
+        uint256 value,
+        bytes memory data
+    ) internal {
+        address module = SENTINEL_MODULES;
+        console.log("PostHooks:");
+        while (modules[module] != SENTINEL_MODULES) {
+            module = modules[module];
+            console.log("module: %s", module);
+            //console.log("next module: %s", modules[module]);
+
+            //TODO: How to handle reverts from hooks and at the same time effectively skip modules that do not implement hooks?
+            try
+                IHooks(module).postHook(target, value, data, msg.sender)
+            {} catch Error(string memory reason) {
+                console.log("Error: %s", reason);
+                revert(reason);
             } catch {
                 console.log("Unknown error");
             }

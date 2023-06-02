@@ -7,7 +7,8 @@ contract MockHookModule is IHooks {
     function preHook(
         address target,
         uint256 value,
-        bytes memory data
+        bytes memory data,
+        address txnInitiator
     ) external {
         console.log("preHook called at", address(this));
     }
@@ -15,7 +16,8 @@ contract MockHookModule is IHooks {
     function postHook(
         address target,
         uint256 value,
-        bytes memory data
+        bytes memory data,
+        address txnInitiator
     ) external {
         console.log("postHook called at", address(this));
     }
