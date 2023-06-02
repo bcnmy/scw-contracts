@@ -6,11 +6,11 @@ import {
   getSmartAccountImplementation, 
   getSmartAccountFactory, 
   getMockToken, 
-  getEOAOwnershipRegistryModule,
+  getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
-import { fillAndSign, makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "../../utils/userOp";
+import { fillAndSign, makeecdsaModuleUserOp, makeecdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
 
 describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
 
@@ -36,10 +36,10 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     const walletFactoryV3 = await WalletFactoryV3.deploy(baseImplV3.address);
     await walletFactoryV3.deployed();
 
-    const eoaModule = await getEOAOwnershipRegistryModule();
-    const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
       
-    let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+    let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
     );
@@ -47,16 +47,16 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     const smartAccountDeploymentIndex = 0;
 
     const expectedSmartAccountAddressV3 =
-            await walletFactoryV3.getAddressForCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+            await walletFactoryV3.getAddressForCounterFactualAccount(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
         
-    await walletFactoryV3.deployCounterFactualAccount(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+    await walletFactoryV3.deployCounterFactualAccount(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     const userSAV3 = await ethers.getContractAt(
             "contracts/smart-contract-wallet/test/upgrades/v3/SmartAccountV3.sol:SmartAccountV3",
             expectedSmartAccountAddressV3
     );
     
-    const userSA = await getSmartAccountWithModule(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+    const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     await deployer.sendTransaction({
       to: userSAV3.address,
@@ -76,7 +76,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: smartAccountFactory,
       mockToken: mockToken,
-      eoaModule: eoaModule,
+      ecdsaModule: ecdsaModule,
       userSA: userSA,
       userSAV3: userSAV3,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
@@ -86,7 +86,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
   it ("test test", async () => {
     
     const { 
-      eoaModule,
+      ecdsaModule,
       userSA,
       userSAV3,
       entryPoint,
@@ -107,7 +107,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     const SpenderModule = await ethers.getContractFactory("SpenderModule");
     const spenderModule = await SpenderModule.deploy();
 
-    const userOp = await makeEOAModuleUserOp(
+    const userOp = await makeecdsaModuleUserOp(
       "enableModule",
       [
         mockHookModule1.address
@@ -115,11 +115,11 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       userSAV3.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     )
     await entryPoint.handleOps([userOp], alice.address);
 
-    const userOp2 = await makeEOAModuleUserOp(
+    const userOp2 = await makeecdsaModuleUserOp(
       "enableModule",
       [
         mockHookModule2.address
@@ -127,11 +127,11 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       userSAV3.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     )
     await entryPoint.handleOps([userOp2], alice.address);
 
-    const userOp3 = await makeEOAModuleUserOp(
+    const userOp3 = await makeecdsaModuleUserOp(
       "enableModule",
       [
         spendingLimitsModule.address
@@ -139,11 +139,11 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       userSAV3.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     )
     await entryPoint.handleOps([userOp3], alice.address);
 
-    const userOp4 = await makeEOAModuleUserOp(
+    const userOp4 = await makeecdsaModuleUserOp(
       "enableModule",
       [
         spenderModule.address
@@ -151,7 +151,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       userSAV3.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     )
     await entryPoint.handleOps([userOp4], alice.address);
 
@@ -161,7 +161,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     );
     
     //make set limit userOp
-    const userOp5 = await makeEOAModuleUserOp(
+    const userOp5 = await makeecdsaModuleUserOp(
       "executeCall_s1m",
       [
         spendingLimitsModule.address,
@@ -171,7 +171,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       userSAV3.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     )
     await entryPoint.handleOps([userOp5], alice.address);
     expect(await spendingLimitsModule.getLimits(userSAV3.address, spenderModule.address)).to.equal(ethers.utils.parseEther("10"));

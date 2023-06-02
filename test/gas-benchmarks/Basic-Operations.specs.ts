@@ -1,19 +1,19 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildEOAModuleAuthorizedForwardTx } from "../../src/utils/execution";
+import { buildecdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
   getSmartAccountFactory,
   getMockToken,
-  getEOAOwnershipRegistryModule,
+  getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import {
-  makeEOAModuleUserOp,
-  makeEOAModuleUserOpWithPaymaster,
+  makeecdsaModuleUserOp,
+  makeecdsaModuleUserOpWithPaymaster,
   fillAndSign,
 } from "../utils/userOp";
 
@@ -25,8 +25,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
     async ({ deployments, getNamedAccounts }) => {
       await deployments.fixture();
 
-      const EOAOwnershipRegistryModule = await ethers.getContractFactory(
-        "EOAOwnershipRegistryModule"
+      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+        "EcdsaOwnershipRegistryModule"
       );
       const SmartAccountFactory = await ethers.getContractFactory(
         "SmartAccountFactory"
@@ -34,10 +34,10 @@ describe("Gas Benchmarking. Basic operations", async () => {
 
       const mockToken = await getMockToken();
 
-      const eoaModule = await getEOAOwnershipRegistryModule();
+      const ecdsaModule = await getEcdsaOwnershipRegistryModule();
 
-      const eoaOwnershipSetupData =
-        EOAOwnershipRegistryModule.interface.encodeFunctionData(
+      const ecdsaOwnershipSetupData =
+        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
           "initForSmartAccount",
           [await smartAccountOwner.getAddress()]
         );
@@ -47,14 +47,14 @@ describe("Gas Benchmarking. Basic operations", async () => {
       const factory = await getSmartAccountFactory();
       const expectedSmartAccountAddress =
         await factory.getAddressForCounterFactualAccount(
-          eoaModule.address,
-          eoaOwnershipSetupData,
+          ecdsaModule.address,
+          ecdsaOwnershipSetupData,
           smartAccountDeploymentIndex
         );
 
       const deploySATx = await factory.deployCounterFactualAccount(
-        eoaModule.address,
-        eoaOwnershipSetupData,
+        ecdsaModule.address,
+        ecdsaOwnershipSetupData,
         smartAccountDeploymentIndex
       );
       const receipt = await deploySATx.wait();
@@ -87,7 +87,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
         smartAccountImplementation: await getSmartAccountImplementation(),
         smartAccountFactory: await getSmartAccountFactory(),
         mockToken: mockToken,
-        eoaModule: eoaModule,
+        ecdsaModule: ecdsaModule,
         userSA: userSA,
         verifyingPaymaster: await getVerifyingPaymaster(
           deployer,
@@ -98,10 +98,10 @@ describe("Gas Benchmarking. Basic operations", async () => {
   );
 
   it("Can deploy SA with default module", async () => {
-    const { mockToken, eoaModule, userSA } = await setupTests();
+    const { mockToken, ecdsaModule, userSA } = await setupTests();
 
-    expect(await userSA.isModuleEnabled(eoaModule.address)).to.equal(true);
-    expect(await eoaModule.smartAccountOwners(userSA.address)).to.equal(
+    expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(true);
+    expect(await ecdsaModule.smartAccountOwners(userSA.address)).to.equal(
       smartAccountOwner.address
     );
 
@@ -114,7 +114,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
   });
 
   it("Can send a native token transfer userOp", async () => {
-    const { entryPoint, mockToken, userSA, eoaModule } = await setupTests();
+    const { entryPoint, mockToken, userSA, ecdsaModule } = await setupTests();
 
     const tx = await deployer.sendTransaction({
       from: deployer.address,
@@ -130,13 +130,13 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const userOp = await makeEOAModuleUserOp(
+    const userOp = await makeecdsaModuleUserOp(
       "executeCall",
       [charlie.address, tokenAmountToTransfer, "0x"],
       userSA.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     );
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
@@ -149,7 +149,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
   });
 
   it("Can send a erc20 token transfer userOp", async () => {
-    const { entryPoint, mockToken, userSA, eoaModule } = await setupTests();
+    const { entryPoint, mockToken, userSA, ecdsaModule } = await setupTests();
 
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
@@ -162,7 +162,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("10");
 
-    const userOp = await makeEOAModuleUserOp(
+    const userOp = await makeecdsaModuleUserOp(
       "executeCall",
       [
         mockToken.address,
@@ -172,7 +172,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
       userSA.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     );
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
@@ -185,10 +185,10 @@ describe("Gas Benchmarking. Basic operations", async () => {
   });
 
   it("Can deploy account and send a native token transfer userOp", async () => {
-    const { entryPoint, smartAccountFactory, eoaModule } = await setupTests();
+    const { entryPoint, smartAccountFactory, ecdsaModule } = await setupTests();
 
-    const EOAOwnershipRegistryModule = await ethers.getContractFactory(
-      "EOAOwnershipRegistryModule"
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
     );
     const SmartAccountFactory = await ethers.getContractFactory(
       "SmartAccountFactory"
@@ -198,8 +198,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const charlieTokenBalanceBefore = await charlie.getBalance();
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const eoaOwnershipSetupData =
-      EOAOwnershipRegistryModule.interface.encodeFunctionData(
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
         "initForSmartAccount",
         [await alice.getAddress()]
       );
@@ -208,13 +208,13 @@ describe("Gas Benchmarking. Basic operations", async () => {
 
     const deploymentData = SmartAccountFactory.interface.encodeFunctionData(
       "deployCounterFactualAccount",
-      [eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex]
+      [ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex]
     );
 
     const expectedSmartAccountAddress =
       await smartAccountFactory.getAddressForCounterFactualAccount(
-        eoaModule.address,
-        eoaOwnershipSetupData,
+        ecdsaModule.address,
+        ecdsaOwnershipSetupData,
         smartAccountDeploymentIndex
       );
 
@@ -246,7 +246,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     // add validator module address to the signature
     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"],
-      [userOp.signature, eoaModule.address]
+      [userOp.signature, ecdsaModule.address]
     );
 
     userOp.signature = signatureWithModuleAddress;
@@ -270,7 +270,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
   });
 
   it("Can send a userOp with Paymaster payment", async () => {
-    const { entryPoint, mockToken, userSA, eoaModule, verifyingPaymaster } =
+    const { entryPoint, mockToken, userSA, ecdsaModule, verifyingPaymaster } =
       await setupTests();
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(
@@ -278,7 +278,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
-    const userOp = await makeEOAModuleUserOpWithPaymaster(
+    const userOp = await makeecdsaModuleUserOpWithPaymaster(
       "executeCall",
       [
         mockToken.address,
@@ -288,7 +288,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
       userSA.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address,
+      ecdsaModule.address,
       verifyingPaymaster,
       verifiedSigner
     );

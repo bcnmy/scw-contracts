@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { BigNumber } from "ethers";
 import { ethers, deployments, waffle } from "hardhat";
 import { 
-  buildEOAModuleAuthorizedForwardTx, 
+  buildecdsaModuleAuthorizedForwardTx, 
   buildSafeTransaction, 
   getTransactionAndRefundInfoFromSafeTransactionObject, 
   SafeTransaction, 
@@ -18,7 +18,7 @@ import {
   getSmartAccountImplementation, 
   getSmartAccountFactory, 
   getMockToken, 
-  getEOAOwnershipRegistryModule,
+  getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
@@ -34,17 +34,17 @@ describe("NEW::: Smart Account Forward Flow", async () => {
 
     const mockToken = await getMockToken();
     
-    const eoaModule = await getEOAOwnershipRegistryModule();
-    const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
       
-    let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+    let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
     );
 
     const smartAccountDeploymentIndex = 0;
 
-    const userSA = await getSmartAccountWithModule(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+    const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     await deployer.sendTransaction({
       to: userSA.address,
@@ -58,7 +58,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,
-      eoaModule: eoaModule,
+      ecdsaModule: ecdsaModule,
       userSA: userSA,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
@@ -67,18 +67,18 @@ describe("NEW::: Smart Account Forward Flow", async () => {
   it ("Can process EIP712-signed txn with value (native token transfer)", async () => { 
     const { 
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
     
     const charlieBalanceBefore = await charlie.getBalance();
     const tokenAmountToTransfer = ethers.utils.parseEther("0.167924");
     
-    const { transaction, feeRefund, signature } = await buildEOAModuleAuthorizedForwardTx(
+    const { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
       charlie.address,
       "0x",
       userSA,
       smartAccountOwner,
-      eoaModule.address,
+      ecdsaModule.address,
       tokenAmountToTransfer.toString(),
     );
     
@@ -93,18 +93,18 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const { 
       mockToken,
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
     
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
     
-    const { transaction, feeRefund, signature } = await buildEOAModuleAuthorizedForwardTx(
+    const { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
       userSA,
       smartAccountOwner,
-      eoaModule.address
+      ecdsaModule.address
     );
 
     const tx = await userSA.execTransaction_S6W(transaction, feeRefund, signature);
@@ -118,18 +118,18 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const { 
       mockToken,
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
     
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
     
-    const { transaction, feeRefund, signature } = await buildEOAModuleAuthorizedForwardTx(
+    const { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
       userSA,
       smartAccountOwner,
-      eoaModule.address
+      ecdsaModule.address
     );
     
     await expect(
@@ -145,7 +145,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       const { 
         mockToken,
         userSA,
-        eoaModule
+        ecdsaModule
       } = await setupTests();
       
       const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
@@ -174,7 +174,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       
       let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
         ["bytes", "address"], 
-        [signature, eoaModule.address]
+        [signature, ecdsaModule.address]
       );
   
       await expect(
@@ -187,30 +187,30 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const { 
       mockToken,
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
     
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
     
-    let { transaction, feeRefund, signature } = await buildEOAModuleAuthorizedForwardTx(
+    let { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
       userSA,
       smartAccountOwner,
-      eoaModule.address
+      ecdsaModule.address
     );
     await expect(
       userSA.execTransaction_S6W(transaction, feeRefund, signature)
     ).to.emit(userSA, "ExecutionSuccess");
 
     const tokenAmountToTransfer2 = ethers.utils.parseEther("0.5555");
-    let { transaction: transaction2, feeRefund: feeRefund2, signature: signature2 } = await buildEOAModuleAuthorizedForwardTx(
+    let { transaction: transaction2, feeRefund: feeRefund2, signature: signature2 } = await buildecdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer2.toString()),
       userSA,
       smartAccountOwner,
-      eoaModule.address
+      ecdsaModule.address
     );  
     await expect(
       userSA.execTransaction_S6W(transaction2, feeRefund2, signature2)
@@ -223,7 +223,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const { 
       mockToken,
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
     
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
@@ -250,7 +250,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     
     let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 
-      [signature, eoaModule.address]
+      [signature, ecdsaModule.address]
     );
 
     await expect(
@@ -262,7 +262,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
   it("can send transactions and charge smart account for fees in native tokens", async function () {
     const { 
       userSA,
-      eoaModule,
+      ecdsaModule,
       mockToken,
     } = await setupTests();
     const balanceRRBefore = await refundReceiver.getBalance();
@@ -295,7 +295,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     signature += data.slice(2);
     let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 
-      [signature, eoaModule.address]
+      [signature, ecdsaModule.address]
     );
 
     const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
@@ -328,7 +328,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
   it("can send transactions and charge smart account for fees in ERC20 tokens", async function () {
     const { 
       userSA,
-      eoaModule,
+      ecdsaModule,
       mockToken,
     } = await setupTests();
 
@@ -372,7 +372,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     signature += data.slice(2);
     let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 
-      [signature, eoaModule.address]
+      [signature, ecdsaModule.address]
     );
 
     const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);

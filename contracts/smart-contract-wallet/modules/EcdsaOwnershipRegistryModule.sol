@@ -4,29 +4,67 @@ pragma solidity 0.8.17;
 import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
-    string public constant NAME = "EOA Ownership Registry Module";
+/**
+ * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
+ * @dev Compatible with Biconomy Modular Interface v 0.1
+ *         - It allows to validate user operations signed by EOA private key.
+ *         - EIP-1271 compatible (ensures Smart Account can validate signed messages).
+ *         - One owner per Smart Account.
+ * !!!!!!! Only EOA owners supported, no Smart Account Owners
+ *         For Smart Contract Owners check SmartContractOwnership module instead
+ * @author Fil Makarov - <filipp.makarov@biconomy.io>
+ */
+
+contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
+    string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "0.1.0";
 
     error NoOwnerRegisteredForSmartAccount(address smartAccount);
     error AlreadyInitedForSmartAccount(address smartAccount);
     error WrongSignatureLength();
+    error NotEOA(address account);
 
     using ECDSA for bytes32;
 
     mapping(address => address) public smartAccountOwners;
 
+    /**
+     * @dev Initializes the module for a Smart Account.
+     * Should be used at a time of first enabling the module for a Smart Account.
+     * @param owner The owner of the Smart Account.
+     */
     function initForSmartAccount(address owner) external returns (address) {
+        if (isSmartAccount(owner)) revert NotEOA(owner);
         if (smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
         smartAccountOwners[msg.sender] = owner;
         return address(this);
     }
 
+    /**
+     * @dev Sets/changes an for a Smart Account.
+     * Should be called by Smart Account itself.
+     * @param owner The owner of the Smart Account.
+     */
     function setOwner(address owner) external {
+        if (isSmartAccount(owner)) revert NotEOA(owner);
         smartAccountOwners[msg.sender] = owner;
     }
 
+    function isSmartAccount(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
+    }
+
+    /**
+     * @dev validates userOperation
+     * @param userOp User Operation to be validated.
+     * @param userOpHash Hash of the User Operation to be validated.
+     * @return sigValidationResult 0 if signature is valid, SIG_VALIDATION_FAILED otherwise.
+     */
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
@@ -58,7 +96,14 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
         return SIG_VALIDATION_FAILED;
     }
 
-    // isValidSignature expects a hash prepended with 'x\x19Ethereum Signed Message:\n32'
+    /**
+     * @dev Validates a signature for a message.
+     * To be called from a Smart Account.
+     * Expects a hash prepended with 'x\x19Ethereum Signed Message:\n32'
+     * @param ethSignedDataHash Hash of the data to be validated.
+     * @param moduleSignature Signature to be validated.
+     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
+     */
     function isValidSignature(
         bytes32 ethSignedDataHash,
         bytes memory moduleSignature
@@ -71,6 +116,14 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
             );
     }
 
+    /**
+     * @dev Validates a signature for a message signed by address.
+     * Expects a hash prepended with 'x\x19Ethereum Signed Message:\n32'
+     * @param ethSignedDataHash Hash of the data to be validated.
+     * @param moduleSignature Signature to be validated.
+     * @param smartAccount expected signer Smart Account address.
+     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
+     */
     function isValidSignatureForAddress(
         bytes32 ethSignedDataHash,
         bytes memory moduleSignature,
@@ -84,20 +137,25 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
         return bytes4(0xffffffff);
     }
 
-    // Only EOA owners supported, no smart contracts.
-    // To support smart contracts, can add a check if expectedSigner.isContract()
-    // then call expectedSigner.isValidSignature(ethSignedHash, signature)
-    // to check if the signature is valid.
+    /**
+     * @dev Validates a signature for a message.
+     * Only EOA owners supported, no Smart Account Owners
+     * For Smart Contrac Owners check SmartContractOwnership module instead
+     * @param dataHash Hash of the data to be validated.
+     * @param signature Signature to be validated.
+     * @param smartAccount expected signer Smart Account address.
+     * @return true if signature is valid, false otherwise.
+     */
     function _verifySignature(
         bytes32 dataHash,
         bytes memory signature,
-        address account
+        address smartAccount
     ) internal view returns (bool) {
-        address expectedSigner = smartAccountOwners[account];
+        address expectedSigner = smartAccountOwners[smartAccount];
         if (expectedSigner == address(0))
-            revert NoOwnerRegisteredForSmartAccount(account);
+            revert NoOwnerRegisteredForSmartAccount(smartAccount);
         if (signature.length < 65) revert WrongSignatureLength();
-        (uint8 v, bytes32 r, bytes32 s) = signatureSplit(signature);
+        (uint8 v, bytes32 r, bytes32 s) = _signatureSplit(signature);
         if (v > 30) {
             //eth_sign flow
             (address _signer, ) = dataHash.toEthSignedMessageHash().tryRecover(
@@ -111,7 +169,7 @@ contract EOAOwnershipRegistryModule is BaseAuthorizationModule {
         }
     }
 
-    function signatureSplit(
+    function _signatureSplit(
         bytes memory signature
     ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
         // The signature format is a compact form of:

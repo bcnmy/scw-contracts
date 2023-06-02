@@ -1,17 +1,17 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildEOAModuleAuthorizedForwardTx } from "../../src/utils/execution";
+import { buildecdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
   getSmartAccountImplementation, 
   getSmartAccountFactory, 
   getMockToken, 
-  getEOAOwnershipRegistryModule,
+  getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "../utils/userOp";
+import { makeecdsaModuleUserOp, makeecdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
 describe("NEW::: Ownerless Smart Account Basics: ", async () => {
 
@@ -22,17 +22,17 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
 
     const mockToken = await getMockToken();
     
-    const eoaModule = await getEOAOwnershipRegistryModule();
-    const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
       
-    let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+    let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
     );
 
     const smartAccountDeploymentIndex = 0;
 
-    const userSA = await getSmartAccountWithModule(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+    const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     await deployer.sendTransaction({
       to: userSA.address,
@@ -46,7 +46,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,
-      eoaModule: eoaModule,
+      ecdsaModule: ecdsaModule,
       userSA: userSA,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
@@ -55,12 +55,12 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
   it ("Can deploy SA with default module", async () => {
     const { 
       mockToken,
-      eoaModule,
+      ecdsaModule,
       userSA
     } = await setupTests();
 
-    expect(await userSA.isModuleEnabled(eoaModule.address)).to.equal(true);
-    expect(await eoaModule.smartAccountOwners(userSA.address)).to.equal(smartAccountOwner.address);
+    expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(true);
+    expect(await ecdsaModule.smartAccountOwners(userSA.address)).to.equal(smartAccountOwner.address);
 
     expect(await ethers.provider.getBalance(userSA.address)).to.equal(ethers.utils.parseEther("10"));
     expect(await mockToken.balanceOf(userSA.address)).to.equal(ethers.utils.parseEther("1000000"));
@@ -71,13 +71,13 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
       entryPoint, 
       mockToken,
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const userOp = await makeEOAModuleUserOp(
+    const userOp = await makeecdsaModuleUserOp(
       "executeCall",
       [
         mockToken.address,
@@ -87,7 +87,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
       userSA.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     )
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
@@ -100,13 +100,13 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     const { 
       entryPoint, 
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
 
     const charlieBalanceBefore = await charlie.getBalance();
     const amountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const userOp = await makeEOAModuleUserOp(
+    const userOp = await makeecdsaModuleUserOp(
       "executeCall",
       [
         charlie.address,
@@ -116,7 +116,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
       userSA.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address
+      ecdsaModule.address
     );
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
@@ -129,14 +129,14 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
       entryPoint, 
       mockToken,
       userSA,
-      eoaModule,
+      ecdsaModule,
       verifyingPaymaster
     } = await setupTests();
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
-    const userOp = await makeEOAModuleUserOpWithPaymaster(
+    const userOp = await makeecdsaModuleUserOpWithPaymaster(
       "executeCall",
       [
         mockToken.address,
@@ -146,7 +146,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
       userSA.address,
       smartAccountOwner,
       entryPoint,
-      eoaModule.address,
+      ecdsaModule.address,
       verifyingPaymaster,
       verifiedSigner,
     );
@@ -160,7 +160,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
   it ("Can verify a signature through isValidSignature", async () => {    
     const { 
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
 
     const eip1271MagicValue = "0x1626ba7e";
@@ -170,7 +170,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     const signature = await smartAccountOwner.signMessage(message);
     let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 
-      [signature, eoaModule.address]
+      [signature, ecdsaModule.address]
     );
 
     const returnedValue = await userSA.isValidSignature(messageHash, signatureWithModuleAddress);
@@ -181,18 +181,18 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     const { 
       mockToken,
       userSA,
-      eoaModule
+      ecdsaModule
     } = await setupTests();
     
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
     
-    const { transaction, feeRefund, signature } = await buildEOAModuleAuthorizedForwardTx(
+    const { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
       userSA,
       smartAccountOwner,
-      eoaModule.address
+      ecdsaModule.address
     );
 
     await expect(

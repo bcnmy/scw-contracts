@@ -4,7 +4,7 @@ import {
   SmartAccount,
   SmartAccountFactory,
   MockToken,
-  EOAOwnershipRegistryModule,
+  EcdsaOwnershipRegistryModule,
 } from "../../typechain";
 import {
   SafeTransaction,
@@ -28,7 +28,7 @@ describe("Ownerless SA Basics", function () {
   let offchainSigner: Signer, deployer: Signer;
   let offchainSigner2: Signer;
   let baseImpl: SmartAccount;
-  let eoaOwnersRegistryModule: EOAOwnershipRegistryModule;
+  let eoaOwnersRegistryModule: EcdsaOwnershipRegistryModule;
   let walletFactory: SmartAccountFactory;
   let token: MockToken;
   let owner: string;
@@ -73,7 +73,7 @@ describe("Ownerless SA Basics", function () {
     await token.deployed();
     console.log("Test token deployed at: ", token.address);
 
-    const EOAOwnersModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    const EOAOwnersModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
     eoaOwnersRegistryModule = await EOAOwnersModule.connect(accounts[0]).deploy();
     console.log("EOA Owners Registry Module deployed at ", eoaOwnersRegistryModule.address);
 
@@ -85,19 +85,19 @@ describe("Ownerless SA Basics", function () {
   describe("Deploy and Perform Actions", function () {
     it("Deploys Ownerless Smart Account and Default Validation Module", async () => {
 
-      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
       const eoaOwner = await accounts[1].getAddress();
       
       // CREATE MODULE SETUP DATA AND DEPLOY ACCOUNT
-      let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+      let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
         "initForSmartAccount",
         [eoaOwner]
       );
 
       const expectedSmartAccountAddress =
-        await walletFactory.getAddressForCounterFactualAccount(eoaOwnersRegistryModule.address, eoaOwnershipSetupData, 0);
+        await walletFactory.getAddressForCounterFactualAccount(eoaOwnersRegistryModule.address, ecdsaOwnershipSetupData, 0);
 
-      let smartAccountDeployTx = await walletFactory.deployCounterFactualAccount(eoaOwnersRegistryModule.address, eoaOwnershipSetupData, 0);
+      let smartAccountDeployTx = await walletFactory.deployCounterFactualAccount(eoaOwnersRegistryModule.address, ecdsaOwnershipSetupData, 0);
       expect(smartAccountDeployTx).to.emit(walletFactory, "AccountCreation")
         .withArgs(expectedSmartAccountAddress, eoaOwnersRegistryModule.address, 0);
 
@@ -152,7 +152,7 @@ describe("Ownerless SA Basics", function () {
           callData: txnDataAA1,
           callGasLimit: 1_000_000,
         },
-        accounts[1],  //signed by owner, that is set in the EOAOwnershipRegistryModule
+        accounts[1],  //signed by owner, that is set in the EcdsaOwnershipRegistryModule
         entryPoint,
         'nonce'
       );

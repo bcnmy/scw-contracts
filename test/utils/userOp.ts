@@ -307,7 +307,7 @@ export async function fillAndSign(
   };
 }
 
-export async function makeEOAModuleUserOp(
+export async function makeecdsaModuleUserOp(
   functionName: string,
   functionParams: any,
   userOpSender: string,
@@ -344,7 +344,7 @@ export async function makeEOAModuleUserOp(
 
 }
 
-export async function makeEOAModuleUserOpWithPaymaster(
+export async function makeecdsaModuleUserOpWithPaymaster(
   functionName: string,
   functionParams: any,
   userOpSender: string,

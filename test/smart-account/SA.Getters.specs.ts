@@ -1,18 +1,18 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
 import { deployFactory } from "../../scripts/utils";
-import { buildEOAModuleAuthorizedForwardTx } from "../../src/utils/execution";
+import { buildecdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
   getSmartAccountImplementation, 
   getSmartAccountFactory, 
   getMockToken, 
-  getEOAOwnershipRegistryModule,
+  getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "../utils/userOp";
+import { makeecdsaModuleUserOp, makeecdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
 describe("NEW::: Smart Account Getters", async () => {
 
@@ -24,17 +24,17 @@ describe("NEW::: Smart Account Getters", async () => {
 
     const mockToken = await getMockToken();
     
-    const eoaModule = await getEOAOwnershipRegistryModule();
-    const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
       
-    let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+    let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
     );
 
     const smartAccountDeploymentIndex = 0;
 
-    const userSA = await getSmartAccountWithModule(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+    const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     await deployer.sendTransaction({
       to: userSA.address,
@@ -48,7 +48,7 @@ describe("NEW::: Smart Account Getters", async () => {
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,
-      eoaModule: eoaModule,
+      ecdsaModule: ecdsaModule,
       userSA: userSA,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };

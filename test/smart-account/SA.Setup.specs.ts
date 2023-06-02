@@ -5,12 +5,12 @@ import {
   getSmartAccountImplementation, 
   getSmartAccountFactory, 
   getMockToken, 
-  getEOAOwnershipRegistryModule,
+  getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
   deployContract
 } from "../utils/setupHelper";
-import { makeEOAModuleUserOp } from "../utils/userOp";
+import { makeecdsaModuleUserOp } from "../utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
 
 describe("NEW::: Smart Account Setup", async () => {
@@ -23,17 +23,17 @@ describe("NEW::: Smart Account Setup", async () => {
 
     const mockToken = await getMockToken();
     
-    const eoaModule = await getEOAOwnershipRegistryModule();
-    const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
       
-    let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+    let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
     );
 
     const smartAccountDeploymentIndex = 0;
 
-    const userSA = await getSmartAccountWithModule(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+    const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     await deployer.sendTransaction({
       to: userSA.address,
@@ -47,7 +47,7 @@ describe("NEW::: Smart Account Setup", async () => {
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,
-      eoaModule: eoaModule,
+      ecdsaModule: ecdsaModule,
       userSA: userSA,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
@@ -66,12 +66,12 @@ describe("NEW::: Smart Account Setup", async () => {
 
     it ("Setups the default authorization module", async () => {
       const { 
-        eoaModule,
+        ecdsaModule,
         userSA
       } = await setupTests();
 
-      expect(await userSA.isModuleEnabled(eoaModule.address)).to.equal(true);
-      expect(await eoaModule.smartAccountOwners(userSA.address)).to.equal(smartAccountOwner.address);
+      expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(true);
+      expect(await ecdsaModule.smartAccountOwners(userSA.address)).to.equal(smartAccountOwner.address);
     });
 
     it ("Reverts if called with invalid initial module", async () => {
@@ -96,14 +96,14 @@ describe("NEW::: Smart Account Setup", async () => {
 
     it ("Can not be called after proxy deployment", async () => {
       const { 
-        eoaModule,
+        ecdsaModule,
         userSA
       } = await setupTests();
       
       await expect(
         userSA.init(
           AddressZero,
-          eoaModule.address,
+          ecdsaModule.address,
           "0x"
         )
       ).to.be.revertedWith("AlreadyInitialized");
@@ -112,13 +112,13 @@ describe("NEW::: Smart Account Setup", async () => {
     it ("Can not be called on implementation", async () => {
       const { 
         smartAccountImplementation,
-        eoaModule
+        ecdsaModule
       } = await setupTests();
 
       await expect(
         smartAccountImplementation.init(
           AddressZero,
-          eoaModule.address,
+          ecdsaModule.address,
           "0x"
         )
       ).to.be.revertedWith("AlreadyInitialized");
@@ -142,11 +142,11 @@ describe("NEW::: Smart Account Setup", async () => {
     it ("can not set address(0) as implementation", async () => {
       const { 
         entryPoint,
-        eoaModule,
+        ecdsaModule,
         userSA,
       } = await setupTests();
 
-      const userOp = await makeEOAModuleUserOp(
+      const userOp = await makeecdsaModuleUserOp(
         "updateImplementation",
         [
           AddressZero
@@ -154,7 +154,7 @@ describe("NEW::: Smart Account Setup", async () => {
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       )
       const implementationInSaBefore = await userSA.getImplementation();
       const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
@@ -166,11 +166,11 @@ describe("NEW::: Smart Account Setup", async () => {
     it ("can not set EOA as implementation", async () => {
       const { 
         entryPoint,
-        eoaModule,
+        ecdsaModule,
         userSA,
       } = await setupTests();
 
-      const userOp = await makeEOAModuleUserOp(
+      const userOp = await makeecdsaModuleUserOp(
         "updateImplementation",
         [
           bob.address
@@ -178,7 +178,7 @@ describe("NEW::: Smart Account Setup", async () => {
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       )
       const implementationInSaBefore = await userSA.getImplementation();
       const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
@@ -190,7 +190,7 @@ describe("NEW::: Smart Account Setup", async () => {
     it ("can update to an implementation and calls are forwarded and event is emitted", async () => {
       const { 
         entryPoint,
-        eoaModule,
+        ecdsaModule,
         userSA,
       } = await setupTests();
 
@@ -213,7 +213,7 @@ describe("NEW::: Smart Account Setup", async () => {
       
       const implementationInSaBefore = await userSA.getImplementation();
 
-      const userOp = await makeEOAModuleUserOp(
+      const userOp = await makeecdsaModuleUserOp(
         "updateImplementation",
         [
           impl2.address
@@ -221,7 +221,7 @@ describe("NEW::: Smart Account Setup", async () => {
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       )
   
       const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
@@ -259,14 +259,14 @@ describe("NEW::: Smart Account Setup", async () => {
       const { 
         smartAccountImplementation,
         entryPoint,
-        eoaModule,
+        ecdsaModule,
       } = await setupTests();
 
       await entryPoint.depositTo(smartAccountImplementation.address, {value: ethers.utils.parseEther("1")});
 
       const prevHandler = await smartAccountImplementation.getFallbackHandler();
       await expect(prevHandler).to.equal(AddressZero);
-      const userOp = await makeEOAModuleUserOp(
+      const userOp = await makeecdsaModuleUserOp(
         "setFallbackHandler",
         [
           "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
@@ -274,7 +274,7 @@ describe("NEW::: Smart Account Setup", async () => {
         smartAccountImplementation.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       );
       await expect(entryPoint.handleOps([userOp], alice.address)).to.be.revertedWith("FailedOp");
       expect(await smartAccountImplementation.getFallbackHandler()).to.equal(prevHandler);
@@ -283,11 +283,11 @@ describe("NEW::: Smart Account Setup", async () => {
     it("Can not set address(0) as callback handler", async () => {
       const { 
         entryPoint,
-        eoaModule,
+        ecdsaModule,
         userSA,
       } = await setupTests();
 
-      const userOp = await makeEOAModuleUserOp(
+      const userOp = await makeecdsaModuleUserOp(
         "setFallbackHandler",
         [
           AddressZero
@@ -295,7 +295,7 @@ describe("NEW::: Smart Account Setup", async () => {
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       )
       const handlerInSaBefore = await userSA.getFallbackHandler();
       const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
@@ -307,7 +307,7 @@ describe("NEW::: Smart Account Setup", async () => {
     it("can update to a callback handler and calls are forwarded and event is emitted", async () => {
       const { 
         entryPoint,
-        eoaModule,
+        ecdsaModule,
         userSA,
       } = await setupTests();
 
@@ -321,7 +321,7 @@ describe("NEW::: Smart Account Setup", async () => {
       
       const handlerInSaBefore = await userSA.getFallbackHandler();
 
-      const userOp = await makeEOAModuleUserOp(
+      const userOp = await makeecdsaModuleUserOp(
         "setFallbackHandler",
         [
           handler2.address
@@ -329,7 +329,7 @@ describe("NEW::: Smart Account Setup", async () => {
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       )
   
       const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);

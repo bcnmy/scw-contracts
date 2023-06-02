@@ -409,7 +409,7 @@ export const buildSafeTransaction = (template: {
   };
 };
 
-export async function buildEOAModuleAuthorizedForwardTx(
+export async function buildecdsaModuleAuthorizedForwardTx(
   destinationContract: string,
   callData: string,
   smartAccount: Contract,

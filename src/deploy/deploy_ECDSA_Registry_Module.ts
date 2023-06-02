@@ -6,7 +6,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     const { deploy } = deployments;
     const { deployer } = await getNamedAccounts();
 
-    await deploy("EOAOwnershipRegistryModule", {
+    await deploy("EcdsaOwnershipRegistryModule", {
         from: deployer,
         args: [],
         log: true,

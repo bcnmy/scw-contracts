@@ -27,10 +27,10 @@ export const getMockToken = async () => {
   return MockToken.attach(MockTokenDeployment.address);
 };
 
-export const getEOAOwnershipRegistryModule = async () => {
-  const EOAOwnershipRegistryModuleDeployment = await deployments.get("EOAOwnershipRegistryModule");
-  const EOAOwnershipRegistryModule = await hre.ethers.getContractFactory("EOAOwnershipRegistryModule");
-  return EOAOwnershipRegistryModule.attach(EOAOwnershipRegistryModuleDeployment.address);
+export const getEcdsaOwnershipRegistryModule = async () => {
+  const EcdsaOwnershipRegistryModuleDeployment = await deployments.get("EcdsaOwnershipRegistryModule");
+  const EcdsaOwnershipRegistryModule = await hre.ethers.getContractFactory("EcdsaOwnershipRegistryModule");
+  return EcdsaOwnershipRegistryModule.attach(EcdsaOwnershipRegistryModuleDeployment.address);
 };
 
 export const getVerifyingPaymaster = async (

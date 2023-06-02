@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildEOAModuleAuthorizedForwardTx } from "../../src/utils/execution";
+import { buildecdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
 import { AddressZero } from "../aa-core/testutils";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import { 
@@ -8,11 +8,11 @@ import {
   getSmartAccountImplementation, 
   getSmartAccountFactory, 
   getMockToken, 
-  getEOAOwnershipRegistryModule,
+  getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeEOAModuleUserOp, makeEOAModuleUserOpWithPaymaster } from "../utils/userOp";
+import { makeecdsaModuleUserOp, makeecdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
 describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
@@ -23,17 +23,17 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
     const mockToken = await getMockToken();
     
-    const eoaModule = await getEOAOwnershipRegistryModule();
-    const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
       
-    let eoaOwnershipSetupData = EOAOwnershipRegistryModule.interface.encodeFunctionData(
+    let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
     );
 
     const smartAccountDeploymentIndex = 0;
 
-    const userSA = await getSmartAccountWithModule(eoaModule.address, eoaOwnershipSetupData, smartAccountDeploymentIndex);
+    const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     await deployer.sendTransaction({
       to: userSA.address,
@@ -47,7 +47,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,
-      eoaModule: eoaModule,
+      ecdsaModule: ecdsaModule,
       userSA: userSA,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
@@ -57,7 +57,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
     it ("Can enable module and it is enabled", async () => {
       const { 
-        eoaModule,
+        ecdsaModule,
         userSA,
         entryPoint
       } = await setupTests();
@@ -65,13 +65,13 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       const MockAuthModule = await ethers.getContractFactory("MockAuthModule");
       const mockAuthModule = await MockAuthModule.deploy();
 
-      let userOp = await makeEOAModuleUserOp(
+      let userOp = await makeecdsaModuleUserOp(
         "enableModule",
         [mockAuthModule.address],
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       );
 
       const tx = await entryPoint.handleOps([userOp], alice.address);
@@ -92,7 +92,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
     it ("Can not setup and enable invalid module", async () => {
       const { 
-        eoaModule,
+        ecdsaModule,
         userSA,
         entryPoint
       } = await setupTests();
@@ -101,13 +101,13 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       const mockInvalidInitialAuthModule = await MockInvalidInitialAuthModule.deploy();
       const invalidModuleSetupData = mockInvalidInitialAuthModule.interface.encodeFunctionData("init", ["0xabcdef"]);
 
-      let userOp = await makeEOAModuleUserOp(
+      let userOp = await makeecdsaModuleUserOp(
         "setupAndEnableModule",
         [mockInvalidInitialAuthModule.address, invalidModuleSetupData],
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       );
       
       const tx = await entryPoint.handleOps([userOp], alice.address);
@@ -119,7 +119,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
     it ("Can enable and setup another module and it is enabled and setup", async () => {
       const { 
-        eoaModule,
+        ecdsaModule,
         userSA,
         entryPoint
       } = await setupTests();
@@ -132,13 +132,13 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
         [[await alice.getAddress(), await bob.getAddress(), await charlie.getAddress()], 2]
       );
 
-      let userOp = await makeEOAModuleUserOp(
+      let userOp = await makeecdsaModuleUserOp(
         "setupAndEnableModule",
         [socialRecoveryModule.address, socialRecoverySetupData],
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       );
       
       const tx = await entryPoint.handleOps([userOp], alice.address);
@@ -163,7 +163,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
   describe ("disableModule: ", async () => {
     it ("Can disable module and it is disabled", async () => {
       const { 
-        eoaModule,
+        ecdsaModule,
         userSA,
         entryPoint
       } = await setupTests();
@@ -172,37 +172,37 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       const module2 = await MockAuthModule.deploy();
       const module3 = await MockAuthModule.deploy();
 
-      let userOp2 = await makeEOAModuleUserOp(
+      let userOp2 = await makeecdsaModuleUserOp(
         "enableModule",
         [module2.address],
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       );
       let tx = await entryPoint.handleOps([userOp2], alice.address);
       await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
       expect(await userSA.isModuleEnabled(module2.address)).to.be.true;
 
-      let userOp3 = await makeEOAModuleUserOp(
+      let userOp3 = await makeecdsaModuleUserOp(
         "enableModule",
         [module3.address],
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       );
       tx = await entryPoint.handleOps([userOp3], alice.address);
       await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
       expect(await userSA.isModuleEnabled(module3.address)).to.be.true;
 
-      let userOpDisable = await makeEOAModuleUserOp(
+      let userOpDisable = await makeecdsaModuleUserOp(
         "disableModule",
         [module3.address, module2.address],
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        eoaModule.address
+        ecdsaModule.address
       );
       tx = await entryPoint.handleOps([userOpDisable], alice.address);
       await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
