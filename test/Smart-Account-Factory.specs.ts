@@ -132,7 +132,6 @@ describe("NEW::: Smart Account Factory", async () => {
     
     it ("should revert if wrong setup data provided", async () => { 
       const { smartAccountFactory, eoaModule } = await setupTests();
-      const EOAOwnershipRegistryModule = await ethers.getContractFactory("EOAOwnershipRegistryModule");
       
       let eoaOwnershipSetupData = "0xeEeEeEeEeEeEeEeEeEeEeEeEeEeEeEeE";
       const smartAccountDeploymentIndex = 0;

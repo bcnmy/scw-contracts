@@ -13,7 +13,7 @@ import {
 import { makeEOAModuleUserOp } from "../utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
 
-describe("NEW::: Smart Account Setup ", async () => {
+describe("NEW::: Smart Account Setup", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 
@@ -72,6 +72,26 @@ describe("NEW::: Smart Account Setup ", async () => {
 
       expect(await userSA.isModuleEnabled(eoaModule.address)).to.equal(true);
       expect(await eoaModule.smartAccountOwners(userSA.address)).to.equal(smartAccountOwner.address);
+    });
+
+    it ("Reverts if called with invalid initial module", async () => {
+      const { 
+        smartAccountFactory,
+      } = await setupTests();
+
+      // deploy a module that doesn't return address at setup
+      const MockInvalidInitialAuthModule = await ethers.getContractFactory("MockInvalidInitialAuthModule");
+      const mockInvalidInitialAuthModule = await MockInvalidInitialAuthModule.deploy();
+
+      const invalidModuleSetupData = mockInvalidInitialAuthModule.interface.encodeFunctionData("init", ["0xabcdef"]);
+
+      await expect(
+        smartAccountFactory.deployCounterFactualAccount(
+          mockInvalidInitialAuthModule.address,
+          invalidModuleSetupData,
+          0
+        )
+      ).to.be.revertedWith("ModuleCannotBeZeroOrSentinel");
     });
 
     it ("Can not be called after proxy deployment", async () => {

@@ -108,16 +108,7 @@ abstract contract ModuleManager is
         bytes memory setupData
     ) internal virtual returns (address) {
         address module = _setupModule(setupContract, setupData);
-        // Module address cannot be null or sentinel.
-        if (module == address(0) || module == SENTINEL_MODULES)
-            revert ModuleCannotBeZeroOrSentinel(module);
-        // Module cannot be added twice.
-        if (modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
-
-        modules[module] = modules[SENTINEL_MODULES];
-        modules[SENTINEL_MODULES] = module;
-
-        emit EnabledModule(module);
+        _enableModule(module);
         return module;
     }
 
