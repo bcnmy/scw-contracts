@@ -614,20 +614,20 @@ contract SmartAccountV3 is
         bytes memory data
     ) internal {
         address module = SENTINEL_MODULES;
-        console.log("PreHooks:");
+        //console.log("PreHooks:");
         while (modules[module] != SENTINEL_MODULES) {
             module = modules[module];
-            console.log("module: %s", module);
+            //console.log("module: %s", module);
             //console.log("next module: %s", modules[module]);
 
             //TODO: How to handle reverts from hooks and at the same time effectively skip modules that do not implement hooks?
             try
                 IHooks(module).preHook(target, value, data, msg.sender)
             {} catch Error(string memory reason) {
-                console.log("Error: %s", reason);
+                //console.log("Error: %s", reason);
                 revert(reason);
             } catch {
-                console.log("Unknown error");
+                //console.log("Unknown error");
             }
         }
     }
@@ -638,20 +638,20 @@ contract SmartAccountV3 is
         bytes memory data
     ) internal {
         address module = SENTINEL_MODULES;
-        console.log("PostHooks:");
+        //console.log("PostHooks:");
         while (modules[module] != SENTINEL_MODULES) {
             module = modules[module];
-            console.log("module: %s", module);
+            //console.log("module: %s", module);
             //console.log("next module: %s", modules[module]);
 
             //TODO: How to handle reverts from hooks and at the same time effectively skip modules that do not implement hooks?
             try
                 IHooks(module).postHook(target, value, data, msg.sender)
             {} catch Error(string memory reason) {
-                console.log("Error: %s", reason);
+                //console.log("Error: %s", reason);
                 revert(reason);
             } catch {
-                console.log("Unknown error");
+                //console.log("Unknown error");
             }
         }
     }

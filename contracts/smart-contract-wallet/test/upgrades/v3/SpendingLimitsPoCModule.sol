@@ -43,7 +43,7 @@ contract SpendingLimitsModule is IHooks {
         bytes memory data,
         address spender
     ) external {
-        console.log("preHook called at Spending Limits Module", address(this));
+        //console.log("preHook called at Spending Limits Module", address(this));
         balancesBeforeTxn[msg.sender] = IERC20(token).balanceOf(msg.sender); //called by SA
     }
 
@@ -53,9 +53,9 @@ contract SpendingLimitsModule is IHooks {
         bytes memory data,
         address spender
     ) external {
-        console.log("postHook called at Spending Limits Module", address(this));
+        //console.log("postHook called at Spending Limits Module", address(this));
         uint256 balanceAfterTxn = IERC20(token).balanceOf(msg.sender); //as it is called by the smart account
-        console.log("balancesBeforeTxn   ", balancesBeforeTxn[msg.sender]);
+        /* console.log("balancesBeforeTxn   ", balancesBeforeTxn[msg.sender]);
         console.log("balanceAfterTxn     ", balanceAfterTxn);
         console.log(
             "spendings for period",
@@ -64,16 +64,16 @@ contract SpendingLimitsModule is IHooks {
         console.log(
             "limitAmount         ",
             userLimits[msg.sender][spender].limitAmount
-        );
+        ); */
 
         uint256 leftToSpend = userLimits[msg.sender][spender].limitAmount -
             calculateSpendingsForPeriod(msg.sender, spender);
 
-        console.log("allowance           ", leftToSpend);
+        /* console.log("allowance           ", leftToSpend);
         console.log(
             "txn spending        ",
             balancesBeforeTxn[msg.sender] - balanceAfterTxn
-        );
+        ); */
 
         if (balanceAfterTxn < balancesBeforeTxn[msg.sender]) {
             //it is a spending txn

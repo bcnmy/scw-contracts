@@ -493,11 +493,8 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       "SmartAccount",
       expectedSmartAccountAddress
     );
-    console.log("0000000");
     expect(await aliceSA.getImplementation()).to.equal(baseImplV3.address);
-    console.log("1111111");
     expect(await aliceSA.getFallbackHandler()).to.equal(newFallbackHandler.address);
-    console.log("2222222");
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(amountToTransfer));
   });
 });

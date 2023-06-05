@@ -20,7 +20,7 @@ contract SpenderModule {
         uint256 _amount,
         address smartAccountAddress
     ) external {
-        console.log("SpenderModule called at", address(this));
+        //console.log("SpenderModule called at", address(this));
         IModuleExecution(smartAccountAddress).execTransactionFromModule(
             _tokenAddress,
             0,
