@@ -3,11 +3,11 @@ import { ethers, deployments, waffle } from "hardhat";
 import { buildecdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
 import { AddressZero } from "../aa-core/testutils";
 import { encodeTransfer } from "../smart-wallet/testUtils";
-import { 
-  getEntryPoint, 
-  getSmartAccountImplementation, 
-  getSmartAccountFactory, 
-  getMockToken, 
+import {
+  getEntryPoint,
+  getSmartAccountImplementation,
+  getSmartAccountFactory,
+  getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
@@ -18,14 +18,16 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 
+  const sentinelAddress = "0x0000000000000000000000000000000000000001";
+
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     await deployments.fixture();
 
     const mockToken = await getMockToken();
-    
+
     const ecdsaModule = await getEcdsaOwnershipRegistryModule();
     const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
-      
+
     let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
@@ -41,7 +43,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
     });
 
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
-    
+
     return {
       entryPoint: await getEntryPoint(),
       smartAccountImplementation: await getSmartAccountImplementation(),
@@ -56,7 +58,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
   describe ("enableModule: ", async () => {
 
     it ("Can enable module and it is enabled", async () => {
-      const { 
+      const {
         ecdsaModule,
         userSA,
         entryPoint
@@ -81,17 +83,94 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
     });
 
     // can not enable address(0) as module
+    it("Can not enable address(0) as module", async()=> {
+      const {
+        ecdsaModule,
+        userSA,
+        entryPoint
+      } = await setupTests();
+
+      let userOp = await makeEcdsaModuleUserOp(
+        "enableModule",
+        [AddressZero],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx = await entryPoint.handleOps([userOp],alice.address);
+      expect(tx).to.emit(entryPoint,"UserOperationRevertReason");
+    });
 
     // can not enable sentinel module
+    it("Can not enable sentinel module", async()=> {
+      const {
+        ecdsaModule,
+        userSA,
+        entryPoint
+      } = await setupTests();
+
+      let userOp = await makeEcdsaModuleUserOp(
+        "enableModule",
+        [sentinelAddress],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx = await entryPoint.handleOps([userOp],alice.address);
+      expect(tx).to.emit(entryPoint,"UserOperationRevertReason");
+      expect(await userSA.isModuleEnabled(sentinelAddress)).to.be.false;
+    });
+
 
     // can not enable module that is already enabled
+    it("Can not enable module that is already enabled", async()=> {
+      const {
+        ecdsaModule,
+        userSA,
+        entryPoint
+      } = await setupTests();
+
+      const MockAuthModule = await ethers.getContractFactory("MockAuthModule");
+      const module1 = await MockAuthModule.deploy();
+
+      let userOp1 = await makeEcdsaModuleUserOp(
+        "enableModule",
+        [module1.address],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx1 = await entryPoint.handleOps([userOp1],alice.address);
+      await expect(tx1).to.not.emit(entryPoint, "UserOperationRevertReason");
+      expect(await userSA.isModuleEnabled(module1.address)).to.be.true;
+
+      let userOp2 = await makeEcdsaModuleUserOp(
+        "enableModule",
+        [module1.address],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx2 = await entryPoint.handleOps([userOp2],alice.address);
+      expect(tx2).to.emit(entryPoint,"UserOperationRevertReason");
+      expect(await userSA.isModuleEnabled(module1.address)).to.be.true;
+    });
+
 
   });
 
   describe ("setupAndEnableModule: ", async () => {
 
     it ("Can not setup and enable invalid module", async () => {
-      const { 
+      const {
         ecdsaModule,
         userSA,
         entryPoint
@@ -109,7 +188,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
         entryPoint,
         ecdsaModule.address
       );
-      
+
       const tx = await entryPoint.handleOps([userOp], alice.address);
       await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
 
@@ -118,7 +197,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
     });
 
     it ("Can enable and setup another module and it is enabled and setup", async () => {
-      const { 
+      const {
         ecdsaModule,
         userSA,
         entryPoint
@@ -140,12 +219,12 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
         entryPoint,
         ecdsaModule.address
       );
-      
+
       const tx = await entryPoint.handleOps([userOp], alice.address);
       await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
 
       expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.be.true;
-      
+
       expect(await socialRecoveryModule.isFriend(userSA.address, alice.address)).to.be.true;
       expect(await socialRecoveryModule.isFriend(userSA.address, bob.address)).to.be.true;
       expect(await socialRecoveryModule.isFriend(userSA.address, charlie.address)).to.be.true;
@@ -153,16 +232,103 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
     });
 
     // can not enable address(0) as module
+    it("Can not setup and enable address(0) as module", async()=>{
+      const {
+        ecdsaModule,
+        userSA,
+        entryPoint
+      } = await setupTests();
+
+      const invalidSetupData = "0x";
+
+      let userOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [AddressZero, invalidSetupData],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx = await entryPoint.handleOps([userOp],alice.address);
+
+      await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
+      expect(await userSA.isModuleEnabled(AddressZero)).to.be.false;
+    });
 
     // can not enable sentinel module
+    it("Can not setup and enable sentinel module", async()=>{
+      const {
+        ecdsaModule,
+        userSA,
+        entryPoint
+      } = await setupTests();
+
+      const invalidSetupData = "0x";
+
+      let userOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [sentinelAddress, invalidSetupData],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx = await entryPoint.handleOps([userOp],alice.address);
+      await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
+      expect(await userSA.isModuleEnabled(sentinelAddress)).to.be.false;
+    });
+
+
 
     // can not enable module that is already enabled
+    it("Can not setup and enable module that is already enabled", async() =>{
+      const {
+        ecdsaModule,
+        userSA,
+        entryPoint
+      } = await setupTests();
 
+      const SocialRecoveryModule = await ethers.getContractFactory("SocialRecoveryModule");
+      const socialRecoveryModule = await SocialRecoveryModule.deploy();
+
+      let socialRecoverySetupData = SocialRecoveryModule.interface.encodeFunctionData(
+        "setup",
+        [[await alice.getAddress(), await bob.getAddress(), await charlie.getAddress()], 2]
+      );
+
+      let userOp1 = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [socialRecoveryModule.address, socialRecoverySetupData],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx1 = await entryPoint.handleOps([userOp1],alice.address);
+      await expect(tx1).to.not.emit(entryPoint, "UserOperationRevertReason");
+      expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.be.true;
+
+      let userOp2 = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [socialRecoveryModule.address, socialRecoverySetupData],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx2 = await entryPoint.handleOps([userOp2],alice.address);
+      await expect(tx2).to.emit(entryPoint, "UserOperationRevertReason");
+      expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.be.true;
+    });
   });
 
   describe ("disableModule: ", async () => {
     it ("Can disable module and it is disabled", async () => {
-      const { 
+      const {
         ecdsaModule,
         userSA,
         entryPoint
@@ -216,14 +382,14 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
   // Don't test until I remove delegatecalls from ModuleManager
   /*
-  describe ("execTransactionFromModule: ", async () => { 
-     
+  describe ("execTransactionFromModule: ", async () => {
+
 
 
   });
 
-  describe ("execBatchTransactionFromModule: ", async () => { 
-    
+  describe ("execBatchTransactionFromModule: ", async () => {
+
 
 
   });
