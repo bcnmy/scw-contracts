@@ -12,6 +12,7 @@ import {
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { fillAndSign, makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
+import { encode } from "querystring";
 
 describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
 
@@ -232,7 +233,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
   it ("Can upgrade the not deployed V2 to V3 and it is upgraded", async () => {
     const { entryPoint, smartAccountFactory, ecdsaModule, mockToken } = await setupTests();
 
-    const charlieBalanceBefore = await await mockToken.balanceOf(charlie.address);
+    const charlieBalanceBefore = await mockToken.balanceOf(charlie.address);
     const amountToTransfer = ethers.utils.parseEther("0.5345");
 
     const MockHookModule = await ethers.getContractFactory("MockHookModule");
@@ -329,16 +330,174 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
   });
 
   it ("Can upgrade the not deployed V2 to V3 via batched calldata in the userOp: upgrade + send ether", async () => {
-    const { entryPoint, smartAccountFactory, ecdsaModule, mockToken } = await setupTests();
+    const { entryPoint, smartAccountFactory, ecdsaModule } = await setupTests();
 
+    const charlieNativeBalanceBefore = await charlie.getBalance();
+    const amountToTransfer = ethers.utils.parseEther("0.572455");
 
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
+    );
+    const SmartAccountFactory = await ethers.getContractFactory(
+      "SmartAccountFactory"
+    );
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await alice.getAddress()]
+      );
+    const smartAccountDeploymentIndex = 0;
+    const deploymentData = SmartAccountFactory.interface.encodeFunctionData(
+      "deployCounterFactualAccount",
+      [ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex]
+    );
+
+    const expectedSmartAccountAddress =
+      await smartAccountFactory.getAddressForCounterFactualAccount(
+        ecdsaModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex
+      );
+
+    await deployer.sendTransaction({
+      to: expectedSmartAccountAddress,
+      value: ethers.utils.parseEther("10"),
+    });
+
+    const updateImplData = SmartAccount.interface.encodeFunctionData(
+      "updateImplementation",
+      [baseImplV3.address]
+    );
+    const execBatchCallData = SmartAccount.interface.encodeFunctionData(
+      "executeBatchCall_4by",
+      [[expectedSmartAccountAddress, charlie.address],[ethers.utils.parseEther("0"), amountToTransfer],[updateImplData, "0x"]]
+    );
+
+    const userOp = await fillAndSign(
+      {
+        sender: expectedSmartAccountAddress,
+        callGasLimit: 1_000_000,
+        initCode: ethers.utils.hexConcat([
+          smartAccountFactory.address,
+          deploymentData,
+        ]),
+        callData: execBatchCallData,
+      },
+      alice,
+      entryPoint,
+      "nonce"
+    );
+    // add validator module address to the signature
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [userOp.signature, ecdsaModule.address]
+    );
+    userOp.signature = signatureWithModuleAddress;
+    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
+      gasLimit: 10000000,
+    });
+    await handleOpsTxn.wait();
+    const aliceSA = await ethers.getContractAt(
+      "SmartAccount",
+      expectedSmartAccountAddress
+    );
+    expect(await aliceSA.getImplementation()).to.equal(baseImplV3.address);
+    expect(await charlie.getBalance()).to.equal(charlieNativeBalanceBefore.add(amountToTransfer));
   });
 
   it ("Can upgrade the not deployed V2 to V3 via batched calldata in the userOp: upgrade + update callback handler + send erc20 token", async () => {
     const { entryPoint, smartAccountFactory, ecdsaModule, mockToken } = await setupTests();
 
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+    const amountToTransfer = ethers.utils.parseEther("0.32981");
 
+    const FallbackHandler = await ethers.getContractFactory("DefaultCallbackHandler");
+    const newFallbackHandler = await FallbackHandler.deploy();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
+    );
+    const SmartAccountFactory = await ethers.getContractFactory(
+      "SmartAccountFactory"
+    );
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await alice.getAddress()]
+      );
+    const smartAccountDeploymentIndex = 0;
+    const deploymentData = SmartAccountFactory.interface.encodeFunctionData(
+      "deployCounterFactualAccount",
+      [ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex]
+    );
+
+    const expectedSmartAccountAddress =
+      await smartAccountFactory.getAddressForCounterFactualAccount(
+        ecdsaModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex
+      );
+
+    await deployer.sendTransaction({
+      to: expectedSmartAccountAddress,
+      value: ethers.utils.parseEther("10"),
+    });
+    await mockToken.mint(expectedSmartAccountAddress, ethers.utils.parseEther("1000"));
+
+    const updateImplData = SmartAccount.interface.encodeFunctionData(
+      "updateImplementation",
+      [baseImplV3.address]
+    );
+    const setHandlerData = SmartAccount.interface.encodeFunctionData(
+      "setFallbackHandler",
+      [newFallbackHandler.address]
+    );
+    const transferTokenData = encodeTransfer(charlie.address, amountToTransfer.toString());
+
+    const execBatchCallData = SmartAccount.interface.encodeFunctionData(
+      "executeBatchCall_4by",
+      [[expectedSmartAccountAddress, expectedSmartAccountAddress,  mockToken.address ],
+       [0,0,0],
+       [updateImplData, setHandlerData,  transferTokenData ]
+      ]
+    );
+
+    const userOp = await fillAndSign(
+      {
+        sender: expectedSmartAccountAddress,
+        callGasLimit: 1_000_000,
+        initCode: ethers.utils.hexConcat([
+          smartAccountFactory.address,
+          deploymentData,
+        ]),
+        callData: execBatchCallData,
+      },
+      alice,
+      entryPoint,
+      "nonce"
+    );
+    // add validator module address to the signature
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [userOp.signature, ecdsaModule.address]
+    );
+    userOp.signature = signatureWithModuleAddress;
+    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
+      gasLimit: 10000000,
+    });
+    await handleOpsTxn.wait();
+    const aliceSA = await ethers.getContractAt(
+      "SmartAccount",
+      expectedSmartAccountAddress
+    );
+    console.log("0000000");
+    expect(await aliceSA.getImplementation()).to.equal(baseImplV3.address);
+    console.log("1111111");
+    expect(await aliceSA.getFallbackHandler()).to.equal(newFallbackHandler.address);
+    console.log("2222222");
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(amountToTransfer));
   });
-
-
 });

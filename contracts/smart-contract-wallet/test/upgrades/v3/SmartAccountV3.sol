@@ -772,11 +772,11 @@ contract SmartAccountV3 is
 
     /**
      * @dev Sets the fallback handler.
-     * @notice This can only be done via a UserOp sent by EntryPoint.
+     * @notice This can only be done via a UserOp sent by EntryPoint or selfcall by SA.
      * @param handler Handler to be set.
      */
     function setFallbackHandler(address handler) external virtual override {
-        _requireFromEntryPoint();
+        _requireFromEntryPointOrSelf();
         _setFallbackHandler(handler);
     }
 

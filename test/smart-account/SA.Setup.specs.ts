@@ -240,7 +240,7 @@ describe("NEW::: Smart Account Setup", async () => {
 
   //update callback handler
   describe("Update Implementation", async () => {
-    it ("Can not be called not from EntryPoint", async () => {
+    it ("Can not be called not from EntryPoint or Self", async () => {
       const { 
         userSA,
       } = await setupTests();
@@ -248,7 +248,7 @@ describe("NEW::: Smart Account Setup", async () => {
 
       await expect(
         userSA.setFallbackHandler(AddressZero)
-      ).to.be.revertedWith("CallerIsNotEntryPoint").withArgs(deployer.address);
+      ).to.be.revertedWith("CallerIsNotEntryPointOrSelf").withArgs(deployer.address);
       expect(await userSA.getFallbackHandler()).to.equal(prevHandler);
     });
 

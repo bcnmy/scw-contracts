@@ -713,7 +713,7 @@ contract SmartAccount is
      * @param handler Handler to be set.
      */
     function setFallbackHandler(address handler) external virtual override {
-        _requireFromEntryPoint();
+        _requireFromEntryPointOrSelf();
         _setFallbackHandler(handler);
     }
 
