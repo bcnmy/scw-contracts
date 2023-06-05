@@ -90,7 +90,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
         entryPoint
       } = await setupTests();
 
-      let userOp = await makeecdsaModuleUserOp(
+      let userOp = await makeEcdsaModuleUserOp(
         "enableModule",
         [AddressZero],
         userSA.address,
@@ -111,7 +111,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
         entryPoint
       } = await setupTests();
 
-      let userOp = await makeecdsaModuleUserOp(
+      let userOp = await makeEcdsaModuleUserOp(
         "enableModule",
         [sentinelAddress],
         userSA.address,
@@ -137,7 +137,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       const MockAuthModule = await ethers.getContractFactory("MockAuthModule");
       const module1 = await MockAuthModule.deploy();
 
-      let userOp1 = await makeecdsaModuleUserOp(
+      let userOp1 = await makeEcdsaModuleUserOp(
         "enableModule",
         [module1.address],
         userSA.address,
@@ -150,7 +150,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       await expect(tx1).to.not.emit(entryPoint, "UserOperationRevertReason");
       expect(await userSA.isModuleEnabled(module1.address)).to.be.true;
 
-      let userOp2 = await makeecdsaModuleUserOp(
+      let userOp2 = await makeEcdsaModuleUserOp(
         "enableModule",
         [module1.address],
         userSA.address,
@@ -241,7 +241,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
       const invalidSetupData = "0x";
 
-      let userOp = await makeecdsaModuleUserOp(
+      let userOp = await makeEcdsaModuleUserOp(
         "setupAndEnableModule",
         [AddressZero, invalidSetupData],
         userSA.address,
@@ -266,7 +266,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
       const invalidSetupData = "0x";
 
-      let userOp = await makeecdsaModuleUserOp(
+      let userOp = await makeEcdsaModuleUserOp(
         "setupAndEnableModule",
         [sentinelAddress, invalidSetupData],
         userSA.address,
@@ -298,7 +298,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
         [[await alice.getAddress(), await bob.getAddress(), await charlie.getAddress()], 2]
       );
 
-      let userOp1 = await makeecdsaModuleUserOp(
+      let userOp1 = await makeEcdsaModuleUserOp(
         "setupAndEnableModule",
         [socialRecoveryModule.address, socialRecoverySetupData],
         userSA.address,
@@ -311,7 +311,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       await expect(tx1).to.not.emit(entryPoint, "UserOperationRevertReason");
       expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.be.true;
 
-      let userOp2 = await makeecdsaModuleUserOp(
+      let userOp2 = await makeEcdsaModuleUserOp(
         "setupAndEnableModule",
         [socialRecoveryModule.address, socialRecoverySetupData],
         userSA.address,
