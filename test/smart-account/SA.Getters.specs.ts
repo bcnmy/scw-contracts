@@ -12,7 +12,7 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeecdsaModuleUserOp, makeecdsaModuleUserOpWithPaymaster } from "../utils/userOp";
+import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
 describe("NEW::: Smart Account Getters", async () => {
 

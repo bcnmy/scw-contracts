@@ -321,7 +321,6 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     */
 
     //if defacto Refund Receiver (RR) balance is higher than expected, it means that some refund was received
-
     expect(defactoRRBalanceAfterPayingForTx.gt(expectedRRBalanceAfterPayingForTx)).to.be.true;
   });
 

@@ -10,7 +10,7 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
-import { fillAndSign, makeecdsaModuleUserOp, makeecdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
+import { fillAndSign, makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
 
 describe("NEW::: Upgrade v1 to Ownerless", async () => {
 
@@ -233,7 +233,7 @@ describe("NEW::: Upgrade v1 to Ownerless", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6326");
 
-    const userOp = await makeecdsaModuleUserOp(
+    const userOp = await makeEcdsaModuleUserOp(
       "executeCall",
       [
         mockToken.address,

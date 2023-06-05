@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
+import {Contract} from "ethers";
 import { encodeTransfer } from "../../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
@@ -10,11 +11,12 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
-import { fillAndSign, makeecdsaModuleUserOp, makeecdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
+import { fillAndSign, makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
 
 describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
+  let baseImplV3: Contract;
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     
@@ -25,7 +27,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     const mockToken = await getMockToken();
 
     const BaseImplementationV3 = await ethers.getContractFactory("SmartAccountV3");
-    const baseImplV3 = await BaseImplementationV3.deploy(entryPoint.address);
+    baseImplV3 = await BaseImplementationV3.deploy(entryPoint.address);
     await baseImplV3.deployed();
 
     const smartAccountFactory = await getSmartAccountFactory();
@@ -83,19 +85,14 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     };
   });
 
-  it ("test test", async () => {
-    
+  it ("Newly deployes V3 SA and PoC Spending limits module work as intended", async () => {
     const { 
       ecdsaModule,
-      userSA,
       userSAV3,
       entryPoint,
       mockToken
     } = await setupTests();
 
-    //enable two fake modules
-    // TODO REBUILD ENABLING MODULE AS EXTERNAL FUNCTION
-    
     const MockHookModule = await ethers.getContractFactory("MockHookModule");
     const mockHookModule1 = await MockHookModule.deploy();
     const mockHookModule2 = await MockHookModule.deploy();
@@ -103,11 +100,10 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     const SpendingLimitsModule = await ethers.getContractFactory("SpendingLimitsModule");
     const spendingLimitsModule = await SpendingLimitsModule.deploy(mockToken.address);
 
-    // Deploy spender module
     const SpenderModule = await ethers.getContractFactory("SpenderModule");
     const spenderModule = await SpenderModule.deploy();
 
-    const userOp = await makeecdsaModuleUserOp(
+    const userOp = await makeEcdsaModuleUserOp(
       "enableModule",
       [
         mockHookModule1.address
@@ -119,7 +115,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     )
     await entryPoint.handleOps([userOp], alice.address);
 
-    const userOp2 = await makeecdsaModuleUserOp(
+    const userOp2 = await makeEcdsaModuleUserOp(
       "enableModule",
       [
         mockHookModule2.address
@@ -131,7 +127,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     )
     await entryPoint.handleOps([userOp2], alice.address);
 
-    const userOp3 = await makeecdsaModuleUserOp(
+    const userOp3 = await makeEcdsaModuleUserOp(
       "enableModule",
       [
         spendingLimitsModule.address
@@ -143,7 +139,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     )
     await entryPoint.handleOps([userOp3], alice.address);
 
-    const userOp4 = await makeecdsaModuleUserOp(
+    const userOp4 = await makeEcdsaModuleUserOp(
       "enableModule",
       [
         spenderModule.address
@@ -159,9 +155,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
       "setLimits",
       [spenderModule.address, ethers.utils.parseEther("10"), 24*60*60]
     );
-    
-    //make set limit userOp
-    const userOp5 = await makeecdsaModuleUserOp(
+    const userOp5 = await makeEcdsaModuleUserOp(
       "executeCall_s1m",
       [
         spendingLimitsModule.address,
@@ -180,13 +174,171 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     await spendingTxn.wait();
 
     const leftToSpend = (await spendingLimitsModule.getLimits(userSAV3.address, spenderModule.address)).sub(await spendingLimitsModule.calculateSpendingsForPeriod(userSAV3.address, spenderModule.address));
-    console.log("leftToSpend", leftToSpend.toString());
     expect (leftToSpend).to.equal(ethers.utils.parseEther("0"));
 
     await expect(
       spenderModule.spend(mockToken.address, charlie.address, ethers.utils.parseEther("10"), userSAV3.address)
     ).to.be.revertedWith("Spending limit exceeded");
-  
   });
+
+  it ("Can upgrade V2 to V3 and it is upgraded (calls hooks at userOp)", async () => {
+    const { 
+      ecdsaModule,
+      userSA,
+      entryPoint,
+      mockToken
+    } = await setupTests();
+
+    const charlieBalanceBefore = await mockToken.balanceOf(charlie.address);
+    const amountToTransfer = ethers.utils.parseEther("1");
+    const MockHookModule = await ethers.getContractFactory("MockHookModule");
+    const mockHookModule = await MockHookModule.deploy();
+    const mockHookModuleCounterBefore = await mockHookModule.counter();
+    
+    const userOp = await makeEcdsaModuleUserOp(
+      "updateImplementation",
+      [
+        await baseImplV3.address
+      ],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    );
+    await entryPoint.handleOps([userOp], alice.address);
+
+    const userOp2 = await makeEcdsaModuleUserOp(
+      "enableModule",
+      [
+        mockHookModule.address
+      ],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    )
+    await entryPoint.handleOps([userOp2], alice.address);
+
+    expect(await userSA.getImplementation()).to.equal(baseImplV3.address);
+    expect(await userSA.isModuleEnabled(mockHookModule.address)).to.equal(true);
+
+    const moduleTx = await mockHookModule.transfer(userSA.address, mockToken.address, charlie.address, amountToTransfer);
+    await moduleTx.wait();
+      
+    expect(await mockHookModule.counter()).to.equal(mockHookModuleCounterBefore.add(2));
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieBalanceBefore.add(amountToTransfer));
+  });
+
+  it ("Can upgrade the not deployed V2 to V3 and it is upgraded", async () => {
+    const { entryPoint, smartAccountFactory, ecdsaModule, mockToken } = await setupTests();
+
+    const charlieBalanceBefore = await await mockToken.balanceOf(charlie.address);
+    const amountToTransfer = ethers.utils.parseEther("0.5345");
+
+    const MockHookModule = await ethers.getContractFactory("MockHookModule");
+    const mockHookModule = await MockHookModule.deploy();
+    const mockHookModuleCounterBefore = await mockHookModule.counter();
+
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
+    );
+    const SmartAccountFactory = await ethers.getContractFactory(
+      "SmartAccountFactory"
+    );
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await alice.getAddress()]
+      );
+    const smartAccountDeploymentIndex = 0;
+    const deploymentData = SmartAccountFactory.interface.encodeFunctionData(
+      "deployCounterFactualAccount",
+      [ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex]
+    );
+
+    const expectedSmartAccountAddress =
+      await smartAccountFactory.getAddressForCounterFactualAccount(
+        ecdsaModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex
+      );
+
+    await deployer.sendTransaction({
+      to: expectedSmartAccountAddress,
+      value: ethers.utils.parseEther("10"),
+    });
+    await mockToken.mint(expectedSmartAccountAddress, ethers.utils.parseEther("1000"));
+
+    const updateImplData = SmartAccount.interface.encodeFunctionData(
+      "updateImplementation",
+      [baseImplV3.address]
+    );
+
+    const userOp = await fillAndSign(
+      {
+        sender: expectedSmartAccountAddress,
+        callGasLimit: 1_000_000,
+        initCode: ethers.utils.hexConcat([
+          smartAccountFactory.address,
+          deploymentData,
+        ]),
+        callData: updateImplData,
+      },
+      alice,
+      entryPoint,
+      "nonce"
+    );
+
+    // add validator module address to the signature
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [userOp.signature, ecdsaModule.address]
+    );
+    userOp.signature = signatureWithModuleAddress;
+    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
+      gasLimit: 10000000,
+    });
+    await handleOpsTxn.wait();
+    const aliceSA = await ethers.getContractAt(
+      "SmartAccount",
+      expectedSmartAccountAddress
+    );
+
+    const userOp2 = await makeEcdsaModuleUserOp(
+      "enableModule",
+      [
+        mockHookModule.address
+      ],
+      aliceSA.address,
+      alice,
+      entryPoint,
+      ecdsaModule.address
+    )
+    await entryPoint.handleOps([userOp2], alice.address);
+
+    expect(await aliceSA.getImplementation()).to.equal(baseImplV3.address);
+    expect(await aliceSA.isModuleEnabled(mockHookModule.address)).to.equal(true);
+
+    const moduleTx = await mockHookModule.transfer(aliceSA.address, mockToken.address, charlie.address, amountToTransfer);
+    await moduleTx.wait();
+      
+    expect(await mockHookModule.counter()).to.equal(mockHookModuleCounterBefore.add(2));
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieBalanceBefore.add(amountToTransfer));
+  });
+
+  it ("Can upgrade the not deployed V2 to V3 via batched calldata in the userOp: upgrade + send ether", async () => {
+    const { entryPoint, smartAccountFactory, ecdsaModule, mockToken } = await setupTests();
+
+
+  });
+
+  it ("Can upgrade the not deployed V2 to V3 via batched calldata in the userOp: upgrade + update callback handler + send erc20 token", async () => {
+    const { entryPoint, smartAccountFactory, ecdsaModule, mockToken } = await setupTests();
+
+
+  });
+
 
 });
