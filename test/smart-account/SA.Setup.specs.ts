@@ -10,7 +10,7 @@ import {
   getVerifyingPaymaster,
   deployContract
 } from "../utils/setupHelper";
-import { makeecdsaModuleUserOp } from "../utils/userOp";
+import { makeEcdsaModuleUserOp } from "../utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
 
 describe("NEW::: Smart Account Setup", async () => {
@@ -146,7 +146,7 @@ describe("NEW::: Smart Account Setup", async () => {
         userSA,
       } = await setupTests();
 
-      const userOp = await makeecdsaModuleUserOp(
+      const userOp = await makeEcdsaModuleUserOp(
         "updateImplementation",
         [
           AddressZero
@@ -170,7 +170,7 @@ describe("NEW::: Smart Account Setup", async () => {
         userSA,
       } = await setupTests();
 
-      const userOp = await makeecdsaModuleUserOp(
+      const userOp = await makeEcdsaModuleUserOp(
         "updateImplementation",
         [
           bob.address
@@ -213,7 +213,7 @@ describe("NEW::: Smart Account Setup", async () => {
       
       const implementationInSaBefore = await userSA.getImplementation();
 
-      const userOp = await makeecdsaModuleUserOp(
+      const userOp = await makeEcdsaModuleUserOp(
         "updateImplementation",
         [
           impl2.address
@@ -266,7 +266,7 @@ describe("NEW::: Smart Account Setup", async () => {
 
       const prevHandler = await smartAccountImplementation.getFallbackHandler();
       await expect(prevHandler).to.equal(AddressZero);
-      const userOp = await makeecdsaModuleUserOp(
+      const userOp = await makeEcdsaModuleUserOp(
         "setFallbackHandler",
         [
           "0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE"
@@ -287,7 +287,7 @@ describe("NEW::: Smart Account Setup", async () => {
         userSA,
       } = await setupTests();
 
-      const userOp = await makeecdsaModuleUserOp(
+      const userOp = await makeEcdsaModuleUserOp(
         "setFallbackHandler",
         [
           AddressZero
@@ -321,7 +321,7 @@ describe("NEW::: Smart Account Setup", async () => {
       
       const handlerInSaBefore = await userSA.getFallbackHandler();
 
-      const userOp = await makeecdsaModuleUserOp(
+      const userOp = await makeEcdsaModuleUserOp(
         "setFallbackHandler",
         [
           handler2.address

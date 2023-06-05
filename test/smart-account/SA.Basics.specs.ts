@@ -11,7 +11,7 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeecdsaModuleUserOp, makeecdsaModuleUserOpWithPaymaster } from "../utils/userOp";
+import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
 describe("NEW::: Ownerless Smart Account Basics: ", async () => {
 
@@ -77,7 +77,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const userOp = await makeecdsaModuleUserOp(
+    const userOp = await makeEcdsaModuleUserOp(
       "executeCall",
       [
         mockToken.address,
@@ -106,7 +106,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     const charlieBalanceBefore = await charlie.getBalance();
     const amountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const userOp = await makeecdsaModuleUserOp(
+    const userOp = await makeEcdsaModuleUserOp(
       "executeCall",
       [
         charlie.address,
@@ -136,7 +136,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
-    const userOp = await makeecdsaModuleUserOpWithPaymaster(
+    const userOp = await makeEcdsaModuleUserOpWithPaymaster(
       "executeCall",
       [
         mockToken.address,

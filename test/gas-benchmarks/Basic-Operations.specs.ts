@@ -12,8 +12,8 @@ import {
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import {
-  makeecdsaModuleUserOp,
-  makeecdsaModuleUserOpWithPaymaster,
+  makeEcdsaModuleUserOp,
+  makeEcdsaModuleUserOpWithPaymaster,
   fillAndSign,
 } from "../utils/userOp";
 
@@ -130,7 +130,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const userOp = await makeecdsaModuleUserOp(
+    const userOp = await makeEcdsaModuleUserOp(
       "executeCall",
       [charlie.address, tokenAmountToTransfer, "0x"],
       userSA.address,
@@ -162,7 +162,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("10");
 
-    const userOp = await makeecdsaModuleUserOp(
+    const userOp = await makeEcdsaModuleUserOp(
       "executeCall",
       [
         mockToken.address,
@@ -278,7 +278,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
-    const userOp = await makeecdsaModuleUserOpWithPaymaster(
+    const userOp = await makeEcdsaModuleUserOpWithPaymaster(
       "executeCall",
       [
         mockToken.address,
