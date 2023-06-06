@@ -157,7 +157,8 @@ abstract contract ModuleManager is
         if (msg.sender == SENTINEL_MODULES || modules[msg.sender] == address(0))
             revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
-        success = execute(to, value, data, operation, txGas);
+        // The check above requires 3410 gas.
+        success = execute(to, value, data, operation, txGas - 3500);
         if (success) {
             emit ModuleTransaction(msg.sender, to, value, data, operation);
             emit ExecutionFromModuleSuccess(msg.sender);
