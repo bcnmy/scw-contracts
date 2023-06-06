@@ -409,27 +409,28 @@ export const buildSafeTransaction = (template: {
   };
 };
 
-export async function buildecdsaModuleAuthorizedForwardTx(
+export async function buildEcdsaModuleAuthorizedForwardTx(
   destinationContract: string,
   callData: string,
   smartAccount: Contract,
   smartAccountOwner: Signer & TypedDataSigner,
-  moduleAddress: string,
-  value: number | string = 0,
+  validationModuleAddress: string,
+  forwardFlowModule: Contract,
+  value: number | string = 0
   ): Promise<SmartAccountSignedForwardTransaction> {
 
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: destinationContract,
       value: value,
       data: callData,
-      nonce: await smartAccount.getNonce(FORWARD_FLOW),
+      nonce: await forwardFlowModule.getNonce(FORWARD_FLOW),
     });
 
     const { signer, data } = await safeSignTypedData(
       smartAccountOwner,
       smartAccount,
       safeTx,
-      await smartAccount.getChainId()
+      await forwardFlowModule.getChainId()
     );
 
     const transaction: Transaction = {
@@ -452,7 +453,7 @@ export async function buildecdsaModuleAuthorizedForwardTx(
     // add validator module address to the signature
     let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 
-      [signature, moduleAddress]
+      [signature, validationModuleAddress]
     );
   
     return {

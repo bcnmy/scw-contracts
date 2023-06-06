@@ -157,12 +157,14 @@ abstract contract ModuleManager is
         if (msg.sender == SENTINEL_MODULES || modules[msg.sender] == address(0))
             revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
-        // The check above requires 3410 gas.
-        success = execute(to, value, data, operation, txGas - 3500);
-        if (success) {
-            emit ModuleTransaction(msg.sender, to, value, data, operation);
-            emit ExecutionFromModuleSuccess(msg.sender);
-        } else emit ExecutionFromModuleFailure(msg.sender);
+        // Can add guards here to allow delegatecalls for selected modules (msg.senders) only
+        success = execute(
+            to,
+            value,
+            data,
+            operation,
+            txGas == 0 ? gasleft() : txGas
+        );
     }
 
     function execTransactionFromModule(
@@ -170,14 +172,8 @@ abstract contract ModuleManager is
         uint256 value,
         bytes memory data,
         Enum.Operation operation
-    ) public virtual returns (bool success) {
-        success = execTransactionFromModule(
-            to,
-            value,
-            data,
-            operation,
-            gasleft()
-        );
+    ) public virtual returns (bool) {
+        return execTransactionFromModule(to, value, data, operation, 0);
     }
 
     /**

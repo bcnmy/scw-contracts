@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {Enum} from "../../../common/Enum.sol";
-import {Transaction, FeeRefund} from "../../../BaseSmartAccount.sol";
+import {Transaction, FeeRefund} from "../../../modules/ForwardFlowModule.sol";
 import {SelfAuthorized} from "../../../common/SelfAuthorized.sol";
 import {IERC165} from "../../../interfaces/IERC165.sol";
 

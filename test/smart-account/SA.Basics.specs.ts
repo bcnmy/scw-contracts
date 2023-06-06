@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildecdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
+import { buildEcdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
@@ -175,31 +175,6 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
 
     const returnedValue = await userSA.isValidSignature(messageHash, signatureWithModuleAddress);
     expect(returnedValue).to.be.equal(eip1271MagicValue);
-  });
-
-  it ("Can use forward flow with modules authorization", async () => { 
-    const { 
-      mockToken,
-      userSA,
-      ecdsaModule
-    } = await setupTests();
-    
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
-    
-    const { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
-      mockToken.address,
-      encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      userSA,
-      smartAccountOwner,
-      ecdsaModule.address
-    );
-
-    await expect(
-      userSA.execTransaction_S6W(transaction, feeRefund, signature)
-    ).to.emit(userSA, "ExecutionSuccess");
-
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   });
 
 });

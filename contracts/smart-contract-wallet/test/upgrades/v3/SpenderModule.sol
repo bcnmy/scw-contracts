@@ -21,6 +21,7 @@ contract SpenderModule {
         address smartAccountAddress
     ) external {
         //console.log("SpenderModule called at", address(this));
+        //console.log("gas before calling execTransactionFromModule: ", gasleft());
         IModuleExecution(smartAccountAddress).execTransactionFromModule(
             _tokenAddress,
             0,

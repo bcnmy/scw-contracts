@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: Apache-2.0
 pragma solidity 0.8.17;
 import "../SmartAccount.sol";
+import {Enum} from "../common/Enum.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 
 contract WhitelistModule {

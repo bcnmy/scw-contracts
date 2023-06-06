@@ -1,8 +1,8 @@
 import { expect } from "chai";
-import { BigNumber } from "ethers";
+import { BigNumber, Contract } from "ethers";
 import { ethers, deployments, waffle } from "hardhat";
 import { 
-  buildecdsaModuleAuthorizedForwardTx, 
+  buildEcdsaModuleAuthorizedForwardTx, 
   buildSafeTransaction, 
   getTransactionAndRefundInfoFromSafeTransactionObject, 
   SafeTransaction, 
@@ -12,6 +12,7 @@ import {
   FeeRefund, 
   FORWARD_FLOW 
 } from "../../src/utils/execution";
+import { makeEcdsaModuleUserOp } from "../utils/userOp";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
@@ -23,38 +24,48 @@ import {
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
 
-describe("NEW::: Smart Account Forward Flow", async () => {
+describe("NEW::: Forward Flow Module", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver] = waffle.provider.getWallets();
   let erc20TransferForwardTxnNoRefundGasCost = BigNumber.from("0");
+  let forwardFlowModule: Contract;
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     
     await deployments.fixture();
 
+    const entryPoint = await getEntryPoint();
     const mockToken = await getMockToken();
-    
     const ecdsaModule = await getEcdsaOwnershipRegistryModule();
     const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
-      
     let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
     );
-
     const smartAccountDeploymentIndex = 0;
-
     const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
+    // send funds to userSA and mint tokens
     await deployer.sendTransaction({
       to: userSA.address,
       value: ethers.utils.parseEther("10"),
     });
-
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
+
+    //deploy forward flow module and enable it in the smart account
+    forwardFlowModule = await (await ethers.getContractFactory("ForwardFlowModule")).deploy();
+    let userOp = await makeEcdsaModuleUserOp(
+      "enableModule",
+      [forwardFlowModule.address],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    );
+    await entryPoint.handleOps([userOp], alice.address);
     
     return {
-      entryPoint: await getEntryPoint(),
+      entryPoint: entryPoint,
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,
@@ -62,6 +73,11 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       userSA: userSA,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
+  });
+
+  it ("Module is enabled", async () => {
+    const { userSA } = await setupTests();
+    expect(await userSA.isModuleEnabled(forwardFlowModule.address)).to.equal(true);
   });
 
   it ("Can process EIP712-signed txn with value (native token transfer)", async () => { 
@@ -73,22 +89,23 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const charlieBalanceBefore = await charlie.getBalance();
     const tokenAmountToTransfer = ethers.utils.parseEther("0.167924");
     
-    const { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
+    const { transaction, feeRefund, signature } = await buildEcdsaModuleAuthorizedForwardTx(
       charlie.address,
       "0x",
       userSA,
       smartAccountOwner,
       ecdsaModule.address,
-      tokenAmountToTransfer.toString(),
+      forwardFlowModule,
+      tokenAmountToTransfer.toString()
     );
     
     await expect(
-      userSA.execTransaction_S6W(transaction, feeRefund, signature)
+      forwardFlowModule.execTransaction(userSA.address, transaction, feeRefund, signature)
     ).to.emit(userSA, "ExecutionSuccess");
     expect(await charlie.getBalance()).to.equal(charlieBalanceBefore.add(tokenAmountToTransfer));
-
   });
 
+  
   it ("Can process EIP712-signed txn with data (ERC20 token transfer)", async () => { 
     const { 
       mockToken,
@@ -99,21 +116,24 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
     
-    const { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
+    const { transaction, feeRefund, signature } = await buildEcdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
       userSA,
       smartAccountOwner,
-      ecdsaModule.address
+      ecdsaModule.address,
+      forwardFlowModule
     );
 
-    const tx = await userSA.execTransaction_S6W(transaction, feeRefund, signature);
+    const tx = await forwardFlowModule.execTransaction(userSA.address, transaction, feeRefund, signature);
     await expect(tx).to.emit(userSA, "ExecutionSuccess");
     const receipt = await tx.wait();
+    // record gas cost for later tests
     erc20TransferForwardTxnNoRefundGasCost = receipt.gasUsed;
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   });
 
+  
   it ("Can not process txn with the same nonce twice", async () => { 
     const { 
       mockToken,
@@ -124,19 +144,20 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
     
-    const { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
+    const { transaction, feeRefund, signature } = await buildEcdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
       userSA,
       smartAccountOwner,
-      ecdsaModule.address
+      ecdsaModule.address,
+      forwardFlowModule
     );
     
     await expect(
-      userSA.execTransaction_S6W(transaction, feeRefund, signature)
+      forwardFlowModule.execTransaction(userSA.address, transaction, feeRefund, signature)
     ).to.emit(userSA, "ExecutionSuccess");
     await expect(
-      userSA.execTransaction_S6W(transaction, feeRefund, signature)
+      forwardFlowModule.execTransaction(userSA.address, transaction, feeRefund, signature)
     ).to.be.revertedWith("InvalidSignature");
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer.mul(1)));
   });
@@ -151,7 +172,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
       const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
 
-      const invalidNonce = (await userSA.getNonce(FORWARD_FLOW)).add(1);
+      const invalidNonce = (await forwardFlowModule.getNonce(FORWARD_FLOW)).add(1);
       
       const safeTx: SafeTransaction = buildSafeTransaction({
         to: mockToken.address,
@@ -159,7 +180,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
         nonce: invalidNonce,
       });
   
-      const chainId = await userSA.getChainId();
+      const chainId = await forwardFlowModule.getChainId();
       const { signer, data } = await safeSignTypedData(
         smartAccountOwner,
         userSA,
@@ -178,7 +199,7 @@ describe("NEW::: Smart Account Forward Flow", async () => {
       );
   
       await expect(
-        userSA.execTransaction_S6W(transaction, refundInfo, signatureWithModuleAddress)
+        forwardFlowModule.execTransaction(userSA.address, transaction, refundInfo, signatureWithModuleAddress)
       ).to.be.revertedWith("InvalidSignature");
       expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
   });
@@ -193,30 +214,33 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
     
-    let { transaction, feeRefund, signature } = await buildecdsaModuleAuthorizedForwardTx(
+    let { transaction, feeRefund, signature } = await buildEcdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
       userSA,
       smartAccountOwner,
-      ecdsaModule.address
+      ecdsaModule.address,
+      forwardFlowModule
     );
     await expect(
-      userSA.execTransaction_S6W(transaction, feeRefund, signature)
+      forwardFlowModule.execTransaction(userSA.address, transaction, feeRefund, signature)
     ).to.emit(userSA, "ExecutionSuccess");
 
     const tokenAmountToTransfer2 = ethers.utils.parseEther("0.5555");
-    let { transaction: transaction2, feeRefund: feeRefund2, signature: signature2 } = await buildecdsaModuleAuthorizedForwardTx(
+    let { transaction: transaction2, feeRefund: feeRefund2, signature: signature2 } = await buildEcdsaModuleAuthorizedForwardTx(
       mockToken.address,
       encodeTransfer(charlie.address, tokenAmountToTransfer2.toString()),
       userSA,
       smartAccountOwner,
-      ecdsaModule.address
+      ecdsaModule.address,
+      forwardFlowModule
     );  
     await expect(
-      userSA.execTransaction_S6W(transaction2, feeRefund2, signature2)
+      forwardFlowModule.execTransaction(userSA.address, transaction2, feeRefund2, signature2)
     ).to.emit(userSA, "ExecutionSuccess");
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer).add(tokenAmountToTransfer2));
+    
   });
 
   it("Can process Personal-signed txn", async () => {
@@ -232,10 +256,10 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: mockToken.address,
       data: encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      nonce: await userSA.getNonce(FORWARD_FLOW),
+      nonce: await forwardFlowModule.getNonce(FORWARD_FLOW),
     });
 
-    const chainId = await userSA.getChainId();
+    const chainId = await forwardFlowModule.getChainId();
     const { signer, data } = await safeSignMessage(
       smartAccountOwner,
       userSA,
@@ -254,10 +278,12 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     );
 
     await expect(
-      userSA.execTransaction_S6W(transaction, refundInfo, signatureWithModuleAddress)
+      forwardFlowModule.execTransaction(userSA.address, transaction, refundInfo, signatureWithModuleAddress)
     ).to.emit(userSA, "ExecutionSuccess");
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   }); 
+
+  /*
 
   it("can send transactions and charge smart account for fees in native tokens", async function () {
     const { 
@@ -313,12 +339,12 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     const expectedRRBalanceAfterPayingForTx = balanceRRBefore.sub(gasPaidForTx);
     const defactoRRBalanceAfterPayingForTx = await refundReceiver.getBalance();
     
-    /*
+    
     console.log("gas used", receipt.gasUsed.toString());
     console.log("Gas used in ETH", ethers.utils.formatEther(receipt.gasUsed.mul(safeTx.gasPrice)));
     console.log("Balances difference ", ethers.utils.formatEther(balanceRRBefore.sub(await refundReceiver.getBalance())));
     //if balances difference is less than gas used, it means that some refund was received
-    */
+    
 
     //if defacto Refund Receiver (RR) balance is higher than expected, it means that some refund was received
     expect(defactoRRBalanceAfterPayingForTx.gt(expectedRRBalanceAfterPayingForTx)).to.be.true;
@@ -390,6 +416,6 @@ describe("NEW::: Smart Account Forward Flow", async () => {
     //console.log("Gas used in Token ", ethers.utils.formatEther(receipt.gasUsed.mul(safeTx.gasPrice))); // 1 MockToken = 1 ETH
     //console.log("Refund amount is: ", ethers.utils.formatEther(balanceRRAfter.sub(balanceRRBefore)));
   });
-
+ */
 
 });

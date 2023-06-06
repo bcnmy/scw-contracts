@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 import {Enum} from "../../../common/Enum.sol";
 import {BaseGuard} from "./GuardManager.sol";
-import {Transaction, FeeRefund} from "../../../BaseSmartAccount.sol";
+import {Transaction, FeeRefund} from "../../../modules/ForwardFlowModule.sol";
 
 contract DelegateCallTransactionGuard is BaseGuard {
     error DelegateCallGuardRestricted();

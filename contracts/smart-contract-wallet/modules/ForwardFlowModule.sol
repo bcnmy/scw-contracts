@@ -6,6 +6,7 @@ import {Executor, Enum} from "../base/Executor.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {Math} from "../libs/Math.sol";
 import {SecuredTokenTransfer} from "../common/SecuredTokenTransfer.sol";
+import {SmartAccountErrors} from "../common/Errors.sol";
 
 interface IExecFromModule {
     function execTransactionFromModule(
@@ -14,6 +15,13 @@ interface IExecFromModule {
         bytes memory data,
         Enum.Operation operation,
         uint256 txGas
+    ) external returns (bool success);
+
+    function execTransactionFromModule(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
     ) external returns (bool success);
 }
 
@@ -36,7 +44,8 @@ struct FeeRefund {
 contract ForwardFlowModule is
     SecuredTokenTransfer,
     ReentrancyGuard,
-    ISignatureValidatorConstants
+    ISignatureValidatorConstants,
+    SmartAccountErrors
 {
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
@@ -51,6 +60,8 @@ contract ForwardFlowModule is
     uint256 private immutable _chainId;
 
     mapping(uint256 => uint256) public nonces;
+
+    event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
 
     constructor() {
         _chainId = block.chainid;
@@ -77,12 +88,14 @@ contract ForwardFlowModule is
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             bytes memory txHashData = encodeTransactionData(
+                // Smart Account to execute Transaction
+                smartAccount,
                 // Transaction info
                 _tx,
                 // Payment info
                 refundInfo,
                 // Signature info
-                nonces[0]++
+                nonces[1]++
             );
 
             txHash = keccak256(txHashData);
@@ -94,28 +107,29 @@ contract ForwardFlowModule is
             ) revert InvalidSignature();
         }
 
-        // We require some gas to emit the events (at least 2500) after the execution and some to perform code until the execution (500)
-        // We also include the 1/64 in the check that is not send along with a call to counteract potential shortings because of EIP-150
+        // We require some gas to emit the events (at least 2500) after the execution and some to
+        // perform code until the execution (7500 = call the external function + checks inside it)
+        // We also include the 1/64 in the check that is not send along with a call to counteract
+        // potential shortings because of EIP-150
         // Bitshift left 6 bits means multiplying by 64, just more gas efficient
         if (
             gasleft() <
-            Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 500
+            Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 7500
         )
             revert NotEnoughGasLeft(
                 gasleft(),
                 Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) +
-                    500
+                    7500
             );
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
-            // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
-            // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than targetTxGas
+            //we always provide targetTxGas to execution
             success = IExecFromModule(smartAccount).execTransactionFromModule(
                 _tx.to,
                 _tx.value,
                 _tx.data,
                 _tx.operation,
-                refundInfo.gasPrice == 0 ? (gasleft() - 2500) : _tx.targetTxGas
+                _tx.targetTxGas
             );
             // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
             // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
@@ -129,6 +143,7 @@ contract ForwardFlowModule is
             uint256 payment;
             if (refundInfo.gasPrice != 0) {
                 payment = handlePayment(
+                    smartAccount,
                     startGas - gasleft(),
                     refundInfo.baseGas,
                     refundInfo.gasPrice,
@@ -153,6 +168,7 @@ contract ForwardFlowModule is
      * @return payment The amount of payment made in the specified token.
      */
     function handlePayment(
+        address smartAccount,
         uint256 gasUsed,
         uint256 baseGas,
         uint256 gasPrice,
@@ -170,18 +186,36 @@ contract ForwardFlowModule is
             payment =
                 (gasUsed + baseGas) *
                 (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            bool success;
-            assembly {
-                success := call(gas(), receiver, payment, 0, 0, 0, 0)
-            }
-            if (!success)
+            if (
+                !IExecFromModule(smartAccount).execTransactionFromModule(
+                    receiver,
+                    payment,
+                    "0x",
+                    Enum.Operation.Call,
+                    0
+                )
+            ) {
                 revert TokenTransferFailed(address(0), receiver, payment);
+            }
         } else {
             payment =
                 ((gasUsed + baseGas) * (gasPrice)) /
                 (tokenGasPriceFactor);
-            if (!transferToken(gasToken, receiver, payment))
+            if (
+                !IExecFromModule(smartAccount).execTransactionFromModule(
+                    gasToken,
+                    0,
+                    abi.encodeWithSignature(
+                        "transfer(address,uint256)",
+                        receiver,
+                        payment
+                    ),
+                    Enum.Operation.Call,
+                    0
+                )
+            ) {
                 revert TokenTransferFailed(gasToken, receiver, payment);
+            }
         }
     }
 
@@ -245,6 +279,7 @@ contract ForwardFlowModule is
      * @return Estimate without refunds and overhead fees (base transaction and payload data gas costs).
      */
     function requiredTxGas(
+        address smartAccount,
         address to,
         uint256 value,
         bytes calldata data,
@@ -252,8 +287,14 @@ contract ForwardFlowModule is
     ) external returns (uint256) {
         uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
-        if (!execute(to, value, data, operation, gasleft()))
-            revert ExecutionFailed();
+        if (
+            !IExecFromModule(smartAccount).execTransactionFromModule(
+                to,
+                value,
+                data,
+                operation
+            )
+        ) revert ExecutionFailed();
         // Convert response to string and return via error message
         unchecked {
             revert(string(abi.encodePacked(startGas - gasleft())));
@@ -262,47 +303,20 @@ contract ForwardFlowModule is
 
     /**
      * @dev Returns hash to be signed by owner.
-     * @param to Destination address.
-     * @param value Ether value.
-     * @param data Data payload.
-     * @param operation Operation type.
-     * @param targetTxGas Fas that should be used for the internal Smart Account transaction.
-     * @param baseGas Additional Gas costs for data used to trigger the transaction.
-     * @param gasPrice Maximum gas price/ token gas price that should be used for this transaction.
-     * @param tokenGasPriceFactor factor by which calculated token gas price is already multiplied.
-     * @param gasToken Token address (or 0 if ETH) that is used for the payment.
-     * @param refundReceiver Address of receiver of gas payment (or 0 if tx.origin).
      * @param _nonce Transaction nonce.
+     * @param smartAccount Address of the Smart Account to execute the txn.
      * @return Transaction hash.
      */
     function getTransactionHash(
-        address to,
-        uint256 value,
-        bytes calldata data,
-        Enum.Operation operation,
-        uint256 targetTxGas,
-        uint256 baseGas,
-        uint256 gasPrice,
-        uint256 tokenGasPriceFactor,
-        address gasToken,
-        address payable refundReceiver,
-        uint256 _nonce
+        Transaction calldata _tx,
+        FeeRefund calldata refundInfo,
+        uint256 _nonce,
+        address smartAccount
     ) public view returns (bytes32) {
-        Transaction memory _tx = Transaction({
-            to: to,
-            value: value,
-            data: data,
-            operation: operation,
-            targetTxGas: targetTxGas
-        });
-        FeeRefund memory refundInfo = FeeRefund({
-            baseGas: baseGas,
-            gasPrice: gasPrice,
-            tokenGasPriceFactor: tokenGasPriceFactor,
-            gasToken: gasToken,
-            refundReceiver: refundReceiver
-        });
-        return keccak256(encodeTransactionData(_tx, refundInfo, _nonce));
+        return
+            keccak256(
+                encodeTransactionData(smartAccount, _tx, refundInfo, _nonce)
+            );
     }
 
     /**
@@ -313,6 +327,7 @@ contract ForwardFlowModule is
      * @return transactionHash bytes that are hashed to be signed by the owner.
      */
     function encodeTransactionData(
+        address smartAccount,
         Transaction memory _tx,
         FeeRefund memory refundInfo,
         uint256 _nonce
@@ -337,7 +352,7 @@ contract ForwardFlowModule is
             bytes.concat(
                 bytes1(0x19),
                 bytes1(0x01),
-                domainSeparator(),
+                domainSeparator(smartAccount),
                 accountTxHash
             );
     }
@@ -355,10 +370,12 @@ contract ForwardFlowModule is
      * @dev Returns the domain separator for this contract, as defined in the EIP-712 standard.
      * @return bytes32 The domain separator hash.
      */
-    function domainSeparator() public view returns (bytes32) {
+    function domainSeparator(
+        address smartAccount
+    ) public view returns (bytes32) {
         return
             keccak256(
-                abi.encode(DOMAIN_SEPARATOR_TYPEHASH, _chainId, address(this))
+                abi.encode(DOMAIN_SEPARATOR_TYPEHASH, _chainId, smartAccount)
             );
     }
 

@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccount.sol";
+import {BaseSmartAccount, IEntryPoint, UserOperation} from "./BaseSmartAccount.sol";
 import {ModuleManager} from "./base/ModuleManager.sol";
 import {FallbackManager} from "./base/FallbackManager.sol";
 import {LibAddress} from "./libs/LibAddress.sol";
@@ -51,7 +51,6 @@ contract SmartAccount is
         address indexed oldImplementation,
         address indexed newImplementation
     );
-    event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
     event SmartAccountReceivedNativeToken(
         address indexed sender,
         uint256 indexed value
@@ -67,7 +66,6 @@ contract SmartAccount is
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
         _entryPoint = anEntryPoint;
-        _chainId = block.chainid;
         modules[SENTINEL_MODULES] = SENTINEL_MODULES;
     }
 
