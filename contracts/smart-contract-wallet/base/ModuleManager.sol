@@ -150,17 +150,33 @@ abstract contract ModuleManager is
         address to,
         uint256 value,
         bytes memory data,
-        Enum.Operation operation
+        Enum.Operation operation,
+        uint256 txGas
     ) public virtual returns (bool success) {
         // Only whitelisted modules are allowed.
         if (msg.sender == SENTINEL_MODULES || modules[msg.sender] == address(0))
             revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
-        success = execute(to, value, data, operation, gasleft());
+        success = execute(to, value, data, operation, txGas);
         if (success) {
             emit ModuleTransaction(msg.sender, to, value, data, operation);
             emit ExecutionFromModuleSuccess(msg.sender);
         } else emit ExecutionFromModuleFailure(msg.sender);
+    }
+
+    function execTransactionFromModule(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) public virtual returns (bool success) {
+        success = execTransactionFromModule(
+            to,
+            value,
+            data,
+            operation,
+            gasleft()
+        );
     }
 
     /**
