@@ -3,13 +3,13 @@ pragma solidity 0.8.17;
 
 import {SelfAuthorized} from "../../../common/SelfAuthorized.sol";
 import {Executor, Enum} from "../../../base/Executor.sol";
-import {ModuleManagerErrors} from "../../../common/Errors.sol";
+import {ModuleManagerErrorsV1} from "./ErrorsV1.sol";
 
 /**
  * @title Module Manager - A contract that manages modules that can execute transactions
  *        on behalf of the Smart Account via this contract.
  */
-contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrors {
+contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
     address internal constant SENTINEL_MODULES = address(0x1);
 
     mapping(address => address) internal modules;

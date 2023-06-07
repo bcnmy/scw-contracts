@@ -2,11 +2,11 @@
 pragma solidity 0.8.17;
 
 import {ISignatureValidator, ISignatureValidatorConstants} from "../interfaces/ISignatureValidator.sol";
-import {Executor, Enum} from "../base/Executor.sol";
+import {Enum} from "../common/Enum.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {Math} from "../libs/Math.sol";
-import {SecuredTokenTransfer} from "../common/SecuredTokenTransfer.sol";
-import {SmartAccountErrors} from "../common/Errors.sol";
+
+//import {SmartAccountErrors} from "../common/Errors.sol";
 
 interface IExecFromModule {
     function execTransactionFromModule(
@@ -41,12 +41,7 @@ struct FeeRefund {
     address payable refundReceiver;
 }
 
-contract ForwardFlowModule is
-    SecuredTokenTransfer,
-    ReentrancyGuard,
-    ISignatureValidatorConstants,
-    SmartAccountErrors
-{
+contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
         0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
@@ -233,6 +228,7 @@ contract ForwardFlowModule is
      * @return requiredGas Estimate of refunds
      */
     function handlePaymentRevert(
+        address smartAccount,
         uint256 gasUsed,
         uint256 baseGas,
         uint256 gasPrice,
@@ -250,17 +246,35 @@ contract ForwardFlowModule is
             // For ETH we will only adjust the gas price to not be higher than the actual used gas price
             uint256 payment = (gasUsed + baseGas) *
                 (gasPrice < tx.gasprice ? gasPrice : tx.gasprice);
-            bool success;
-            assembly {
-                success := call(gas(), receiver, payment, 0, 0, 0, 0)
-            }
-            if (!success)
+            if (
+                !IExecFromModule(smartAccount).execTransactionFromModule(
+                    receiver,
+                    payment,
+                    "0x",
+                    Enum.Operation.Call,
+                    0
+                )
+            ) {
                 revert TokenTransferFailed(address(0), receiver, payment);
+            }
         } else {
             uint256 payment = ((gasUsed + baseGas) * (gasPrice)) /
                 (tokenGasPriceFactor);
-            if (!transferToken(gasToken, receiver, payment))
+            if (
+                !IExecFromModule(smartAccount).execTransactionFromModule(
+                    gasToken,
+                    0,
+                    abi.encodeWithSignature(
+                        "transfer(address,uint256)",
+                        receiver,
+                        payment
+                    ),
+                    Enum.Operation.Call,
+                    0
+                )
+            ) {
                 revert TokenTransferFailed(gasToken, receiver, payment);
+            }
         }
         unchecked {
             requiredGas = startGas - gasleft();
@@ -387,3 +401,44 @@ contract ForwardFlowModule is
         return _chainId;
     }
 }
+
+/**
+ * @notice Throws when the address that signed the data (restored from signature)
+ * differs from the address we expected to sign the data (i.e. some authorized address)
+ */
+error InvalidSignature();
+
+/**
+ * @notice Throws if not enough gas is left at some point
+ * @param gasLeft how much gas left at the moment of a check
+ * @param gasRequired how much gas required to proceed
+ */
+error NotEnoughGasLeft(uint256 gasLeft, uint256 gasRequired);
+
+/**
+ * @notice Throws if not able to estimate gas
+ * It can be when amount of gas and its price are both zero and at the same time
+ * transaction has failed to be executed
+ * @param targetTxGas gas required for target transaction
+ * @param gasPrice gas price passed in Refund Info
+ * @param success whether transaction has been executed successfully or not
+ */
+error CanNotEstimateGas(uint256 targetTxGas, uint256 gasPrice, bool success);
+
+/**
+ * @notice Throws if transfer of tokens failed
+ * @param token token contract address
+ * @param dest token transfer receiver
+ * @param amount the amount of tokens in a failed transfer
+ */
+error TokenTransferFailed(address token, address dest, uint256 amount);
+
+/**
+ * @notice Thrown when trying to use 0 as tokenGasPriceFactor
+ */
+error TokenGasPriceFactorCanNotBeZero();
+
+/**
+ * @notice Throws when the transaction execution fails
+ */
+error ExecutionFailed();
