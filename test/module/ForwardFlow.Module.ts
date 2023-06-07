@@ -283,8 +283,6 @@ describe("NEW::: Forward Flow Module", async () => {
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   }); 
 
-  /*
-
   it("can send transactions and charge smart account for fees in native tokens", async function () {
     const { 
       userSA,
@@ -296,7 +294,7 @@ describe("NEW::: Forward Flow Module", async () => {
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: mockToken.address,
       data: encodeTransfer(charlie.address, ethers.utils.parseEther("10").toString()),
-      nonce: await userSA.getNonce(FORWARD_FLOW),
+      nonce: await forwardFlowModule.getNonce(FORWARD_FLOW),
     });
     const gasEstimation = await ethers.provider.estimateGas({
       to: mockToken.address,
@@ -308,13 +306,13 @@ describe("NEW::: Forward Flow Module", async () => {
     safeTx.gasToken = "0x0000000000000000000000000000000000000000";
     safeTx.gasPrice = 10000000000;
     safeTx.targetTxGas = gasEstimation.toNumber();
-    safeTx.baseGas = 21000 + 21000 + 25000; // base + eth transfer + ~cost of handlePayment itself
+    safeTx.baseGas = 21000 + + 15000 + 21000 + 25000; // base + cost of execTransactionFromModule + eth transfer  + ~cost of handlePayment itself
 
     const { signer, data } = await safeSignTypedData(
       smartAccountOwner,
       userSA,
       safeTx,
-      await userSA.getChainId()
+      await forwardFlowModule.getChainId()
     );
 
     let signature = "0x";
@@ -326,9 +324,9 @@ describe("NEW::: Forward Flow Module", async () => {
 
     const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
 
-    const tx = await userSA
+    const tx = await forwardFlowModule
       .connect(refundReceiver)
-      .execTransaction_S6W(transaction, refundInfo, signatureWithModuleAddress, {
+      .execTransaction(userSA.address, transaction, refundInfo, signatureWithModuleAddress, {
         gasPrice: safeTx.gasPrice,
       }
     );
@@ -339,12 +337,9 @@ describe("NEW::: Forward Flow Module", async () => {
     const expectedRRBalanceAfterPayingForTx = balanceRRBefore.sub(gasPaidForTx);
     const defactoRRBalanceAfterPayingForTx = await refundReceiver.getBalance();
     
-    
-    console.log("gas used", receipt.gasUsed.toString());
-    console.log("Gas used in ETH", ethers.utils.formatEther(receipt.gasUsed.mul(safeTx.gasPrice)));
-    console.log("Balances difference ", ethers.utils.formatEther(balanceRRBefore.sub(await refundReceiver.getBalance())));
-    //if balances difference is less than gas used, it means that some refund was received
-    
+    //console.log("gas used", receipt.gasUsed.toString());
+    //console.log("Gas used in ETH", ethers.utils.formatEther(receipt.gasUsed.mul(safeTx.gasPrice)));
+    //console.log("Balances difference ", ethers.utils.formatEther(balanceRRBefore.sub(await refundReceiver.getBalance())));  
 
     //if defacto Refund Receiver (RR) balance is higher than expected, it means that some refund was received
     expect(defactoRRBalanceAfterPayingForTx.gt(expectedRRBalanceAfterPayingForTx)).to.be.true;
@@ -362,7 +357,7 @@ describe("NEW::: Forward Flow Module", async () => {
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: mockToken.address,
       data: encodeTransfer(charlie.address, ethers.utils.parseEther("10").toString()),
-      nonce: await userSA.getNonce(FORWARD_FLOW),
+      nonce: await forwardFlowModule.getNonce(FORWARD_FLOW),
     });
     const gasEstimation1 = await ethers.provider.estimateGas({
       to: mockToken.address,
@@ -390,7 +385,7 @@ describe("NEW::: Forward Flow Module", async () => {
       smartAccountOwner,
       userSA,
       safeTx,
-      await userSA.getChainId()
+      await forwardFlowModule.getChainId()
     );
 
     let signature = "0x";
@@ -401,9 +396,9 @@ describe("NEW::: Forward Flow Module", async () => {
     );
 
     const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
-    const tx = await userSA
+    const tx = await forwardFlowModule
       .connect(refundReceiver)
-      .execTransaction_S6W(transaction, refundInfo, signatureWithModuleAddress, {
+      .execTransaction(userSA.address, transaction, refundInfo, signatureWithModuleAddress, {
         gasPrice: safeTx.gasPrice,
       }
     );
@@ -416,6 +411,5 @@ describe("NEW::: Forward Flow Module", async () => {
     //console.log("Gas used in Token ", ethers.utils.formatEther(receipt.gasUsed.mul(safeTx.gasPrice))); // 1 MockToken = 1 ETH
     //console.log("Refund amount is: ", ethers.utils.formatEther(balanceRRAfter.sub(balanceRRBefore)));
   });
- */
 
 });
