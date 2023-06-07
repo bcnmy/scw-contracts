@@ -6,8 +6,6 @@ import {Enum} from "../common/Enum.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {Math} from "../libs/Math.sol";
 
-//import {SmartAccountErrors} from "../common/Errors.sol";
-
 interface IExecFromModule {
     function execTransactionFromModule(
         address to,
