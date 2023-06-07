@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 import "../SmartAccount.sol";
+import {Enum} from "../common/Enum.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 
 // TODO: To be rebuilt for an ownerless setup => like which validation method does it recover?

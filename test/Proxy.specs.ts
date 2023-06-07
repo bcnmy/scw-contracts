@@ -30,7 +30,7 @@ describe("NEW::: Proxy ", async () => {
       let proxy = await Proxy.deploy(implementationAddress);
       await proxy.deployed();
       proxy = await ethers.getContractAt("SmartAccount", proxy.address);
-      await expect(proxy.getChainId()).to.be.reverted;
+      await expect(proxy.getImplementation()).to.be.reverted;
     });
 
   });

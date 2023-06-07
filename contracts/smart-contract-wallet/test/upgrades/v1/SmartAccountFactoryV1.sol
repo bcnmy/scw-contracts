@@ -4,7 +4,7 @@ pragma solidity 0.8.17;
 import "./Proxy.sol";
 import "./BaseSmartAccountV1.sol";
 import {DefaultCallbackHandler} from "../../../handler/DefaultCallbackHandler.sol";
-import {SmartAccountFactoryErrors} from "../../../common/Errors.sol";
+import {SmartAccountFactoryErrorsV1} from "./ErrorsV1.sol";
 
 /**
  * @title Smart Account Factory - factory responsible for deploying Smart Accounts using CREATE2 and CREATE

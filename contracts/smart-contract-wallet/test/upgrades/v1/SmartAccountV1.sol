@@ -11,7 +11,7 @@ import {ISignatureValidator} from "../../../interfaces/ISignatureValidator.sol";
 import {Math} from "../../../libs/Math.sol";
 import {IERC165} from "../../../interfaces/IERC165.sol";
 import {ReentrancyGuard} from "../../../common/ReentrancyGuard.sol";
-import {SmartAccountErrors} from "../../../common/Errors.sol";
+import {SmartAccountErrorsV1} from "./ErrorsV1.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IModule} from "./IModuleV1.sol";
 
@@ -32,7 +32,7 @@ contract SmartAccountV1 is
     SecuredTokenTransfer,
     IERC165,
     ReentrancyGuard,
-    SmartAccountErrors,
+    SmartAccountErrorsV1,
     ISignatureValidator
 {
     using ECDSA for bytes32;

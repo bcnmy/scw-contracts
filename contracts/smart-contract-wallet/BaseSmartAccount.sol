@@ -8,25 +8,8 @@ pragma solidity 0.8.17;
 import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {Enum} from "./common/Enum.sol";
 import {BaseSmartAccountErrors} from "./common/Errors.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
-
-struct Transaction {
-    address to;
-    Enum.Operation operation;
-    uint256 value;
-    bytes data;
-    uint256 targetTxGas;
-}
-
-struct FeeRefund {
-    uint256 baseGas;
-    uint256 gasPrice; //gasPrice or tokenGasPrice
-    uint256 tokenGasPriceFactor;
-    address gasToken;
-    address payable refundReceiver;
-}
 
 /**
  * Basic account implementation.
@@ -124,18 +107,4 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
         address moduleSetupContract,
         bytes calldata moduleSetupData
     ) external virtual returns (address);
-
-    /**
-     * @dev Gnosis style transaction with optional repay in native tokens OR ERC20
-     * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
-     * @notice The fees are always transferred, even if the user transaction fails.
-     * @param _tx Smart Account transaction
-     * @param refundInfo Required information for gas refunds
-     * @param signatures Packed signature/s data ({bytes32 r}{bytes32 s}{uint8 v})
-     */
-    function execTransaction(
-        Transaction memory _tx,
-        FeeRefund memory refundInfo,
-        bytes memory signatures
-    ) external payable virtual returns (bool success);
 }

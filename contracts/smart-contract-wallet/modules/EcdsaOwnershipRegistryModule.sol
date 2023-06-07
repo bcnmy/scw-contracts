@@ -51,6 +51,10 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         smartAccountOwners[msg.sender] = owner;
     }
 
+    /**
+     * @dev Checks if the address provided is a smart contract.
+     * @param account Address to be checked.
+     */
     function isSmartAccount(address account) internal view returns (bool) {
         uint256 size;
         assembly {

@@ -10,7 +10,7 @@ interface ISmartAccount {
         uint256 value,
         bytes memory data,
         Enum.Operation operation
-    ) external;
+    ) external returns (bool success);
 }
 
 contract MockHookModule is IHooks {

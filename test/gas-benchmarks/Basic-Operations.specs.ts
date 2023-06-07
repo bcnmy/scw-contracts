@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildecdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import {
   getEntryPoint,
@@ -8,7 +7,6 @@ import {
   getSmartAccountFactory,
   getMockToken,
   getEcdsaOwnershipRegistryModule,
-  getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import {

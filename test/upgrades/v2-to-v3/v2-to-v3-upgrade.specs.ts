@@ -86,7 +86,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     };
   });
 
-  it ("Newly deployes V3 SA and PoC Spending limits module work as intended", async () => {
+  it ("Newly deployed V3 SA and PoC Spending limits module work as intended", async () => {
     const { 
       ecdsaModule,
       userSAV3,

@@ -81,8 +81,6 @@ describe("NEW::: Smart Account Factory", async () => {
       expect(await smartAccount.isModuleEnabled(ecdsaModule.address)).to.equal(true);
       expect(await ecdsaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
       expect(await smartAccount.nonce()).to.equal(0);
-      const forwardFlowNonceBatchId = 1;
-      expect(await smartAccount.getNonce(forwardFlowNonceBatchId)).to.equal(0);
     });
 
     it ("should revert if already deployed", async () => {   
