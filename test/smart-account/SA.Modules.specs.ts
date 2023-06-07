@@ -378,19 +378,12 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
     });
   });
 
-  // Don't test until I remove delegatecalls from ModuleManager
-  /*
   describe ("execTransactionFromModule: ", async () => {
-
-
-
+      // execTransactionFromModule is successfuly tested in the ../module/ForwardFlowModule.specs.ts
   });
 
   describe ("execBatchTransactionFromModule: ", async () => {
 
-
-
   });
-  */
 
 });

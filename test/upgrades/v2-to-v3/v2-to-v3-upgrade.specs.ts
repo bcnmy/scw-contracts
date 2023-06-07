@@ -12,7 +12,6 @@ import {
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { fillAndSign, makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
-import { encode } from "querystring";
 
 describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
 
