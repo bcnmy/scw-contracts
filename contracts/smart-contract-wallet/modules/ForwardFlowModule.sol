@@ -61,13 +61,15 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
     }
 
     /**
-     * @dev Gnosis style transaction with optional repay in native tokens OR ERC20
+     * @dev Safe (ex-Gnosis) style transaction with optional repay in native tokens or ERC20
      * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
      * @dev Function name optimized to have hash started with zeros to make this function calls cheaper
      * @notice The fees are always transferred, even if the user transaction fails.
      * @param _tx Smart Account transaction
      * @param refundInfo Required information for gas refunds
      * @param signatures Packed signature/s data ({bytes32 r}{bytes32 s}{uint8 v})
+     *                   Should be a signature over Typed Data Hash
+     *                   Use eth_signTypedData, not a personal_sign
      */
 
     function execTransaction(

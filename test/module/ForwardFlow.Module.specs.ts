@@ -243,45 +243,13 @@ describe("NEW::: Forward Flow Module", async () => {
     
   });
 
+  /*
   it("Can process Personal-signed txn", async () => {
-    const { 
-      mockToken,
-      userSA,
-      ecdsaModule
-    } = await setupTests();
-    
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
-    
-    const safeTx: SafeTransaction = buildSafeTransaction({
-      to: mockToken.address,
-      data: encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      nonce: await forwardFlowModule.getNonce(FORWARD_FLOW),
-    });
-
-    const chainId = await forwardFlowModule.getChainId();
-    const { signer, data } = await safeSignMessage(
-      smartAccountOwner,
-      userSA,
-      safeTx,
-      chainId
-    );
-
-    const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
-
-    let signature = "0x";
-    signature += data.slice(2);
-    
-    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-      ["bytes", "address"], 
-      [signature, ecdsaModule.address]
-    );
-
-    await expect(
-      forwardFlowModule.execTransaction(userSA.address, transaction, refundInfo, signatureWithModuleAddress)
-    ).to.emit(userSA, "ExecutionSuccess");
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+      // DEPRECATED
+      // Only signatures over typed data hash are expected by this module
+      // because of the way it reconstructs hash to verify the signature
   }); 
+  */
 
   it("can send transactions and charge smart account for fees in native tokens", async function () {
     const { 

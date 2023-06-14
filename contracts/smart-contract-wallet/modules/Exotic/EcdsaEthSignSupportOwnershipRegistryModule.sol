@@ -1,28 +1,31 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule, UserOperation} from "../BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
- * @title Smart Contract Ownership Authorization module for Biconomy Smart Accounts.
+ * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
- *         - It allows to validate user operations signed by other smart contracts via EIP-1271.
+ *         - It allows to validate user operations signed by EOA private key.
  *         - EIP-1271 compatible (ensures Smart Account can validate signed messages).
  *         - One owner per Smart Account.
- * !!!!!!! No EOA owners supported
- *         For EOA Owners check EcdsaOwnership module instead
+ *         - Supports eth_sign flow
+ * !!!!!!! Only EOA owners supported, no Smart Account Owners
+ *         For Smart Contract Owners check SmartContractOwnership module instead
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
-    string public constant NAME = "Smart Contract Ownership Registry Module";
+contract EcdsaWithEthSignSupportOwnershipRegistryModule is
+    BaseAuthorizationModule
+{
+    string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "0.1.0";
 
     error NoOwnerRegisteredForSmartAccount(address smartAccount);
     error AlreadyInitedForSmartAccount(address smartAccount);
     error WrongSignatureLength();
-    error NotSmartContract(address account);
+    error NotEOA(address account);
 
     using ECDSA for bytes32;
 
@@ -34,7 +37,7 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
      * @param owner The owner of the Smart Account.
      */
     function initForSmartAccount(address owner) external returns (address) {
-        if (!isSmartAccount(owner)) revert NotSmartContract(owner);
+        if (isSmartAccount(owner)) revert NotEOA(owner);
         if (smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
         smartAccountOwners[msg.sender] = owner;
@@ -47,10 +50,14 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
      * @param owner The owner of the Smart Account.
      */
     function setOwner(address owner) external {
-        if (!isSmartAccount(owner)) revert NotSmartContract(owner);
+        if (isSmartAccount(owner)) revert NotEOA(owner);
         smartAccountOwners[msg.sender] = owner;
     }
 
+    /**
+     * @dev Checks if the address provided is a smart contract.
+     * @param account Address to be checked.
+     */
     function isSmartAccount(address account) internal view returns (bool) {
         uint256 size;
         assembly {
@@ -99,7 +106,6 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
     /**
      * @dev Validates a signature for a message.
      * To be called from a Smart Account.
-     * Expects a hash prepended with 'x\x19Ethereum Signed Message:\n32'
      * @param dataHash Exact hash of the data that was signed.
      * @param moduleSignature Signature to be validated.
      * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
@@ -132,7 +138,7 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
 
     /**
      * @dev Validates a signature for a message.
-     * Only Smart Account Owners, no EOA owners supported
+     * Only EOA owners supported, no Smart Account Owners
      * For Smart Contrac Owners check SmartContractOwnership module instead
      * @param dataHash Hash of the data to be validated.
      * @param signature Signature to be validated.
@@ -144,15 +150,40 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
         bytes memory signature,
         address smartAccount
     ) internal view returns (bool) {
-        address expectedContractSigner = smartAccountOwners[smartAccount];
-        if (expectedContractSigner == address(0))
+        address expectedSigner = smartAccountOwners[smartAccount];
+        if (expectedSigner == address(0))
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
-        return
-            ISignatureValidator(expectedContractSigner).isValidSignature(
-                dataHash,
-                signature
-            ) == EIP1271_MAGIC_VALUE
-                ? true
-                : false;
+        if (signature.length < 65) revert WrongSignatureLength();
+        (uint8 v, bytes32 r, bytes32 s) = _signatureSplit(signature);
+        if (v > 30) {
+            //eth_sign flow
+            (address _signer, ) = dataHash.toEthSignedMessageHash().tryRecover(
+                v - 4,
+                r,
+                s
+            );
+            return expectedSigner == _signer;
+        } else {
+            return expectedSigner == dataHash.recover(signature);
+        }
+    }
+
+    function _signatureSplit(
+        bytes memory signature
+    ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+        // The signature format is a compact form of:
+        //   {bytes32 r}{bytes32 s}{uint8 v}
+        // Compact means, uint8 is not padded to 32 bytes.
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r := mload(add(signature, 0x20))
+            s := mload(add(signature, 0x40))
+            // Here we are loading the last 32 bytes, including 31 bytes
+            // of 's'. There is no 'mload8' to do this.
+            //
+            // 'byte' is not working due to the Solidity parser, so let's
+            // use the second best option, 'and'
+            v := and(mload(add(signature, 0x41)), 0xff)
+        }
     }
 }
