@@ -78,20 +78,12 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
             userOp.signature,
             (bytes, address)
         );
-        // validateUserOp gets a hash not prepended with 'x\x19Ethereum Signed Message:\n32'
-        // so we have to do it manually
-        bytes32 ethSignedHash = userOpHash.toEthSignedMessageHash();
-        return _validateSignature(userOp, ethSignedHash, moduleSignature);
-    }
-
-    function _validateSignature(
-        UserOperation calldata userOp,
-        bytes32 ethSignedUserOpHash,
-        bytes memory moduleSignature
-    ) internal view virtual returns (uint256 sigValidationResult) {
+        // validateUserOp gets from EP a hash not prepended with 'x\x19Ethereum Signed Message:\n32'
+        // so we have to do it manually, as on the user side it is signed with personal_sign
+        // that prepends with "\x19Ethereum Signed Message\n32"
         if (
             _verifySignature(
-                ethSignedUserOpHash,
+                userOpHash.toEthSignedMessageHash(),
                 moduleSignature,
                 userOp.sender
             )
@@ -153,24 +145,5 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
         if (signature.length < 65) revert WrongSignatureLength();
         return expectedSigner == dataHash.recover(signature);
-    }
-
-    function _signatureSplit(
-        bytes memory signature
-    ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
-        // The signature format is a compact form of:
-        //   {bytes32 r}{bytes32 s}{uint8 v}
-        // Compact means, uint8 is not padded to 32 bytes.
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            r := mload(add(signature, 0x20))
-            s := mload(add(signature, 0x40))
-            // Here we are loading the last 32 bytes, including 31 bytes
-            // of 's'. There is no 'mload8' to do this.
-            //
-            // 'byte' is not working due to the Solidity parser, so let's
-            // use the second best option, 'and'
-            v := and(mload(add(signature, 0x41)), 0xff)
-        }
     }
 }

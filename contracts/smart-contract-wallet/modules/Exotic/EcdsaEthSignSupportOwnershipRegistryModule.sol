@@ -80,20 +80,12 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
             userOp.signature,
             (bytes, address)
         );
-        // validateUserOp gets a hash not prepended with 'x\x19Ethereum Signed Message:\n32'
-        // so we have to do it manually
-        bytes32 ethSignedHash = userOpHash.toEthSignedMessageHash();
-        return _validateSignature(userOp, ethSignedHash, moduleSignature);
-    }
-
-    function _validateSignature(
-        UserOperation calldata userOp,
-        bytes32 ethSignedUserOpHash,
-        bytes memory moduleSignature
-    ) internal view virtual returns (uint256 sigValidationResult) {
+        // validateUserOp gets from EP a hash not prepended with 'x\x19Ethereum Signed Message:\n32'
+        // so we have to do it manually, as on the user side it is signed with personal_sign
+        // that prepends with "\x19Ethereum Signed Message\n32"
         if (
             _verifySignature(
-                ethSignedUserOpHash,
+                userOpHash.toEthSignedMessageHash(),
                 moduleSignature,
                 userOp.sender
             )
