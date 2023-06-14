@@ -67,7 +67,8 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             SAFactory: SAFactory,
             EcdsaRegistryModule: EcdsaRegistryModule,
             userSA: userSA,
-            randomContract: randomContract
+            randomContract: randomContract,
+            EcdsaOwnershipSetupData: EcdsaOwnershipSetupData,
         };
     });
 
@@ -249,7 +250,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         // Negative Cases
 
         // Pass in valid userOp with invalid userOpHash
-        it("Returns SIG_VALIDATION_FAILED when invalid chainId is passed wrong chainId in userOpHash ", async()=>{
+        it("Returns SIG_VALIDATION_FAILED when invalid chainId is passed in userOpHash ", async()=>{
             const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
 
             let txndata = randomContract.interface.encodeFunctionData(
@@ -308,6 +309,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 [],
             );
 
+            // Pass bob as signer instead of alice
             let userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
                 [randomContract.address,0,txndata],
@@ -319,25 +321,85 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
             const provider = entryPoint?.provider;
             const chainId = await provider!.getNetwork().then((net) => net.chainId);
-
             const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
+
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(1);
+        });
+
+        it("Reverts when userOp.sender is an Unregistered Smart Account", async()=>{
+            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract, EcdsaOwnershipSetupData } = await setupTests1();
+
+            let txndata = randomContract.interface.encodeFunctionData(
+                "returnAddress",
+                [],
+            );
+
+            let userOp = await makeEcdsaModuleUserOp(
+                "executeCall",
+                [randomContract.address,0,txndata],
+                userSA.address,
+                alice,
+                entryPoint,
+                EcdsaRegistryModule.address
+            );
+
+            const provider = entryPoint?.provider;
+            const chainId = await provider!.getNetwork().then((net) => net.chainId);
+            const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
+
+            // get a new smart account address
+            const unregisteredSmartAccount = await SAFactory.getAddressForCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex+1);
+
+            userOp.sender = unregisteredSmartAccount;
+
+            await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.reverted;
+
+
+        });
+
+
+
+        it("Reverts when length of user.signature is less than 65 ", async()=>{
+            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
+
+            let txndata = randomContract.interface.encodeFunctionData(
+                "returnAddress",
+                [],
+            );
+
+            let userOp = await makeEcdsaModuleUserOp(
+                "executeCall",
+                [randomContract.address,0,txndata],
+                userSA.address,
+                alice,
+                entryPoint,
+                EcdsaRegistryModule.address
+            );
+
+            const provider = entryPoint?.provider;
+            const chainId = await provider!.getNetwork().then((net) => net.chainId);
+            const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
+
+            // construct signature of length < 65
+            const invalidSignature = new Uint8Array(64);
+            for (let i = 0; i < invalidSignature.length; i++) {
+                invalidSignature[i] = i; // Set each byte to its index value
+            }
+
+            let invalidSignatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+                ["bytes", "address"],
+                [invalidSignature, EcdsaRegistryModule.address]
+            );
+
+            userOp.signature = invalidSignatureWithModuleAddress;
+
+            await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.reverted;
+
         });
     });
 
+    // when hash is not prepended with
 
-    // Expects a hash prepended with 'x\x19Ethereum Signed Message:\n32'
-    // isValidSignatureForAddress()
-    // bytes32 dataHash, bytes memory signature, address smartAccount
-    describe("isValidSignatureForAddress(): ", async()=>{
-        // Deployed userSA in setupTests1() has alice as owner
 
-        it("Returns EIP1271_MAGIC_VALUE when signed by owner of userSA ", async()=>{});
-
-        it("Reverts when passed [bytes signature] of length<65 ", async()=>{});
-
-        it("Reverts when passed invalid signature (invalid v,r,s) ", async()=>{});
-
-    });
 
 });
