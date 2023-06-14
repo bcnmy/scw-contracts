@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule, UserOperation} from "../BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
@@ -10,13 +10,15 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  *         - It allows to validate user operations signed by EOA private key.
  *         - EIP-1271 compatible (ensures Smart Account can validate signed messages).
  *         - One owner per Smart Account.
- *         - Does not support outdated eth_sign flow for cheaper validations (see https://support.metamask.io/hc/en-us/articles/14764161421467-What-is-eth-sign-and-why-is-it-a-risk-)
+ *         - Supports eth_sign flow
  * !!!!!!! Only EOA owners supported, no Smart Account Owners
  *         For Smart Contract Owners check SmartContractOwnership module instead
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
+contract EcdsaWithEthSignSupportOwnershipRegistryModule is
+    BaseAuthorizationModule
+{
     string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "0.1.0";
 
@@ -144,6 +146,36 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         if (expectedSigner == address(0))
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
         if (signature.length < 65) revert WrongSignatureLength();
-        return expectedSigner == dataHash.recover(signature);
+        (uint8 v, bytes32 r, bytes32 s) = _signatureSplit(signature);
+        if (v > 30) {
+            //eth_sign flow
+            (address _signer, ) = dataHash.toEthSignedMessageHash().tryRecover(
+                v - 4,
+                r,
+                s
+            );
+            return expectedSigner == _signer;
+        } else {
+            return expectedSigner == dataHash.recover(signature);
+        }
+    }
+
+    function _signatureSplit(
+        bytes memory signature
+    ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
+        // The signature format is a compact form of:
+        //   {bytes32 r}{bytes32 s}{uint8 v}
+        // Compact means, uint8 is not padded to 32 bytes.
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            r := mload(add(signature, 0x20))
+            s := mload(add(signature, 0x40))
+            // Here we are loading the last 32 bytes, including 31 bytes
+            // of 's'. There is no 'mload8' to do this.
+            //
+            // 'byte' is not working due to the Solidity parser, so let's
+            // use the second best option, 'and'
+            v := and(mload(add(signature, 0x41)), 0xff)
+        }
     }
 }

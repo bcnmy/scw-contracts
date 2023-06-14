@@ -243,16 +243,84 @@ describe("NEW::: Forward Flow Module", async () => {
     
   });
 
+  /*
   it("Can process Personal-signed txn", async () => {
+      // DEPRECATED
+      // Only signatures over typed data hash are expected by this module
+      // because of the way it reconstructs hash to verify the signature
+  }); 
+  */
+
+  it("Can process eth_signed txn via dedicated module", async () => {
     const { 
       mockToken,
       userSA,
-      ecdsaModule
+      ecdsaModule,
+      entryPoint,
     } = await setupTests();
     
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
+
+    const EthSignCompatibleECDSAModule = await ethers.getContractFactory("EcdsaWithEthSignSupportOwnershipRegistryModule");
+    const ethSignCompatibleECDSAModule = await EthSignCompatibleECDSAModule.deploy();
+    const ethSignCompatibleECDSASetupData = EthSignCompatibleECDSAModule.interface.encodeFunctionData(
+      "initForSmartAccount",
+      [smartAccountOwner.address]
+    ); 
+    let enableModuleUserOp = await makeEcdsaModuleUserOp(
+      "setupAndEnableModule",
+      [ethSignCompatibleECDSAModule.address, ethSignCompatibleECDSASetupData],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    );
+    const tx = await entryPoint.handleOps([enableModuleUserOp], alice.address);
+    await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+    expect(await userSA.isModuleEnabled(ethSignCompatibleECDSAModule.address)).to.be.true;
     
+    const safeTx: SafeTransaction = buildSafeTransaction({
+      to: mockToken.address,
+      data: encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      nonce: await forwardFlowModule.getNonce(FORWARD_FLOW),
+    });
+
+    const chainId = await forwardFlowModule.getChainId();
+    const { signer, data } = await safeSignMessage(
+      smartAccountOwner,
+      userSA,
+      safeTx,
+      chainId
+    );
+
+    const {transaction, refundInfo} = getTransactionAndRefundInfoFromSafeTransactionObject(safeTx);
+
+    let signature = "0x";
+    signature += data.slice(2);
+    
+    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"], 
+      [signature, ethSignCompatibleECDSAModule.address]
+    );
+
+    await expect(
+      forwardFlowModule.execTransaction(userSA.address, transaction, refundInfo, signatureWithModuleAddress)
+    ).to.emit(userSA, "ExecutionSuccess");
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+  }); 
+
+  it("Can not process eth_signed txn via regular ecdsa module", async () => {
+    const { 
+      mockToken,
+      userSA,
+      ecdsaModule,
+      entryPoint,
+    } = await setupTests();
+    
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.13924");
+
     const safeTx: SafeTransaction = buildSafeTransaction({
       to: mockToken.address,
       data: encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
@@ -279,8 +347,8 @@ describe("NEW::: Forward Flow Module", async () => {
 
     await expect(
       forwardFlowModule.execTransaction(userSA.address, transaction, refundInfo, signatureWithModuleAddress)
-    ).to.emit(userSA, "ExecutionSuccess");
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+    ).to.be.revertedWith("ECDSA: invalid signature");
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
   }); 
 
   it("can send transactions and charge smart account for fees in native tokens", async function () {
