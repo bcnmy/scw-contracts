@@ -1,16 +1,20 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
-
 import "./ISessionValidationModule.sol";
+import {AuthorizationModulesConstants} from "../BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract ERC20SessionValidationModule {
+import "hardhat/console.sol";
+
+contract ERC20SessionValidationModule is AuthorizationModulesConstants {
     function validateSessionUserOp(
         UserOperation calldata _op,
         bytes32 _userOpHash,
         bytes calldata _data,
         bytes calldata _sig
-    ) external view returns (bool) {
+    ) external view returns (uint256) {
+        console.log("validateSessionUserOp");
+
         address sessionKey = address(bytes20(_data[0:20]));
         address recipient = address(bytes20(_data[40:60]));
         uint256 maxAmount = abi.decode(_data[60:92], (uint256));
@@ -21,10 +25,12 @@ contract ERC20SessionValidationModule {
                 (address, uint256, bytes)
             );
             if (tokenAddr != token) {
-                return false;
+                console.log("failed at 1");
+                return SIG_VALIDATION_FAILED;
             }
             if (amount > 0) {
-                return false;
+                console.log("failed at 2");
+                return SIG_VALIDATION_FAILED;
             }
         }
         bytes calldata data;
@@ -36,11 +42,24 @@ contract ERC20SessionValidationModule {
             data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
         }
         if (address(bytes20(data[12:32])) != recipient) {
-            return false;
+            console.log("failed at 3");
+            console.log(
+                "address(bytes20(data[12:32])): %s",
+                address(bytes20(data[12:32]))
+            );
+            console.log("recipient: %s", recipient);
+            return SIG_VALIDATION_FAILED;
         }
         if (uint256(bytes32(data[32:64])) > maxAmount) {
-            return false;
+            console.log("failed at 4");
+            return SIG_VALIDATION_FAILED;
         }
-        return ECDSA.recover(_userOpHash, _sig) == sessionKey;
+        //return ECDSA.recover(_userOpHash, _sig) == sessionKey;
+        console.log("sessionKey: %s", sessionKey);
+        return
+            ECDSA.recover(ECDSA.toEthSignedMessageHash(_userOpHash), _sig) ==
+                sessionKey
+                ? 0
+                : SIG_VALIDATION_FAILED;
     }
 }
