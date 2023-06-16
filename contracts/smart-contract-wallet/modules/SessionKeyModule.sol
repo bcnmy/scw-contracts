@@ -14,7 +14,11 @@ struct SessionKeyStorage {
 contract SessionKeyManager is BaseAuthorizationModule {
     using ECDSA for bytes32;
 
-    mapping(address /*wallet*/ => SessionKeyStorage) public sessionKeyMap;
+    /*
+     * @dev mapping of Smart Account to a SessionKeyStorage
+     * Session Keys are stored as root of the merkle tree built over the session keys
+     */
+    mapping(address => SessionKeyStorage) internal sessionKeyMap;
 
     function _getSessionData(
         address _account
@@ -28,6 +32,12 @@ contract SessionKeyManager is BaseAuthorizationModule {
 
     function setMerkleRoot(bytes32 _merkleRoot) external {
         _setSessionData(msg.sender, _merkleRoot);
+    }
+
+    function getSessionKeys(
+        address smartAccount
+    ) public view returns (SessionKeyStorage memory) {
+        return sessionKeyMap[smartAccount];
     }
 
     /**

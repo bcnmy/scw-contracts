@@ -108,7 +108,9 @@ describe("NEW::: SessionKey: ERC20 Session Validation Module", async () => {
     );
     const tx = await entryPoint.handleOps([addMerkleRootUserOp], alice.address);
     await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-    expect(await sessionKeyManager.sessionKeyMap(userSA.address)).to.equal(merkleTree.getHexRoot());
+    expect(
+      (await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot
+    ).to.equal(merkleTree.getHexRoot());
     
     const transferUserOpCalldata = SmartAccount.interface.encodeFunctionData(
       "executeCall",

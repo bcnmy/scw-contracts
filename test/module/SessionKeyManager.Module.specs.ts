@@ -1,9 +1,8 @@
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../utils/userOp";
 import { encodeTransfer } from "../smart-wallet/testUtils";
-import { arrayify, hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
+import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
 import { 
   getEntryPoint, 
   getSmartAccountImplementation, 
@@ -19,7 +18,6 @@ import { MerkleTree } from "merkletreejs";
 describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver, sessionKey] = waffle.provider.getWallets();
-  //let forwardFlowModule: Contract;
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     
@@ -43,7 +41,6 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     });
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-    //deploy forward flow module and enable it in the smart account
     const sessionKeyManager = await (await ethers.getContractFactory("SessionKeyManager")).deploy();
     let userOp = await makeEcdsaModuleUserOp(
       "enableModule",
@@ -55,7 +52,6 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     );
     await entryPoint.handleOps([userOp], alice.address);
 
-    const erc20SessionModule = await (await ethers.getContractFactory("ERC20SessionValidationModule")).deploy();
     const mockSessionValidationModule = await (await ethers.getContractFactory("MockSessionValidationModule")).deploy();
     
     return {
@@ -67,7 +63,6 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
       userSA: userSA,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       sessionKeyManager: sessionKeyManager,
-      erc20SessionModule: erc20SessionModule,
       mockSessionValidationModule: mockSessionValidationModule,
     };
   });
@@ -110,7 +105,9 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     );
     const tx = await entryPoint.handleOps([addMerkleRootUserOp], alice.address);
     await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-    expect(await sessionKeyManager.sessionKeyMap(userSA.address)).to.equal(merkleTree.getHexRoot());
+    expect(
+      (await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot
+    ).to.equal(merkleTree.getHexRoot());
     
     const transferUserOpCalldata = SmartAccount.interface.encodeFunctionData(
       "executeCall",
