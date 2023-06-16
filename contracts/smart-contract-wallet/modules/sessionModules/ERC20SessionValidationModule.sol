@@ -15,7 +15,9 @@ contract ERC20SessionValidationModule is AuthorizationModulesConstants {
     ) external view returns (uint256) {
         console.log("validateSessionUserOp");
 
+        // _data is SessionKey data, that describes sessionKey permissions
         address sessionKey = address(bytes20(_data[0:20]));
+        // 20:40 is token address
         address recipient = address(bytes20(_data[40:60]));
         uint256 maxAmount = abi.decode(_data[60:92], (uint256));
         {
@@ -33,29 +35,35 @@ contract ERC20SessionValidationModule is AuthorizationModulesConstants {
                 return SIG_VALIDATION_FAILED;
             }
         }
+        // working with userOp.callData
+        // need to check if the call is to the allowed recepient and amount is not more than allowed
         bytes calldata data;
+        console.logBytes(_op.callData);
         {
             uint256 offset = uint256(bytes32(_op.callData[4 + 64:4 + 96]));
             uint256 length = uint256(
                 bytes32(_op.callData[4 + offset:4 + offset + 32])
             );
+            console.log("length: %s", length);
             data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
+            console.logBytes(data); //data is correct
         }
-        if (address(bytes20(data[12:32])) != recipient) {
+        if (address(bytes20(data[16:36])) != recipient) {
+            /*
             console.log("failed at 3");
             console.log(
                 "address(bytes20(data[12:32])): %s",
                 address(bytes20(data[12:32]))
             );
             console.log("recipient: %s", recipient);
+            */
             return SIG_VALIDATION_FAILED;
         }
-        if (uint256(bytes32(data[32:64])) > maxAmount) {
-            console.log("failed at 4");
+        if (uint256(bytes32(data[36:68])) > maxAmount) {
+            //console.log("failed at 4");
             return SIG_VALIDATION_FAILED;
         }
-        //return ECDSA.recover(_userOpHash, _sig) == sessionKey;
-        console.log("sessionKey: %s", sessionKey);
+        console.log("trying to recover");
         return
             ECDSA.recover(ECDSA.toEthSignedMessageHash(_userOpHash), _sig) ==
                 sessionKey

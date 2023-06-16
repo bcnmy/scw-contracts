@@ -136,13 +136,21 @@ describe("NEW::: SessionKey Module", async () => {
     );
     console.log("userOp filled and signed");
     const paddedSig = defaultAbiCoder.encode(
+      //validUntil, validAfter, sessionVerificationModule address, validationData, merkleProof, signature
       ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
-      [0, 0, erc20SessionModule.address, hexConcat([
-        hexZeroPad(sessionKey.address, 20),
-        hexZeroPad(mockToken.address, 20),
-        hexZeroPad(charlie.address, 20),
-        hexZeroPad(ethers.constants.MaxUint256.toHexString(), 32)
-      ]), merkleTree.getProof(ethers.utils.keccak256(data)), transferUserOp.signature]
+      [ 
+        0, 
+        0, 
+        erc20SessionModule.address, 
+        hexConcat([
+          hexZeroPad(sessionKey.address, 20),
+          hexZeroPad(mockToken.address, 20),
+          hexZeroPad(charlie.address, 20),
+          hexZeroPad(ethers.constants.MaxUint256.toHexString(), 32)
+        ]), 
+        merkleTree.getProof(ethers.utils.keccak256(data)), 
+        transferUserOp.signature
+      ]
     );
     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 
@@ -152,9 +160,10 @@ describe("NEW::: SessionKey Module", async () => {
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
       
-    await expect(entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})).to.be.revertedWith("FailedOp");
+    //await expect(entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})).to.be.revertedWith("FailedOp");
     
-    //expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+    await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   });
   
 });
