@@ -16,7 +16,7 @@ import {
 import {keccak256} from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
 
-describe("NEW::: SessionKey Module", async () => {
+describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver, sessionKey] = waffle.provider.getWallets();
   //let forwardFlowModule: Contract;
@@ -56,6 +56,7 @@ describe("NEW::: SessionKey Module", async () => {
     await entryPoint.handleOps([userOp], alice.address);
 
     const erc20SessionModule = await (await ethers.getContractFactory("ERC20SessionValidationModule")).deploy();
+    const mockSessionValidationModule = await (await ethers.getContractFactory("MockSessionValidationModule")).deploy();
     
     return {
       entryPoint: entryPoint,
@@ -67,29 +68,25 @@ describe("NEW::: SessionKey Module", async () => {
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       sessionKeyManager: sessionKeyManager,
       erc20SessionModule: erc20SessionModule,
+      mockSessionValidationModule: mockSessionValidationModule,
     };
   });
 
-  it ("Module is enabled", async () => {
+  it ("should be enabled", async () => {
     const { userSA, sessionKeyManager } = await setupTests();
     expect(await userSA.isModuleEnabled(sessionKeyManager.address)).to.equal(true);
   });
 
-  it ("Module is working", async () => {
-    const { entryPoint, userSA, ecdsaModule, sessionKeyManager, erc20SessionModule, mockToken } = await setupTests();
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+  it ("should be able to process Session Key signed userOp via Mock session validation module", async () => {
+    const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
     const data = hexConcat([
       hexZeroPad("0x00",6),
       hexZeroPad("0x00",6),
-      hexZeroPad(erc20SessionModule.address,20),
-      hexConcat([
-        hexZeroPad(sessionKey.address, 20),
-        hexZeroPad(mockToken.address, 20),
-        hexZeroPad(charlie.address, 20),
-        hexZeroPad(ethers.constants.MaxUint256.toHexString(), 32)
-      ])
+      hexZeroPad(mockSessionValidationModule.address,20),
+      hexZeroPad(sessionKey.address, 20),
     ])
 
     const merkleTree = new MerkleTree(
@@ -134,20 +131,14 @@ describe("NEW::: SessionKey Module", async () => {
       entryPoint,
       "nonce"
     );
-    console.log("userOp filled and signed");
     const paddedSig = defaultAbiCoder.encode(
       //validUntil, validAfter, sessionVerificationModule address, validationData, merkleProof, signature
       ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
       [ 
         0, 
         0, 
-        erc20SessionModule.address, 
-        hexConcat([
-          hexZeroPad(sessionKey.address, 20),
-          hexZeroPad(mockToken.address, 20),
-          hexZeroPad(charlie.address, 20),
-          hexZeroPad(ethers.constants.MaxUint256.toHexString(), 32)
-        ]), 
+        mockSessionValidationModule.address, 
+        hexZeroPad(sessionKey.address, 20), 
         merkleTree.getProof(ethers.utils.keccak256(data)), 
         transferUserOp.signature
       ]
@@ -159,9 +150,6 @@ describe("NEW::: SessionKey Module", async () => {
     transferUserOp.signature = signatureWithModuleAddress;
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-      
-    //await expect(entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})).to.be.revertedWith("FailedOp");
-    
     await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   });

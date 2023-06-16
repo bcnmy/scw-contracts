@@ -5,6 +5,7 @@ import {IAuthorizationModule, UserOperation} from "../interfaces/IAuthorizationM
 import {ISignatureValidator, ISignatureValidatorConstants} from "../interfaces/ISignatureValidator.sol";
 
 contract AuthorizationModulesConstants {
+    uint256 internal constant VALIDATION_SUCCESS = 0;
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 }
 

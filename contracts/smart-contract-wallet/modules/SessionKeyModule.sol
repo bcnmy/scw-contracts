@@ -5,7 +5,7 @@ import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./Bas
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
-import "./sessionModules/ISessionValidationModule.sol";
+import "./SessionValidationModules/ISessionValidationModule.sol";
 
 struct SessionKeyStorage {
     bytes32 merkleRoot;
@@ -68,7 +68,8 @@ contract SessionKeyManager is BaseAuthorizationModule {
         );
         return
             _packValidationData(
-                ISessionValidationModule(module).validateSessionUserOp(
+                //_packValidationData expects true if sig validation has failed, false otherwise
+                !ISessionValidationModule(module).validateSessionUserOp(
                     userOp,
                     userOpHash,
                     data,
