@@ -20,24 +20,14 @@ contract SessionKeyManager is BaseAuthorizationModule {
      */
     mapping(address => SessionKeyStorage) internal sessionKeyMap;
 
-    function _getSessionData(
-        address _account
-    ) internal view returns (SessionKeyStorage storage sessionKeyStorage) {
-        sessionKeyStorage = sessionKeyMap[_account];
-    }
-
-    function _setSessionData(address _account, bytes32 _merkleRoot) internal {
-        sessionKeyMap[_account] = SessionKeyStorage({merkleRoot: _merkleRoot});
+    function getSessionKeys(
+        address smartAccount
+    ) external view returns (SessionKeyStorage memory) {
+        return sessionKeyMap[smartAccount];
     }
 
     function setMerkleRoot(bytes32 _merkleRoot) external {
         _setSessionData(msg.sender, _merkleRoot);
-    }
-
-    function getSessionKeys(
-        address smartAccount
-    ) public view returns (SessionKeyStorage memory) {
-        return sessionKeyMap[smartAccount];
     }
 
     /**
@@ -95,5 +85,15 @@ contract SessionKeyManager is BaseAuthorizationModule {
         bytes memory _signature
     ) public view override returns (bytes4) {
         return 0xffffffff; // do not support it here
+    }
+
+    function _setSessionData(address _account, bytes32 _merkleRoot) internal {
+        sessionKeyMap[_account] = SessionKeyStorage({merkleRoot: _merkleRoot});
+    }
+
+    function _getSessionData(
+        address _account
+    ) internal view returns (SessionKeyStorage storage sessionKeyStorage) {
+        sessionKeyStorage = sessionKeyMap[_account];
     }
 }
