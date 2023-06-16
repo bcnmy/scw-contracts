@@ -99,7 +99,9 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
                     txHash,
                     signatures
                 ) != EIP1271_MAGIC_VALUE
-            ) revert InvalidSignature();
+            ) {
+                revert InvalidSignature();
+            }
         }
 
         // We require some gas to emit the events (at least 2500) after the execution and some to
