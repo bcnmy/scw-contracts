@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import hre , { ethers, deployments, waffle } from "hardhat";
 import { AddressZero } from "../aa-core/testutils";
-import { makeEcdsaModuleUserOp, makeMockTokenUserOp, fillAndSign, getUserOpHash } from "../utils/userOp";
+import { makeEcdsaModuleUserOp,fillAndSign, getUserOpHash } from "../utils/userOp";
 import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken} from "../utils/setupHelper";
 import { EntryPoint } from "../../typechain";
 import { keccak256, arrayify } from "ethers/lib/utils";
@@ -36,12 +36,12 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
         await deployer.sendTransaction({
             to: expectedSmartAccountAddress,
-            value: ethers.utils.parseEther("10"),
+            value: ethers.utils.parseEther("60"),
         });
 
         await deployer.sendTransaction({
             to: smartAccountOwner.address,
-            value: ethers.utils.parseEther("10"),
+            value: ethers.utils.parseEther("60"),
         });
 
         const randomContractCode = `
@@ -164,9 +164,14 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const bobBalanceBefore = await MockToken.balanceOf(bob.address);
             const tokenAmountToTransfer = ethers.utils.parseEther("50");
 
-            const userOp = await makeMockTokenUserOp(
+            let txnData = await MockToken.interface.encodeFunctionData(
                 "transfer",
-                [bob.address,tokenAmountToTransfer.toString()],
+                [bob.address,tokenAmountToTransfer.toString()]
+            );
+
+            const userOp = await makeEcdsaModuleUserOp(
+                "executeCall",
+                [MockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,
@@ -184,20 +189,25 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
 
             expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore.sub(tokenAmountToTransfer));
         });
 
         // Pass in valid userOp with invalid userOpHash
-        it("Returns SIG_VALIDATION_FAILED when invalid chainId is passed in userOpHash ", async()=>{
-            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
+        it("Returns SIG_VALIDATION_FAILED when invalid chainId is passed in userOpHash", async()=>{
+            const {EcdsaRegistryModule, entryPoint, MockToken, userSA} = await setupTests();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            let txnData = await MockToken.interface.encodeFunctionData(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()]
             );
 
-            let userOp = await makeEcdsaModuleUserOp(
+            const userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [randomContract.address,0,txndata],
+                [MockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,
@@ -210,19 +220,29 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const userOpHash = await getUserOpHash(userOp,entryPoint.address,invalidChainId);
 
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
+
+            let tx = await entryPoint.handleOps([userOp],smartAccountOwner.address);
+            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore.sub(tokenAmountToTransfer));
         });
 
         it("Returns SIG_VALIDATION_FAILED when invalid entryPoint address is passed to userOpHash" ,async()=>{
-            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
+            const {EcdsaRegistryModule, entryPoint, randomContract, userSA, MockToken} = await setupTests();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            let txnData = await MockToken.interface.encodeFunctionData(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()]
             );
 
-            let userOp = await makeEcdsaModuleUserOp(
+            const userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [randomContract.address,0,txndata],
+                [MockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,
@@ -234,22 +254,31 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
             const userOpHash = await getUserOpHash(userOp,bob.address,chainId);
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
+
+            let tx = await entryPoint.handleOps([userOp],smartAccountOwner.address);
+            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore.sub(tokenAmountToTransfer));
         });
 
-        it("Returns SIG_VALIDATION_FAILED when userOp by signed by invalid owner ", async()=>{
-            const {EcdsaRegistryModule,entryPoint, randomContract, userSA} = await setupTests();
+        it("Returns SIG_VALIDATION_FAILED when userOp is by signed by invalid owner ", async()=>{
+            const {EcdsaRegistryModule,entryPoint, userSA, MockToken} = await setupTests();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            let txnData = await MockToken.interface.encodeFunctionData(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()]
             );
 
-            // Pass bob as signer instead of smartAccountOwner
-            let userOp = await makeEcdsaModuleUserOp(
+            const userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [randomContract.address,0,txndata],
+                [MockToken.address,0,txnData],
                 userSA.address,
-                bob,
+                charlie,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -262,16 +291,20 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         });
 
         it("Reverts when userOp.sender is an Unregistered Smart Account", async()=>{
-            const {SAFactory,EcdsaRegistryModule,EcdsaOwnershipSetupData, entryPoint, randomContract, userSA} = await setupTests();
+            const {SAFactory,EcdsaRegistryModule,EcdsaOwnershipSetupData, entryPoint, MockToken, userSA} = await setupTests();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            let txnData = await MockToken.interface.encodeFunctionData(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()]
             );
 
-            let userOp = await makeEcdsaModuleUserOp(
+            const userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [randomContract.address,0,txndata],
+                [MockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,
@@ -291,16 +324,20 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         });
 
         it("Reverts when length of user.signature is less than 65 ", async()=>{
-            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
+            const {EcdsaRegistryModule, entryPoint, MockToken, userSA} = await setupTests();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            let txnData = await MockToken.interface.encodeFunctionData(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()]
             );
 
-            let userOp = await makeEcdsaModuleUserOp(
+            const userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [randomContract.address,0,txndata],
+                [MockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,
@@ -328,16 +365,20 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         });
 
         it("Returns SIG_VALIDATION_FAILED when v is altered", async()=>{
-            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
+            const {EcdsaRegistryModule, entryPoint, MockToken, userSA} = await setupTests();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            let txnData = await MockToken.interface.encodeFunctionData(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()]
             );
 
-            let userOp = await makeEcdsaModuleUserOp(
+            const userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [randomContract.address,0,txndata],
+                [MockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,
@@ -413,20 +454,24 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             );
             userOp.signature = invalidSignature;
 
-            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
+            await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.revertedWith("ECDSA: invalid signature");
         });
 
         it("Returns SIG_VALIDATION_FAILED when s is altered", async()=>{
-            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
+            const {EcdsaRegistryModule, entryPoint, MockToken, userSA} = await setupTests();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            let txnData = await MockToken.interface.encodeFunctionData(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()]
             );
 
-            let userOp = await makeEcdsaModuleUserOp(
+            const userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [randomContract.address,0,txndata],
+                [MockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,
