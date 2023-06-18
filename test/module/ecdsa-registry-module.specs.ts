@@ -1,8 +1,8 @@
 import { expect } from "chai";
 import hre , { ethers, deployments, waffle } from "hardhat";
 import { AddressZero } from "../aa-core/testutils";
-import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster, fillAndSign, getUserOpHash } from "../utils/userOp";
-import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract} from "../utils/setupHelper";
+import { makeEcdsaModuleUserOp, makeMockTokenUserOp, fillAndSign, getUserOpHash } from "../utils/userOp";
+import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken} from "../utils/setupHelper";
 import { EntryPoint } from "../../typechain";
 import { keccak256, arrayify } from "ethers/lib/utils";
 
@@ -10,58 +10,37 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
     const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
     const smartAccountDeploymentIndex = 0;
+    const SIG_VALIDATION_SUCCESS = 0;
+    const SIG_VALIDATION_FAILED = 1;
 
     const setupTests = deployments.createFixture(async( {deployments, getNamedAccounts} ) =>{
         await deployments.fixture();
 
-        // Deploy EntryPoint
         const entryPoint = await getEntryPoint();
-        // Deploy SmartAccountFactory
         const SAFactory = await getSmartAccountFactory();
-        // Deploy ECDSA Module
         const EcdsaRegistryModule = await getEcdsaOwnershipRegistryModule();
+        const MockToken = await getMockToken();
 
         let EcdsaOwnershipSetupData = EcdsaRegistryModule.interface.encodeFunctionData(
             "initForSmartAccount",
-            [await smartAccountOwner.address]
+            [smartAccountOwner.address]
         );
 
         const expectedSmartAccountAddress = await SAFactory.getAddressForCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
+        await SAFactory.deployCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
+        const userSA = await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+
+        const tokensToMint = ethers.utils.parseEther("100");
+        await MockToken.mint(userSA.address,tokensToMint.toString());
+        await MockToken.mint(bob.address,tokensToMint.toString());
 
         await deployer.sendTransaction({
             to: expectedSmartAccountAddress,
             value: ethers.utils.parseEther("10"),
         });
 
-        return {
-            entryPoint: entryPoint,
-            SAFactory: SAFactory,
-            EcdsaRegistryModule: EcdsaRegistryModule,
-        };
-    });
-
-    // alice is the owner
-    const setupTests1 = deployments.createFixture(async( {deployments, getNamedAccounts} ) =>{
-        await deployments.fixture();
-
-        // Deploy EntryPoint
-        const entryPoint = await getEntryPoint();
-        // Deploy SmartAccountFactory
-        const SAFactory = await getSmartAccountFactory();
-        // Deploy ECDSA Module
-        const EcdsaRegistryModule = await getEcdsaOwnershipRegistryModule();
-
-        let EcdsaOwnershipSetupData = EcdsaRegistryModule.interface.encodeFunctionData(
-            "initForSmartAccount",
-            [alice.address]
-         );
-
-         const expectedSmartAccountAddress = await SAFactory.getAddressForCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
-         await SAFactory.deployCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
-         const userSA = await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
-
         await deployer.sendTransaction({
-            to: userSA.address,
+            to: smartAccountOwner.address,
             value: ethers.utils.parseEther("10"),
         });
 
@@ -78,71 +57,33 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             entryPoint: entryPoint,
             SAFactory: SAFactory,
             EcdsaRegistryModule: EcdsaRegistryModule,
-            userSA: userSA,
-            randomContract: randomContract,
             EcdsaOwnershipSetupData: EcdsaOwnershipSetupData,
+            randomContract: randomContract,
+            expectedSmartAccountAddress: expectedSmartAccountAddress,
+            userSA: userSA,
+            MockToken: MockToken,
         };
     });
 
-
-
     describe("initForSmartAccount: ", async() =>{
-        // Pass in EOA address in setupData for calling initForSmartAccount function and SA is succesfully deployed
-        it("Setups ECDSA Module for the deployed Smart Account", async()=>{
-            const {SAFactory,EcdsaRegistryModule} = await setupTests();
 
-            let EcdsaOwnershipSetupData = EcdsaRegistryModule.interface.encodeFunctionData(
-                "initForSmartAccount",
-                [await smartAccountOwner.address]
-            );
-
-            const expectedSmartAccountAddress = await SAFactory.getAddressForCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
-            await SAFactory.deployCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
-            const userSA = await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
-
-            expect( await EcdsaRegistryModule.smartAccountOwners(userSA.address)).to.be.equal(smartAccountOwner.address);
-
-        });
-
-        // Pass in non(EOA) as owner in the setupData and check for revert
         it("Reverts when trying to set Smart Contract as owner of the Smart Account", async()=>{
-            const {SAFactory,EcdsaRegistryModule} = await setupTests();
-
-            const randomContractCode = `
-            contract random {
-                function returnAddress() public view returns(address){
-                    return address(this);
-                }
-            }
-            `;
-            const randomContract = await deployContract(deployer,randomContractCode);
-
+            const {SAFactory,EcdsaRegistryModule, randomContract} = await setupTests();
 
             let EcdsaOwnershipSetupData = EcdsaRegistryModule.interface.encodeFunctionData(
                 "initForSmartAccount",
                 [randomContract.address]
               );
 
-            const expectedSmartAccountAddress = await SAFactory.getAddressForCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
+            // Add 1 to smartAccountDeploymentIndex because the prev index SA has already been deployed
+            const expectedSmartAccountAddress = await SAFactory.getAddressForCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex+1);
+            await expect(SAFactory.deployCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex+1)).to.revertedWith("NotEOA");
 
-            await expect(SAFactory.deployCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex)).to.revertedWith("NotEOA");
-
-            // smartAccountOwners mapping should point to address(0)
             expect( await EcdsaRegistryModule.smartAccountOwners(expectedSmartAccountAddress)).to.be.equal(AddressZero);
         });
 
-        // Listen for AlreadyInitedForSmartAccount(msg.sender) error
         it("Reverts when calling again after initialization", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint} = await setupTests();
-
-            let EcdsaOwnershipSetupData = EcdsaRegistryModule.interface.encodeFunctionData(
-                "initForSmartAccount",
-                [smartAccountOwner.address]
-              );
-
-            const expectedSmartAccountAddress = await SAFactory.getAddressForCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
-            await SAFactory.deployCounterFactualAccount(EcdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex);
-            const userSA = await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+            const {EcdsaRegistryModule,entryPoint,userSA} = await setupTests();
 
             const txnData1 = EcdsaRegistryModule.interface.encodeFunctionData(
                 "initForSmartAccount",
@@ -161,15 +102,14 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const tx = await entryPoint.handleOps([userOp], alice.address);
             await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
         });
+
     });
 
     describe("setOwner(): ",async()=>{
-        it("Call setOwner() from userSA and changes owner ", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA} = await setupTests1();
+        it("Call setOwner() from userSA and it successfully changes owner ", async()=>{
+            const {EcdsaRegistryModule,entryPoint,userSA} = await setupTests();
 
-            // Assert alice as the initial owner
-            expect( await EcdsaRegistryModule.smartAccountOwners(userSA.address)).to.be.equal(alice.address);
-
+            // Calldata to set Bob as owner
             let txnData1 = EcdsaRegistryModule.interface.encodeFunctionData(
                 "setOwner",
                 [bob.address]
@@ -179,7 +119,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [EcdsaRegistryModule.address,0,txnData1],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -188,15 +128,10 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
 
             expect(await EcdsaRegistryModule.smartAccountOwners(userSA.address)).to.be.equal(bob.address);
-
         });
 
-        // Negative case
         it("Reverts while setting Smart Contract Address as owner via setOwner() ", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
-
-            // Assert alice as the initial owner
-            expect( await EcdsaRegistryModule.smartAccountOwners(userSA.address)).to.be.equal(alice.address);
+            const {EcdsaRegistryModule,entryPoint, randomContract, userSA} = await setupTests();
 
             let txnData1 = EcdsaRegistryModule.interface.encodeFunctionData(
                 "setOwner",
@@ -207,7 +142,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [EcdsaRegistryModule.address,0,txnData1],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -215,42 +150,45 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const tx = await entryPoint.handleOps([userOp],charlie.address);
             await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
 
-            expect(await EcdsaRegistryModule.smartAccountOwners(userSA.address)).to.be.equal(alice.address);
+            expect(await EcdsaRegistryModule.smartAccountOwners(userSA.address)).to.be.equal(smartAccountOwner.address);
         });
     });
 
     // validateUserOp(UserOperation calldata userOp,bytes32 userOpHash)
     describe("validateUserOp(): ", async()=>{
-        // Construct a valid userOp and check if it does not revert
-        it("Returns 0  for a valid UserOp and valid userOpHash ", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
-            );
+        it("Returns SIG_VALIDATION_SUCCESS for a valid UserOp and valid userOpHash ", async()=>{
+            const {EcdsaRegistryModule,entryPoint,userSA,MockToken} = await setupTests();
 
-            let userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
-                [randomContract.address,0,txndata],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            const userOp = await makeMockTokenUserOp(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
 
-            // getChainId()
+            // Construct userOpHash
             const provider = entryPoint?.provider;
             const chainId = await provider!.getNetwork().then((net) => net.chainId);
-
             const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
 
-            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(0);
+            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_SUCCESS);
+
+            let tx = await entryPoint.handleOps([userOp],smartAccountOwner.address);
+            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
         });
 
         // Pass in valid userOp with invalid userOpHash
         it("Returns SIG_VALIDATION_FAILED when invalid chainId is passed in userOpHash ", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
+            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
 
             let txndata = randomContract.interface.encodeFunctionData(
                 "returnAddress",
@@ -261,7 +199,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [randomContract.address,0,txndata],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -271,11 +209,11 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const invalidChainId = 2* chainId;
             const userOpHash = await getUserOpHash(userOp,entryPoint.address,invalidChainId);
 
-            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(1);
+            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
         });
 
         it("Returns SIG_VALIDATION_FAILED when invalid entryPoint address is passed to userOpHash" ,async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
+            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
 
             let txndata = randomContract.interface.encodeFunctionData(
                 "returnAddress",
@@ -286,7 +224,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [randomContract.address,0,txndata],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -295,18 +233,18 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const chainId = await provider!.getNetwork().then((net) => net.chainId);
 
             const userOpHash = await getUserOpHash(userOp,bob.address,chainId);
-            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(1);
+            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
         });
 
         it("Returns SIG_VALIDATION_FAILED when userOp by signed by invalid owner ", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
+            const {EcdsaRegistryModule,entryPoint, randomContract, userSA} = await setupTests();
 
             let txndata = randomContract.interface.encodeFunctionData(
                 "returnAddress",
                 [],
             );
 
-            // Pass bob as signer instead of alice
+            // Pass bob as signer instead of smartAccountOwner
             let userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
                 [randomContract.address,0,txndata],
@@ -320,11 +258,11 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const chainId = await provider!.getNetwork().then((net) => net.chainId);
             const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
 
-            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(1);
+            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
         });
 
         it("Reverts when userOp.sender is an Unregistered Smart Account", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract, EcdsaOwnershipSetupData } = await setupTests1();
+            const {SAFactory,EcdsaRegistryModule,EcdsaOwnershipSetupData, entryPoint, randomContract, userSA} = await setupTests();
 
             let txndata = randomContract.interface.encodeFunctionData(
                 "returnAddress",
@@ -335,7 +273,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [randomContract.address,0,txndata],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -353,7 +291,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         });
 
         it("Reverts when length of user.signature is less than 65 ", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
+            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
 
             let txndata = randomContract.interface.encodeFunctionData(
                 "returnAddress",
@@ -364,7 +302,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [randomContract.address,0,txndata],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -390,7 +328,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         });
 
         it("Returns SIG_VALIDATION_FAILED when v is altered", async()=>{
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
+            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
 
             let txndata = randomContract.interface.encodeFunctionData(
                 "returnAddress",
@@ -401,7 +339,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [randomContract.address,0,txndata],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -434,12 +372,12 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             );
             userOp.signature = invalidSignature;
 
-            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(1);
+            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
         });
 
         it("Returns SIG_VALIDATION_FAILED when r is altered", async()=>{
 
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
+            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
 
             let txndata = randomContract.interface.encodeFunctionData(
                 "returnAddress",
@@ -450,7 +388,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [randomContract.address,0,txndata],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -475,12 +413,11 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             );
             userOp.signature = invalidSignature;
 
-            await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.reverted;
+            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
         });
 
         it("Returns SIG_VALIDATION_FAILED when s is altered", async()=>{
-
-            const {SAFactory,EcdsaRegistryModule,entryPoint, userSA, randomContract} = await setupTests1();
+            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
 
             let txndata = randomContract.interface.encodeFunctionData(
                 "returnAddress",
@@ -491,7 +428,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
                 "executeCall",
                 [randomContract.address,0,txndata],
                 userSA.address,
-                alice,
+                smartAccountOwner,
                 entryPoint,
                 EcdsaRegistryModule.address
             );
@@ -516,7 +453,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             );
             userOp.signature = invalidSignature;
 
-            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(1);
+            expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
         });
     });
 });
