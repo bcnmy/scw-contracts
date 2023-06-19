@@ -2,28 +2,27 @@
 pragma solidity 0.8.17;
 
 import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
-import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "./SessionValidationModules/ISessionValidationModule.sol";
 
-struct SessionKeyStorage {
+struct SessionStorage {
     bytes32 merkleRoot;
 }
 
 contract SessionKeyManager is BaseAuthorizationModule {
-    using ECDSA for bytes32;
+    error SessionNotApproved();
 
     /*
-     * @dev mapping of Smart Account to a SessionKeyStorage
-     * Session Keys are stored as root of the merkle tree built over the session keys
+     * @dev mapping of Smart Account to a SessionStorage
+     * Info about session keys is stored as root of the merkle tree built over the session keys
      */
-    mapping(address => SessionKeyStorage) internal sessionKeyMap;
+    mapping(address => SessionStorage) internal userSessions;
 
     function getSessionKeys(
         address smartAccount
-    ) external view returns (SessionKeyStorage memory) {
-        return sessionKeyMap[smartAccount];
+    ) external view returns (SessionStorage memory) {
+        return userSessions[smartAccount];
     }
 
     function setMerkleRoot(bytes32 _merkleRoot) external {
@@ -40,9 +39,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view virtual returns (uint256) {
-        SessionKeyStorage storage sessionKeyStorage = _getSessionData(
-            msg.sender
-        );
+        SessionStorage storage sessionKeyStorage = _getSessionData(msg.sender);
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -50,31 +47,38 @@ contract SessionKeyManager is BaseAuthorizationModule {
         (
             uint48 validUntil,
             uint48 validAfter,
-            address module,
-            bytes memory data,
+            address sessionValidationModule,
+            bytes memory sessionKeyData,
             bytes32[] memory merkleProof,
-            bytes memory signature
+            bytes memory sessionKeySignature
         ) = abi.decode(
                 moduleSignature,
                 (uint48, uint48, address, bytes, bytes32[], bytes)
             );
 
         bytes32 leaf = keccak256(
-            abi.encodePacked(validUntil, validAfter, module, data)
+            abi.encodePacked(
+                validUntil,
+                validAfter,
+                sessionValidationModule,
+                sessionKeyData
+            )
         );
-        require(
-            MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf),
-            "invalid merkle root"
-        );
+        if (
+            !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
+        )
+            //revert SessionNotApproved();
+            revert("SessionNotApproved");
         return
             _packValidationData(
                 //_packValidationData expects true if sig validation has failed, false otherwise
-                !ISessionValidationModule(module).validateSessionUserOp(
-                    userOp,
-                    userOpHash,
-                    data,
-                    signature
-                ),
+                !ISessionValidationModule(sessionValidationModule)
+                    .validateSessionUserOp(
+                        userOp,
+                        userOpHash,
+                        sessionKeyData,
+                        sessionKeySignature
+                    ),
                 validUntil,
                 validAfter
             );
@@ -88,12 +92,12 @@ contract SessionKeyManager is BaseAuthorizationModule {
     }
 
     function _setSessionData(address _account, bytes32 _merkleRoot) internal {
-        sessionKeyMap[_account] = SessionKeyStorage({merkleRoot: _merkleRoot});
+        userSessions[_account] = SessionStorage({merkleRoot: _merkleRoot});
     }
 
     function _getSessionData(
         address _account
-    ) internal view returns (SessionKeyStorage storage sessionKeyStorage) {
-        sessionKeyStorage = sessionKeyMap[_account];
+    ) internal view returns (SessionStorage storage sessionKeyStorage) {
+        sessionKeyStorage = userSessions[_account];
     }
 }

@@ -161,8 +161,6 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       expect(tx2).to.emit(entryPoint,"UserOperationRevertReason");
       expect(await userSA.isModuleEnabled(module1.address)).to.be.true;
     });
-
-
   });
 
   describe ("setupAndEnableModule: ", async () => {

@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { BigNumber, Contract } from "ethers";
+import { makeEcdsaSessionKeySignedUserOp } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
 import { encodeTransfer } from "../../smart-wallet/testUtils";
@@ -75,16 +75,18 @@ describe("NEW::: SessionKey: ERC20 Session Validation Module", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
+    const sessionKeyData = hexConcat([
+      hexZeroPad(sessionKey.address, 20),
+      hexZeroPad(mockToken.address, 20),
+      hexZeroPad(charlie.address, 20),
+      hexZeroPad(ethers.constants.MaxUint256.toHexString(), 32)
+    ]);
+
     const data = hexConcat([
       hexZeroPad("0x00",6),
       hexZeroPad("0x00",6),
       hexZeroPad(erc20SessionModule.address,20),
-      hexConcat([
-        hexZeroPad(sessionKey.address, 20),
-        hexZeroPad(mockToken.address, 20),
-        hexZeroPad(charlie.address, 20),
-        hexZeroPad(ethers.constants.MaxUint256.toHexString(), 32)
-      ])
+      sessionKeyData
     ])
 
     const merkleTree = new MerkleTree(
@@ -108,10 +110,8 @@ describe("NEW::: SessionKey: ERC20 Session Validation Module", async () => {
     );
     const tx = await entryPoint.handleOps([addMerkleRootUserOp], alice.address);
     await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-    expect(
-      (await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot
-    ).to.equal(merkleTree.getHexRoot());
     
+    /*
     const transferUserOpCalldata = SmartAccount.interface.encodeFunctionData(
       "executeCall",
       [
@@ -138,12 +138,7 @@ describe("NEW::: SessionKey: ERC20 Session Validation Module", async () => {
         0, 
         0, 
         erc20SessionModule.address, 
-        hexConcat([
-          hexZeroPad(sessionKey.address, 20),
-          hexZeroPad(mockToken.address, 20),
-          hexZeroPad(charlie.address, 20),
-          hexZeroPad(ethers.constants.MaxUint256.toHexString(), 32)
-        ]), 
+        sessionKeyData, 
         merkleTree.getProof(ethers.utils.keccak256(data)), 
         transferUserOp.signature
       ]
@@ -153,6 +148,24 @@ describe("NEW::: SessionKey: ERC20 Session Validation Module", async () => {
       [paddedSig, sessionKeyManager.address]
     );
     transferUserOp.signature = signatureWithModuleAddress;
+    */
+
+    const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+      "executeCall",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      0, 0,
+      erc20SessionModule.address,
+      sessionKeyData,
+      merkleTree.getHexProof(ethers.utils.keccak256(data)),
+    );
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
