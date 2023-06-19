@@ -186,7 +186,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_SUCCESS);
 
             let tx = await entryPoint.handleOps([userOp],smartAccountOwner.address);
-            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+            await expect(tx).to.emit(entryPoint, "BeforeExecution");
 
             expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
             expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore.sub(tokenAmountToTransfer));
@@ -222,7 +222,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
 
             let tx = await entryPoint.handleOps([userOp],smartAccountOwner.address);
-            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+            await expect(tx).to.emit(entryPoint, "BeforeExecution");
 
             expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
             expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore.sub(tokenAmountToTransfer));
@@ -256,7 +256,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
 
             let tx = await entryPoint.handleOps([userOp],smartAccountOwner.address);
-            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+            await expect(tx).to.emit(entryPoint, "BeforeExecution");
 
             expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
             expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore.sub(tokenAmountToTransfer));
@@ -288,6 +288,11 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
 
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
+
+            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
         });
 
         it("Reverts when userOp.sender is an Unregistered Smart Account", async()=>{
@@ -321,6 +326,11 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             userOp.sender = unregisteredSmartAccount;
 
             await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.reverted;
+
+            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
         });
 
         it("Reverts when length of user.signature is less than 65 ", async()=>{
@@ -362,6 +372,11 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             userOp.signature = invalidSignatureWithModuleAddress;
 
             await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.reverted;
+
+            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
         });
 
         it("Returns SIG_VALIDATION_FAILED when v is altered", async()=>{
@@ -414,20 +429,29 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             userOp.signature = invalidSignature;
 
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
+
+            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
         });
 
-        it("Returns SIG_VALIDATION_FAILED when r is altered", async()=>{
+        it("Reverts when r is altered", async()=>{
 
-            const {EcdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
+            const {EcdsaRegistryModule, entryPoint, randomContract, userSA, MockToken} = await setupTests();
 
-            let txndata = randomContract.interface.encodeFunctionData(
-                "returnAddress",
-                [],
+            const userSABalanceBefore = await MockToken.balanceOf(userSA.address);
+            const bobBalanceBefore = await MockToken.balanceOf(bob.address);
+            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+
+            let txnData = await MockToken.interface.encodeFunctionData(
+                "transfer",
+                [bob.address,tokenAmountToTransfer.toString()]
             );
 
-            let userOp = await makeEcdsaModuleUserOp(
+            const userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [randomContract.address,0,txndata],
+                [MockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,
@@ -455,6 +479,11 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             userOp.signature = invalidSignature;
 
             await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.revertedWith("ECDSA: invalid signature");
+
+            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
         });
 
         it("Returns SIG_VALIDATION_FAILED when s is altered", async()=>{
@@ -499,6 +528,11 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             userOp.signature = invalidSignature;
 
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
+
+            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
+
+            expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
+            expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
         });
     });
 });
