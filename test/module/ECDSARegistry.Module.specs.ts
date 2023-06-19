@@ -289,7 +289,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
             expect(await EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
 
-            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
+            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.revertedWith("FailedOp");
 
             expect(await MockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
             expect(await MockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
@@ -325,7 +325,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
             userOp.sender = unregisteredSmartAccount;
 
-            await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.reverted;
+            await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
 
             await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
 
@@ -371,7 +371,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
             userOp.signature = invalidSignatureWithModuleAddress;
 
-            await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.reverted;
+            await expect(EcdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.revertedWith("WrongSignatureLength");
 
             await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
 
