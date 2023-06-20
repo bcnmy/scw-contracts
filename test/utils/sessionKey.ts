@@ -1,9 +1,12 @@
 import { BigNumber, BytesLike, Contract, Signer, Wallet } from "ethers";
 import { ethers } from "hardhat";
-import { EntryPoint, VerifyingSingletonPaymaster } from "../../typechain";
+import { EntryPoint, SessionKeyManager, VerifyingSingletonPaymaster } from "../../typechain";
 import { UserOperation } from "./userOperation";
-import { fillAndSign } from "./userOp";
+import { fillAndSign, makeEcdsaModuleUserOp } from "./userOp";
 import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
+import MerkleTree from "merkletreejs";
+import {keccak256} from "ethereumjs-util";
+
 
 export async function makeEcdsaSessionKeySignedUserOp(
   functionName: string,
@@ -55,5 +58,67 @@ export async function makeEcdsaSessionKeySignedUserOp(
   userOp.signature = signatureWithModuleAddress;
 
   return userOp;
+}
+
+export async function enableNewTreeForSmartAccountViaEcdsa(
+  leaves: BytesLike[],
+  sessionKeyManager: Contract,
+  SmartAccountAddress: string,
+  smartAccountOwner: Signer,
+  entryPoint: EntryPoint,
+  ecdsaModuleAddress: string
+) : Promise<MerkleTree> {
+
+  const merkleTree = new MerkleTree(
+    leaves,
+    keccak256,
+    { sortPairs: false, hashLeaves: false }
+  );
+  let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
+    "executeCall",
+    [
+      sessionKeyManager.address,
+      ethers.utils.parseEther("0"),
+      sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [merkleTree.getHexRoot()]),
+    ],
+    SmartAccountAddress,
+    smartAccountOwner,
+    entryPoint,
+    ecdsaModuleAddress
+  );
+  const tx = await entryPoint.handleOps([addMerkleRootUserOp], await smartAccountOwner.getAddress());
+  await tx.wait();
+
+  return merkleTree;
+}
+
+
+export async function addLeavesForSmartAccountViaEcdsa(
+  merkleTree: MerkleTree,
+  newLeaves: any[],
+  sessionKeyManager: Contract,
+  SmartAccountAddress: string,
+  smartAccountOwner: Signer,
+  entryPoint: EntryPoint,
+  ecdsaModuleAddress: string
+) : Promise<MerkleTree> {
+  
+  merkleTree.addLeaves(newLeaves);
+  let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
+    "executeCall",
+    [
+      sessionKeyManager.address,
+      ethers.utils.parseEther("0"),
+      sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [merkleTree.getHexRoot()]),
+    ],
+    SmartAccountAddress,
+    smartAccountOwner,
+    entryPoint,
+    ecdsaModuleAddress
+  );
+  const tx = await entryPoint.handleOps([addMerkleRootUserOp], await smartAccountOwner.getAddress());
+  await tx.wait();
+
+  return merkleTree;  
 }
 

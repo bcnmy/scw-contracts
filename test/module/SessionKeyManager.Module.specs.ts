@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../utils/userOp";
-import { makeEcdsaSessionKeySignedUserOp } from "../utils/sessionKey";
+import { makeEcdsaSessionKeySignedUserOp, enableNewTreeForSmartAccountViaEcdsa, addLeavesForSmartAccountViaEcdsa } from "../utils/sessionKey";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
 import { 
@@ -18,7 +18,7 @@ import { MerkleTree } from "merkletreejs";
 
 describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
 
-  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver, sessionKey, fakeSessionKey] = waffle.provider.getWallets();
+  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver, sessionKey, sessionKey2, fakeSessionKey] = waffle.provider.getWallets();
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     
@@ -74,7 +74,7 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
   });
 
   describe ("setMerkleRoot", async () => {
-    it ("should add new session key by adding new merkle tree root", async () => {
+    it ("should add new session key by setting new merkle tree root", async () => {
       const { userSA, sessionKeyManager, mockSessionValidationModule, entryPoint, ecdsaModule } = await setupTests();
 
       const data = hexConcat([
@@ -82,7 +82,8 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
         hexZeroPad("0x00",6),
         hexZeroPad(mockSessionValidationModule.address,20),
         hexZeroPad(sessionKey.address, 20),
-      ])
+      ]);
+
       const merkleTree = new MerkleTree(
         [ethers.utils.keccak256(data)],
         keccak256,
@@ -102,9 +103,49 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
       );
       const tx = await entryPoint.handleOps([addMerkleRootUserOp], alice.address);
       await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+      
       expect(
         (await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot
       ).to.equal(merkleTree.getHexRoot());
+    });
+
+    it ("should add new session key to the existing merkle tree", async () => {
+      const { userSA, sessionKeyManager, mockSessionValidationModule, entryPoint, ecdsaModule } = await setupTests();
+
+      const leaf1Data = hexConcat([
+        hexZeroPad("0x00",6),
+        hexZeroPad("0x00",6),
+        hexZeroPad(mockSessionValidationModule.address,20),
+        hexZeroPad(sessionKey.address, 20),
+      ]);
+
+      const merkleTree1 = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leaf1Data)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+      expect((await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot).to.equal(merkleTree1.getHexRoot());
+
+      const leaf2Data = hexConcat([
+        hexZeroPad("0x00",6),
+        hexZeroPad("0x00",6),
+        hexZeroPad(mockSessionValidationModule.address,20),
+        hexZeroPad(sessionKey2.address, 20),
+      ]);
+
+      const merkleTree2 = await addLeavesForSmartAccountViaEcdsa(
+        merkleTree1,
+        [ethers.utils.keccak256(leaf2Data)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+      expect((await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot).to.equal(merkleTree2.getHexRoot());
     });
   });
 
@@ -116,34 +157,21 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
       const sessionKeyData = hexZeroPad(sessionKey.address, 20);
-      const data = hexConcat([
+      const leafData = hexConcat([
         hexZeroPad("0x00",6),
         hexZeroPad("0x00",6),
         hexZeroPad(mockSessionValidationModule.address,20),
         sessionKeyData,
       ]);
 
-      const merkleTree = new MerkleTree(
-        [ethers.utils.keccak256(data)],
-        keccak256,
-        { sortPairs: false, hashLeaves: false }
-      );
-      expect(merkleTree.getHexRoot()).to.equal(ethers.utils.keccak256(data));
-
-      let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
-        "executeCall",
-        [
-          sessionKeyManager.address,
-          ethers.utils.parseEther("0"),
-          sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [merkleTree.getHexRoot()]),
-        ],
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
         userSA.address,
         smartAccountOwner,
         entryPoint,
         ecdsaModule.address
       );
-      const tx = await entryPoint.handleOps([addMerkleRootUserOp], alice.address);
-      await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
         "executeCall",
@@ -159,7 +187,7 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
         0, 0,
         mockSessionValidationModule.address,
         sessionKeyData,
-        merkleTree.getHexProof(ethers.utils.keccak256(data)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
       );
 
       const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
@@ -175,39 +203,33 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
       const sessionKeyData = hexZeroPad(sessionKey.address, 20);
-      const data = hexConcat([
-        hexZeroPad("0x00",6),
-        hexZeroPad("0x00",6),
-        hexZeroPad(mockSessionValidationModule.address,20),
-        sessionKeyData,
+      const leafData = hexConcat([
+        hexZeroPad("0x00",6), //validUntil
+        hexZeroPad("0x00",6), //validAfter
+        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
+        sessionKeyData, //session key address and permissions
       ]);
-
-      // !! TODO:
-      // refactor to addNewSessionKey helper function
-
-      const merkleTree = new MerkleTree(
-        [ethers.utils.keccak256(data)],
-        keccak256,
-        { sortPairs: false, hashLeaves: false }
-      );
-      expect(merkleTree.getHexRoot()).to.equal(ethers.utils.keccak256(data));
-
-      let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
-        "executeCall",
-        [
-          sessionKeyManager.address,
-          ethers.utils.parseEther("0"),
-          sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [merkleTree.getHexRoot()]),
-        ],
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
         userSA.address,
         smartAccountOwner,
         entryPoint,
         ecdsaModule.address
       );
-      const tx = await entryPoint.handleOps([addMerkleRootUserOp], alice.address);
-      await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
 
-      // Refactor END
+      const fakeSessionKeyData = hexZeroPad(fakeSessionKey.address, 20), //pass fakeSessionKey as a part of a session key data
+      const fakeLeafData = hexConcat([
+        hexZeroPad("0x00",6), //validUntil
+        hexZeroPad("0x00",6), //validAfter
+        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
+        fakeSessionKeyData, //session key address and permissions
+      ]);
+      const fakeMerkleTree = new MerkleTree(
+        [fakeLeafData],
+        keccak256,
+        { sortPairs: false, hashLeaves: false }
+      );
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
         "executeCall",
@@ -217,13 +239,13 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
           encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
         ],
         userSA.address,
-        fakeSessionKey,
+        fakeSessionKey, //sign with fakeSessionKey
         entryPoint,
         sessionKeyManager.address,
         0, 0,
         mockSessionValidationModule.address,
-        hexZeroPad(fakeSessionKey.address, 20),
-        merkleTree.getHexProof(ethers.utils.keccak256(data)),
+        fakeSessionKeyData,
+        fakeMerkleTree.getHexProof(ethers.utils.keccak256(fakeLeafData)), //provide valid proof for fakeLeaf from fakeTree
       );
 
       const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
@@ -231,7 +253,8 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
         entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
       ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
       expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
-    });  
+    }); 
+     
       // passing wrong validUntil 
 
       // passing wrong validAfter 
