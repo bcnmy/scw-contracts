@@ -150,16 +150,16 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
   });
 
   describe ("validateUserOp", async () => {
-
     it ("should be able to process Session Key signed userOp via Mock session validation module", async () => {
       const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+      const validUntil = 0;
+      const validAfter = 0;
 
       const sessionKeyData = hexZeroPad(sessionKey.address, 20);
       const leafData = hexConcat([
-        hexZeroPad("0x00",6),
-        hexZeroPad("0x00",6),
+        hexZeroPad(ethers.utils.hexlify(validUntil), 6),
+        hexZeroPad(ethers.utils.hexlify(validAfter), 6),
         hexZeroPad(mockSessionValidationModule.address,20),
         sessionKeyData,
       ]);
@@ -184,7 +184,8 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
         sessionKey,
         entryPoint,
         sessionKeyManager.address,
-        0, 0,
+        validUntil, 
+        validAfter,
         mockSessionValidationModule.address,
         sessionKeyData,
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
@@ -197,10 +198,9 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
 
     // reverts if signed with the session key that is not in the merkle tree 
     // even if passing valid session key data (session key passed in sesson key data is actually the signer)
-    it ("reverts if signed with the session key that is not in the merkle tree", async () => {
+    it ("should revert if signed with the session key that is not in the merkle tree", async () => {
       const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-      const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
       const sessionKeyData = hexZeroPad(sessionKey.address, 20);
       const leafData = hexConcat([
@@ -217,8 +217,9 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
         entryPoint,
         ecdsaModule.address
       );
+      expect((await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot).to.equal(merkleTree.getHexRoot());
 
-      const fakeSessionKeyData = hexZeroPad(fakeSessionKey.address, 20), //pass fakeSessionKey as a part of a session key data
+      const fakeSessionKeyData = hexZeroPad(fakeSessionKey.address, 20); //pass fakeSessionKey as a part of a session key data
       const fakeLeafData = hexConcat([
         hexZeroPad("0x00",6), //validUntil
         hexZeroPad("0x00",6), //validAfter
@@ -254,16 +255,300 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
       ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
       expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
     }); 
-     
-      // passing wrong validUntil 
 
-      // passing wrong validAfter 
+    it ("should revert with wrong validUntil", async () => {
+      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
 
-      // passing wrong session validation module address
+      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+      const correctValidUntil = hexZeroPad("0x00",6); //0
+      const wrongValidUntil = 1;
+      const leafData = hexConcat([
+        correctValidUntil,
+        hexZeroPad("0x00",6), //validAfter
+        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
+        sessionKeyData, //session key address and permissions
+      ]);
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
 
-      // passing wrong session key data
+      const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "executeCall",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        wrongValidUntil, 0,
+        mockSessionValidationModule.address,
+        sessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+      );
 
-    // 
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      await expect(
+        entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
+      ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+    }); 
+
+    it ("should revert with wrong validAfter", async () => {
+      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+      const correctValidAfter = hexZeroPad("0x00",6); //0
+      const wrongValidAfter = 9999999999999;
+      const leafData = hexConcat([
+        hexZeroPad("0x00",6), //validUntil
+        correctValidAfter,
+        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
+        sessionKeyData, //session key address and permissions
+      ]);
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "executeCall",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0, wrongValidAfter,
+        mockSessionValidationModule.address,
+        sessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      await expect(
+        entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
+      ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+    });
+
+    it ("should revert if session key is not yet valid", async () => {
+      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+      const currentTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
+      const validAfter = currentTimestamp + 1000;
+      const validUntil = validAfter + 1000;
+      const leafData = hexConcat([
+        hexZeroPad(ethers.utils.hexlify(validUntil),6),
+        hexZeroPad(ethers.utils.hexlify(validAfter),6),
+        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
+        sessionKeyData, //session key address and permissions
+      ]);
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "executeCall",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        validUntil, validAfter,
+        mockSessionValidationModule.address,
+        sessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      await expect(
+        entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
+      ).to.be.revertedWith("FailedOp").withArgs(0, "AA22 expired or not due");
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+    });
+
+    it ("should revert if session key is already expired", async () => {
+      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+      const currentTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
+      const validUntil = currentTimestamp - 1000;
+      const validAfter = validUntil - 1000;
+
+      const leafData = hexConcat([
+        hexZeroPad(ethers.utils.hexlify(validUntil),6),
+        hexZeroPad(ethers.utils.hexlify(validAfter),6),
+        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
+        sessionKeyData, //session key address and permissions
+      ]);
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "executeCall",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        validUntil, validAfter,
+        mockSessionValidationModule.address,
+        sessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      await expect(
+        entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
+      ).to.be.revertedWith("FailedOp").withArgs(0, "AA22 expired or not due");
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+    });
+
+    it ("should revert with wrong session validation module address", async () => {
+      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+      const correctValidAfter = hexZeroPad("0x00",6); //0
+      const wrongValidAfter = 9999999999999;
+      const leafData = hexConcat([
+        hexZeroPad("0x00",6), //validUntil
+        correctValidAfter,
+        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
+        sessionKeyData, //session key address and permissions
+      ]);
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const wrongSessionValidationModule = await (await ethers.getContractFactory("ERC20SessionValidationModule")).deploy();
+
+      const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "executeCall",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0, wrongValidAfter,
+        wrongSessionValidationModule.address,
+        sessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      await expect(
+        entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
+      ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+    });
+
+    it ("should revert with wrong session key data", async () => {
+      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+      const correctValidAfter = hexZeroPad("0x00",6); //0
+      const wrongValidAfter = 9999999999999;
+      const leafData = hexConcat([
+        hexZeroPad("0x00",6), //validUntil
+        correctValidAfter,
+        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
+        sessionKeyData, //session key address and permissions
+      ]);
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const wrongSessionKeyData = hexZeroPad(sessionKey2.address, 20);
+
+      const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "executeCall",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0, wrongValidAfter,
+        mockSessionValidationModule.address,
+        wrongSessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      await expect(
+        entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
+      ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+    });
   });
-  
+
+  describe ("isValidSignature", async () => {
+    it ("should return 0xffffffff even for the valid hash/signature pair", async () => {
+      const {sessionKeyManager} = await setupTests();
+      const message = "Some message from dApp";
+      const signature = await smartAccountOwner.signMessage(message);
+      const messageHash = ethers.utils.hashMessage(message);
+      const notMagicValue = "0xffffffff";
+      expect(await sessionKeyManager.isValidSignature(messageHash, signature)).to.be.equal(notMagicValue);
+    });
+  });
+
 });

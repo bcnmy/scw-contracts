@@ -11,8 +11,6 @@ struct SessionStorage {
 }
 
 contract SessionKeyManager is BaseAuthorizationModule {
-    error SessionNotApproved();
-
     /*
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
@@ -66,9 +64,9 @@ contract SessionKeyManager is BaseAuthorizationModule {
         );
         if (
             !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
-        )
-            //revert SessionNotApproved();
+        ) {
             revert("SessionNotApproved");
+        }
         return
             _packValidationData(
                 //_packValidationData expects true if sig validation has failed, false otherwise

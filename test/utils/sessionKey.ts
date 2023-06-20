@@ -42,8 +42,8 @@ export async function makeEcdsaSessionKeySignedUserOp(
     //validUntil, validAfter, sessionVerificationModule address, validationData, merkleProof, signature
     ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
     [ 
-      0, 
-      0, 
+      validUntil, 
+      validAfter, 
       sessionValidationModuleAddress, 
       sessionKeyParamsData, 
       merkleProof, 
