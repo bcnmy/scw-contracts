@@ -7,6 +7,10 @@ import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
 import MerkleTree from "merkletreejs";
 import {keccak256} from "ethereumjs-util";
 
+export interface SessionKeyParams {
+  sessionKeyData: string;
+  leafData: string;
+}
 
 export async function makeEcdsaSessionKeySignedUserOp(
   functionName: string,
@@ -120,5 +124,36 @@ export async function addLeavesForSmartAccountViaEcdsa(
   await tx.wait();
 
   return merkleTree;  
+}
+
+export async function getERC20SessionKeyParams(
+  sessionKey: string,
+  erc20TokenAddress: string,
+  receiverAddress: string,
+  maxAmountToTransfer: BigNumber,
+  validUntil: number,
+  validAfter: number,
+  sessionValidationModuleAddress: string,
+) : Promise<SessionKeyParams> {
+
+  const sessionKeyData = hexConcat([
+    hexZeroPad(sessionKey, 20),
+    hexZeroPad(erc20TokenAddress, 20),
+    hexZeroPad(receiverAddress, 20),
+    hexZeroPad(maxAmountToTransfer.toHexString(), 32)
+  ]);
+
+  const leafData = hexConcat([
+    hexZeroPad(ethers.utils.hexlify(validUntil),6),
+    hexZeroPad(ethers.utils.hexlify(validAfter),6),
+    hexZeroPad(sessionValidationModuleAddress,20),
+    sessionKeyData
+  ]);
+  
+  const params : SessionKeyParams = {
+    sessionKeyData: sessionKeyData,
+    leafData: leafData
+  };
+  return params 
 }
 
