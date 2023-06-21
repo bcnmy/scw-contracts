@@ -1,6 +1,6 @@
 import { BigNumber, BytesLike, Contract, Signer, Wallet } from "ethers";
 import { ethers } from "hardhat";
-import { EntryPoint, SessionKeyManager, VerifyingSingletonPaymaster } from "../../typechain";
+import { EntryPoint } from "../../typechain";
 import { UserOperation } from "./userOperation";
 import { fillAndSign, makeEcdsaModuleUserOp } from "./userOp";
 import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";

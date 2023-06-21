@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { makeEcdsaSessionKeySignedUserOp, enableNewTreeForSmartAccountViaEcdsa, getERC20SessionKeyParams } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
-import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
+import { makeEcdsaModuleUserOp } from "../../utils/userOp";
 import { encodeTransfer } from "../../smart-wallet/testUtils";
 import { 
   getEntryPoint, 
@@ -12,7 +12,7 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
-import { BigNumber, Contract } from "ethers";
+import { BigNumber } from "ethers";
 import { UserOperation } from "../../utils/userOperation";
 
 describe("NEW::: SessionKey: ERC20 Session Validation Module", async () => {
