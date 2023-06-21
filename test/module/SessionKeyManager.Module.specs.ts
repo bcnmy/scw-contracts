@@ -54,6 +54,25 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     await entryPoint.handleOps([userOp], alice.address);
 
     const mockSessionValidationModule = await (await ethers.getContractFactory("MockSessionValidationModule")).deploy();
+
+    const validUntil = 0;
+    const validAfter = 0;
+    const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+    const leafData = hexConcat([
+      hexZeroPad(ethers.utils.hexlify(validUntil), 6),
+      hexZeroPad(ethers.utils.hexlify(validAfter), 6),
+      hexZeroPad(mockSessionValidationModule.address,20),
+      sessionKeyData,
+    ]);
+
+    const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+      [ethers.utils.keccak256(leafData)],
+      sessionKeyManager,
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    );
     
     return {
       entryPoint: entryPoint,
@@ -65,6 +84,9 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       sessionKeyManager: sessionKeyManager,
       mockSessionValidationModule: mockSessionValidationModule,
+      sessionKeyData: sessionKeyData,
+      leafData: leafData,
+      merkleTree: merkleTree,
     };
   });
 
@@ -151,27 +173,8 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
 
   describe ("validateUserOp", async () => {
     it ("should be able to process Session Key signed userOp via Mock session validation module", async () => {
-      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const { entryPoint, userSA, sessionKeyManager, mockSessionValidationModule, mockToken, sessionKeyData, leafData, merkleTree } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-      const validUntil = 0;
-      const validAfter = 0;
-
-      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
-      const leafData = hexConcat([
-        hexZeroPad(ethers.utils.hexlify(validUntil), 6),
-        hexZeroPad(ethers.utils.hexlify(validAfter), 6),
-        hexZeroPad(mockSessionValidationModule.address,20),
-        sessionKeyData,
-      ]);
-
-      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-        [ethers.utils.keccak256(leafData)],
-        sessionKeyManager,
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
         "executeCall",
@@ -184,8 +187,8 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
         sessionKey,
         entryPoint,
         sessionKeyManager.address,
-        validUntil, 
-        validAfter,
+        0, 
+        0,
         mockSessionValidationModule.address,
         sessionKeyData,
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
@@ -199,24 +202,8 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     // reverts if signed with the session key that is not in the merkle tree 
     // even if passing valid session key data (session key passed in sesson key data is actually the signer)
     it ("should revert if signed with the session key that is not in the merkle tree", async () => {
-      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const { entryPoint, userSA, sessionKeyManager, mockSessionValidationModule, mockToken, merkleTree } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-
-      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
-      const leafData = hexConcat([
-        hexZeroPad("0x00",6), //validUntil
-        hexZeroPad("0x00",6), //validAfter
-        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
-        sessionKeyData, //session key address and permissions
-      ]);
-      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-        [ethers.utils.keccak256(leafData)],
-        sessionKeyManager,
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
       expect((await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot).to.equal(merkleTree.getHexRoot());
 
       const fakeSessionKeyData = hexZeroPad(fakeSessionKey.address, 20); //pass fakeSessionKey as a part of a session key data
@@ -257,26 +244,10 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     }); 
 
     it ("should revert with wrong validUntil", async () => {
-      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const { entryPoint, userSA, sessionKeyManager, mockSessionValidationModule, mockToken, sessionKeyData, leafData, merkleTree } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
 
-      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
-      const correctValidUntil = hexZeroPad("0x00",6); //0
       const wrongValidUntil = 1;
-      const leafData = hexConcat([
-        correctValidUntil,
-        hexZeroPad("0x00",6), //validAfter
-        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
-        sessionKeyData, //session key address and permissions
-      ]);
-      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-        [ethers.utils.keccak256(leafData)],
-        sessionKeyManager,
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
         "executeCall",
@@ -303,26 +274,9 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     }); 
 
     it ("should revert with wrong validAfter", async () => {
-      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const { entryPoint, userSA, sessionKeyManager, mockSessionValidationModule, mockToken, sessionKeyData, leafData, merkleTree } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-
-      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
-      const correctValidAfter = hexZeroPad("0x00",6); //0
       const wrongValidAfter = 9999999999999;
-      const leafData = hexConcat([
-        hexZeroPad("0x00",6), //validUntil
-        correctValidAfter,
-        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
-        sessionKeyData, //session key address and permissions
-      ]);
-      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-        [ethers.utils.keccak256(leafData)],
-        sessionKeyManager,
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
         "executeCall",
@@ -444,26 +398,8 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     });
 
     it ("should revert with wrong session validation module address", async () => {
-      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const { entryPoint, userSA, sessionKeyManager, mockToken, leafData, sessionKeyData, merkleTree } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-
-      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
-      const correctValidAfter = hexZeroPad("0x00",6); //0
-      const wrongValidAfter = 9999999999999;
-      const leafData = hexConcat([
-        hexZeroPad("0x00",6), //validUntil
-        correctValidAfter,
-        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
-        sessionKeyData, //session key address and permissions
-      ]);
-      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-        [ethers.utils.keccak256(leafData)],
-        sessionKeyManager,
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
 
       const wrongSessionValidationModule = await (await ethers.getContractFactory("ERC20SessionValidationModule")).deploy();
 
@@ -478,7 +414,7 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
         sessionKey,
         entryPoint,
         sessionKeyManager.address,
-        0, wrongValidAfter,
+        0, 0,
         wrongSessionValidationModule.address,
         sessionKeyData,
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
@@ -492,26 +428,8 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
     });
 
     it ("should revert with wrong session key data", async () => {
-      const { entryPoint, userSA, ecdsaModule, sessionKeyManager, mockSessionValidationModule, mockToken } = await setupTests();
+      const { entryPoint, userSA, sessionKeyManager, mockSessionValidationModule, mockToken, leafData, merkleTree } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-
-      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
-      const correctValidAfter = hexZeroPad("0x00",6); //0
-      const wrongValidAfter = 9999999999999;
-      const leafData = hexConcat([
-        hexZeroPad("0x00",6), //validUntil
-        correctValidAfter,
-        hexZeroPad(mockSessionValidationModule.address,20), //session validation module
-        sessionKeyData, //session key address and permissions
-      ]);
-      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-        [ethers.utils.keccak256(leafData)],
-        sessionKeyManager,
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
 
       const wrongSessionKeyData = hexZeroPad(sessionKey2.address, 20);
 
@@ -526,7 +444,7 @@ describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
         sessionKey,
         entryPoint,
         sessionKeyManager.address,
-        0, wrongValidAfter,
+        0, 0,
         mockSessionValidationModule.address,
         wrongSessionKeyData,
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
