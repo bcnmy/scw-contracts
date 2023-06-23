@@ -8,5 +8,6 @@ abstract contract BaseAuthorizationModule is
     IAuthorizationModule,
     ISignatureValidator
 {
+    uint256 internal constant VALIDATION_SUCCESS = 0;
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 }
