@@ -71,7 +71,7 @@ describe("NEW::: Smart Account Setup", async () => {
       } = await setupTests();
 
       expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(true);
-      expect(await ecdsaModule.smartAccountOwners(userSA.address)).to.equal(smartAccountOwner.address);
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(smartAccountOwner.address);
     });
 
     it ("Reverts if called with invalid initial module", async () => {

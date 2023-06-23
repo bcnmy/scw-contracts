@@ -197,7 +197,7 @@ describe("NEW::: Upgrade v1 to Ownerless", async () => {
     } = await setupTestsAndUpgrade();
 
     expect(await userSAOwnerless.isModuleEnabled(ecdsaModule.address)).to.equal(true);
-    expect(await ecdsaModule.smartAccountOwners(userSAOwnerless.address)).to.equal(smartAccountOwner.address);
+    expect(await ecdsaModule.getOwner(userSAOwnerless.address)).to.equal(smartAccountOwner.address);
   
   });
 
