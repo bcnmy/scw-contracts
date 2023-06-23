@@ -120,9 +120,6 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
             userOp.signature,
             (bytes, address)
         );
-        // validateUserOp gets from EP a hash not prepended with 'x\x19Ethereum Signed Message:\n32'
-        // so we have to do it manually, as on the user side it is signed with personal_sign
-        // that prepends with "\x19Ethereum Signed Message\n32"
         if (_verifySignature(userOpHash, moduleSignature, userOp.sender)) {
             return VALIDATION_SUCCESS;
         }
