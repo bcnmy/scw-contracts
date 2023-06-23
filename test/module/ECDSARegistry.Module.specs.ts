@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import hre , { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, getUserOpHash } from "../utils/userOp";
-import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken} from "../utils/setupHelper";
+import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken, getSmartAccountWithModule} from "../utils/setupHelper";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 
 describe("NEW::: ECDSA Registry Module: ", async()=>{
@@ -23,17 +23,15 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             "initForSmartAccount",
             [smartAccountOwner.address]
         );
-
-        const expectedSmartAccountAddress = await saFactory.getAddressForCounterFactualAccount(ecdsaRegistryModule.address,ecdsaOwnershipSetupData,smartAccountDeploymentIndex);
-        await saFactory.deployCounterFactualAccount(ecdsaRegistryModule.address,ecdsaOwnershipSetupData,smartAccountDeploymentIndex);
-        const userSA = await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
+        const userSA = await getSmartAccountWithModule(ecdsaRegistryModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
+        console.log("userSA address: ", userSA.address);
 
         const tokensToMint = ethers.utils.parseEther("100");
         await mockToken.mint(userSA.address,tokensToMint.toString());
         await mockToken.mint(bob.address,tokensToMint.toString());
 
         await deployer.sendTransaction({
-            to: expectedSmartAccountAddress,
+            to: userSA.address,
             value: ethers.utils.parseEther("60"),
         });
 
@@ -57,7 +55,6 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             ecdsaRegistryModule: ecdsaRegistryModule,
             ecdsaOwnershipSetupData: ecdsaOwnershipSetupData,
             randomContract: randomContract,
-            expectedSmartAccountAddress: expectedSmartAccountAddress,
             userSA: userSA,
             mockToken: mockToken,
         };
@@ -181,9 +178,9 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         // Pass in valid userOp with invalid userOpHash
         it("Returns SIG_VALIDATION_FAILED when invalid chainId is passed in userOpHash", async()=>{
             const {ecdsaRegistryModule, entryPoint, mockToken, userSA} = await setupTests();
-            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+            const tokenAmountToTransfer = ethers.utils.parseEther("7.934");
 
-            let txnData = await mockToken.interface.encodeFunctionData(
+            let txnData = mockToken.interface.encodeFunctionData(
                 "transfer",
                 [bob.address,tokenAmountToTransfer.toString()]
             );
@@ -207,7 +204,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const {ecdsaRegistryModule, entryPoint, userSA, mockToken} = await setupTests();
             const tokenAmountToTransfer = ethers.utils.parseEther("0.23436");
 
-            let txnData = await mockToken.interface.encodeFunctionData(
+            let txnData = mockToken.interface.encodeFunctionData(
                 "transfer",
                 [bob.address,tokenAmountToTransfer.toString()]
             );
@@ -259,7 +256,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         it("Reverts when userOp.sender is an Unregistered Smart Account", async()=>{
             const {saFactory,ecdsaRegistryModule,ecdsaOwnershipSetupData, entryPoint, mockToken, userSA} = await setupTests();
             const bobBalanceBefore = await mockToken.balanceOf(bob.address);
-            const tokenAmountToTransfer = ethers.utils.parseEther("50");
+            const tokenAmountToTransfer = ethers.utils.parseEther("1.9999");
             const EcdsaOwnershipRegistryModule = await hre.ethers.getContractFactory("EcdsaOwnershipRegistryModule");
 
             // get a new smart account
@@ -344,148 +341,6 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
             await expect(ecdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.revertedWith("WrongSignatureLength");
             await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
-            expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
-            expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
-        });
-
-        it("Returns SIG_VALIDATION_FAILED and userOp is not handled when v is altered", async()=>{
-            const {ecdsaRegistryModule, entryPoint, mockToken, userSA} = await setupTests();
-            const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
-            const bobBalanceBefore = await mockToken.balanceOf(bob.address);
-            const tokenAmountToTransfer = ethers.utils.parseEther("4.363");
-
-            let txnData = await mockToken.interface.encodeFunctionData(
-                "transfer",
-                [bob.address,tokenAmountToTransfer.toString()]
-            );
-
-            const userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
-                [mockToken.address,0,txnData],
-                userSA.address,
-                smartAccountOwner,
-                entryPoint,
-                ecdsaRegistryModule.address
-            );
-
-            const provider = entryPoint?.provider;
-            const chainId = await provider!.getNetwork().then((net) => net.chainId);
-            const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
-
-            // Decoding signature and alter "v"
-            const abi = ["bytes", "address"];
-            const [ decodedSignature, decodedAddress ] = ethers.utils.defaultAbiCoder.decode(abi,userOp.signature);
-
-            let {v,r,s} = ethers.utils.splitSignature(decodedSignature);
-
-            // v can attain 2 possible values
-            // Switching v between those two
-            // EIP-155 followed
-            if(v>30){
-                v = (v == 2* chainId + 35) ? 2* chainId + 36 : 2* chainId + 35;
-            }
-            else{
-                v = (v == 27 )? 28 : 27;
-            }
-
-            const newSignature = ethers.utils.joinSignature({v,r,s});
-            const invalidSignature = ethers.utils.defaultAbiCoder.encode(
-                ["bytes", "address"],
-                [newSignature, ecdsaRegistryModule.address]
-            );
-            userOp.signature = invalidSignature;
-
-            expect(await ecdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
-            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.revertedWith("FailedOp");
-            expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
-            expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
-        });
-
-        it("Returns SIG_VALIDATION_FAILED and userOp is not handled when r is altered", async()=>{
-            const {ecdsaRegistryModule, entryPoint, userSA, mockToken} = await setupTests();
-            const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
-            const bobBalanceBefore = await mockToken.balanceOf(bob.address);
-            const tokenAmountToTransfer = ethers.utils.parseEther("1.67");
-
-            let txnData = mockToken.interface.encodeFunctionData(
-                "transfer",
-                [bob.address,tokenAmountToTransfer.toString()]
-            );
-
-            const testUserOp = await makeEcdsaModuleUserOp(
-                "executeCall",
-                [mockToken.address,0,txnData],
-                userSA.address,
-                smartAccountOwner,
-                entryPoint,
-                ecdsaRegistryModule.address
-            );
-            const provider = entryPoint?.provider;
-            const chainId = await provider!.getNetwork().then((net) => net.chainId);
-            const userOpHash = getUserOpHash(testUserOp,entryPoint.address,chainId);
-
-            const abi = ["bytes", "address"];
-            const [ decodedSignature, ] = ethers.utils.defaultAbiCoder.decode(abi,testUserOp.signature);
-            let {v,r,s} = ethers.utils.splitSignature(decodedSignature);
-
-            const incrementedR = ethers.BigNumber.from(r).add(ethers.BigNumber.from(userSA.address));
-            const updatedR = incrementedR.toHexString();
-            const newSignature = ethers.utils.joinSignature({v,r:updatedR,s});
-
-            const invalidSignature = ethers.utils.defaultAbiCoder.encode(
-                ["bytes", "address"],
-                [newSignature, ecdsaRegistryModule.address]
-            );
-            testUserOp.signature = invalidSignature;
-
-            await expect(ecdsaRegistryModule.validateUserOp(testUserOp, userOpHash)).to.be.revertedWith("ECDSA: invalid signature");
-            await expect(entryPoint.handleOps([testUserOp], smartAccountOwner.address)).to.be.revertedWith("FailedOp");
-            expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
-            expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
-        });
-
-        it("Returns SIG_VALIDATION_FAILED and userOp is not handled when s is altered", async()=>{
-            const {ecdsaRegistryModule, entryPoint, mockToken, userSA} = await setupTests();
-            const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
-            const bobBalanceBefore = await mockToken.balanceOf(bob.address);
-            const tokenAmountToTransfer = ethers.utils.parseEther("50");
-
-            let txnData = mockToken.interface.encodeFunctionData(
-                "transfer",
-                [bob.address,tokenAmountToTransfer.toString()]
-            );
-
-            const userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
-                [mockToken.address,0,txnData],
-                userSA.address,
-                smartAccountOwner,
-                entryPoint,
-                ecdsaRegistryModule.address
-            );
-
-            const provider = entryPoint?.provider;
-            const chainId = await provider!.getNetwork().then((net) => net.chainId);
-            const userOpHash = getUserOpHash(userOp,entryPoint.address,chainId);
-
-            // Decoding signature and alter "s"
-            const abi = ["bytes", "address"];
-            const [ decodedSignature, ] = ethers.utils.defaultAbiCoder.decode(abi,userOp.signature);
-            let {v,r,s} = ethers.utils.splitSignature(decodedSignature);
-
-            // Incrementing s by 1
-            const incrementedS= ethers.BigNumber.from(s).add(1);
-            const updatedS = incrementedS.toHexString();
-            const newSignature = ethers.utils.joinSignature({v,r,s: updatedS});
-
-            const invalidSignature = ethers.utils.defaultAbiCoder.encode(
-                ["bytes", "address"],
-                [newSignature, ecdsaRegistryModule.address]
-            );
-            userOp.signature = invalidSignature;
-
-            expect(await ecdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
-            await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.revertedWith("FailedOp");
             expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
             expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
         });

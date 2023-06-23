@@ -116,11 +116,11 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view virtual returns (uint256) {
-        (bytes memory moduleSignature, ) = abi.decode(
+        (bytes memory cleanEcdsaSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
         );
-        if (_verifySignature(userOpHash, moduleSignature, userOp.sender)) {
+        if (_verifySignature(userOpHash, cleanEcdsaSignature, userOp.sender)) {
             return VALIDATION_SUCCESS;
         }
         return SIG_VALIDATION_FAILED;
@@ -182,7 +182,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         if (signature.length < 65) revert WrongSignatureLength();
         if (
             expectedSigner ==
-            dataHash.toEthSignedMessageHash().recover(signature)
+            (dataHash.toEthSignedMessageHash()).recover(signature)
         ) {
             return true;
         }

@@ -29,9 +29,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
       "initForSmartAccount",
       [await smartAccountOwner.getAddress()]
     );
-
     const smartAccountDeploymentIndex = 0;
-
     const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     await deployer.sendTransaction({

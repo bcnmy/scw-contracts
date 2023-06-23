@@ -18,7 +18,7 @@ import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
  *         - It allows to receive and manage assets.
  *         - It is responsible for managing the modules and fallbacks.
  *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
- * @author Chirag Titiya - <chirag@biconomy.io>
+ * @author Chirag Titiya - <chirag@biconomy.io>, Filipp Makarov - <filipp.makarov@biconomy.io>
  */
 contract SmartAccount is
     BaseSmartAccount,
