@@ -9,3 +9,6 @@ typechain
 #Hardhat files
 cache
 artifacts
+
+#ignore .DS_Store recursively
+.DS_Store

@@ -9,14 +9,14 @@ import {
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
 import { ethers } from "hardhat";
-import { AddressZero, callDataCost, HashZero, rethrow } from "../smart-wallet/testutils";
+import { AddressZero, callDataCost, HashZero, rethrow } from "../smart-wallet/testUtils";
 import {
   ecsign,
   toRpcSig,
   keccak256 as keccak256_buffer,
 } from "ethereumjs-util";
 import { EntryPoint, VerifyingSingletonPaymaster } from "../../typechain";
-import { UserOperation } from "./UserOperation";
+import { UserOperation } from "./userOperation";
 import { Create2Factory } from "../../src/Create2Factory";
 
 export function packUserOp(op: UserOperation, forSignature = true): string {
@@ -339,9 +339,7 @@ export async function makeEcdsaModuleUserOp(
   );
 
   userOp.signature = signatureWithModuleAddress;
-
   return userOp;
-
 }
 
 export async function makeEcdsaModuleUserOpWithPaymaster(
@@ -402,6 +400,5 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   userOpWithPaymasterData.signature = signatureWithModuleAddress;
 
   return userOpWithPaymasterData;
-
 }
 

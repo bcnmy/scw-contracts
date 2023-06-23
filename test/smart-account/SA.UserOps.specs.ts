@@ -14,7 +14,7 @@ import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster, fillAndSign 
 
 describe("NEW::: UserOps", async () => {
 
-  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
+  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, notEnabledModule] = waffle.provider.getWallets();
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     await deployments.fixture();
@@ -173,6 +173,46 @@ describe("NEW::: UserOps", async () => {
       let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
         ["bytes", "address"], 
         [userOp.signature, sentinelAddress]
+      );
+      userOp.signature = signatureWithModuleAddress;
+
+      await expect(entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})).to.be.revertedWith("FailedOp");
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+    });
+
+    it ("Reverts when trying to forward validateUserOp flow to the module that is not enabled", async () => {
+      const { 
+        entryPoint, 
+        mockToken,
+        userSA,
+        ecdsaModule
+      } = await setupTests();
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+      const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+        "executeCall",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ]
+      );
+      const userOp = await fillAndSign(
+        {
+          sender: userSA.address,
+          callData: txnDataAA1
+        },
+        smartAccountOwner,
+        entryPoint,
+        'nonce'
+      );
+      // add not enabled module address to the signature
+      let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"], 
+        [userOp.signature, notEnabledModule.address]
       );
       userOp.signature = signatureWithModuleAddress;
 

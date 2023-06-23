@@ -265,12 +265,6 @@ contract SmartAccount is
             userOp.signature,
             (bytes, address)
         );
-        // TODO:
-        // 1) USE if(isModuleEnabled()) instead?
-        // It's more expensive but handles the SENTINEL_MODULES case
-        // However, validationModule.validateUserOp reverts if sentinel module is provided as a validation module
-        // Can there be the case, when SENTINEL_MODULES.validateUserOp won't revert, leaving validation data 0
-        // which means validation success?
         if (address(modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
