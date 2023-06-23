@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import hre , { ethers, deployments, waffle } from "hardhat";
+import { hashMessage } from "ethers/lib/utils";
 import { makeEcdsaModuleUserOp, getUserOpHash } from "../utils/userOp";
 import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken, getSmartAccountWithModule} from "../utils/setupHelper";
 import { encodeTransfer } from "../utils/testUtils";
@@ -342,6 +343,52 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
             expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
             expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
+        });
+    });
+
+    describe("isValidSignatureForAddress(): ", async()=>{
+        it("Returns EIP1271_MAGIC_VALUE for valid signature signed by Smart Account Owner",async()=>{
+            const {ecdsaRegistryModule, userSA} = await setupTests();
+
+            const messageToSign = "SCW signed this message";
+            const dataHash = hashMessage(messageToSign);
+            const signature = await smartAccountOwner.signMessage(messageToSign);
+            expect(await ecdsaRegistryModule.isValidSignatureForAddress(dataHash,signature,userSA.address)).to.equal(EIP1271_MAGIC_VALUE);
+        });
+
+        it("Reverts when Unregistered Smart Account calls isValidSignature()", async()=>{
+            const {ecdsaRegistryModule, randomContract} = await setupTests();
+            const unregisteredSmartAccount = randomContract.address;
+            const messageToSign = "SCW signed this message";
+            const dataHash = hashMessage(messageToSign);
+            const signature = await smartAccountOwner.signMessage(messageToSign);
+
+            // set msg.sender to be unregisteredSmartAccount instead of userSA.address
+            await expect(ecdsaRegistryModule.isValidSignatureForAddress(dataHash,signature,unregisteredSmartAccount)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
+        });
+
+        it("Reverts when signature length is less than 65", async()=>{
+            const {ecdsaRegistryModule, userSA} = await setupTests();
+
+            const messageToSign = "SCW signed this message";
+            const dataHash = hashMessage(messageToSign);
+            // construct signature of length < 65
+            const invalidSignature = new Uint8Array(64);
+            for (let i = 0; i < invalidSignature.length; i++) {
+                invalidSignature[i] = i; // Set each byte to its index value
+            }
+            await expect(ecdsaRegistryModule.isValidSignatureForAddress(dataHash,invalidSignature,userSA.address)).to.be.revertedWith("WrongSignatureLength");
+        });
+
+        it("Returns 0xffffffff for signatures not signed by Smart Account Owners ", async()=>{
+            const {ecdsaRegistryModule, userSA} = await setupTests();
+
+            const messageToSign = "SCW signed this message";
+            const dataHash = hashMessage(messageToSign);
+            const invalidOwner = charlie;
+            const signature = await invalidOwner.signMessage(messageToSign);
+
+            expect(await ecdsaRegistryModule.isValidSignatureForAddress(dataHash,signature,userSA.address)).to.equal(EIP1271_INVALID_SIGNATURE);
         });
     });
 });
