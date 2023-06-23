@@ -11,20 +11,29 @@ struct SessionStorage {
 }
 
 contract SessionKeyManager is BaseAuthorizationModule {
-    /*
+    /**
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
      */
     mapping(address => SessionStorage) internal userSessions;
 
+    /**
+     * @dev returns the SessionStorage object for a given smartAccount
+     * @param smartAccount Smart Account address
+     */
     function getSessionKeys(
         address smartAccount
     ) external view returns (SessionStorage memory) {
         return userSessions[smartAccount];
     }
 
+    /**
+     * @dev sets the merkle root of a tree containing session keys for msg.sender
+     * should be called by Smart Account
+     * @param _merkleRoot Merkle Root of a tree that contains session keys with their permissions and parameters
+     */
     function setMerkleRoot(bytes32 _merkleRoot) external {
-        _setSessionData(msg.sender, _merkleRoot);
+        userSessions[msg.sender].merkleRoot = _merkleRoot;
     }
 
     /**
@@ -82,6 +91,12 @@ contract SessionKeyManager is BaseAuthorizationModule {
             );
     }
 
+    /**
+     * @dev isValidSignature according to BaseAuthorizationModule
+     * @param _dataHash Hash of the data to be validated.
+     * @param _signature Signature over the the _dataHash.
+     * @return always returns 0xffffffff as signing messages is not supported by SessionKeys
+     */
     function isValidSignature(
         bytes32 _dataHash,
         bytes memory _signature
@@ -89,10 +104,11 @@ contract SessionKeyManager is BaseAuthorizationModule {
         return 0xffffffff; // do not support it here
     }
 
-    function _setSessionData(address _account, bytes32 _merkleRoot) internal {
-        userSessions[_account] = SessionStorage({merkleRoot: _merkleRoot});
-    }
-
+    /**
+     * @dev returns the SessionStorage object for a given smartAccount
+     * @param _account Smart Account address
+     * @return sessionKeyStorage SessionStorage object at storage
+     */
     function _getSessionData(
         address _account
     ) internal view returns (SessionStorage storage sessionKeyStorage) {

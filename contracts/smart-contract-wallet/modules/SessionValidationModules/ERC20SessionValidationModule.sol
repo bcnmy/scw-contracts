@@ -9,22 +9,22 @@ contract ERC20SessionValidationModule {
      * and that _op has been signed by this SessionKey
      * @param _op User Operation to be validated.
      * @param _userOpHash Hash of the User Operation to be validated.
-     * @param _data SessionKey data, that describes sessionKey permissions
-     * @param _sig Signature over the the _userOpHash.
+     * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
+     * @param _sessionKeySignature Signature over the the _userOpHash.
      * @return true if the _op is valid, false otherwise.
      */
     function validateSessionUserOp(
         UserOperation calldata _op,
         bytes32 _userOpHash,
-        bytes calldata _data,
-        bytes calldata _sig
+        bytes calldata _sessionKeyData,
+        bytes calldata _sessionKeySignature
     ) external view returns (bool) {
-        address sessionKey = address(bytes20(_data[0:20]));
+        address sessionKey = address(bytes20(_sessionKeyData[0:20]));
         // 20:40 is token address
-        address recipient = address(bytes20(_data[40:60]));
-        uint256 maxAmount = abi.decode(_data[60:92], (uint256));
+        address recipient = address(bytes20(_sessionKeyData[40:60]));
+        uint256 maxAmount = abi.decode(_sessionKeyData[60:92], (uint256));
         {
-            address token = address(bytes20(_data[20:40]));
+            address token = address(bytes20(_sessionKeyData[20:40]));
 
             // we expect _op.callData to be `SmartAccount.executeCall(to, value, calldata)` calldata
             (address tokenAddr, uint256 callValue, ) = abi.decode(
@@ -56,7 +56,9 @@ contract ERC20SessionValidationModule {
             revert("ERC20SV Max Amount Exceeded");
         }
         return
-            ECDSA.recover(ECDSA.toEthSignedMessageHash(_userOpHash), _sig) ==
-            sessionKey;
+            ECDSA.recover(
+                ECDSA.toEthSignedMessageHash(_userOpHash),
+                _sessionKeySignature
+            ) == sessionKey;
     }
 }

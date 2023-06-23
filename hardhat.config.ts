@@ -233,12 +233,12 @@ const config: HardhatUserConfig = {
       // gasPrice: 6400000
     },
   },
-  /*
+  
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
-    currency: "USD",
+    onlyCalledMethods: true,
   },
-  */
+  
   dependencyCompiler: {
     paths: [
       '@account-abstraction/contracts/core/EntryPoint.sol',
