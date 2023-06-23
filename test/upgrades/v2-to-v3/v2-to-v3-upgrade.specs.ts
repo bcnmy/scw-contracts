@@ -54,7 +54,7 @@ describe("NEW::: Upgrade v2 (Ownerless) to v3", async () => {
     await walletFactoryV3.deployCounterFactualAccount(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
     const userSAV3 = await ethers.getContractAt(
-            "contracts/smart-contract-wallet/test/upgrades/v3/SmartAccountV3.sol:SmartAccountV3",
+            "contracts/smart-account/test/upgrades/v3/SmartAccountV3.sol:SmartAccountV3",
             expectedSmartAccountAddressV3
     );
     
