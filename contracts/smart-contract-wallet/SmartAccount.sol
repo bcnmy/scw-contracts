@@ -57,7 +57,7 @@ contract SmartAccount is
     );
 
     /**
-     * @dev Constructor that sets the owner of the contract and the entry point contract.
+     * @dev Constructor that sets the entry point contract.
      *      modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
      * @param anEntryPoint The address of the entry point contract.
      */
@@ -70,9 +70,10 @@ contract SmartAccount is
     }
 
     /**
-     * @dev This function allows the owner or entry point to execute certain actions.
+     * @dev This function allows entry point or SA itself to execute certain actions.
      * If the caller is not authorized, the function will revert with an error message.
-     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     * @notice This function acts as modifier and is marked as internal to be be called
+     * within the contract itself only.
      */
     function _requireFromEntryPointOrSelf() internal view {
         if (msg.sender != address(entryPoint()) && msg.sender != address(this))
@@ -80,9 +81,10 @@ contract SmartAccount is
     }
 
     /**
-     * @dev This function allows the owner or entry point to execute certain actions.
+     * @dev This function allows entry point to execute certain actions.
      * If the caller is not authorized, the function will revert with an error message.
-     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     * @notice This function acts as modifier and is marked as internal to be be called
+     * within the contract itself only.
      */
     function _requireFromEntryPoint() internal view {
         if (msg.sender != address(entryPoint()))
@@ -158,7 +160,7 @@ contract SmartAccount is
     }
 
     /**
-     * @dev Execute a transaction (called directly from owner, or by entryPoint)
+     * @dev Execute a transaction (called by entryPoint)
      * @notice Name is optimized for this method to be cheaper to be called
      * @param dest Address of the contract to call
      * @param value Amount of native tokens to send along with the transaction
@@ -277,10 +279,7 @@ contract SmartAccount is
 
     /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
-     * @dev If owner is a smart-contract (other smart contract wallet or module, that controls
-     *      signature verifications - like multisig), forward isValidSignature request to it.
-     *      In case of multisig, _signature can be several concatenated signatures
-     *      If owner is EOA, perform a regular ecrecover.
+     * @dev Forwards the validation to the module specified in the signature
      * @param dataHash 32 bytes hash of the data signed on the behalf of address(msg.sender)
      * @param signature Signature byte array associated with dataHash
      * @return bytes4 value.
