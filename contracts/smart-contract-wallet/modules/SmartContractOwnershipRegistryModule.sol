@@ -19,6 +19,12 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
     string public constant NAME = "Smart Contract Ownership Registry Module";
     string public constant VERSION = "0.1.0";
 
+    event OwnershipTransferred(
+        address indexed smartAccount,
+        address indexed oldOwner,
+        address indexed newOwner
+    );
+
     error NoOwnerRegisteredForSmartAccount(address smartAccount);
     error AlreadyInitedForSmartAccount(address smartAccount);
     error WrongSignatureLength();
@@ -26,32 +32,71 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
 
     using ECDSA for bytes32;
 
-    mapping(address => address) public smartAccountOwners;
+    mapping(address => address) internal smartAccountOwners;
 
     /**
      * @dev Initializes the module for a Smart Account.
+     * @dev no need to check for address(0) as it is not a Smart Contract
      * Should be used at a time of first enabling the module for a Smart Account.
      * @param owner The owner of the Smart Account.
      */
     function initForSmartAccount(address owner) external returns (address) {
-        if (!isSmartAccount(owner)) revert NotSmartContract(owner);
         if (smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
+        if (!_isSmartContract(owner)) revert NotSmartContract(owner);
         smartAccountOwners[msg.sender] = owner;
         return address(this);
     }
 
     /**
      * @dev Sets/changes an for a Smart Account.
+     * @dev no need to check for address(0) as it is not a Smart Contract
      * Should be called by Smart Account itself.
      * @param owner The owner of the Smart Account.
      */
     function setOwner(address owner) external {
-        if (!isSmartAccount(owner)) revert NotSmartContract(owner);
+        if (!_isSmartContract(owner)) revert NotSmartContract(owner);
         smartAccountOwners[msg.sender] = owner;
     }
 
-    function isSmartAccount(address account) internal view returns (bool) {
+    /**
+     * @dev Renounces ownership
+     * should be called by Smart Account.
+     */
+    function renounceOwnership() external {
+        _transferOwnership(msg.sender, address(0));
+    }
+
+    /**
+     * @dev Returns the owner of the Smart Account. Reverts for Smart Accounts without owners.
+     * @param smartAccount Smart Account address.
+     * @return owner The owner of the Smart Account.
+     */
+    function getOwner(address smartAccount) external view returns (address) {
+        address owner = smartAccountOwners[smartAccount];
+        if (owner == address(0))
+            revert NoOwnerRegisteredForSmartAccount(smartAccount);
+        return owner;
+    }
+
+    /**
+     * @dev Transfers ownership for smartAccount and emits an event
+     * @param newOwner Smart Account address.
+     */
+    function _transferOwnership(
+        address smartAccount,
+        address newOwner
+    ) internal {
+        address _oldOwner = smartAccountOwners[smartAccount];
+        smartAccountOwners[smartAccount] = newOwner;
+        emit OwnershipTransferred(smartAccount, _oldOwner, newOwner);
+    }
+
+    /**
+     * @dev Checks if the address provided is a smart contract.
+     * @param account Address to be checked.
+     */
+    function _isSmartContract(address account) internal view returns (bool) {
         uint256 size;
         assembly {
             size := extcodesize(account)

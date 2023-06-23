@@ -44,7 +44,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     function initForSmartAccount(address owner) external returns (address) {
         if (smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
-        if (_isSmartAccount(owner)) revert NotEOA(owner);
+        if (_isSmartContract(owner)) revert NotEOA(owner);
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         smartAccountOwners[msg.sender] = owner;
         return address(this);
@@ -56,7 +56,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
      * @param owner The owner of the Smart Account.
      */
     function transferOwnership(address owner) external {
-        if (_isSmartAccount(owner)) revert NotEOA(owner);
+        if (_isSmartContract(owner)) revert NotEOA(owner);
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         _transferOwnership(msg.sender, owner);
     }
@@ -98,7 +98,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
      * @dev Checks if the address provided is a smart contract.
      * @param account Address to be checked.
      */
-    function _isSmartAccount(address account) internal view returns (bool) {
+    function _isSmartContract(address account) internal view returns (bool) {
         uint256 size;
         assembly {
             size := extcodesize(account)
@@ -123,13 +123,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         // validateUserOp gets from EP a hash not prepended with 'x\x19Ethereum Signed Message:\n32'
         // so we have to do it manually, as on the user side it is signed with personal_sign
         // that prepends with "\x19Ethereum Signed Message\n32"
-        if (
-            _verifySignature(
-                userOpHash.toEthSignedMessageHash(),
-                moduleSignature,
-                userOp.sender
-            )
-        ) {
+        if (_verifySignature(userOpHash, moduleSignature, userOp.sender)) {
             return VALIDATION_SUCCESS;
         }
         return SIG_VALIDATION_FAILED;
@@ -152,7 +146,8 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
 
     /**
      * @dev Validates a signature for a message signed by address.
-     * @param dataHash Exact hash of the data that was signed.
+     * @dev Also try dataHash.toEthSignedMessageHash()
+     * @param dataHash hash of the data
      * @param moduleSignature Signature to be validated.
      * @param smartAccount expected signer Smart Account address.
      * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
@@ -171,7 +166,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     /**
      * @dev Validates a signature for a message.
      * Only EOA owners supported, no Smart Account Owners
-     * For Smart Contrac Owners check SmartContractOwnership module instead
+     * For Smart Contract Owners check SmartContractOwnership Module instead
      * @param dataHash Hash of the data to be validated.
      * @param signature Signature to be validated.
      * @param smartAccount expected signer Smart Account address.
@@ -186,6 +181,15 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         if (expectedSigner == address(0))
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
         if (signature.length < 65) revert WrongSignatureLength();
-        return expectedSigner == dataHash.recover(signature);
+        if (
+            expectedSigner ==
+            dataHash.toEthSignedMessageHash().recover(signature)
+        ) {
+            return true;
+        }
+        if (expectedSigner == dataHash.recover(signature)) {
+            return true;
+        }
+        return false;
     }
 }
