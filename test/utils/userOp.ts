@@ -9,7 +9,7 @@ import {
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
 import { ethers } from "hardhat";
-import { AddressZero, callDataCost, HashZero, rethrow } from "../smart-wallet/testUtils";
+import { AddressZero, callDataCost, HashZero, rethrow } from "../utils/testUtils";
 import {
   ecsign,
   toRpcSig,

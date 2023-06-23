@@ -13,7 +13,7 @@ import {
   FORWARD_FLOW 
 } from "../../src/utils/execution";
 import { makeEcdsaModuleUserOp } from "../utils/userOp";
-import { encodeTransfer } from "../smart-wallet/testUtils";
+import { encodeTransfer } from "../utils/testUtils";
 import { 
   getEntryPoint, 
   getSmartAccountImplementation, 

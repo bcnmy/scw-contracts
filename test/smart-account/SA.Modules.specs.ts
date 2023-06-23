@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { AddressZero } from "../aa-core/testutils";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -15,7 +14,6 @@ import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../ut
 describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
-
   const sentinelAddress = "0x0000000000000000000000000000000000000001";
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
@@ -90,7 +88,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
       let userOp = await makeEcdsaModuleUserOp(
         "enableModule",
-        [AddressZero],
+        [ethers.constants.AddressZero],
         userSA.address,
         smartAccountOwner,
         entryPoint,
@@ -189,7 +187,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
 
       expect(await userSA.isModuleEnabled(mockInvalidInitialAuthModule.address)).to.be.false;
-      expect(await userSA.isModuleEnabled(AddressZero)).to.be.false;
+      expect(await userSA.isModuleEnabled(ethers.constants.AddressZero)).to.be.false;
     });
 
     it ("Can enable and setup another module and it is enabled and setup", async () => {
@@ -239,7 +237,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
 
       let userOp = await makeEcdsaModuleUserOp(
         "setupAndEnableModule",
-        [AddressZero, invalidSetupData],
+        [ethers.constants.AddressZero, invalidSetupData],
         userSA.address,
         smartAccountOwner,
         entryPoint,
@@ -249,7 +247,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       const tx = await entryPoint.handleOps([userOp],alice.address);
 
       await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
-      expect(await userSA.isModuleEnabled(AddressZero)).to.be.false;
+      expect(await userSA.isModuleEnabled(ethers.constants.AddressZero)).to.be.false;
     });
 
     // can not enable sentinel module
@@ -370,7 +368,7 @@ describe("NEW::: Ownerless Smart Account Modules: ", async () => {
       await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
 
       expect(await userSA.isModuleEnabled(module2.address)).to.be.false;
-      expect(await userSA.isModuleEnabled(AddressZero)).to.be.false;
+      expect(await userSA.isModuleEnabled(ethers.constants.AddressZero)).to.be.false;
       const returnedValue = await userSA.getModulesPaginated("0x0000000000000000000000000000000000000001", 10);
       expect(returnedValue.array.length).to.equal(2);
     });

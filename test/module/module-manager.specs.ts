@@ -22,7 +22,7 @@ import {
   buildSafeTransaction,
   executeContractCallWithSigners,
 } from "../../src/utils/execution";
-import { encodeTransfer } from "../smart-wallet/testUtils";
+import { encodeTransfer } from "../utils/testUtils";
 import { fillAndSign, fillUserOp } from "../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";

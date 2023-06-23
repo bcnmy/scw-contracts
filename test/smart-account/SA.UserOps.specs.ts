@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { encodeTransfer } from "../smart-wallet/testUtils";
+import { encodeTransfer } from "../utils/testUtils";
 import { 
   getEntryPoint, 
   getSmartAccountImplementation, 

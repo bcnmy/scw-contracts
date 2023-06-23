@@ -2,7 +2,7 @@ import { expect } from "chai";
 import hre , { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, getUserOpHash } from "../utils/userOp";
 import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken, getSmartAccountWithModule} from "../utils/setupHelper";
-import { encodeTransfer } from "../smart-wallet/testUtils";
+import { encodeTransfer } from "../utils/testUtils";
 
 describe("NEW::: ECDSA Registry Module: ", async()=>{
 
@@ -24,7 +24,6 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             [smartAccountOwner.address]
         );
         const userSA = await getSmartAccountWithModule(ecdsaRegistryModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
-        console.log("userSA address: ", userSA.address);
 
         const tokensToMint = ethers.utils.parseEther("100");
         await mockToken.mint(userSA.address,tokensToMint.toString());

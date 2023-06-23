@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp } from "../utils/userOp";
 import { makeEcdsaSessionKeySignedUserOp, enableNewTreeForSmartAccountViaEcdsa, addLeavesForSmartAccountViaEcdsa } from "../utils/sessionKey";
-import { encodeTransfer } from "../smart-wallet/testUtils";
+import { encodeTransfer } from "../utils/testUtils";
 import { hexZeroPad, hexConcat } from "ethers/lib/utils";
 import { 
   getEntryPoint, 
