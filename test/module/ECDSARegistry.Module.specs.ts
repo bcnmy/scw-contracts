@@ -137,11 +137,49 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         });
 
         // reverts when trying to set address(0) as owner
+        it("Reverts when trying to set address(0) as owner", async()=>{
+            const {ecdsaRegistryModule,entryPoint, randomContract, userSA} = await setupTests();
+            const previousOwner = await ecdsaRegistryModule.getOwner(userSA.address);
+            let txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
+                "transferOwnership",
+                [AddressZero]
+            );
+            let userOp = await makeEcdsaModuleUserOp(
+                "executeCall",
+                [ecdsaRegistryModule.address,0,txnData1],
+                userSA.address,
+                smartAccountOwner,
+                entryPoint,
+                ecdsaRegistryModule.address
+            );
 
+            const tx = await entryPoint.handleOps([userOp],charlie.address);
+            await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
+            expect(await ecdsaRegistryModule.getOwner(userSA.address)).to.be.equal(previousOwner);
+        });
     });
 
-    // describe renounceOwnership
-        // it should be able to renounce ownership and the owner should be address(0)
+    describe("renounceOwnership():", async()=>{
+        it("Should be able to renounce ownership and the new owner should be address(0)", async()=>{
+            const {ecdsaRegistryModule,entryPoint,userSA} = await setupTests();
+            let txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
+                "renounceOwnership",
+                []
+            );
+            let userOp = await makeEcdsaModuleUserOp(
+                "executeCall",
+                [ecdsaRegistryModule.address,0,txnData1],
+                userSA.address,
+                smartAccountOwner,
+                entryPoint,
+                ecdsaRegistryModule.address
+            );
+
+            const tx = await entryPoint.handleOps([userOp],charlie.address);
+            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+            expect(await ecdsaRegistryModule.getOwner(userSA.address)).to.be.equal(AddressZero);
+        });
+    });
 
     // validateUserOp(UserOperation calldata userOp,bytes32 userOpHash)
     describe("validateUserOp(): ", async()=>{
