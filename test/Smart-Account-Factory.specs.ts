@@ -79,7 +79,7 @@ describe("NEW::: Smart Account Factory", async () => {
       expect(await smartAccount.getImplementation()).to.equal(await smartAccountFactory.basicImplementation());
       expect(await smartAccount.entryPoint()).to.equal(await smartAccountImplementation.entryPoint());
       expect(await smartAccount.isModuleEnabled(ecdsaModule.address)).to.equal(true);
-      expect(await ecdsaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
+      expect(await ecdsaModule.getOwner(smartAccount.address)).to.equal(smartAccountOwner.address);
       expect(await smartAccount.nonce()).to.equal(0);
     });
 
@@ -185,7 +185,7 @@ describe("NEW::: Smart Account Factory", async () => {
 
       const smartAccount = await ethers.getContractAt("SmartAccount", deployedSmartAccountAddress);
       expect(await smartAccount.isModuleEnabled(ecdsaModule.address)).to.equal(true);
-      expect(await ecdsaModule.smartAccountOwners(smartAccount.address)).to.equal(smartAccountOwner.address);
+      expect(await ecdsaModule.getOwner(smartAccount.address)).to.equal(smartAccountOwner.address);
     });
 
     it ("should revert if wrong setup data provided", async () => { 

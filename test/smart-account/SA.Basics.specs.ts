@@ -60,7 +60,7 @@ describe("NEW::: Ownerless Smart Account Basics: ", async () => {
     } = await setupTests();
 
     expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(true);
-    expect(await ecdsaModule.smartAccountOwners(userSA.address)).to.equal(smartAccountOwner.address);
+    expect(await ecdsaModule.getOwner(userSA.address)).to.equal(smartAccountOwner.address);
 
     expect(await ethers.provider.getBalance(userSA.address)).to.equal(ethers.utils.parseEther("10"));
     expect(await mockToken.balanceOf(userSA.address)).to.equal(ethers.utils.parseEther("1000000"));

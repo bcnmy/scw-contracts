@@ -118,7 +118,7 @@ describe("Ownerless SA Basics", function () {
       console.log("user module is at %s", eoaOwnersRegistryModule.address);
 
       expect(await userSCW.isModuleEnabled(eoaOwnersRegistryModule.address)).to.equal(true);
-      expect(await eoaOwnersRegistryModule.smartAccountOwners(userSCW.address)).to.equal(eoaOwner);
+      expect(await eoaOwnersRegistryModule.getOwner(userSCW.address)).to.equal(eoaOwner);
 
       expect(await ethers.provider.getBalance(userSCW.address)).to.equal(ethers.utils.parseEther("10"));
       expect(await token.balanceOf(userSCW.address)).to.equal(ethers.utils.parseEther("1000000"));
@@ -132,7 +132,7 @@ describe("Ownerless SA Basics", function () {
       const charlieTokenBalanceBefore = await token.balanceOf(charlie);
       const EIP1271_MAGIC_VALUE = "0x1626ba7e";
 
-      const eoaOwner = await eoaOwnersRegistryModule.smartAccountOwners(userSCW.address);
+      const eoaOwner = await eoaOwnersRegistryModule.getOwner(userSCW.address);
       expect(eoaOwner).to.equal(await accounts[1].getAddress());
 
       let tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
