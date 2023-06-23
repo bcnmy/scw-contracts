@@ -4,7 +4,6 @@ import { makeEcdsaModuleUserOp, getUserOpHash } from "../utils/userOp";
 import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken} from "../utils/setupHelper";
 import { encodeTransfer } from "../smart-wallet/testUtils";
 
-
 describe("NEW::: ECDSA Registry Module: ", async()=>{
 
     const [deployer, smartAccountOwner, alice, bob, charlie] = waffle.provider.getWallets();
@@ -406,7 +405,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             const {ecdsaRegistryModule, entryPoint, userSA, mockToken} = await setupTests();
             const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
             const bobBalanceBefore = await mockToken.balanceOf(bob.address);
-            const tokenAmountToTransfer = ethers.utils.parseEther("0.246567");
+            const tokenAmountToTransfer = ethers.utils.parseEther("1.67");
 
             let txnData = mockToken.interface.encodeFunctionData(
                 "transfer",
@@ -443,9 +442,6 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             await expect(entryPoint.handleOps([testUserOp], smartAccountOwner.address)).to.be.revertedWith("FailedOp");
             expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
             expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
-
-            //invalidSignature    :  0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000063c2a8b981d2268ad17b87a34c09635a9ebf98d10000000000000000000000000000000000000000000000000000000000000041c36197c2de008a8da81e4162363c09f1b48f0764a1a0edb82994b2fc2bc2b4f7609c0744748e0d1192244dae45d515e54a34b1482610b6381a53145d2326beb81b00000000000000000000000000000000000000000000000000000000000000
-            //testUserOp.signature:  0x000000000000000000000000000000000000000000000000000000000000004000000000000000000000000063c2a8b981d2268ad17b87a34c09635a9ebf98d10000000000000000000000000000000000000000000000000000000000000041c36197c2de008a8da81e4162363c09f1b48f0764a1a0edb82994b2fc2bc2b4f7609c0744748e0d1192244dae45d515e54a34b1482610b6381a53145d2326beb81b00000000000000000000000000000000000000000000000000000000000000
         });
 
         it("Returns SIG_VALIDATION_FAILED and userOp is not handled when s is altered", async()=>{

@@ -162,6 +162,8 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
 
     /**
      * @dev Validates a signature for a message.
+     * @dev Check if signature was made over dataHash.toEthSignedMessageHash() or just dataHash
+     * The former is for personal_sign, the latter for the typed_data sign
      * Only EOA owners supported, no Smart Account Owners
      * For Smart Contract Owners check SmartContractOwnership Module instead
      * @param dataHash Hash of the data to be validated.

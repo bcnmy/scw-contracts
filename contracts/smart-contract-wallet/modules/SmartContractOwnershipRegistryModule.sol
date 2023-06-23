@@ -54,9 +54,9 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
      * Should be called by Smart Account itself.
      * @param owner The owner of the Smart Account.
      */
-    function setOwner(address owner) external {
+    function transferOwnership(address owner) external {
         if (!_isSmartContract(owner)) revert NotSmartContract(owner);
-        smartAccountOwners[msg.sender] = owner;
+        _transferOwnership(msg.sender, owner);
     }
 
     /**
