@@ -180,13 +180,14 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         if (expectedSigner == address(0))
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
         if (signature.length < 65) revert WrongSignatureLength();
-        if (
-            expectedSigner ==
-            (dataHash.toEthSignedMessageHash()).recover(signature)
-        ) {
+        address recovered = (dataHash.toEthSignedMessageHash()).recover(
+            signature
+        );
+        if (expectedSigner == recovered) {
             return true;
         }
-        if (expectedSigner == dataHash.recover(signature)) {
+        recovered = dataHash.recover(signature);
+        if (expectedSigner == recovered) {
             return true;
         }
         return false;

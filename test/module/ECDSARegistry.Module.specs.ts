@@ -4,6 +4,7 @@ import { hashMessage } from "ethers/lib/utils";
 import { makeEcdsaModuleUserOp, getUserOpHash } from "../utils/userOp";
 import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken, getSmartAccountWithModule} from "../utils/setupHelper";
 import { encodeTransfer } from "../utils/testUtils";
+import { AddressZero } from "@ethersproject/constants";
 
 describe("NEW::: ECDSA Registry Module: ", async()=>{
 
@@ -11,6 +12,8 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
     const smartAccountDeploymentIndex = 0;
     const SIG_VALIDATION_SUCCESS = 0;
     const SIG_VALIDATION_FAILED = 1;
+    const EIP1271_INVALID_SIGNATURE = "0xffffffff";
+    const EIP1271_MAGIC_VALUE = "0x1626ba7e";
 
     const setupTests = deployments.createFixture(async( {deployments, getNamedAccounts} ) =>{
         await deployments.fixture();
@@ -136,7 +139,6 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             expect(await ecdsaRegistryModule.getOwner(userSA.address)).to.be.equal(previousOwner);
         });
 
-        // reverts when trying to set address(0) as owner
         it("Reverts when trying to set address(0) as owner", async()=>{
             const {ecdsaRegistryModule,entryPoint, randomContract, userSA} = await setupTests();
             const previousOwner = await ecdsaRegistryModule.getOwner(userSA.address);
@@ -161,7 +163,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
     describe("renounceOwnership():", async()=>{
         it("Should be able to renounce ownership and the new owner should be address(0)", async()=>{
-            const {ecdsaRegistryModule,entryPoint,userSA} = await setupTests();
+            const {ecdsaRegistryModule, entryPoint, userSA} = await setupTests();
             let txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
                 "renounceOwnership",
                 []
@@ -177,7 +179,7 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
 
             const tx = await entryPoint.handleOps([userOp],charlie.address);
             await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-            expect(await ecdsaRegistryModule.getOwner(userSA.address)).to.be.equal(AddressZero);
+            await expect(ecdsaRegistryModule.getOwner(userSA.address)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
         });
     });
 
@@ -205,9 +207,10 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             // Construct userOpHash
             const provider = entryPoint?.provider;
             const chainId = await provider!.getNetwork().then((net) => net.chainId);
-            const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
-
-            expect(await ecdsaRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_SUCCESS);
+            const userOpHash = getUserOpHash(userOp,entryPoint.address,chainId);
+            
+            let res = await ecdsaRegistryModule.validateUserOp(userOp, userOpHash);
+            expect(res).to.be.equal(SIG_VALIDATION_SUCCESS);
             await entryPoint.handleOps([userOp],smartAccountOwner.address);
             expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
             expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore.sub(tokenAmountToTransfer));
