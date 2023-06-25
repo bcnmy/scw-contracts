@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import hre , { ethers, deployments, waffle } from "hardhat";
+import { hashMessage } from "ethers/lib/utils";
 import { makeEcdsaModuleUserOp, getUserOpHash } from "../utils/userOp";
 import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken, getSmartAccountWithModule} from "../utils/setupHelper";
 import { encodeTransfer } from "../utils/testUtils";
@@ -136,11 +137,49 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
         });
 
         // reverts when trying to set address(0) as owner
+        it("Reverts when trying to set address(0) as owner", async()=>{
+            const {ecdsaRegistryModule,entryPoint, randomContract, userSA} = await setupTests();
+            const previousOwner = await ecdsaRegistryModule.getOwner(userSA.address);
+            let txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
+                "transferOwnership",
+                [AddressZero]
+            );
+            let userOp = await makeEcdsaModuleUserOp(
+                "executeCall",
+                [ecdsaRegistryModule.address,0,txnData1],
+                userSA.address,
+                smartAccountOwner,
+                entryPoint,
+                ecdsaRegistryModule.address
+            );
 
+            const tx = await entryPoint.handleOps([userOp],charlie.address);
+            await expect(tx).to.emit(entryPoint, "UserOperationRevertReason");
+            expect(await ecdsaRegistryModule.getOwner(userSA.address)).to.be.equal(previousOwner);
+        });
     });
 
-    // describe renounceOwnership
-        // it should be able to renounce ownership and the owner should be address(0)
+    describe("renounceOwnership():", async()=>{
+        it("Should be able to renounce ownership and the new owner should be address(0)", async()=>{
+            const {ecdsaRegistryModule,entryPoint,userSA} = await setupTests();
+            let txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
+                "renounceOwnership",
+                []
+            );
+            let userOp = await makeEcdsaModuleUserOp(
+                "executeCall",
+                [ecdsaRegistryModule.address,0,txnData1],
+                userSA.address,
+                smartAccountOwner,
+                entryPoint,
+                ecdsaRegistryModule.address
+            );
+
+            const tx = await entryPoint.handleOps([userOp],charlie.address);
+            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
+            expect(await ecdsaRegistryModule.getOwner(userSA.address)).to.be.equal(AddressZero);
+        });
+    });
 
     // validateUserOp(UserOperation calldata userOp,bytes32 userOpHash)
     describe("validateUserOp(): ", async()=>{
@@ -342,6 +381,52 @@ describe("NEW::: ECDSA Registry Module: ", async()=>{
             await expect(entryPoint.handleOps([userOp],smartAccountOwner.address)).to.be.reverted;
             expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
             expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
+        });
+    });
+
+    describe("isValidSignatureForAddress(): ", async()=>{
+        it("Returns EIP1271_MAGIC_VALUE for valid signature signed by Smart Account Owner",async()=>{
+            const {ecdsaRegistryModule, userSA} = await setupTests();
+
+            const messageToSign = "SCW signed this message";
+            const dataHash = hashMessage(messageToSign);
+            const signature = await smartAccountOwner.signMessage(messageToSign);
+            expect(await ecdsaRegistryModule.isValidSignatureForAddress(dataHash,signature,userSA.address)).to.equal(EIP1271_MAGIC_VALUE);
+        });
+
+        it("Reverts when Unregistered Smart Account calls isValidSignature()", async()=>{
+            const {ecdsaRegistryModule, randomContract} = await setupTests();
+            const unregisteredSmartAccount = randomContract.address;
+            const messageToSign = "SCW signed this message";
+            const dataHash = hashMessage(messageToSign);
+            const signature = await smartAccountOwner.signMessage(messageToSign);
+
+            // set msg.sender to be unregisteredSmartAccount instead of userSA.address
+            await expect(ecdsaRegistryModule.isValidSignatureForAddress(dataHash,signature,unregisteredSmartAccount)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
+        });
+
+        it("Reverts when signature length is less than 65", async()=>{
+            const {ecdsaRegistryModule, userSA} = await setupTests();
+
+            const messageToSign = "SCW signed this message";
+            const dataHash = hashMessage(messageToSign);
+            // construct signature of length < 65
+            const invalidSignature = new Uint8Array(64);
+            for (let i = 0; i < invalidSignature.length; i++) {
+                invalidSignature[i] = i; // Set each byte to its index value
+            }
+            await expect(ecdsaRegistryModule.isValidSignatureForAddress(dataHash,invalidSignature,userSA.address)).to.be.revertedWith("WrongSignatureLength");
+        });
+
+        it("Returns 0xffffffff for signatures not signed by Smart Account Owners ", async()=>{
+            const {ecdsaRegistryModule, userSA} = await setupTests();
+
+            const messageToSign = "SCW signed this message";
+            const dataHash = hashMessage(messageToSign);
+            const invalidOwner = charlie;
+            const signature = await invalidOwner.signMessage(messageToSign);
+
+            expect(await ecdsaRegistryModule.isValidSignatureForAddress(dataHash,signature,userSA.address)).to.equal(EIP1271_INVALID_SIGNATURE);
         });
     });
 });
