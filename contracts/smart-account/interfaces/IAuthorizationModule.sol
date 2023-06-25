@@ -7,5 +7,5 @@ interface IAuthorizationModule {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view returns (uint256 validationData);
+    ) external returns (uint256 validationData);
 }
