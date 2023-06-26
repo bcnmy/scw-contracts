@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, waffle } from "hardhat";
 import { AddressZero } from "@ethersproject/constants";
 
-describe("NEW::: Proxy ", async () => {
+describe("Proxy ", async () => {
 
   const [randomAddress] = waffle.provider.getWallets();
 

@@ -8,7 +8,7 @@ import {
 } from "./utils/setupHelper";
 import { AddressZero } from "@ethersproject/constants";
 
-describe("NEW::: Smart Account Factory", async () => {
+describe("Smart Account Factory", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 

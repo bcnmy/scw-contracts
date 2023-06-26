@@ -16,7 +16,7 @@ import {
 import {keccak256} from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
 
-describe("NEW::: SessionKey: SessionKey Manager Module", async () => {
+describe("SessionKey: SessionKey Manager Module", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver, sessionKey, sessionKey2, fakeSessionKey] = waffle.provider.getWallets();
 

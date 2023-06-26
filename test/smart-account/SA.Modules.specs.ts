@@ -11,7 +11,7 @@ import {
 } from "../utils/setupHelper";
 import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
-describe("NEW::: Ownerless Smart Account Modules: ", async () => {
+describe("Ownerless Smart Account Modules: ", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
   const sentinelAddress = "0x0000000000000000000000000000000000000001";

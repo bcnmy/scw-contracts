@@ -15,7 +15,7 @@ import {
 import { BigNumber } from "ethers";
 import { UserOperation } from "../../utils/userOperation";
 
-describe("NEW::: SessionKey: ERC20 Session Validation Module", async () => {
+describe("SessionKey: ERC20 Session Validation Module", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver, sessionKey, nonAuthSessionKey] = waffle.provider.getWallets();
   const maxAmount = ethers.utils.parseEther("100");

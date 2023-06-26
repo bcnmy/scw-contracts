@@ -99,7 +99,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const { mockToken, ecdsaModule, userSA } = await setupTests();
 
     expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(true);
-    expect(await ecdsaModule.getOwners(userSA.address)).to.equal(
+    expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
       smartAccountOwner.address
     );
 

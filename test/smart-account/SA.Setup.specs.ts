@@ -13,7 +13,7 @@ import {
 import { makeEcdsaModuleUserOp } from "../utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
 
-describe("NEW::: Smart Account Setup", async () => {
+describe("Smart Account Setup", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 

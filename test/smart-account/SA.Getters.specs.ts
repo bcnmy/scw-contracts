@@ -10,7 +10,7 @@ import {
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
 
-describe("NEW::: Smart Account Getters", async () => {
+describe("Smart Account Getters", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 

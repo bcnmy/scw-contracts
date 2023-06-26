@@ -24,7 +24,7 @@ import {
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
 
-describe("NEW::: Forward Flow Module", async () => {
+describe("Forward Flow Module", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver] = waffle.provider.getWallets();
   let erc20TransferForwardTxnNoRefundGasCost = BigNumber.from("0");

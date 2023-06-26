@@ -12,7 +12,7 @@ import {
 } from "../../utils/setupHelper";
 import { fillAndSign, makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
 
-describe("NEW::: Upgrade v1 to Ownerless", async () => {
+describe("Upgrade v1 to Ownerless", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 

@@ -6,7 +6,7 @@ import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,de
 import { encodeTransfer } from "../utils/testUtils";
 import { AddressZero } from "@ethersproject/constants";
 
-describe("NEW::: ECDSA Registry Module: ", async()=>{
+describe("ECDSA Registry Module: ", async()=>{
 
     const [deployer, smartAccountOwner, alice, bob, charlie] = waffle.provider.getWallets();
     const smartAccountDeploymentIndex = 0;

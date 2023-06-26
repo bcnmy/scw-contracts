@@ -12,7 +12,7 @@ import {
 } from "../utils/setupHelper";
 import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster, fillAndSign } from "../utils/userOp";
 
-describe("NEW::: UserOps", async () => {
+describe("UserOps", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, notEnabledModule] = waffle.provider.getWallets();
 
