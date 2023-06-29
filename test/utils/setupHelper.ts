@@ -33,6 +33,12 @@ export const getEcdsaOwnershipRegistryModule = async () => {
   return EcdsaOwnershipRegistryModule.attach(EcdsaOwnershipRegistryModuleDeployment.address);
 };
 
+export const getSmartContractOwnershipRegistryModule = async() => {
+  const SmartContractOwnerhsipRegistryModule = await hre.ethers.getContractFactory("SmartContractOwnershipRegistryModule");
+  const SmartContractOwnerhsipRegistryModuleContract = await SmartContractOwnerhsipRegistryModule.deploy();
+  return SmartContractOwnerhsipRegistryModuleContract;
+}
+
 export const getVerifyingPaymaster = async (
   owner: Wallet,
   verifiedSigner: Wallet,
