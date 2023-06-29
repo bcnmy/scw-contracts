@@ -402,3 +402,44 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   return userOpWithPaymasterData;
 }
 
+
+export async function makeSARegistryModuleUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  saRegistryModuleAddress: string,
+  ecdsaModuleAddress: string
+) : Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1
+    },
+    userOpSigner,
+    entryPoint,
+    'nonce'
+  );
+
+  let tempSignature = ethers.utils.defaultAbiCoder.encode(
+    ["bytes","address"],
+    [userOp.signature,ecdsaModuleAddress]
+  )
+
+  let signatureWithModuleAddresses = ethers.utils.defaultAbiCoder.encode(
+    ["bytes","address"],
+    [tempSignature, saRegistryModuleAddress]
+  );
+
+  userOp.signature = signatureWithModuleAddresses;
+  return userOp;
+}
+
