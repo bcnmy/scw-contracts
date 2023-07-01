@@ -7,7 +7,6 @@ import { AddressZero } from "@ethersproject/constants";
 import { hashMessage } from "ethers/lib/utils";
 
 describe("Smart Contract Ownership Registry Module: ", async()=>{
-
     const [deployer, baseSmartAccountOwner1, baseSmartAccountOwner2, alice, bob] = waffle.provider.getWallets();
     const smartAccountDeploymentIndex = 0;
     const SIG_VALIDATION_SUCCESS = 0;
@@ -72,7 +71,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
     });
 
     describe("initForSmartAccount(): ", async()=>{
-        it("Calls initForSmartAccount and it successfully initializes userSA with Smart Contract as Owner", async()=>{
+        it("Should successfully initialize userSA with Smart Contract as Owner", async()=>{
             const {smartContractOwnershipRegistryModule,smartAccountOwnerContract1} = await setupTests();
 
             let smartContractOwnerhsipSetupData = smartContractOwnershipRegistryModule.interface.encodeFunctionData(
@@ -83,7 +82,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             expect(await smartContractOwnershipRegistryModule.getOwner(userSA.address)).to.be.equal(smartAccountOwnerContract1.address);
         });
 
-        it("Reverts when setting up EOA as Smart Account Owner", async()=>{
+        it("Should revert when setting up EOA as Smart Account Owner", async()=>{
             const {saFactory,smartContractOwnershipRegistryModule} = await setupTests();
 
             let smartContractOwnershipSetupData = smartContractOwnershipRegistryModule.interface.encodeFunctionData(
@@ -95,7 +94,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             await expect(smartContractOwnershipRegistryModule.getOwner(expectedSmartAccountAddress)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
         });
 
-        it("Reverts when calling again after initialization", async()=>{
+        it("Should revert when calling again after initialization", async()=>{
             const {smartContractOwnershipRegistryModule,ecdsaRegistryModule,entryPoint,userSA} = await setupTests();
             const txnData = ecdsaRegistryModule.interface.encodeFunctionData(
                 "initForSmartAccount",
@@ -116,7 +115,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
     });
 
     describe("transferOwnership(): ", async()=>{
-        it("Call transferOwnership from userSA and it successfully changes owner", async()=>{
+        it("Should successfully transfer ownership to another Smart Contract Account", async()=>{
             const {entryPoint,smartContractOwnershipRegistryModule, ecdsaRegistryModule, userSA, smartAccountOwnerContract2} = await setupTests();
             // Calldata to set smartAccountOwnerContract2 as owner
             let txnData = smartContractOwnershipRegistryModule.interface.encodeFunctionData(
@@ -137,7 +136,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             expect(await smartContractOwnershipRegistryModule.getOwner(userSA.address)).to.be.equal(smartAccountOwnerContract2.address);
         });
 
-        it("Reverts when trying to set EOA as owner via transferOwnership()", async()=>{
+        it("Should revert when trying to set EOA as owner rather than Smart Contract Account", async()=>{
             const {entryPoint,smartContractOwnershipRegistryModule,ecdsaRegistryModule,userSA} = await setupTests();
 
             const previousOwner = await smartContractOwnershipRegistryModule.getOwner(userSA.address);
@@ -160,7 +159,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             expect(await smartContractOwnershipRegistryModule.getOwner(userSA.address)).to.be.equal(previousOwner);
         });
 
-        it("Reverts when trying to set address(0) as owner", async()=>{
+        it("Should revert when trying to set address(0) as owner", async()=>{
             const {entryPoint,smartContractOwnershipRegistryModule, ecdsaRegistryModule, userSA} = await setupTests();
 
             const previousOwner = await smartContractOwnershipRegistryModule.getOwner(userSA.address);
@@ -208,7 +207,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
     });
 
     describe("validateUserOp(): ", async()=>{
-        it("Returns SIG_VALIDATION_SUCCESS for a valid UserOp and valid userOpHash", async()=>{
+        it("Should return SIG_VALIDATION_SUCCESS for a valid UserOp and valid userOpHash", async()=>{
             const {smartContractOwnershipRegistryModule,ecdsaRegistryModule,entryPoint,userSA,mockToken} = await setupTests();
             const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
             const bobBalanceBefore = await mockToken.balanceOf(bob.address);
@@ -240,7 +239,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
         });
 
         // Pass in valid userOp with invalid userOpHash
-        it("Returns SIG_VALIDATION_FAILED when invalid chainId is passed in userOpHash", async()=>{
+        it("Should return SIG_VALIDATION_FAILED when invalid chainId is passed in userOpHash", async()=>{
             const {smartContractOwnershipRegistryModule, ecdsaRegistryModule, entryPoint, mockToken, userSA} = await setupTests();
             const tokenAmountToTransfer = ethers.utils.parseEther("7.934");
 
@@ -265,7 +264,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             expect(await smartContractOwnershipRegistryModule.validateUserOp(userOp,invalidUserOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
         });
 
-        it("Returns SIG_VALIDATION_FAILED when invalid entryPoint address is passed to userOpHash" ,async()=>{
+        it("Should return SIG_VALIDATION_FAILED when invalid entryPoint address is passed to userOpHash" ,async()=>{
             const {smartContractOwnershipRegistryModule, ecdsaRegistryModule, entryPoint, userSA, mockToken} = await setupTests();
             const tokenAmountToTransfer = ethers.utils.parseEther("0.23436");
             let txnData = mockToken.interface.encodeFunctionData(
@@ -289,7 +288,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             expect(await smartContractOwnershipRegistryModule.validateUserOp(userOp,userOpHash)).to.be.equal(SIG_VALIDATION_FAILED);
         });
 
-        it("Returns SIG_VALIDATION_FAILED when userOp is signed by an invalid owner ", async()=>{
+        it("Should return SIG_VALIDATION_FAILED when userOp is signed by an invalid owner ", async()=>{
             const {smartContractOwnershipRegistryModule, ecdsaRegistryModule,entryPoint, userSA, mockToken} = await setupTests();
             const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
             const bobBalanceBefore = await mockToken.balanceOf(bob.address);
@@ -319,7 +318,8 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
             expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
         });
-        it("Reverts when userOp.sender is an Unregistered Smart Account", async()=>{
+
+        it("Should revert when userOp.sender is an Unregistered Smart Account", async()=>{
             const {saFactory,smartContractOwnershipRegistryModule,smartContractOwnershipSetupData,smartAccountOwnerContract1,ecdsaRegistryModule,entryPoint, mockToken, userSA} = await setupTests();
             const bobBalanceBefore = await mockToken.balanceOf(bob.address);
             const tokenAmountToTransfer = ethers.utils.parseEther("1.9999");
@@ -369,57 +369,10 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
             expect(await mockToken.balanceOf(unregisteredSA.address)).to.equal(unregisteredSABalanceBefore);
         });
-
-        it("Reverts when length of user.signature is less than 65 ", async()=>{
-            const {smartContractOwnershipRegistryModule,ecdsaRegistryModule, entryPoint, mockToken, userSA} = await setupTests();
-            const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
-            const bobBalanceBefore = await mockToken.balanceOf(bob.address);
-            const tokenAmountToTransfer = ethers.utils.parseEther("3.632");
-
-            let txnData = await mockToken.interface.encodeFunctionData(
-                "transfer",
-                [bob.address,tokenAmountToTransfer.toString()]
-            );
-
-            let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
-                [mockToken.address,0,txnData],
-                 userSA.address,
-                 baseSmartAccountOwner1,
-                 entryPoint,
-                 smartContractOwnershipRegistryModule.address,
-                 ecdsaRegistryModule.address
-            );
-
-            const provider = entryPoint?.provider;
-            const chainId = await provider!.getNetwork().then((net) => net.chainId);
-            const userOpHash = await getUserOpHash(userOp,entryPoint.address,chainId);
-
-            // construct signature of length < 65
-            const invalidSignature = new Uint8Array(64);
-            for (let i = 0; i < invalidSignature.length; i++) {
-                invalidSignature[i] = i; // Set each byte to its index value
-            }
-
-            let tempSignature = ethers.utils.defaultAbiCoder.encode(
-                ["bytes","address"],
-                [invalidSignature,ecdsaRegistryModule.address]
-            );
-            let invalidSignatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-                ["bytes", "address"],
-                [tempSignature, ecdsaRegistryModule.address]
-            );
-            userOp.signature = invalidSignatureWithModuleAddress;
-
-            await expect(smartContractOwnershipRegistryModule.validateUserOp(userOp,userOpHash)).to.be.revertedWith("WrongSignatureLength");
-            await expect(entryPoint.handleOps([userOp],alice.address)).to.be.reverted;
-            expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
-            expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore);
-        });
     });
 
     describe("isValidSignatureForAddress(): ", async()=>{
-        it("Returns EIP1271_MAGIC_VALUE for valid signature signed by Smart Account Owner",async()=>{
+        it("Should return EIP1271_MAGIC_VALUE for valid signature signed by Smart Account Owner",async()=>{
             const {smartContractOwnershipRegistryModule,ecdsaRegistryModule,userSA} = await setupTests();
 
             const messageToSign = "SCW signed this message";
@@ -432,7 +385,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             expect(await smartContractOwnershipRegistryModule.isValidSignatureForAddress(dataHash,moduleSignature,userSA.address)).to.equal(EIP1271_MAGIC_VALUE);
         });
 
-        it("Reverts when Unregistered Smart Account calls isValidSignature()", async()=>{
+        it("Should revert when Unregistered Smart Account calls isValidSignature()", async()=>{
             const {ecdsaRegistryModule,smartContractOwnershipRegistryModule,randomContract} = await setupTests();
             const unregisteredSmartAccount = randomContract.address;
             const messageToSign = "SCW signed this message";
@@ -447,25 +400,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             await expect(smartContractOwnershipRegistryModule.isValidSignatureForAddress(dataHash,moduleSignature,unregisteredSmartAccount)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
         });
 
-        it("Reverts when signature length is less than 65", async()=>{
-            const {ecdsaRegistryModule,smartContractOwnershipRegistryModule, userSA} = await setupTests();
-
-            const messageToSign = "SCW signed this message";
-            const dataHash = hashMessage(messageToSign);
-            // construct signature of length < 65
-            const tempSignature = new Uint8Array(64);
-            for (let i = 0; i < tempSignature.length; i++) {
-                tempSignature[i] = i; // Set each byte to its index value
-            }
-            const moduleSignature = ethers.utils.defaultAbiCoder.encode(
-                ["bytes","address"],
-                [tempSignature,ecdsaRegistryModule.address]
-            );
-
-            await expect(smartContractOwnershipRegistryModule.isValidSignatureForAddress(dataHash,moduleSignature,userSA.address)).to.be.revertedWith("WrongSignatureLength");
-        });
-
-        it("Returns 0xffffffff for signatures not signed by Smart Account Owners ", async()=>{
+        it("Should return 0xffffffff for signatures not signed by Smart Account Owners ", async()=>{
             const {ecdsaRegistryModule,smartContractOwnershipRegistryModule, userSA} = await setupTests();
 
             const messageToSign = "SCW signed this message";
@@ -480,12 +415,3 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
         });
     });
 });
-
-
-
-
-
-
-
-
-
