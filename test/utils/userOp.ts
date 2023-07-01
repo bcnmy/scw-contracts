@@ -429,17 +429,17 @@ export async function makeSARegistryModuleUserOp(
     'nonce'
   );
 
-  let tempSignature = ethers.utils.defaultAbiCoder.encode(
+  let signatureForSAOwnershipRegistry = ethers.utils.defaultAbiCoder.encode(
     ["bytes","address"],
     [userOp.signature,ecdsaModuleAddress]
-  )
-
-  let signatureWithModuleAddresses = ethers.utils.defaultAbiCoder.encode(
-    ["bytes","address"],
-    [tempSignature, saRegistryModuleAddress]
   );
 
-  userOp.signature = signatureWithModuleAddresses;
+  let signatureForECDSAOwnershipRegistry = ethers.utils.defaultAbiCoder.encode(
+    ["bytes","address"],
+    [signatureForSAOwnershipRegistry, saRegistryModuleAddress]
+  );
+
+  userOp.signature = signatureForECDSAOwnershipRegistry;
   return userOp;
 }
 
