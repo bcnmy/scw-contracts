@@ -34,9 +34,9 @@ export const getEcdsaOwnershipRegistryModule = async () => {
 };
 
 export const getSmartContractOwnershipRegistryModule = async() => {
+  const SmartContractOwnerhsipRegistryDeployment = await deployments.get("SmartContractOwnershipRegistryModule");
   const SmartContractOwnerhsipRegistryModule = await hre.ethers.getContractFactory("SmartContractOwnershipRegistryModule");
-  const SmartContractOwnerhsipRegistryModuleContract = await SmartContractOwnerhsipRegistryModule.deploy();
-  return SmartContractOwnerhsipRegistryModuleContract;
+  return SmartContractOwnerhsipRegistryModule.attach(SmartContractOwnerhsipRegistryDeployment.address);
 }
 
 export const getVerifyingPaymaster = async (
