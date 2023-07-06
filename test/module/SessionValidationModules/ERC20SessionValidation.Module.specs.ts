@@ -41,7 +41,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     });
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-    //deploy forward flow module and enable it in the smart account
+    //deploy SessionKeyManager module and enable it in the smart account
     const sessionKeyManager = await (await ethers.getContractFactory("SessionKeyManager")).deploy();
     let userOp = await makeEcdsaModuleUserOp(
       "enableModule",

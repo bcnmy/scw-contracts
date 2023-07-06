@@ -97,6 +97,8 @@ function getDeploymentGasPrice(): number {
     return 50e9; //50 gwei  
   } else if (hardhat.network.name === "zkevm_testnet" && hardhat.network.config.chainId === 1442) {
     return 100e9; //100 gwei  
+  } else if (hardhat.network.name === "sepolia" && hardhat.network.config.chainId === 11155111) {
+    return 1e9; //1 gwei 
   // MAINNETS
   } else if (hardhat.network.name === "polygon_mainnet" && hardhat.network.config.chainId === 137) {
     return 500e9; // 500 gwei
@@ -109,7 +111,7 @@ function getDeploymentGasPrice(): number {
   } else if (hardhat.network.name === "optimismMainnet" && hardhat.network.config.chainId === 10) {
     return 1e8; // 0.1 gwei
   } else if (hardhat.network.name === "bnb_mainnet" && hardhat.network.config.chainId === 56) {
-    return 10e9; // 10 gwei
+    return 15e9; // 15 gwei
   } else if (hardhat.network.name === "zkevm_mainnet" && hardhat.network.config.chainId === 1101) {
     return 10e9; // 500 gwei
   // OTHERWISE CHECK HARDHAT CONFIG. IF NOT SET IN CONFIG, USE 100 GWEI
