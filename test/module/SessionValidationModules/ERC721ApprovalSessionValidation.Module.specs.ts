@@ -93,32 +93,6 @@ describe("SessionKey: ERC721 Approval Session Validation Module", async () => {
     };
   });
 
-  const makeErc20TransferUserOp = async function (
-    token: string,
-    amount: BigNumber,
-    recipient: string,
-    txnValue: BigNumber,
-    testParams: any = {}
-  ) : Promise<UserOperation> {
-    const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-      "executeCall",
-      [
-        token,
-        txnValue,
-        encodeTransfer(recipient, amount.toString()),
-      ],
-      testParams.userSA.address,
-      sessionKey,
-      testParams.entryPoint,
-      testParams.sessionKeyManager.address,
-      0, 0,
-      testParams.erc20SessionModule.address,
-      testParams.sessionKeyData,
-      testParams.merkleTree.getHexProof(ethers.utils.keccak256(testParams.leafData)),
-    );
-    return transferUserOp;
-  }
-
   it ("should be able to process Session Key signed userOp", async () => {
     const { entryPoint, userSA, sessionKeyManager, erc721ApprovalSVM, sessionKeyData, leafData, merkleTree, mockNFT } = await setupTests();
     const Erc721 = await ethers.getContractFactory("MockNFT");
