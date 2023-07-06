@@ -114,8 +114,7 @@ describe("SessionKey: ERC721 Approval Session Validation Module", async () => {
       merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
     );
 
-    const isCharlieOperatorBefore = await mockNFT.isApprovedForAll(userSA.address, charlie.address);
-    expect(isCharlieOperatorBefore).to.be.false;
+    expect(await mockNFT.isApprovedForAll(userSA.address, charlie.address)).to.be.false;
     await entryPoint.handleOps([approvalUserOp], alice.address, {gasLimit: 10000000});
     expect(await mockNFT.isApprovedForAll(userSA.address, charlie.address)).to.be.true;
   });
