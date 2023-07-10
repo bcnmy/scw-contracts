@@ -18,7 +18,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     string public constant NAME = "ECDSA Ownership Registry Module";
-    string public constant VERSION = "0.1.0";
+    string public constant VERSION = "0.2.0";
 
     event OwnershipTransferred(
         address indexed smartAccount,
