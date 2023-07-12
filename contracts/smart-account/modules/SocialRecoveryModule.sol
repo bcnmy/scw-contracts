@@ -26,10 +26,14 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         address lastGuardian,
         address currentGuardian
     );
+
     error ZeroAddressNotAllowedAsGuardian();
     error InvalidTimeFrame(uint48 validUntil, uint48 validAfter);
     error ExpiredValidUntil(uint48 validUntil);
     error GuardianAlreadySet(address guardian, address smartAccount);
+
+    error NotEnoughGuardiansProvided(uint256 guardiansProvided);
+    error InvalidAmountOfGuardianParams();
 
     using ECDSA for bytes32;
 
@@ -52,10 +56,27 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
      * @dev Initializes the module for a Smart Account.
      * Should be used at a time of first enabling the module for a Smart Account.
      */
-    function initForSmartAccount() external returns (address) {
-        // TODO make initiation of the module for a Smart Account
+    function initForSmartAccount(
+        address[] memory guardians,
+        uint48[] memory validUntil,
+        uint48[] memory validAfter,
+        uint48 recoveryThreshold,
+        uint48 securityDelay
+    ) external returns (address) {
+        if (recoveryThreshold > guardians.length)
+            revert NotEnoughGuardiansProvided(guardians.length);
+        if (
+            guardians.length != validUntil.length ||
+            validUntil.length != validAfter.length ||
+            guardians.length != 0
+        ) revert InvalidAmountOfGuardianParams();
 
-        // set guardians and set threshold and delay
+        _smartAccountSettings[msg.sender] = settings(
+            recoveryThreshold,
+            securityDelay
+        );
+
+        // FOR cycle to add guardians
 
         return address(this);
     }
@@ -63,12 +84,16 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     // NOTE - if both validUntil and validAfter provided for setup are 0, guardian is considered active forever
     // Thus we put type(uint48).max as value for validUntil in this case, so the calldata itself doesn't need to contain this big value and thus
     // txn is cheaper
+    // @note securityDelay is added to validAfter to get the actual validAfter value, so the validUntil should be bigger than validAfter + securityDelay
     function addGuardian(
         address guardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
         if (guardian == address(0)) revert ZeroAddressNotAllowedAsGuardian();
+        validAfter =
+            validAfter +
+            _smartAccountSettings[msg.sender].securityDelay;
         if (validUntil < validAfter)
             revert InvalidTimeFrame(validUntil, validAfter);
         if (validUntil < block.timestamp) revert ExpiredValidUntil(validUntil);
@@ -77,7 +102,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         // make a test case that it fails if validAfter + securityDelay together overflow uint48
         _guardians[guardian][msg.sender] = timeFrame(
             validUntil == 0 ? type(uint48).max : validUntil,
-            validAfter + _smartAccountSettings[msg.sender].securityDelay
+            validAfter
         );
     }
 
