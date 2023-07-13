@@ -11,7 +11,7 @@ import {
 } from "../utils/setupHelper";
 import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
-describe("Ownerless Smart Account Modules: ", async () => {
+describe("Smart Account Modules: ", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
   const sentinelAddress = "0x0000000000000000000000000000000000000001";
@@ -197,7 +197,7 @@ describe("Ownerless Smart Account Modules: ", async () => {
         entryPoint
       } = await setupTests();
 
-      const SocialRecoveryModule = await ethers.getContractFactory("SocialRecoveryModule");
+      const SocialRecoveryModule = await ethers.getContractFactory("LegacySocialRecoveryModule");
       const socialRecoveryModule = await SocialRecoveryModule.deploy();
 
       let socialRecoverySetupData = SocialRecoveryModule.interface.encodeFunctionData(
@@ -284,7 +284,7 @@ describe("Ownerless Smart Account Modules: ", async () => {
         entryPoint
       } = await setupTests();
 
-      const SocialRecoveryModule = await ethers.getContractFactory("SocialRecoveryModule");
+      const SocialRecoveryModule = await ethers.getContractFactory("LegacySocialRecoveryModule");
       const socialRecoveryModule = await SocialRecoveryModule.deploy();
 
       let socialRecoverySetupData = SocialRecoveryModule.interface.encodeFunctionData(

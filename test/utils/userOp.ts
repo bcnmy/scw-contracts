@@ -307,6 +307,70 @@ export async function fillAndSign(
   };
 }
 
+export async function fillAndMultiSign(
+  op: Partial<UserOperation>,
+  signers: Wallet[] | Signer[],
+  entryPoint?: EntryPoint,
+  getNonceFunction = "getNonce",
+  extraPreVerificationGas: number = 0
+): Promise<UserOperation> {
+  const provider = entryPoint?.provider;
+  const op2 = await fillUserOp(op, entryPoint, getNonceFunction);
+  op2.preVerificationGas =
+    Number(op2.preVerificationGas) + extraPreVerificationGas;
+
+  const chainId = await provider!.getNetwork().then((net) => net.chainId);
+  const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
+
+  let signatures = "0x";
+
+  for (let i = 0; i < signers.length; i++) {
+    const signer = signers[i];
+    const sig = await signer.signMessage(message);
+    signatures = signatures + sig.slice(2);
+  }
+
+  return {
+    ...op2,
+    signature: signatures,
+  };
+}
+
+export async function makeMultiSignedUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigners: Signer[],
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+) : Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+  
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+  
+  const userOp = await fillAndMultiSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1
+    },
+    userOpSigners,
+    entryPoint,
+    'nonce'
+  );
+
+  // add validator module address to the signature
+  let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"], 
+    [userOp.signature, moduleAddress]
+  );
+
+  userOp.signature = signatureWithModuleAddress;
+  return userOp;
+}
+
 export async function makeEcdsaModuleUserOp(
   functionName: string,
   functionParams: any,

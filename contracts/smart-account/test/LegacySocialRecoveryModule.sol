@@ -6,7 +6,7 @@ import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 
 // TODO: To be rebuilt for an ownerless setup => like which validation method does it recover?
 
-contract SocialRecoveryModule is IAuthorizationModule {
+contract LegacySocialRecoveryModule is IAuthorizationModule {
     string public constant NAME = "Social Recovery Module";
     string public constant VERSION = "0.1.0";
     uint256 internal constant SIG_VALIDATION_FAILED = 1;

@@ -4,6 +4,8 @@ pragma solidity 0.8.17;
 import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Social Recovery module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
@@ -68,16 +70,26 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         if (
             guardians.length != validUntil.length ||
             validUntil.length != validAfter.length ||
-            guardians.length != 0
+            guardians.length == 0
         ) revert InvalidAmountOfGuardianParams();
-
         _smartAccountSettings[msg.sender] = settings(
             recoveryThreshold,
             securityDelay
         );
-
-        // FOR cycle to add guardians
-
+        for (uint256 i; i < guardians.length; i++) {
+            if (guardians[i] == address(0))
+                revert ZeroAddressNotAllowedAsGuardian();
+            if (validUntil[i] < validAfter[i])
+                revert InvalidTimeFrame(validUntil[i], validAfter[i]);
+            if (validUntil[i] < block.timestamp)
+                revert ExpiredValidUntil(validUntil[i]);
+            if (_guardians[guardians[i]][msg.sender].validUntil != 0)
+                revert GuardianAlreadySet(guardians[i], msg.sender);
+            _guardians[guardians[i]][msg.sender] = timeFrame(
+                validUntil[i] == 0 ? type(uint48).max : validUntil[i],
+                validAfter[i]
+            );
+        }
         return address(this);
     }
 
@@ -129,17 +141,14 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
 
         address lastGuardian;
         address currentGuardian;
-        uint128 validAfter;
-        uint128 validUntil;
-        uint128 latestValidAfter;
-        uint128 earliestValidUntil = type(uint48).max;
+        uint48 validAfter;
+        uint48 validUntil;
+        uint48 latestValidAfter;
+        uint48 earliestValidUntil = type(uint48).max;
 
         for (uint256 i; i < requiredSignatures; ) {
             currentGuardian = (userOpHash.toEthSignedMessageHash()).recover(
-                // get the current signature
-                // getCurrentSignature(userOp.signature, i)
-                // or getCurrentSignature(signatures, i)  and use assembly
-                userOp.signature[i * 65:(i + 1) * 65]
+                userOp.signature[96 + i * 65:96 + (i + 1) * 65]
             );
 
             validAfter = _guardians[currentGuardian][userOp.sender].validAfter;
@@ -176,6 +185,11 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
             (uint256(validUntil) << 160) |
             (uint256(validAfter) << (160 + 48));
     }
+
+    function getCurrentSignature(
+        bytes memory signatures,
+        uint256 pos
+    ) internal pure returns (bytes memory) {}
 
     /**
      * @dev Validates a signature for a message.
