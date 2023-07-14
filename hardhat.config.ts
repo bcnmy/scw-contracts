@@ -88,7 +88,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      //: 200e9,    
+      // : 200e9,
     },
     polygon_mumbai: {
       url: process.env.POLYGON_MUMBAI_URL || "",
@@ -115,7 +115,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-          gasPrice: 50e9
+      gasPrice: 50e9,
     },
     avalancheMain: {
       url: "https://api.avax.network/ext/bc/C/rpc",
@@ -148,7 +148,7 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
       chainId: 421613,
-      //gasPrice: 2e9, //2 gwei
+      // gasPrice: 2e9, //2 gwei
     },
     arbitrumTest: {
       url: "https://rinkeby.arbitrum.io/rpc",
@@ -181,7 +181,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      //gasPrice: 50e9,    
+      // gasPrice: 50e9,
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
@@ -226,6 +226,24 @@ const config: HardhatUserConfig = {
       accounts: walletUtils.makeKeyList(),
       chainId: 245022926,
       // gasPrice: 6400000
+    },
+    baseGoerli: {
+      url:
+        process.env.BASE_TESTNET_URL ||
+        `https://base-goerli.blockpi.network/v1/rpc/public`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 84531,
+    },
+    lineaGoerli: {
+      url: process.env.LINEA_TESTNET_URL || `https://rpc.goerli.linea.build`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 59140,
     },
   },
   gasReporter: {
