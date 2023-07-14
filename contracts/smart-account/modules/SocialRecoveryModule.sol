@@ -49,7 +49,8 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     }
 
     struct settings {
-        uint48 recoveryThreshold;
+        uint8 guardiansCount;
+        uint8 recoveryThreshold;
         uint48 securityDelay;
     }
 
@@ -69,7 +70,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         bytes32[] memory guardians,
         uint48[] memory validUntil,
         uint48[] memory validAfter,
-        uint48 recoveryThreshold,
+        uint8 recoveryThreshold,
         uint48 securityDelay
     ) external returns (address) {
         if (_smartAccountSettings[msg.sender].recoveryThreshold > 0)
@@ -82,53 +83,28 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
             guardians.length == 0
         ) revert InvalidAmountOfGuardianParams();
         _smartAccountSettings[msg.sender] = settings(
+            uint8(guardians.length),
             recoveryThreshold,
             securityDelay
         );
         for (uint256 i; i < guardians.length; i++) {
             if (guardians[i] == ADDRESS_ZERO_HASH)
                 revert ZeroAddressNotAllowedAsGuardian();
-            if (validUntil[i] < validAfter[i])
-                revert InvalidTimeFrame(validUntil[i], validAfter[i]);
-            if (validUntil[i] < block.timestamp)
-                revert ExpiredValidUntil(validUntil[i]);
             if (_guardians[guardians[i]][msg.sender].validUntil != 0)
                 revert GuardianAlreadySet(guardians[i], msg.sender);
+
+            if (validUntil[i] == 0) validUntil[i] = type(uint48).max;
+            if (validUntil[i] < validAfter[i])
+                revert InvalidTimeFrame(validUntil[i], validAfter[i]);
+            if (validUntil[i] != 0 && validUntil[i] < block.timestamp)
+                revert ExpiredValidUntil(validUntil[i]);
+
             _guardians[guardians[i]][msg.sender] = timeFrame(
-                validUntil[i] == 0 ? type(uint48).max : validUntil[i],
+                validUntil[i],
                 validAfter[i]
             );
         }
         return address(this);
-    }
-
-    // NOTE - if both validUntil and validAfter provided for setup are 0, guardian is considered active forever
-    // Thus we put type(uint48).max as value for validUntil in this case, so the calldata itself doesn't need to contain this big value and thus
-    // txn is cheaper
-    // @note securityDelay is added to validAfter to get the actual validAfter value, so the validUntil should be bigger than validAfter + securityDelay
-
-    // TODO: Do we need a guardian to agree to be added?
-
-    function addGuardian(
-        bytes32 guardian,
-        uint48 validUntil,
-        uint48 validAfter
-    ) external {
-        if (guardian == ADDRESS_ZERO_HASH)
-            revert ZeroAddressNotAllowedAsGuardian();
-        validAfter =
-            validAfter +
-            _smartAccountSettings[msg.sender].securityDelay;
-        if (validUntil < validAfter)
-            revert InvalidTimeFrame(validUntil, validAfter);
-        if (validUntil < block.timestamp) revert ExpiredValidUntil(validUntil);
-        if (_guardians[guardian][msg.sender].validUntil != 0)
-            revert GuardianAlreadySet(guardian, msg.sender);
-        // make a test case that it fails if validAfter + securityDelay together overflow uint48
-        _guardians[guardian][msg.sender] = timeFrame(
-            validUntil == 0 ? type(uint48).max : validUntil,
-            validAfter
-        );
     }
 
     /*
@@ -159,6 +135,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     *   if the delay is not 0, we make additional checks:
 
         if (userOp.calldata == smartAccountRequests[smartAccount].calldata) {
+            delete smartAccountRequests[smartAccount];
             return packValidationData(
                 false, 
                 uint48(max).value, 
@@ -179,6 +156,8 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         } else {
             return SIG_VALIDATION_FAILED; // revert WrongOperation();
         }
+
+        + add renounce request function
 
     */
 
@@ -254,10 +233,81 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
             (uint256(latestValidAfter) << (160 + 48));
     }
 
-    function getCurrentSignature(
-        bytes memory signatures,
-        uint256 pos
-    ) internal pure returns (bytes memory) {}
+    // NOTE - if both validUntil and validAfter provided for setup are 0, guardian is considered active forever
+    // Thus we put type(uint48).max as value for validUntil in this case, so the calldata itself doesn't need to contain this big value and thus
+    // txn is cheaper
+    // @note securityDelay is added to validAfter to get the actual validAfter value, so the validUntil should be bigger than validAfter + securityDelay
+
+    // TODO: Do we need a guardian to agree to be added?
+
+    function addGuardian(
+        bytes32 guardian,
+        uint48 validUntil,
+        uint48 validAfter
+    ) external {
+        if (guardian == ADDRESS_ZERO_HASH)
+            revert ZeroAddressNotAllowedAsGuardian();
+        if (_guardians[guardian][msg.sender].validUntil != 0)
+            revert GuardianAlreadySet(guardian, msg.sender);
+
+        if (validUntil == 0) validUntil = type(uint48).max;
+        uint48 minimalSecureValidAfter = uint48(
+            block.timestamp + _smartAccountSettings[msg.sender].securityDelay
+        );
+        validAfter = validAfter < minimalSecureValidAfter
+            ? minimalSecureValidAfter
+            : validAfter;
+        if (validUntil < validAfter)
+            revert InvalidTimeFrame(validUntil, validAfter);
+        if (validUntil < block.timestamp) revert ExpiredValidUntil(validUntil);
+
+        // TODO:
+        // make a test case that it fails if validAfter + securityDelay together overflow uint48
+        _guardians[guardian][msg.sender] = timeFrame(validUntil, validAfter);
+        _smartAccountSettings[msg.sender].guardiansCount++;
+    }
+
+    function changeGuardian(
+        bytes32 guardian,
+        bytes32 newGuardian,
+        uint48 validUntil,
+        uint48 validAfter
+    ) external {
+        if (guardian == ADDRESS_ZERO_HASH)
+            revert ZeroAddressNotAllowedAsGuardian();
+        if (newGuardian == ADDRESS_ZERO_HASH)
+            revert ZeroAddressNotAllowedAsGuardian();
+
+        if (validUntil == 0) validUntil = type(uint48).max;
+        uint48 minimalSecureValidAfter = uint48(
+            block.timestamp + _smartAccountSettings[msg.sender].securityDelay
+        );
+        validAfter = validAfter < minimalSecureValidAfter
+            ? minimalSecureValidAfter
+            : validAfter;
+        if (validUntil < validAfter)
+            revert InvalidTimeFrame(validUntil, validAfter);
+        if (validUntil < block.timestamp) revert ExpiredValidUntil(validUntil);
+
+        // make the new one valid
+        _guardians[newGuardian][msg.sender] = timeFrame(
+            validUntil == 0 ? type(uint48).max : validUntil,
+            validAfter
+        );
+
+        // make the previous stay valid for period of securityDelay from now only
+        _guardians[guardian][msg.sender].validUntil = minimalSecureValidAfter;
+    }
+
+    function removeGuardian(bytes32 guardian) external {
+        delete _guardians[guardian][msg.sender];
+        if (
+            _smartAccountSettings[msg.sender].guardiansCount <
+            _smartAccountSettings[msg.sender].recoveryThreshold
+        ) {
+            _smartAccountSettings[msg.sender].recoveryThreshold--;
+        }
+    }
 
     /**
      * @dev Validates a signature for a message.
