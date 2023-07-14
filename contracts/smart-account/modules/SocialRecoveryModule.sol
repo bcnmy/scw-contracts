@@ -119,60 +119,6 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         return address(this);
     }
 
-    /*
-
-     *  How to make a delayed effect of changing the owner?
-     *  make it two userOps. 
-     *  1) userOp to approve the calldata that changes an owner
-     *  user.Op calldata can only be to this module and to the submitChangeRequest function
-     *  it records the calldata of the function that will actually change the owner on-chain
-     *  along with the timestamp of the submission. 
-     *  2) for the next validateUserOp call, if userOp contains this exact calldata, 
-     *  it validates userOp with validAfter set as the timestamp of the submission + securityDelay
-     *  
-     *  This may also require adding another securityDelay to the struct settings
-     *  one delay for new guardians, one delay for applying the change of the owner
-
-    */
-
-    /*
-
-    *   If we don't want delay for changing owner , but we want our module to _look_
-    *   like it allows only changing owner user ops, we can technically limit which calldatas
-    *   should be considered valid to be authorised via this module
-    *   However, it's not a good idea, as it's just _look_, because after changing the owner
-    *   any userOp will still be available to be validated immediately.
-    *   I think, it will be better to make this changing owner delayed. 
-    *   just can configure the delay. If the delay is 0, then allow for immediate change of the owner.
-    *   if the delay is not 0, we make additional checks:
-
-        if (userOp.calldata == smartAccountRequests[smartAccount].calldata) {
-            delete smartAccountRequests[smartAccount];
-            return packValidationData(
-                false, 
-                uint48(max).value, 
-                smartAccountRequests[smartAccount].timestamp+_smartAccountSettings[smartAccount].securityDelay
-            )
-        }
-
-        // signatures and validUntil/After checks
-
-        if (userOp.calldata[0:4] == submitChangeRequest.selector || 
-            _smartAccountSettings[smartAccount].securityDelay == 0
-            ) 
-        {
-            return
-                VALIDATION_SUCCESS |
-                (uint256(validUntil) << 160) |
-                (uint256(validAfter) << (160 + 48));
-        } else {
-            return SIG_VALIDATION_FAILED; // revert WrongOperation();
-        }
-
-        + add renounce request function
-
-    */
-
     // recoveryCallData is something like executeCall(module, 0, encode(transferOwnership(newOwner)))
     function submitRecoveryRequest(bytes calldata recoveryCallData) public {
         _smartAccountRequests[msg.sender] = recoveryRequest(
@@ -215,7 +161,6 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         }
 
         // otherwise we need to check all the signatures first
-
         uint256 requiredSignatures = _smartAccountSettings[userOp.sender]
             .recoveryThreshold;
         if (requiredSignatures == 0)
@@ -259,6 +204,9 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
                     currentGuardianAddress
                 );
 
+            // detect the common validity window for all the guardians
+            // if at least one guardian is not valid yet or expired
+            // the whole userOp will be invalidated at the EntryPoint
             if (validUntil < earliestValidUntil) {
                 earliestValidUntil = validUntil;
             }
@@ -271,12 +219,13 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
                 ++i;
             }
         }
+
         // if all the signatures are ok, we need to check if it is a new recovery request
         // anything except adding a new request to this module is allowed only if securityDelay is 0
         // which means user explicitly allowed to execute an operation immediately
         // userOp.callData expected to be the calldata of the default execution function
         // in this case executeCall(address dest, uint256 value, bytes calldata data);
-        // where `data` is the submitRecoveryRequest calldata
+        // where `data` is the submitRecoveryRequest() method calldata
         (address dest, uint256 callValue, bytes memory innerCallData) = abi
             .decode(
                 userOp.callData[4:], // skip selector
@@ -286,12 +235,12 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         assembly {
             innerSelector := mload(add(innerCallData, 0x20))
         }
-        bool addingRequestUserOp = innerSelector ==
+        bool isValidAddingRequestUserOp = innerSelector ==
             this.submitRecoveryRequest.selector &&
             dest == address(this) &&
             callValue == 0;
         if (
-            addingRequestUserOp ||
+            isValidAddingRequestUserOp ||
             _smartAccountSettings[msg.sender].securityDelay == 0
         ) {
             return
