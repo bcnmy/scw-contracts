@@ -11,8 +11,11 @@ import "hardhat/console.sol";
  * @dev Compatible with Biconomy Modular Interface v 0.1
  *         - It allows to _______________
  *         - ECDSA guardians only
+ *         - For security reasons, we store hashes of the addresses of guardians, not the addresses themselves
+ *
  *
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
+ * based on https://vitalik.ca/general/2021/01/11/recovery.html by Vitalik Buterin
  */
 
 contract SocialRecoveryModule is BaseAuthorizationModule {
@@ -22,6 +25,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     // TODO
     // EVENTS
 
+    error AlreadyInitedForSmartAccount(address smartAccount);
     error ThresholdNotSetForSmartAccount(address smartAccount);
     error InvalidSignaturesLength();
     error NotUniqueGuardianOrInvalidOrder(
@@ -32,7 +36,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     error ZeroAddressNotAllowedAsGuardian();
     error InvalidTimeFrame(uint48 validUntil, uint48 validAfter);
     error ExpiredValidUntil(uint48 validUntil);
-    error GuardianAlreadySet(address guardian, address smartAccount);
+    error GuardianAlreadySet(bytes32 guardian, address smartAccount);
 
     error NotEnoughGuardiansProvided(uint256 guardiansProvided);
     error InvalidAmountOfGuardianParams();
@@ -49,22 +53,27 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         uint48 securityDelay;
     }
 
-    // guardian => (smartAccount => timeFrame)
-    mapping(address => mapping(address => timeFrame)) internal _guardians;
+    bytes32 constant ADDRESS_ZERO_HASH =
+        keccak256(abi.encodePacked(address(0)));
+
+    // guardian (hash of the address) => (smartAccount => timeFrame)
+    mapping(bytes32 => mapping(address => timeFrame)) internal _guardians;
 
     mapping(address => settings) internal _smartAccountSettings;
 
     /**
      * @dev Initializes the module for a Smart Account.
-     * Should be used at a time of first enabling the module for a Smart Account.
+     * Can only be used at a time of first enabling the module for a Smart Account.
      */
     function initForSmartAccount(
-        address[] memory guardians,
+        bytes32[] memory guardians,
         uint48[] memory validUntil,
         uint48[] memory validAfter,
         uint48 recoveryThreshold,
         uint48 securityDelay
     ) external returns (address) {
+        if (_smartAccountSettings[msg.sender].recoveryThreshold > 0)
+            revert AlreadyInitedForSmartAccount(msg.sender);
         if (recoveryThreshold > guardians.length)
             revert NotEnoughGuardiansProvided(guardians.length);
         if (
@@ -77,7 +86,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
             securityDelay
         );
         for (uint256 i; i < guardians.length; i++) {
-            if (guardians[i] == address(0))
+            if (guardians[i] == ADDRESS_ZERO_HASH)
                 revert ZeroAddressNotAllowedAsGuardian();
             if (validUntil[i] < validAfter[i])
                 revert InvalidTimeFrame(validUntil[i], validAfter[i]);
@@ -97,12 +106,16 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     // Thus we put type(uint48).max as value for validUntil in this case, so the calldata itself doesn't need to contain this big value and thus
     // txn is cheaper
     // @note securityDelay is added to validAfter to get the actual validAfter value, so the validUntil should be bigger than validAfter + securityDelay
+
+    // TODO: Do we need a guardian to agree to be added?
+
     function addGuardian(
-        address guardian,
+        bytes32 guardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian == address(0)) revert ZeroAddressNotAllowedAsGuardian();
+        if (guardian == ADDRESS_ZERO_HASH)
+            revert ZeroAddressNotAllowedAsGuardian();
         validAfter =
             validAfter +
             _smartAccountSettings[msg.sender].securityDelay;
@@ -117,6 +130,57 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
             validAfter
         );
     }
+
+    /*
+
+     *  How to make a delayed effect of changing the owner?
+     *  make it two userOps. 
+     *  1) userOp to approve the calldata that changes an owner
+     *  user.Op calldata can only be to this module and to the submitChangeRequest function
+     *  it records the calldata of the function that will actually change the owner on-chain
+     *  along with the timestamp of the submission. 
+     *  2) for the next validateUserOp call, if userOp contains this exact calldata, 
+     *  it validates userOp with validAfter set as the timestamp of the submission + securityDelay
+     *  
+     *  This may also require adding another securityDelay to the struct settings
+     *  one delay for new guardians, one delay for applying the change of the owner
+
+    */
+
+    /*
+
+    *   If we don't want delay for changing owner , but we want our module to _look_
+    *   like it allows only changing owner user ops, we can technically limit which calldatas
+    *   should be considered valid to be authorised via this module
+    *   However, it's not a good idea, as it's just _look_, because after changing the owner
+    *   any userOp will still be available to be validated immediately.
+    *   I think, it will be better to make this changing owner delayed. 
+    *   just can configure the delay. If the delay is 0, then allow for immediate change of the owner.
+    *   if the delay is not 0, we make additional checks:
+
+        if (userOp.calldata == smartAccountRequests[smartAccount].calldata) {
+            return packValidationData(
+                false, 
+                uint48(max).value, 
+                smartAccountRequests[smartAccount].timestamp+_smartAccountSettings[smartAccount].securityDelay
+            )
+        }
+
+        // signatures and validUntil/After checks
+
+        if (userOp.calldata[0:4] == submitChangeRequest.selector || 
+            _smartAccountSettings[smartAccount].securityDelay == 0
+            ) 
+        {
+            return
+                VALIDATION_SUCCESS |
+                (uint256(validUntil) << 160) |
+                (uint256(validAfter) << (160 + 48));
+        } else {
+            return SIG_VALIDATION_FAILED; // revert WrongOperation();
+        }
+
+    */
 
     /**
      * @dev validates userOperation
@@ -139,18 +203,22 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         if (signatures.length < requiredSignatures * 65)
             revert InvalidSignaturesLength();
 
-        address lastGuardian;
-        address currentGuardian;
+        address lastGuardianAddress;
+        address currentGuardianAddress;
+        bytes32 currentGuardian;
         uint48 validAfter;
         uint48 validUntil;
         uint48 latestValidAfter;
         uint48 earliestValidUntil = type(uint48).max;
 
         for (uint256 i; i < requiredSignatures; ) {
-            currentGuardian = (userOpHash.toEthSignedMessageHash()).recover(
-                userOp.signature[96 + i * 65:96 + (i + 1) * 65]
-            );
+            currentGuardianAddress = userOpHash
+                .toEthSignedMessageHash()
+                .recover(userOp.signature[96 + i * 65:96 + (i + 1) * 65]);
 
+            currentGuardian = keccak256(
+                abi.encodePacked(currentGuardianAddress)
+            );
             validAfter = _guardians[currentGuardian][userOp.sender].validAfter;
             validUntil = _guardians[currentGuardian][userOp.sender].validUntil;
 
@@ -161,10 +229,10 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
 
             // gas efficient way to ensure all guardians are unique
             // requires from dapp to sort signatures before packing them into bytes
-            if (currentGuardian <= lastGuardian)
+            if (currentGuardianAddress <= lastGuardianAddress)
                 revert NotUniqueGuardianOrInvalidOrder(
-                    lastGuardian,
-                    currentGuardian
+                    lastGuardianAddress,
+                    currentGuardianAddress
                 );
 
             if (validUntil < earliestValidUntil) {
@@ -173,7 +241,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
             if (validAfter > latestValidAfter) {
                 latestValidAfter = validAfter;
             }
-            lastGuardian = currentGuardian;
+            lastGuardianAddress = currentGuardianAddress;
 
             unchecked {
                 ++i;
@@ -182,8 +250,8 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
 
         return
             VALIDATION_SUCCESS |
-            (uint256(validUntil) << 160) |
-            (uint256(validAfter) << (160 + 48));
+            (uint256(earliestValidUntil) << 160) |
+            (uint256(latestValidAfter) << (160 + 48));
     }
 
     function getCurrentSignature(

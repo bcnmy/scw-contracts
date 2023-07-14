@@ -1,5 +1,6 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
+import { keccak256 } from "ethers/lib/utils";
 import { encodeTransfer } from "../utils/testUtils";
 import { 
   getEntryPoint, 
@@ -47,7 +48,7 @@ describe("Social Recovery Module: ", async () => {
     let socialRecoverySetupData = socialRecoveryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [
-        [alice.address, bob.address, charlie.address],
+        [keccak256(alice.address), keccak256(bob.address), keccak256(charlie.address)],
         [16741936496, 16741936496, 16741936496],
         [0, 0, 0],
         3,
@@ -87,9 +88,9 @@ describe("Social Recovery Module: ", async () => {
     } = await setupTests();
 
     console.log("social recovery module address: ", socialRecoveryModule.address);
-    console.log("alice address: ", alice.address);
-    console.log("bob address: ", bob.address);
-    console.log("charlie address: ", charlie.address);
+    console.log("alice address: %s hash: %s", alice.address, keccak256(alice.address));
+    console.log("bob address: %s hash: %s", bob.address, keccak256(bob.address));
+    console.log("charlie address: %s hash1: %s", charlie.address, keccak256(charlie.address));
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
