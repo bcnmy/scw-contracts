@@ -11,11 +11,12 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeEcdsaModuleUserOp, makeMultiSignedUserOp } from "../utils/userOp";
+import { makeEcdsaModuleUserOp, makeMultiSignedUserOp, makeUnsignedUserOp } from "../utils/userOp";
+
 
 describe("Social Recovery Module: ", async () => {
 
-  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
+  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, eve, fox, newOwner] = waffle.provider.getWallets();
 
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
     await deployments.fixture();
@@ -44,6 +45,7 @@ describe("Social Recovery Module: ", async () => {
     // deploy Social Recovery Module
     const socialRecoveryModule = await (await ethers.getContractFactory("SocialRecoveryModule")).deploy();
     
+    const defaultSecurityDelay = 150;
     // enable and setup Social Recovery Module
     let socialRecoverySetupData = socialRecoveryModule.interface.encodeFunctionData(
       "initForSmartAccount",
@@ -52,7 +54,7 @@ describe("Social Recovery Module: ", async () => {
         [16741936496, 16741936496, 16741936496],
         [0, 0, 0],
         3,
-        150
+        defaultSecurityDelay,
       ]
     );
     const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
@@ -76,6 +78,7 @@ describe("Social Recovery Module: ", async () => {
       userSA: userSA,
       socialRecoveryModule: socialRecoveryModule,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
+      defaultSecurityDelay: defaultSecurityDelay,
     };
   });
 
@@ -85,6 +88,8 @@ describe("Social Recovery Module: ", async () => {
       mockToken,
       userSA,
       socialRecoveryModule,
+      ecdsaModule, 
+      defaultSecurityDelay
     } = await setupTests();
 
     console.log("social recovery module address: ", socialRecoveryModule.address);
@@ -101,12 +106,29 @@ describe("Social Recovery Module: ", async () => {
 
     expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.equal(true);
 
+    const recoveryRequestCallData = userSA.interface.encodeFunctionData(
+      "executeCall",
+      [
+        ecdsaModule.address,
+        ethers.utils.parseEther("0"),
+        ecdsaModule.interface.encodeFunctionData(
+          "transferOwnership",
+          [newOwner.address]
+        ),
+      ]
+    )
+
     const userOp = await makeMultiSignedUserOp(
       "executeCall",
       [
-        mockToken.address,
+        socialRecoveryModule.address,
         ethers.utils.parseEther("0"),
-        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        socialRecoveryModule.interface.encodeFunctionData(
+          "submitRecoveryRequest",
+          [
+            recoveryRequestCallData
+          ]
+        ),
       ],
       userSA.address,
       [charlie, alice, bob], // order is important
@@ -117,8 +139,85 @@ describe("Social Recovery Module: ", async () => {
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000});
     await handleOpsTxn.wait();
 
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+    const recoveryRequest = await socialRecoveryModule.getRecoverRequest(userSA.address);
+    expect(recoveryRequest.callDataHash).to.equal(ethers.utils.keccak256(recoveryRequestCallData));
+    expect(await ecdsaModule.getOwner(userSA.address)).to.equal(smartAccountOwner.address);
+
+    // can be non signed at all, just needs to be executed after the delay
+    const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
+      "executeCall",
+      [
+        ecdsaModule.address,
+        ethers.utils.parseEther("0"),
+        ecdsaModule.interface.encodeFunctionData(
+          "transferOwnership",
+          [newOwner.address]
+        ),
+      ],
+      userSA.address,
+      entryPoint,
+      socialRecoveryModule.address
+    );
+    await expect(
+      entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {gasLimit: 10000000})
+    ).to.be.revertedWith("FailedOp").withArgs(0, "AA22 expired or not due");
+
+    await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay+12]);
+    await ethers.provider.send("evm_mine", []);
+
+    await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {gasLimit: 10000000});
+    expect(await ecdsaModule.getOwner(userSA.address)).to.equal(newOwner.address);
+    expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(smartAccountOwner.address);
   });
 
+  describe ("addGuardian", async () => {
+
+    it ("Can add a guardian", async () => {
+      const { 
+        entryPoint, 
+        userSA,
+        socialRecoveryModule,
+        ecdsaModule
+      } = await setupTests();
+
+      const newGuardian = ethers.utils.keccak256(eve.address);
+      const guardiansBefore = (await socialRecoveryModule.getSmartAccountSettings(userSA.address)).guardiansCount;
+
+      const addGuardianData = socialRecoveryModule.interface.encodeFunctionData(
+        "addGuardian",
+        [
+          newGuardian,
+          16741936496,
+          0
+        ]
+      );
+
+      const addGuardianUserOp = await makeEcdsaModuleUserOp(
+        "executeCall",
+        [
+          socialRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          addGuardianData,
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const handleOpsTxn = await entryPoint.handleOps([addGuardianUserOp], alice.address, {gasLimit: 10000000});
+      const receipt = await handleOpsTxn.wait();
+      const receiptTimestamp = (await ethers.provider.getBlock(receipt.blockNumber)).timestamp;
+
+      const userSASettings = await socialRecoveryModule.getSmartAccountSettings(userSA.address);
+      const guardiansAfter = userSASettings.guardiansCount;
+
+      const eveTimeFrame = await socialRecoveryModule.getGuardianDetails(newGuardian, userSA.address);
+      expect(eveTimeFrame.validUntil).to.equal(16741936496);
+      expect(eveTimeFrame.validAfter).to.equal(receiptTimestamp + userSASettings.securityDelay);
+      expect(guardiansAfter).to.equal(guardiansBefore + 1);
+    });
+
+    
+  });
 
 });

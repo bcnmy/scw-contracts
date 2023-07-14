@@ -371,6 +371,39 @@ export async function makeMultiSignedUserOp(
   return userOp;
 }
 
+export async function makeUnsignedUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+) : Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+  
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+  
+  const userOp = await fillUserOp(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1
+    },
+    entryPoint,
+    'nonce'
+  );
+
+  // add validator module address to the empty signature
+  let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"], 
+    [0x0, moduleAddress]
+  );
+
+  userOp.signature = signatureWithModuleAddress;
+  return userOp;
+}
+
 export async function makeEcdsaModuleUserOp(
   functionName: string,
   functionParams: any,

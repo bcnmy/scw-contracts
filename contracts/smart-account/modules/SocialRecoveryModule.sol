@@ -24,6 +24,11 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
 
     // TODO
     // EVENTS
+    event RecoveryRequestSubmitted(
+        address indexed smartAccount,
+        bytes indexed requestCallData
+    );
+    event RecoveryRequestRenounced(address indexed smartAccount);
 
     error AlreadyInitedForSmartAccount(address smartAccount);
     error ThresholdNotSetForSmartAccount(address smartAccount);
@@ -54,6 +59,11 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         uint48 securityDelay;
     }
 
+    struct recoveryRequest {
+        bytes32 callDataHash;
+        uint48 requestTimestamp;
+    }
+
     bytes32 constant ADDRESS_ZERO_HASH =
         keccak256(abi.encodePacked(address(0)));
 
@@ -61,6 +71,8 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     mapping(bytes32 => mapping(address => timeFrame)) internal _guardians;
 
     mapping(address => settings) internal _smartAccountSettings;
+
+    mapping(address => recoveryRequest) internal _smartAccountRequests;
 
     /**
      * @dev Initializes the module for a Smart Account.
@@ -161,6 +173,20 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
 
     */
 
+    // recoveryCallData is something like executeCall(module, 0, encode(transferOwnership(newOwner)))
+    function submitRecoveryRequest(bytes calldata recoveryCallData) public {
+        _smartAccountRequests[msg.sender] = recoveryRequest(
+            keccak256(recoveryCallData),
+            uint48(block.timestamp)
+        );
+        emit RecoveryRequestSubmitted(msg.sender, recoveryCallData);
+    }
+
+    function renounceRecoveryRequest() external {
+        delete _smartAccountRequests[msg.sender];
+        emit RecoveryRequestRenounced(msg.sender);
+    }
+
     /**
      * @dev validates userOperation
      * @param userOp User Operation to be validated.
@@ -170,7 +196,26 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view virtual returns (uint256) {
+    ) external virtual returns (uint256) {
+        // if there is a request added, return validation success
+        // with validAfter set to the timestamp of the request + securityDelay
+        // so that the userOp can be validated only after the delay
+        if (
+            keccak256(userOp.callData) ==
+            _smartAccountRequests[msg.sender].callDataHash
+        ) {
+            uint48 reqValidAfter = _smartAccountRequests[msg.sender]
+                .requestTimestamp +
+                _smartAccountSettings[msg.sender].securityDelay;
+            delete _smartAccountRequests[msg.sender];
+            return
+                VALIDATION_SUCCESS |
+                (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
+                (uint256(reqValidAfter) << (160 + 48));
+        }
+
+        // otherwise we need to check all the signatures first
+
         uint256 requiredSignatures = _smartAccountSettings[userOp.sender]
             .recoveryThreshold;
         if (requiredSignatures == 0)
@@ -226,17 +271,47 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
                 ++i;
             }
         }
+        // if all the signatures are ok, we need to check if it is a new recovery request
+        // anything except adding a new request to this module is allowed only if securityDelay is 0
+        // which means user explicitly allowed to execute an operation immediately
+        // userOp.callData expected to be the calldata of the default execution function
+        // in this case executeCall(address dest, uint256 value, bytes calldata data);
+        // where `data` is the submitRecoveryRequest calldata
+        (address dest, uint256 callValue, bytes memory innerCallData) = abi
+            .decode(
+                userOp.callData[4:], // skip selector
+                (address, uint256, bytes)
+            );
+        bytes4 innerSelector;
+        assembly {
+            innerSelector := mload(add(innerCallData, 0x20))
+        }
+        bool addingRequestUserOp = innerSelector ==
+            this.submitRecoveryRequest.selector &&
+            dest == address(this) &&
+            callValue == 0;
+        if (
+            addingRequestUserOp ||
+            _smartAccountSettings[msg.sender].securityDelay == 0
+        ) {
+            return
+                VALIDATION_SUCCESS |
+                (uint256(earliestValidUntil) << 160) |
+                (uint256(latestValidAfter) << (160 + 48));
+        }
 
-        return
-            VALIDATION_SUCCESS |
-            (uint256(earliestValidUntil) << 160) |
-            (uint256(latestValidAfter) << (160 + 48));
+        // otherwise sig validation considered failed
+        return SIG_VALIDATION_FAILED;
     }
 
-    // NOTE - if both validUntil and validAfter provided for setup are 0, guardian is considered active forever
-    // Thus we put type(uint48).max as value for validUntil in this case, so the calldata itself doesn't need to contain this big value and thus
+    // NOTE - if both validUntil is 0, guardian is considered active forever
+    // Thus we put type(uint48).max as value for validUntil in this case,
+    // so the calldata itself doesn't need to contain this big value and thus
     // txn is cheaper
-    // @note securityDelay is added to validAfter to get the actual validAfter value, so the validUntil should be bigger than validAfter + securityDelay
+    // we need to explicitly do it, so the algorithm of intersecting validUntils and validAfters
+    // for several guardians works correctly
+    // @note if validAfter is less thena now + securityDelay, it is set to now + securityDelay
+    // as for security reasons new guardian is only active after securityDelay
 
     // TODO: Do we need a guardian to agree to be added?
 
@@ -309,16 +384,31 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         }
     }
 
+    function getGuardianDetails(
+        bytes32 guardian,
+        address smartAccount
+    ) external view returns (timeFrame memory) {
+        return _guardians[guardian][smartAccount];
+    }
+
+    function getSmartAccountSettings(
+        address smartAccount
+    ) external view returns (settings memory) {
+        return _smartAccountSettings[smartAccount];
+    }
+
+    function getRecoverRequest(
+        address smartAccount
+    ) external view returns (recoveryRequest memory) {
+        return _smartAccountRequests[smartAccount];
+    }
+
     /**
-     * @dev Validates a signature for a message.
-     * To be called from a Smart Account.
-     * @param dataHash Exact hash of the data that was signed.
-     * @param moduleSignature Signature to be validated.
-     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
+     * @dev Not supported here
      */
     function isValidSignature(
-        bytes32 dataHash,
-        bytes memory moduleSignature
+        bytes32,
+        bytes memory
     ) public view virtual override returns (bytes4) {
         return 0xffffffff; // not supported
     }
