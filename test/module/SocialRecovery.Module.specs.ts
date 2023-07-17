@@ -82,7 +82,23 @@ describe("Social Recovery Module: ", async () => {
     };
   });
 
-  it ("Can send a userOp", async () => {
+  /**  
+   * The delayed Social Recovery flow is the following:
+   * 1. The recovery request with a proper number of signatures is submitted via 
+   * the userOp that calls the socialRecoveryModule.submitRecoveryRequest() function using the 
+   * executeCall() function of the userSA.
+   * At this step social recovery module is used for both validation (check signatures) and 
+   * execution (SA.executeCall => SocialRecoveryModule.submitRecoveryRequest).
+   * 2. After the delay has passed, the recovery request can be executed by anyone via the
+   * userOp that calls the validationModule.chavalidationModul method.
+   * At this step, Social Recovery Module is only used for validation: check if the request 
+   * with the appropriate calldata has been submitted and the delay has passed. Then the calldata 
+   * (that describes) the call to one of the validation modules, like ECDSA module, is executed.
+   * This call will change the party that is authorized to sign userOp (signer key). This userOp
+   * doesn't require any signature at all.
+  */
+
+  it ("Can submit a recovery request and execute it after a proper delay", async () => {
     const { 
       entryPoint, 
       mockToken,
@@ -102,7 +118,6 @@ describe("Social Recovery Module: ", async () => {
 
     let arrayOfSigners = [alice, bob, charlie];
     arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
-    //console.log("arrayOfSigners: ", arrayOfSigners);
 
     expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.equal(true);
 
@@ -170,6 +185,84 @@ describe("Social Recovery Module: ", async () => {
     expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(smartAccountOwner.address);
   });
 
+  describe ("initForSmartAccount", async () => {
+
+    it ("Successfully inits the Smart Account, by adding guardians and settings", async () => {
+
+    });
+
+    it ("reverts if the SA has already been initialized", async () => {
+
+    });
+
+    it ("reverts if the threshold provided is > then # of guardians", async () => {
+
+    });
+
+    it ("reverts if the wrong amount of parameters provided", async () => {
+
+    });
+
+    it ("reverts if 0 guardians provided", async () => {
+
+    });
+
+    it ("reverts if at least one guardian is a zero address", async () => {
+
+    });
+
+  });
+
+  describe ("submitRecoveryRequest", async () => {
+
+  });
+
+  describe ("renounceRecoveryRequest", async () => {
+
+  });
+
+  describe ("Validation Flow", async () => {
+
+    it ("Should immediately execute recovery request when delay is 0", async () => {
+
+    });
+
+    it ("Should revert userOp if the dalay is >0 and the calldata is not for submitting request", async () => {
+
+    });
+    
+    it ("Should revert if execution calldata doesn't match the submitted request", async () => {
+
+    });
+
+    it ("Should revert executing the request if the delay has not passed yet", async () => {
+
+    });
+
+    it ("Should revert if at least one guardian is expired", async () => {
+
+    });
+
+    it ("Should revert if at least one guardian is not yet active", async () => {
+
+    });
+
+    it ("Should revert if expired and not yet active cases  intersect", async () => {
+
+    });
+
+    it ("Should revert if at least one signature is invalid", async () => {
+
+    });
+
+    it ("Should revert if guardians are not unique", async () => {
+
+    });
+    
+
+  });
+
+
   describe ("addGuardian", async () => {
 
     it ("Can add a guardian", async () => {
@@ -215,6 +308,10 @@ describe("Social Recovery Module: ", async () => {
       expect(eveTimeFrame.validUntil).to.equal(16741936496);
       expect(eveTimeFrame.validAfter).to.equal(receiptTimestamp + userSASettings.securityDelay);
       expect(guardiansAfter).to.equal(guardiansBefore + 1);
+    });
+
+    it ("Should revert if at least one signature is invalid", async () => {
+
     });
 
     

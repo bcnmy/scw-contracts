@@ -68,6 +68,9 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         keccak256(abi.encodePacked(address(0)));
 
     // guardian (hash of the address) => (smartAccount => timeFrame)
+    // complies with associated storage rules
+    // see https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
+    // see https://docs.soliditylang.org/en/v0.8.15/internals/layout_in_storage.html#mappings-and-dynamic-arrays
     mapping(bytes32 => mapping(address => timeFrame)) internal _guardians;
 
     mapping(address => settings) internal _smartAccountSettings;
@@ -128,6 +131,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         emit RecoveryRequestSubmitted(msg.sender, recoveryCallData);
     }
 
+    // natspec
     function renounceRecoveryRequest() external {
         delete _smartAccountRequests[msg.sender];
         emit RecoveryRequestRenounced(msg.sender);
@@ -145,7 +149,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
     ) external virtual returns (uint256) {
         // if there is a request added, return validation success
         // with validAfter set to the timestamp of the request + securityDelay
-        // so that the userOp can be validated only after the delay
+        // so that the request execution userOp can be validated only after the delay
         if (
             keccak256(userOp.callData) ==
             _smartAccountRequests[msg.sender].callDataHash
@@ -253,16 +257,14 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         return SIG_VALIDATION_FAILED;
     }
 
-    // NOTE - if both validUntil is 0, guardian is considered active forever
+    // NOTE - if validUntil is 0, guardian is considered active forever
     // Thus we put type(uint48).max as value for validUntil in this case,
     // so the calldata itself doesn't need to contain this big value and thus
     // txn is cheaper
-    // we need to explicitly do it, so the algorithm of intersecting validUntils and validAfters
-    // for several guardians works correctly
-    // @note if validAfter is less thena now + securityDelay, it is set to now + securityDelay
+    // we need to explicitly change 0 to type(uint48).max, so the algorithm of intersecting
+    // validUntil's and validAfter's for several guardians works correctly
+    // @note if validAfter is less then now + securityDelay, it is set to now + securityDelay
     // as for security reasons new guardian is only active after securityDelay
-
-    // TODO: Do we need a guardian to agree to be added?
 
     function addGuardian(
         bytes32 guardian,
@@ -291,6 +293,8 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         _smartAccountSettings[msg.sender].guardiansCount++;
     }
 
+    // natspec
+    // same as adding guardian, but also makes the old one active only until the new one is active
     function changeGuardian(
         bytes32 guardian,
         bytes32 newGuardian,
@@ -323,6 +327,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         _guardians[guardian][msg.sender].validUntil = minimalSecureValidAfter;
     }
 
+    // natspec
     function removeGuardian(bytes32 guardian) external {
         delete _guardians[guardian][msg.sender];
         if (
