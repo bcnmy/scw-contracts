@@ -267,7 +267,27 @@ const config: HardhatUserConfig = {
       arbitrumOne: process.env.ARBITRUM_API_KEY || "",
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
+      "base-goerli": "PLACEHOLDER_STRING",
+      "linea-goerli": "PLACEHOLDER_STRING",
     },
+    customChains: [
+      {
+        network: "linea-goerli",
+        chainId: 59140,
+        urls: {
+          apiURL: " https://explorer.goerli.linea.build/api",
+          browserURL: "https://goerli.lineascan.build",
+        },
+      },
+      {
+        network: "base-goerli",
+        chainId: 84531,
+        urls: {
+          apiURL: "https://api-goerli.basescan.org/api",
+          browserURL: "https://goerli.basescan.org",
+        },
+      },
+    ],
   },
 };
 
