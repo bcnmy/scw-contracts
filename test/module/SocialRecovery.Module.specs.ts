@@ -211,6 +211,10 @@ describe("Social Recovery Module: ", async () => {
 
     });
 
+    it ("can change from ecdsa to passkeys when making recovery", async () => {
+
+    });
+
   });
 
   describe ("submitRecoveryRequest", async () => {
