@@ -13,7 +13,7 @@ import {
 } from "../utils/setupHelper";
 import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
-describe("Ownerless Smart Account Basics: ", async () => {
+describe("Smart Account Basics: ", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 
@@ -76,7 +76,7 @@ describe("Ownerless Smart Account Basics: ", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "executeCall_s1m",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),
@@ -105,7 +105,7 @@ describe("Ownerless Smart Account Basics: ", async () => {
     const amountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "executeCall_s1m",
       [
         charlie.address,
         amountToTransfer,
@@ -135,7 +135,7 @@ describe("Ownerless Smart Account Basics: ", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
     const userOp = await makeEcdsaModuleUserOpWithPaymaster(
-      "executeCall",
+      "executeCall_s1m",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),

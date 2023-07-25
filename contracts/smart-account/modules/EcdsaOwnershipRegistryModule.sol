@@ -115,7 +115,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view virtual returns (uint256) {
+    ) external virtual returns (uint256) {
         (bytes memory cleanEcdsaSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
