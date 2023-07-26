@@ -18,8 +18,6 @@ struct SessionStorage {
 contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
     using UserOperationLib for UserOperation;
 
-    // TODO: work with userOp.sender and try to get is like it is done in Helper.sol
-    // can be cheaper - CHECK THIS
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
@@ -29,10 +27,20 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
             (bytes, address)
         );
 
+        address sender;
+        //read sender from userOp, which is first userOp member (saves gas)
+        assembly {
+            sender := calldataload(userOp)
+        }
+
         if (moduleSignature.length == 65) {
             //it's not a multichain signature
             return
-                _verifySignature(userOpHash, moduleSignature, userOp.sender)
+                _verifySignature(
+                    userOpHash,
+                    moduleSignature,
+                    address(uint160(sender))
+                )
                     ? VALIDATION_SUCCESS
                     : SIG_VALIDATION_FAILED;
         }
@@ -51,7 +59,7 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
                 keccak256( //leaf
                     abi.encodePacked(
                         block.chainid,
-                        ISmartAccount(userOp.sender).nonce(),
+                        ISmartAccount(address(uint160(sender))).nonce(),
                         address(this)
                     )
                 )
@@ -66,7 +74,11 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
         );
 
         return
-            _verifySignature(multichainHash, multichainSignature, userOp.sender)
+            _verifySignature(
+                multichainHash,
+                multichainSignature,
+                address(uint160(sender))
+            )
                 ? VALIDATION_SUCCESS
                 : SIG_VALIDATION_FAILED;
     }
@@ -74,10 +86,14 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
     function getChainAgnosticUserOpHash(
         UserOperation calldata userOp
     ) public pure returns (bytes32) {
+        address sender;
+        assembly {
+            sender := calldataload(userOp)
+        }
         return
             keccak256(
                 abi.encode(
-                    userOp.sender,
+                    address(uint160(sender)),
                     calldataKeccak(userOp.initCode), //hashInitCode
                     calldataKeccak(userOp.callData), // hashCallData
                     userOp.callGasLimit,
