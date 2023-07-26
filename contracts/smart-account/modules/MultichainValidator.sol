@@ -10,7 +10,7 @@ import {calldataKeccak} from "@account-abstraction/contracts/core/Helpers.sol";
 import "hardhat/console.sol";
 
 interface ISmartAccount {
-    function nonce() external view virtual returns (uint256);
+    function nonce() external view returns (uint256);
 }
 
 struct SessionStorage {
@@ -28,17 +28,21 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual override returns (uint256) {
+    ) external view virtual override returns (uint256) {
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
         );
 
-        /*
-            if (bytes4(userOp.signature[0:4]) == 0x00000001) {
-                // this is a multichain signature
-        */
+        if (moduleSignature.length == 65) {
+            //it's not a multichain signature
+            return
+                _verifySignature(userOpHash, moduleSignature, userOp.sender)
+                    ? VALIDATION_SUCCESS
+                    : SIG_VALIDATION_FAILED;
+        }
 
+        //otherwise it is a multichain signature
         (
             bytes32 merkleTreeRoot,
             bytes32[] memory merkleProof,
@@ -52,33 +56,24 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
                 keccak256( //leaf
                     abi.encodePacked(
                         block.chainid,
-                        //_localNonces[userOp.sender],
                         ISmartAccount(userOp.sender).nonce(),
                         address(this)
                     )
                 )
             )
         ) {
-            return SIG_VALIDATION_FAILED;
+            revert("Invalid Chain Params");
         }
 
         // reconstruct hash = all the userOp fileds except nonce + merkleTreeRoot that is based on chainId, nonce, address(this)
         bytes32 multichainHash = keccak256(
             abi.encode(getChainAgnosticUserOpHash(userOp), merkleTreeRoot)
         );
+
         return
             _verifySignature(multichainHash, multichainSignature, userOp.sender)
                 ? VALIDATION_SUCCESS
                 : SIG_VALIDATION_FAILED;
-
-        /*
-        if (ISignatureValidator(userOp.sender).isValidSignature(multichainHash, multichainSignature) != EIP1271_MAGIC_VALUE) {
-            return SIG_VALIDATION_FAILED;
-        }
-        
-        ++_localNonces[address(this)];
-        return VALIDATION_SUCCESS;
-        */
     }
 
     function getChainAgnosticUserOpHash(
@@ -106,7 +101,7 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
 
     /**
      * Inherits isValideSignature method from EcdsaOwnershipRegistryModule
-     * isValidSignature is not intended to work with the multichain signature
+     * isValidSignature is intended to work not with a multichain signature
      * but with a regular ecdsa signature over a message hash
      */
 }

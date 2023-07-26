@@ -4,6 +4,8 @@ pragma solidity 0.8.17;
 import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
@@ -115,11 +117,12 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual returns (uint256) {
+    ) external view virtual returns (uint256) {
         (bytes memory cleanEcdsaSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
         );
+        console.log("sig length: ", cleanEcdsaSignature.length);
         if (_verifySignature(userOpHash, cleanEcdsaSignature, userOp.sender)) {
             return VALIDATION_SUCCESS;
         }
