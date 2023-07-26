@@ -7,8 +7,6 @@ import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/in
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {calldataKeccak} from "@account-abstraction/contracts/core/Helpers.sol";
 
-import "hardhat/console.sol";
-
 interface ISmartAccount {
     function nonce() external view returns (uint256);
 }
@@ -19,9 +17,6 @@ struct SessionStorage {
 
 contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
     using UserOperationLib for UserOperation;
-
-    // nonce specific to this chain
-    // mapping(address => uint256) internal _localNonces;
 
     // TODO: work with userOp.sender and try to get is like it is done in Helper.sol
     // can be cheaper - CHECK THIS
