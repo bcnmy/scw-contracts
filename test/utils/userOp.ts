@@ -452,10 +452,7 @@ export async function makeMultichainEcdsaModuleUserOp(
   userOpSigner: Signer,
   entryPoint: EntryPoint,
   moduleAddress: string,
-  chainIds: number[],
-  chainNonces: number[],
-  chainAddresses: string[],
-  leaveId: number
+  leaves: string[],
 ) : Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
   
@@ -474,15 +471,7 @@ export async function makeMultichainEcdsaModuleUserOp(
     'nonce'
   );
 
-  const leaves = [];
-  for (let i = 0; i < chainIds.length; i++) {
-    const chainLeafData = hexConcat([
-      hexZeroPad(BigNumber.from(chainIds[i]).toHexString(), 32), // chainId
-      hexZeroPad(BigNumber.from(chainNonces[i]).toHexString(), 32), //nonce
-      hexZeroPad(chainAddresses[i],20),
-    ]);
-    leaves.push(ethers.utils.keccak256(chainLeafData));
-  }
+  leaves.push(await entryPoint.getUserOpHash(userOp));
   
   const chainMerkleTree = new MerkleTree(
     leaves,
@@ -495,20 +484,12 @@ export async function makeMultichainEcdsaModuleUserOp(
     moduleAddress
   );
 
-  // prepare the multichain hash
-  const hash = ethers.utils.keccak256(
-    hexConcat([
-      await multichainModule.getChainAgnosticUserOpHash(userOp),
-      chainMerkleTree.getHexRoot(),
-    ])
-  );
-
   // user only signs once
-  const multichainSignature = await userOpSigner.signMessage(ethers.utils.arrayify(hash));
+  const multichainSignature = await userOpSigner.signMessage(ethers.utils.arrayify(chainMerkleTree.getHexRoot()));
   
   // but still required to pad the signature with the required data (unsigned) for every chain
   // this is done by dapp automatically
-  const merkleProof = chainMerkleTree.getHexProof(leaves[leaveId]);
+  const merkleProof = chainMerkleTree.getHexProof(leaves[leaves.length - 1]);
   const moduleSignature = defaultAbiCoder.encode(
     ["bytes32", "bytes32[]", "bytes"],
     [
