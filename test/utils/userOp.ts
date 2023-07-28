@@ -479,11 +479,6 @@ export async function makeMultichainEcdsaModuleUserOp(
     { sortPairs: true }
   );
 
-  const multichainModule = await ethers.getContractAt(
-    "MultichainECDSAValidator",
-    moduleAddress
-  );
-
   // user only signs once
   const multichainSignature = await userOpSigner.signMessage(ethers.utils.arrayify(chainMerkleTree.getHexRoot()));
   

@@ -53,7 +53,7 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
         ) = abi.decode(moduleSignature, (bytes32, bytes32[], bytes));
 
         if (!MerkleProof.verify(merkleProof, merkleTreeRoot, userOpHash)) {
-            revert("Invalid User Op");
+            revert("Invalid UserOp");
         }
 
         // reconstruct hash = all the userOp fileds except nonce + merkleTreeRoot that is based on chainId, nonce, address(this)
