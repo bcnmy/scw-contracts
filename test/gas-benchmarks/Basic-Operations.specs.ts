@@ -33,6 +33,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
       const mockToken = await getMockToken();
 
       const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+      const smartAccountFactory = await getSmartAccountFactory();
+      const entryPoint = await getEntryPoint();
 
       const ecdsaOwnershipSetupData =
         EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
@@ -60,30 +62,77 @@ describe("Gas Benchmarking. Basic operations", async () => {
         "Gas used to directly deploy SA: ",
         receipt.cumulativeGasUsed.toString()
       );
-      // 196694
+
+      // ===============  deply SA via userOp =================
+      
+      const deploymentData = SmartAccountFactory.interface.encodeFunctionData(
+        "deployCounterFactualAccount",
+        [ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex+1]
+      );
+  
+      const expectedSmartAccountAddress2 =
+        await smartAccountFactory.getAddressForCounterFactualAccount(
+          ecdsaModule.address,
+          ecdsaOwnershipSetupData,
+          smartAccountDeploymentIndex + 1
+        );
+  
+      // funding account
+      await deployer.sendTransaction({
+        to: expectedSmartAccountAddress2,
+        value: ethers.utils.parseEther("10"),
+      });
+      await mockToken.mint(expectedSmartAccountAddress2, ethers.utils.parseEther("1000000"));
+
+      // deployment userOp
+      const deploymentUserOp = await fillAndSign(
+        {
+          sender: expectedSmartAccountAddress2,
+          callGasLimit: 1_000_000,
+          initCode: ethers.utils.hexConcat([
+            smartAccountFactory.address,
+            deploymentData,
+          ]),
+          callData: "0x",
+        },
+        smartAccountOwner,
+        entryPoint,
+        "nonce"
+      );
+
+      let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"], 
+        [deploymentUserOp.signature, ecdsaModule.address]
+      );
+
+      deploymentUserOp.signature = signatureWithModuleAddress;
 
       const userSA = await ethers.getContractAt(
         "SmartAccount",
-        expectedSmartAccountAddress
+        expectedSmartAccountAddress2
       );
 
-      await deployer.sendTransaction({
-        to: userSA.address,
-        value: ethers.utils.parseEther("10"),
-      });
+      const handleOpsTxn = await entryPoint.handleOps([deploymentUserOp], alice.address, {gasLimit: 10000000});
+      const receipt2 = await handleOpsTxn.wait();
+      console.log(
+        "Deploy with an ecdsa signature via userOp gas used: ",
+        receipt2.gasUsed.toString()
+      );
+      //this moves nonce from 0 to further tests using userSA
+
+      // ===== rest of setup ====
 
       await deployer.sendTransaction({
         to: alice.address,
         value: ethers.utils.parseEther("10"),
       });
 
-      await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
       await mockToken.mint(charlie.address, ethers.utils.parseEther("1"));
 
       return {
-        entryPoint: await getEntryPoint(),
+        entryPoint: entryPoint,
         smartAccountImplementation: await getSmartAccountImplementation(),
-        smartAccountFactory: await getSmartAccountFactory(),
+        smartAccountFactory: smartAccountFactory,
         mockToken: mockToken,
         ecdsaModule: ecdsaModule,
         userSA: userSA,
@@ -103,8 +152,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
       smartAccountOwner.address
     );
 
-    expect(await ethers.provider.getBalance(userSA.address)).to.equal(
-      ethers.utils.parseEther("10")
+    expect(await ethers.provider.getBalance(userSA.address)).to.be.above(
+      ethers.utils.parseEther("9") //gas was used for first userOp
     );
     expect(await mockToken.balanceOf(userSA.address)).to.equal(
       ethers.utils.parseEther("1000000")
@@ -129,7 +178,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "executeCall_s1m",
       [charlie.address, tokenAmountToTransfer, "0x"],
       userSA.address,
       smartAccountOwner,
@@ -161,7 +210,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("10");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "executeCall_s1m",
       [
         mockToken.address,
         "0",
@@ -222,7 +271,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     });
 
     const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-      "executeCall",
+      "executeCall_s1m",
       [charlie.address, tokenAmountToTransfer, "0x"]
     );
 
@@ -277,7 +326,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
     const userOp = await makeEcdsaModuleUserOpWithPaymaster(
-      "executeCall",
+      "executeCall_s1m",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),
