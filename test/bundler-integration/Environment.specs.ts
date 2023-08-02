@@ -1,23 +1,40 @@
-import { ethers, config } from "hardhat";
-import { setupEnvironment } from "./setupEnvironment";
-import { HttpNetworkConfig } from "hardhat/types";
+import { ethers } from "hardhat";
+import { BundlerTestEnvironment } from "./bundlerEnvironment";
+import { expect } from "chai";
 
-describe("Bundler Envitonment", async () => {
+describe("Bundler Environment", async () => {
   const signers = await ethers.getSigners();
+  const [alice, bob] = signers;
+  let environment: BundlerTestEnvironment;
 
-  it("Default Signers Should have funds after environment setup", async () => {
-    await setupEnvironment(
-      new ethers.providers.JsonRpcProvider(
-        (config.networks.local as HttpNetworkConfig).url
-      ),
-      signers.map((signer) => signer.address),
-      signers.map((_) => ethers.utils.parseEther("100"))
-    );
+  before(async () => {
+    environment = await BundlerTestEnvironment.getDefaultInstance();
+  });
 
+  it("Default Signers should have funds after environment setup", async () => {
     for (const signer of signers) {
       expect(await ethers.provider.getBalance(signer.address)).to.be.gte(
-        ethers.utils.parseEther("100")
+        environment.DEFAULT_FUNDING_AMOUNT
       );
     }
+  });
+
+  it("Should be able to revert to snapshot", async () => {
+    const aliceBalance = await ethers.provider.getBalance(alice.address);
+    const bobBalance = await ethers.provider.getBalance(bob.address);
+
+    const snapshot = await environment.snapshot();
+
+    await expect(
+      alice.sendTransaction({
+        to: bob.address,
+        value: ethers.utils.parseEther("1"),
+      })
+    ).to.not.be.reverted;
+
+    await environment.revert(snapshot);
+
+    expect(await ethers.provider.getBalance(alice.address)).to.eq(aliceBalance);
+    expect(await ethers.provider.getBalance(bob.address)).to.eq(bobBalance);
   });
 });
