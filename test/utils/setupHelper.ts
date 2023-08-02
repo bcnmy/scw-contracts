@@ -1,12 +1,15 @@
 import hre, { deployments, ethers } from "hardhat";
 import { Wallet, Contract, BytesLike, Signer } from "ethers";
-import {EntryPoint__factory,} from "../../typechain";
+import { EntryPoint__factory } from "../../typechain";
 const solc = require("solc");
 
 export const getEntryPoint = async () => {
   const EntryPointDeployment = await deployments.get("EntryPoint");
   const EntryPoint = await hre.ethers.getContractFactory("EntryPoint");
-  return EntryPoint__factory.connect(EntryPointDeployment.address, ethers.provider.getSigner());
+  return EntryPoint__factory.connect(
+    EntryPointDeployment.address,
+    ethers.provider.getSigner()
+  );
 };
 
 export const getSmartAccountImplementation = async () => {
@@ -17,7 +20,9 @@ export const getSmartAccountImplementation = async () => {
 
 export const getSmartAccountFactory = async () => {
   const SAFactoryDeployment = await deployments.get("SmartAccountFactory");
-  const SmartAccountFactory = await hre.ethers.getContractFactory("SmartAccountFactory");
+  const SmartAccountFactory = await hre.ethers.getContractFactory(
+    "SmartAccountFactory"
+  );
   return SmartAccountFactory.attach(SAFactoryDeployment.address);
 };
 
@@ -28,38 +33,53 @@ export const getMockToken = async () => {
 };
 
 export const getEcdsaOwnershipRegistryModule = async () => {
-  const EcdsaOwnershipRegistryModuleDeployment = await deployments.get("EcdsaOwnershipRegistryModule");
-  const EcdsaOwnershipRegistryModule = await hre.ethers.getContractFactory("EcdsaOwnershipRegistryModule");
-  return EcdsaOwnershipRegistryModule.attach(EcdsaOwnershipRegistryModuleDeployment.address);
+  const EcdsaOwnershipRegistryModuleDeployment = await deployments.get(
+    "EcdsaOwnershipRegistryModule"
+  );
+  const EcdsaOwnershipRegistryModule = await hre.ethers.getContractFactory(
+    "EcdsaOwnershipRegistryModule"
+  );
+  return EcdsaOwnershipRegistryModule.attach(
+    EcdsaOwnershipRegistryModuleDeployment.address
+  );
 };
 
-export const getSmartContractOwnershipRegistryModule = async() => {
-  const SmartContractOwnerhsipRegistryDeployment = await deployments.get("SmartContractOwnershipRegistryModule");
-  const SmartContractOwnerhsipRegistryModule = await hre.ethers.getContractFactory("SmartContractOwnershipRegistryModule");
-  return SmartContractOwnerhsipRegistryModule.attach(SmartContractOwnerhsipRegistryDeployment.address);
-}
+export const getSmartContractOwnershipRegistryModule = async () => {
+  const SmartContractOwnerhsipRegistryDeployment = await deployments.get(
+    "SmartContractOwnershipRegistryModule"
+  );
+  const SmartContractOwnerhsipRegistryModule =
+    await hre.ethers.getContractFactory("SmartContractOwnershipRegistryModule");
+  return SmartContractOwnerhsipRegistryModule.attach(
+    SmartContractOwnerhsipRegistryDeployment.address
+  );
+};
 
 export const getVerifyingPaymaster = async (
   owner: Wallet,
-  verifiedSigner: Wallet,
+  verifiedSigner: Wallet
 ) => {
   const entryPoint = await getEntryPoint();
-  const VerifyingSingletonPaymaster = await hre.ethers.getContractFactory("VerifyingSingletonPaymaster");
-  const verifyingSingletonPaymaster = await VerifyingSingletonPaymaster.deploy(owner.address, entryPoint.address, verifiedSigner.address);
-  
+  const VerifyingSingletonPaymaster = await hre.ethers.getContractFactory(
+    "VerifyingSingletonPaymaster"
+  );
+  const verifyingSingletonPaymaster = await VerifyingSingletonPaymaster.deploy(
+    owner.address,
+    entryPoint.address,
+    verifiedSigner.address
+  );
+
   await verifyingSingletonPaymaster
     .connect(owner)
     .addStake(10, { value: ethers.utils.parseEther("2") });
 
-  await verifyingSingletonPaymaster.depositFor(
-    verifiedSigner.address,
-    { value: ethers.utils.parseEther("1") }
-  );
+  await verifyingSingletonPaymaster.depositFor(verifiedSigner.address, {
+    value: ethers.utils.parseEther("1"),
+  });
 
-  await entryPoint.depositTo(
-    verifyingSingletonPaymaster.address, 
-    { value: ethers.utils.parseEther("10") }
-  );  
+  await entryPoint.depositTo(verifyingSingletonPaymaster.address, {
+    value: ethers.utils.parseEther("10"),
+  });
 
   return verifyingSingletonPaymaster;
 };
@@ -67,15 +87,25 @@ export const getVerifyingPaymaster = async (
 export const getSmartAccountWithModule = async (
   moduleSetupContract: string,
   moduleSetupData: BytesLike,
-  index: number,
+  index: number
 ) => {
   const factory = await getSmartAccountFactory();
   const expectedSmartAccountAddress =
-        await factory.getAddressForCounterFactualAccount(moduleSetupContract, moduleSetupData, index);
-  await factory.deployCounterFactualAccount(moduleSetupContract, moduleSetupData, index);
-  return await hre.ethers.getContractAt("SmartAccount", expectedSmartAccountAddress);
-}
-
+    await factory.getAddressForCounterFactualAccount(
+      moduleSetupContract,
+      moduleSetupData,
+      index
+    );
+  await factory.deployCounterFactualAccount(
+    moduleSetupContract,
+    moduleSetupData,
+    index
+  );
+  return await hre.ethers.getContractAt(
+    "SmartAccount",
+    expectedSmartAccountAddress
+  );
+};
 
 export const compile = async (source: string) => {
   const input = JSON.stringify({

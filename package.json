@@ -3,6 +3,9 @@
   "version": "2.0.1",
   "description": "SCW contracts for Biconomy SDK",
   "main": "index.js",
+  "engines": {
+    "node": ">=12.0.0"
+  },
   "scripts": {
     "clean": "npx hardhat clean",
     "build": "npm run clean && npx hardhat compile",
