@@ -1,7 +1,5 @@
-FROM ethereum/client-go:release-1.10
-COPY ./data /data
+FROM ethereum/client-go:release-1.12
 ENTRYPOINT geth \
-      --verbosity 1 \
       --http.vhosts '*,localhost,host.docker.internal' \
       --http \
       --http.api personal,eth,net,web3,debug \
@@ -12,4 +10,4 @@ ENTRYPOINT geth \
       --dev \
       --allow-insecure-unlock \
       --rpc.allow-unprotected-txs \
-      --dev.gaslimit 20000000 \
+      --dev.gaslimit 200000000 \

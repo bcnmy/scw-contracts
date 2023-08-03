@@ -11,6 +11,7 @@ import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
 import "hardhat-deploy-ethers";
 import "hardhat-dependency-compiler";
+import { parseUnits } from "ethers/lib/utils";
 
 const walletUtils = require("./walletUtils");
 
@@ -66,12 +67,12 @@ const config: HardhatUserConfig = {
       url: "http://localhost:8545",
       accounts: {
         mnemonic:
-          // "garbage miracle journey siren inch method pulse learn month grid frame business",
-          "test test test test test test test test test test test junk",
+          "garbage miracle journey siren inch method pulse learn month grid frame business",
         path: "m/44'/60'/0'/0",
         initialIndex: 0,
         count: 20,
       },
+      gasPrice: parseUnits("1", "gwei").toNumber(),
     },
     eth_mainnet: {
       url: process.env.ETH_MAINNET_URL || "",

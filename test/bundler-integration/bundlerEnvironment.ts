@@ -1,15 +1,15 @@
 import { providers, BigNumberish, utils, BigNumber } from "ethers";
 import axios, { AxiosInstance } from "axios";
-import { ethers, config } from "hardhat";
+import { ethers, config, getNamedAccounts } from "hardhat";
 import type { HttpNetworkConfig } from "hardhat/types";
 
-type Snapshot = {
+export type Snapshot = {
   blockNumber: number;
 };
 
 export class BundlerTestEnvironment {
   BUNDLER_ENVIRONMENT_CHAIN_ID = 1337;
-  DEFAULT_FUNDING_AMOUNT = utils.parseEther("10");
+  DEFAULT_FUNDING_AMOUNT = utils.parseEther("1000");
 
   private apiClient: AxiosInstance;
   private static instance: BundlerTestEnvironment;
@@ -46,10 +46,17 @@ export class BundlerTestEnvironment {
 
     await this.instance.init();
 
-    const defaultSigners = await ethers.getSigners();
+    const defaultAddresses = Array.from(
+      new Set([
+        ...(await ethers.getSigners()).map((signer) => signer.address),
+        ...Object.entries(await getNamedAccounts()).map(
+          ([, address]) => address
+        ),
+      ])
+    );
     await this.instance.fundAccounts(
-      defaultSigners.map((signer) => signer.address),
-      defaultSigners.map((_) => this.instance.DEFAULT_FUNDING_AMOUNT)
+      defaultAddresses,
+      defaultAddresses.map((_) => this.instance.DEFAULT_FUNDING_AMOUNT)
     );
 
     return this.instance;
@@ -80,8 +87,12 @@ export class BundlerTestEnvironment {
     await this.provider.send("debug_setHead", [
       utils.hexValue(BigNumber.from(snapshot.blockNumber)),
     ]);
-    const currentBlockNumber = await this.provider.getBlockNumber();
-    if (currentBlockNumber !== snapshot.blockNumber) {
+
+    // getBlockNumber() caches the result, so we directly call the rpc method instead
+    const currentBlockNumber = BigNumber.from(
+      await this.provider.send("eth_blockNumber", [])
+    );
+    if (!BigNumber.from(snapshot.blockNumber).eq(currentBlockNumber)) {
       throw new Error(
         `Failed to revert to block ${snapshot.blockNumber}. Current block number is ${currentBlockNumber}`
       );
