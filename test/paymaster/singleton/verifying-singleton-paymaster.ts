@@ -24,6 +24,9 @@ import { fillAndSign, fillUserOp } from "../../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { BigNumber, BigNumberish, Contract, Signer } from "ethers";
 
+const MOCK_VALID_UNTIL = "0x00000000deadbeef";
+const MOCK_VALID_AFTER = "0x0000000000001234";
+
 export async function deployEntryPoint(
   provider = ethers.provider
 ): Promise<EntryPoint> {
@@ -121,10 +124,15 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      paymasterId
+      paymasterId,
+      MOCK_VALID_UNTIL,
+      MOCK_VALID_AFTER
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
-    const paymasterData = abi.encode(["address", "bytes"], [paymasterId, sig]);
+    const paymasterData = abi.encode(
+      ["address", "uint48", "uint48", "bytes"],
+      [paymasterId, MOCK_VALID_UNTIL, MOCK_VALID_AFTER, sig]
+    );
     const paymasterAndData = hexConcat([paymasterAddress, paymasterData]);
     return await fillAndSign(
       {
@@ -170,7 +178,9 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        await offchainSigner.getAddress()
+        await offchainSigner.getAddress(),
+        MOCK_VALID_UNTIL,
+        MOCK_VALID_AFTER
       );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       const userOp = await fillAndSign(
@@ -179,8 +189,13 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
           paymasterAndData: hexConcat([
             paymasterAddress,
             ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
+              ["address", "uint48", "uint48", "bytes"],
+              [
+                await offchainSigner.getAddress(),
+                MOCK_VALID_UNTIL,
+                MOCK_VALID_AFTER,
+                sig,
+              ]
             ),
           ]),
         },
@@ -212,7 +227,9 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        await offchainSigner.getAddress()
+        await offchainSigner.getAddress(),
+        MOCK_VALID_UNTIL,
+        MOCK_VALID_AFTER
       );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       console.log("offchainSigner : " + (await offchainSigner.getAddress()));
@@ -244,8 +261,8 @@ describe("EntryPoint with VerifyingPaymaster Singleton", function () {
           paymasterAndData: hexConcat([
             paymasterAddress,
             ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
+              ["address", "uint48", "uint48", "bytes"],
+              [await offchainSigner.getAddress(), MOCK_VALID_UNTIL, MOCK_VALID_AFTER, sig]
             ),
           ]),
         },

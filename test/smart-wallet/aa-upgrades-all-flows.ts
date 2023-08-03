@@ -25,6 +25,9 @@ import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
 import { UserOperation } from "../utils/userOpetation";
 
+const MOCK_VALID_UNTIL = "0x00000000deadbeef";
+const MOCK_VALID_AFTER = "0x0000000000001234";
+
 export async function deployEntryPoint(
   provider = ethers.provider
 ): Promise<EntryPoint> {
@@ -43,7 +46,9 @@ async function getUserOpWithPaymasterData(
 ) {
   const hash = await paymaster.getHash(
     userOp,
-    await offchainPaymasterSigner.getAddress()
+    await offchainPaymasterSigner.getAddress(),
+    MOCK_VALID_UNTIL,
+    MOCK_VALID_AFTER
   );
   const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
   const userOpWithPaymasterData = await fillAndSign(
@@ -53,8 +58,13 @@ async function getUserOpWithPaymasterData(
       paymasterAndData: hexConcat([
         paymasterAddress,
         ethers.utils.defaultAbiCoder.encode(
-          ["address", "bytes"],
-          [await offchainPaymasterSigner.getAddress(), sig]
+          ["address", "uint48", "uint48", "bytes"],
+          [
+            await offchainPaymasterSigner.getAddress(),
+            MOCK_VALID_UNTIL,
+            MOCK_VALID_AFTER,
+            sig,
+          ]
         ),
       ]),
     },

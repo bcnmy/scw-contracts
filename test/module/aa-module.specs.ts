@@ -37,6 +37,8 @@ export async function deployEntryPoint(
 
 export const AddressZero = "0x0000000000000000000000000000000000000000";
 export const AddressOne = "0x0000000000000000000000000000000000000001";
+const MOCK_VALID_UNTIL = "0x00000000deadbeef";
+const MOCK_VALID_AFTER = "0x0000000000001234";
 
 async function getUserOpWithPaymasterData(
   paymaster: VerifyingSingletonPaymaster,
@@ -49,7 +51,9 @@ async function getUserOpWithPaymasterData(
 ) {
   const hash = await paymaster.getHash(
     userOp,
-    await offchainPaymasterSigner.getAddress()
+    await offchainPaymasterSigner.getAddress(),
+    MOCK_VALID_UNTIL,
+    MOCK_VALID_AFTER
   );
   const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
   const userOpWithPaymasterData = await fillAndSign(
@@ -59,14 +63,19 @@ async function getUserOpWithPaymasterData(
       paymasterAndData: hexConcat([
         paymasterAddress,
         ethers.utils.defaultAbiCoder.encode(
-          ["address", "bytes"],
-          [await offchainPaymasterSigner.getAddress(), sig]
+          ["address", "uint48", "uint48", "bytes"],
+          [
+            await offchainPaymasterSigner.getAddress(),
+            MOCK_VALID_UNTIL,
+            MOCK_VALID_AFTER,
+            sig,
+          ]
         ),
       ]),
     },
     walletOwner,
     entryPoint,
-    'nonce'
+    "nonce"
   );
   return userOpWithPaymasterData;
 }
@@ -191,7 +200,7 @@ describe("Module transactions via AA flow", function () {
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -247,7 +256,7 @@ describe("Module transactions via AA flow", function () {
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -339,7 +348,7 @@ describe("Module transactions via AA flow", function () {
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -610,12 +619,14 @@ describe("Module transactions via AA flow", function () {
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        await offchainSigner.getAddress()
+        await offchainSigner.getAddress(),
+        MOCK_VALID_UNTIL,
+        MOCK_VALID_AFTER
       );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       const userOp = await fillAndSign(
@@ -624,14 +635,19 @@ describe("Module transactions via AA flow", function () {
           paymasterAndData: hexConcat([
             paymasterAddress,
             ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
+              ["address", "uint48", "uint48", "bytes"],
+              [
+                await offchainSigner.getAddress(),
+                MOCK_VALID_UNTIL,
+                MOCK_VALID_AFTER,
+                sig,
+              ]
             ),
           ]),
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
       console.log(userOp);
       // const userOpHash = await entryPoint.getUserOpHash(userOp);
@@ -716,12 +732,14 @@ describe("Module transactions via AA flow", function () {
         },
         accounts[7], // not an owner // as good as overriding later with fake sig!
         entryPoint,
-        'nonce'
+        "nonce"
       );
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        await offchainSigner.getAddress()
+        await offchainSigner.getAddress(),
+        MOCK_VALID_UNTIL,
+        MOCK_VALID_AFTER
       );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       const userOp = await fillAndSign(
@@ -730,14 +748,19 @@ describe("Module transactions via AA flow", function () {
           paymasterAndData: hexConcat([
             paymasterAddress,
             ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
+              ["address", "uint48", "uint48", "bytes"],
+              [
+                await offchainSigner.getAddress(),
+                MOCK_VALID_UNTIL,
+                MOCK_VALID_AFTER,
+                sig,
+              ]
             ),
           ]),
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
       console.log(userOp);
       // TODO: Replace signature with mock signature..
@@ -816,12 +839,14 @@ describe("Module transactions via AA flow", function () {
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        await offchainSigner.getAddress()
+        await offchainSigner.getAddress(),
+        MOCK_VALID_UNTIL,
+        MOCK_VALID_AFTER
       );
       const sig = await offchainSigner.signMessage(arrayify(hash));
       const userOpAA1 = await fillAndSign(
@@ -830,14 +855,19 @@ describe("Module transactions via AA flow", function () {
           paymasterAndData: hexConcat([
             paymasterAddress,
             ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
+              ["address", "uint48", "uint48", "bytes"],
+              [
+                await offchainSigner.getAddress(),
+                MOCK_VALID_UNTIL,
+                MOCK_VALID_AFTER,
+                sig,
+              ]
             ),
           ]),
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
       console.log(userOpAA1);
       await entryPoint.handleOps(
@@ -892,12 +922,14 @@ describe("Module transactions via AA flow", function () {
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
 
       const hash2 = await verifyingSingletonPaymaster.getHash(
         userOp2,
-        await offchainSigner.getAddress()
+        await offchainSigner.getAddress(),
+        MOCK_VALID_UNTIL,
+        MOCK_VALID_AFTER
       );
       const sig2 = await offchainSigner.signMessage(arrayify(hash2));
       const userOpAA2 = await fillAndSign(
@@ -906,14 +938,19 @@ describe("Module transactions via AA flow", function () {
           paymasterAndData: hexConcat([
             paymasterAddress,
             ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig2]
+              ["address", "uint48", "uint48", "bytes"],
+              [
+                await offchainSigner.getAddress(),
+                MOCK_VALID_UNTIL,
+                MOCK_VALID_AFTER,
+                sig2,
+              ]
             ),
           ]),
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
       console.log(userOpAA2);
       await entryPoint.handleOps(
@@ -1021,12 +1058,14 @@ describe("Module transactions via AA flow", function () {
         },
         accounts[8], // not an owner
         entryPoint,
-        'nonce'
+        "nonce"
       );
 
       const hash = await verifyingSingletonPaymaster.getHash(
         userOp1,
-        await offchainSigner.getAddress() // paymaster id is still same as previous offchain signer
+        await offchainSigner.getAddress(), // paymaster id is still same as previous offchain signer
+        MOCK_VALID_UNTIL,
+        MOCK_VALID_AFTER
       );
       const sig = await offchainSigner2.signMessage(arrayify(hash));
       const userOp = await fillAndSign(
@@ -1035,14 +1074,19 @@ describe("Module transactions via AA flow", function () {
           paymasterAndData: hexConcat([
             paymasterAddress,
             ethers.utils.defaultAbiCoder.encode(
-              ["address", "bytes"],
-              [await offchainSigner.getAddress(), sig]
+              ["address", "uint48", "uint48", "bytes"],
+              [
+                await offchainSigner.getAddress(),
+                MOCK_VALID_UNTIL,
+                MOCK_VALID_AFTER,
+                sig,
+              ]
             ),
           ]),
         },
         walletOwner,
         entryPoint,
-        'nonce'
+        "nonce"
       );
       console.log(userOp);
       // TODO: Replace signature with mock signature..

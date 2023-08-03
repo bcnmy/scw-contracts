@@ -36,6 +36,9 @@ import { arrayify, formatEther, hexConcat, parseEther } from "ethers/lib/utils";
 import { BigNumber, Signer } from "ethers";
 import { UserOperation } from "../../utils/userOpetation";
 
+const MOCK_VALID_UNTIL = "0x00000000deadbeef";
+const MOCK_VALID_AFTER = "0x0000000000001234";
+
 describe("Upgrade functionality Via Entrypoint", function () {
   let entryPoint: EntryPoint;
   let latestEntryPoint: EntryPoint;
@@ -278,7 +281,12 @@ async function getUserOpWithPaymasterData(
   walletOwner: Signer,
   entryPoint: EntryPoint
 ) {
-  const hash = await paymaster.getHash(userOp, paymasterId);
+  const hash = await paymaster.getHash(
+    userOp,
+    paymasterId,
+    MOCK_VALID_UNTIL,
+    MOCK_VALID_AFTER
+  );
   const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
   const userOpWithPaymasterData = await fillAndSign(
     {
@@ -287,8 +295,8 @@ async function getUserOpWithPaymasterData(
       paymasterAndData: hexConcat([
         paymasterAddress,
         ethers.utils.defaultAbiCoder.encode(
-          ["address", "bytes"],
-          [paymasterId, sig]
+          ["address", "uint48", "uint48", "bytes"],
+          [paymasterId, MOCK_VALID_UNTIL, MOCK_VALID_AFTER, sig]
         ),
       ]),
     },
