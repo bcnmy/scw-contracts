@@ -57,8 +57,10 @@ describe("Bundler Environment", async () => {
 
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
+    const entryPoint = await getEntryPoint();
+
     return {
-      entryPoint: await getEntryPoint(),
+      entryPoint,
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,

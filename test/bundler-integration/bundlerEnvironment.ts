@@ -11,6 +11,9 @@ export class BundlerTestEnvironment {
   BUNDLER_ENVIRONMENT_CHAIN_ID = 1337;
   DEFAULT_FUNDING_AMOUNT = utils.parseEther("1000");
 
+  DOCKER_COMPOSE_DIR = __dirname;
+  DOCKER_COMPOSE_BUNDLER_SERVICE = "bundler";
+
   private apiClient: AxiosInstance;
   private static instance: BundlerTestEnvironment;
 
@@ -68,6 +71,18 @@ export class BundlerTestEnvironment {
   ) => {
     const signer = this.provider.getSigner();
     const nonce = await signer.getTransactionCount();
+    accountsToFund = (
+      await Promise.all(
+        accountsToFund.map(
+          async (account, i): Promise<[string, boolean]> => [
+            account,
+            (await this.provider.getBalance(account)).lt(fundingAmount[i]),
+          ]
+        )
+      )
+    )
+      .filter(([, needsFunding]) => needsFunding)
+      .map(([account]) => account);
     await Promise.all(
       accountsToFund.map((account, i) =>
         signer.sendTransaction({
