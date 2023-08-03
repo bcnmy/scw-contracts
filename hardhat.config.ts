@@ -186,12 +186,18 @@ const config: HardhatUserConfig = {
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 420,
     },
     optimismMainnet: {
       url: `https://mainnet.optimism.io`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 10,
     },
     moonbeam_mainnet: {
@@ -212,19 +218,28 @@ const config: HardhatUserConfig = {
     },
     celoTestnet: {
       url: `https://alfajores-forno.celo-testnet.org`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 44787,
       // gasPrice: 6400000
     },
     celoMainnet: {
       url: `https://forno.celo.org`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 42220,
       // gasPrice: 6400000
     },
     neonDevnet: {
       url: `https://proxy.devnet.neonlabs.org/solana`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 245022926,
       // gasPrice: 6400000
     },
