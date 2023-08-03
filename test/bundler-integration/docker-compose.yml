@@ -4,7 +4,7 @@ services:
   bundler:
     ports: ["3000:3000"]
     image: accountabstraction/bundler
-    command: --network http://geth-dev:8545 --entryPoint 0x881f3ed00AA4F4C98e76644Bb46DebC24DffE307
+    command: --network http://geth-dev:8545 --entryPoint 0x1E1EDc60c3C65E45C18D30a5D6E614c2e12d08E1
     volumes:
       - ./workdir:/app/workdir:ro
 

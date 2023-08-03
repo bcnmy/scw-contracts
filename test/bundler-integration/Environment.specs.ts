@@ -21,12 +21,22 @@ describe("Bundler Environment", async () => {
   let environment: BundlerTestEnvironment;
   let defaultSnapshot: Snapshot;
 
-  before(async () => {
+  before(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
     environment = await BundlerTestEnvironment.getDefaultInstance();
     defaultSnapshot = await environment.snapshot();
   });
 
-  afterEach(async () => {
+  afterEach(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
     await environment.revert(defaultSnapshot);
   });
 
@@ -73,7 +83,7 @@ describe("Bundler Environment", async () => {
   it("Default Signers should have funds after environment setup", async () => {
     for (const signer of signers) {
       expect(await ethers.provider.getBalance(signer.address)).to.be.gte(
-        environment.DEFAULT_FUNDING_AMOUNT
+        BundlerTestEnvironment.DEFAULT_FUNDING_AMOUNT
       );
     }
   });
@@ -117,11 +127,13 @@ describe("Bundler Environment", async () => {
       userSA.address,
       smartAccountOwner,
       entryPoint,
-      ecdsaModule.address
+      ecdsaModule.address,
+      {
+        preVerificationGas: 50000,
+      }
     );
 
-    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
-    await handleOpsTxn.wait();
+    await environment.sendUserOperation(userOp, entryPoint.address);
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore.add(tokenAmountToTransfer)

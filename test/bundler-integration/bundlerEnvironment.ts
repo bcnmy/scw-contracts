@@ -2,14 +2,16 @@ import { providers, BigNumberish, utils, BigNumber } from "ethers";
 import axios, { AxiosInstance } from "axios";
 import { ethers, config, getNamedAccounts } from "hardhat";
 import type { HttpNetworkConfig } from "hardhat/types";
+import { UserOperation } from "../utils/userOperation";
+import { serializeUserOp } from "../utils/userOp";
 
 export type Snapshot = {
   blockNumber: number;
 };
 
 export class BundlerTestEnvironment {
-  BUNDLER_ENVIRONMENT_CHAIN_ID = 1337;
-  DEFAULT_FUNDING_AMOUNT = utils.parseEther("1000");
+  public static BUNDLER_ENVIRONMENT_CHAIN_ID = 1337;
+  public static DEFAULT_FUNDING_AMOUNT = utils.parseEther("1000");
 
   DOCKER_COMPOSE_DIR = __dirname;
   DOCKER_COMPOSE_BUNDLER_SERVICE = "bundler";
@@ -26,15 +28,6 @@ export class BundlerTestEnvironment {
     });
   }
 
-  init = async () => {
-    const { chainId } = await this.provider.getNetwork();
-    if (chainId !== this.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-      throw new Error(
-        `Invalid chain id ${chainId} for bundler environment. Expected ${this.BUNDLER_ENVIRONMENT_CHAIN_ID}`
-      );
-    }
-  };
-
   static getDefaultInstance = async () => {
     if (this.instance) {
       return this.instance;
@@ -47,8 +40,6 @@ export class BundlerTestEnvironment {
       "http://localhost:3000"
     );
 
-    await this.instance.init();
-
     const defaultAddresses = Array.from(
       new Set([
         ...(await ethers.getSigners()).map((signer) => signer.address),
@@ -59,7 +50,7 @@ export class BundlerTestEnvironment {
     );
     await this.instance.fundAccounts(
       defaultAddresses,
-      defaultAddresses.map((_) => this.instance.DEFAULT_FUNDING_AMOUNT)
+      defaultAddresses.map((_) => this.DEFAULT_FUNDING_AMOUNT)
     );
 
     return this.instance;
@@ -97,6 +88,33 @@ export class BundlerTestEnvironment {
   snapshot = async (): Promise<Snapshot> => ({
     blockNumber: await this.provider.getBlockNumber(),
   });
+
+  sendUserOperation = async (
+    userOperation: UserOperation,
+    entrypointAddress: string
+  ): Promise<string> => {
+    const result = await this.apiClient.post("/rpc", {
+      jsonrpc: "2.0",
+      method: "eth_sendUserOperation",
+      params: [serializeUserOp(userOperation), entrypointAddress],
+    });
+    if (result.status !== 200) {
+      throw new Error(
+        `Failed to send user operation: ${JSON.stringify(
+          result.data.error.message
+        )}`
+      );
+    }
+    if (result.data.error) {
+      throw new Error(
+        `Error in submitting user operation: ${JSON.stringify(
+          result.data.error
+        )}`
+      );
+    }
+
+    return result.data;
+  };
 
   revert = async (snapshot: Snapshot) => {
     await this.provider.send("debug_setHead", [

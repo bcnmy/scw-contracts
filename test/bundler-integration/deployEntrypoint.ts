@@ -1,10 +1,14 @@
+import { getEntryPoint } from "../utils/setupHelper";
+import { deployments } from "hardhat";
 import { BundlerTestEnvironment } from "./bundlerEnvironment";
-import hre from "hardhat";
-import deploy from "../../src/deploy/01_deploy_entrypoint";
 
 if (require.main === module) {
   (async () => {
     await BundlerTestEnvironment.getDefaultInstance();
-    await deploy(hre);
+    await deployments.createFixture(async ({ deployments }) => {
+      await deployments.fixture();
+      const entrypoint = await getEntryPoint();
+      console.log("Entrypoint deployed at", entrypoint.address);
+    })();
   })();
 }

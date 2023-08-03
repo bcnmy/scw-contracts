@@ -5,6 +5,7 @@ import {
   getCreate2Address,
   hexConcat,
   hexDataSlice,
+  hexValue,
   keccak256,
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
@@ -314,6 +315,9 @@ export async function makeEcdsaModuleUserOp(
   userOpSigner: Signer,
   entryPoint: EntryPoint,
   moduleAddress: string,
+  options?: {
+    preVerificationGas?: number;
+  }
 ) : Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
   
@@ -325,7 +329,8 @@ export async function makeEcdsaModuleUserOp(
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
-      callData: txnDataAA1
+      callData: txnDataAA1,
+      ...options,
     },
     userOpSigner,
     entryPoint,
@@ -443,3 +448,18 @@ export async function makeSARegistryModuleUserOp(
   return userOp;
 }
 
+export function serializeUserOp(op: UserOperation) {
+  return {
+    sender: op.sender,
+    nonce: hexValue(op.nonce),
+    initCode: op.initCode,
+    callData: op.callData,
+    callGasLimit: hexValue(op.callGasLimit),
+    verificationGasLimit: hexValue(op.verificationGasLimit),
+    preVerificationGas: hexValue(op.preVerificationGas),
+    maxFeePerGas: hexValue(op.maxFeePerGas),
+    maxPriorityFeePerGas: hexValue(op.maxPriorityFeePerGas),
+    paymasterAndData: op.paymasterAndData,
+    signature: op.signature,
+  };
+}
