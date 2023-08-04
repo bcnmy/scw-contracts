@@ -13,10 +13,10 @@ let baseImpAddress = "";
 let entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
   "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
-const owner = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
-const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_DEV || "";
+const owner = process.env.PAYMASTER_OWNER_ADDRESS_PROD || "";
+const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_PROD || "";
 const DEPLOYER_CONTRACT_ADDRESS =
-  process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
+  process.env.DEPLOYER_CONTRACT_ADDRESS_PROD || "";
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
   if (network.name !== "hardhat" && network.name !== "ganache") {

@@ -261,6 +261,24 @@ const config: HardhatUserConfig = {
           : walletUtils.makeKeyList(),
       chainId: 59140,
     },
+    lineaMainnet: {
+      url: process.env.LINEA_MAINNET_URL || ``,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 59144,
+    },
+    baseMainnet: {
+      url:
+        process.env.BASE_MAINNET_URL ||
+        `https://developer-access-mainnet.base.org`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 8453,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -285,6 +303,7 @@ const config: HardhatUserConfig = {
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
       "base-goerli": "PLACEHOLDER_STRING",
       "linea-goerli": "PLACEHOLDER_STRING",
+      "base-mainnet": process.env.BASE_API_KEY || "",
     },
     customChains: [
       {
@@ -301,6 +320,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-goerli.basescan.org/api",
           browserURL: "https://goerli.basescan.org",
+        },
+      },
+      {
+        network: "base-mainnet",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
         },
       },
     ],
