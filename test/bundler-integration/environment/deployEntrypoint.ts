@@ -1,4 +1,4 @@
-import { getEntryPoint } from "../utils/setupHelper";
+import { getEntryPoint } from "../../utils/setupHelper";
 import { deployments } from "hardhat";
 import { BundlerTestEnvironment } from "./bundlerEnvironment";
 

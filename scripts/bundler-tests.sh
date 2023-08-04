@@ -2,7 +2,9 @@
 
 SCRIPT=$(realpath $0)
 SCRIPT_PATH=$(dirname $SCRIPT)
-COMPOSE_FILE_PATH=$SCRIPT_PATH/../test/bundler-integration/docker-compose.yml
+ENVIONRMENT_PATH=$SCRIPT_PATH/../test/bundler-integration/environment
+COMPOSE_FILE_PATH=$ENVIONRMENT_PATH/docker-compose.yml
+ENTRYPOINT_DEPLOY_SCRIPT_PATH=$ENVIONRMENT_PATH/deployEntrypoint.ts
 
 docker compose -f $COMPOSE_FILE_PATH down
 
@@ -10,7 +12,7 @@ echo "⚙️  1. Launching geth...."
 docker compose -f $COMPOSE_FILE_PATH up geth-dev -d
 
 echo "⚙️  2. Deploying Entrypoint..."
-npx hardhat run test/bundler-integration/deployEntrypoint.ts --network local
+npx hardhat run $ENTRYPOINT_DEPLOY_SCRIPT_PATH --network local
 
 echo "⚙️  3. Launching Bundler..."
 docker compose -f $COMPOSE_FILE_PATH up bundler -d
@@ -35,7 +37,7 @@ while true; do
 done
 
 echo "⚙️  5. Running tests..."
-npx hardhat test test/bundler-integration/*.ts --network local
+npx hardhat test test/bundler-integration/**/*.ts --network local
 
 echo "⚙️  6. Stopping geth and bundler...."
 docker compose -f $COMPOSE_FILE_PATH down

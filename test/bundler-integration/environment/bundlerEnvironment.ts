@@ -2,12 +2,19 @@ import { providers, BigNumberish, utils, BigNumber } from "ethers";
 import axios, { AxiosInstance } from "axios";
 import { ethers, config, getNamedAccounts } from "hardhat";
 import type { HttpNetworkConfig } from "hardhat/types";
-import { UserOperation } from "../utils/userOperation";
-import { serializeUserOp } from "../utils/userOp";
+import { UserOperation } from "../../utils/userOperation";
+import { serializeUserOp } from "../../utils/userOp";
 
 export type Snapshot = {
   blockNumber: number;
 };
+
+export class UserOperationSubmissionError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "UserOperationSubmissionError";
+  }
+}
 
 export class BundlerTestEnvironment {
   public static BUNDLER_ENVIRONMENT_CHAIN_ID = 1337;
@@ -106,11 +113,7 @@ export class BundlerTestEnvironment {
       );
     }
     if (result.data.error) {
-      throw new Error(
-        `Error in submitting user operation: ${JSON.stringify(
-          result.data.error
-        )}`
-      );
+      throw new UserOperationSubmissionError(JSON.stringify(result.data.error));
     }
 
     return result.data;
