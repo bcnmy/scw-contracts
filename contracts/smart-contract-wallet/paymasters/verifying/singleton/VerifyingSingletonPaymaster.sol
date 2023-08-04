@@ -239,6 +239,21 @@ contract VerifyingSingletonPaymaster is
         );
     }
 
+    function getGasPrice(
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas
+    ) internal view returns (uint256) {
+        if (maxFeePerGas == maxPriorityFeePerGas) {
+            //legacy mode (for networks that don't support basefee opcode)
+            return maxFeePerGas;
+        }
+        return min(maxFeePerGas, maxPriorityFeePerGas + block.basefee);
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
+    }
+
     /**
      * @dev Executes the paymaster's payment conditions
      * @param mode tells whether the op succeeded, reverted, or if the op succeeded but cause the postOp to revert
@@ -252,7 +267,10 @@ contract VerifyingSingletonPaymaster is
     ) internal virtual override {
         PaymasterContext memory data = context._decodePaymasterContext();
         address extractedPaymasterId = data.paymasterId;
-        uint256 effectiveGasPrice = block.basefee + data.maxPriorityFeePerGas;
+        uint256 effectiveGasPrice = getGasPrice(
+            data.maxFeePerGas,
+            data.maxPriorityFeePerGas
+        );
         uint256 balToDeduct = actualGasCost +
             unaccountedEPGasOverhead *
             effectiveGasPrice;
