@@ -226,7 +226,11 @@ contract VerifyingSingletonPaymaster is
                 paymasterIdBalances[paymasterData.paymasterId]
             );
         return (
-            userOp.paymasterContext(paymasterData),
+            userOp.paymasterContext(
+                paymasterData,
+                userOp.maxFeePerGas,
+                userOp.maxPriorityFeePerGas
+            ),
             _packValidationData(
                 false,
                 paymasterData.validUntil,
@@ -248,9 +252,10 @@ contract VerifyingSingletonPaymaster is
     ) internal virtual override {
         PaymasterContext memory data = context._decodePaymasterContext();
         address extractedPaymasterId = data.paymasterId;
+        uint256 effectiveGasPrice = block.basefee + data.maxPriorityFeePerGas;
         uint256 balToDeduct = actualGasCost +
             unaccountedEPGasOverhead *
-            tx.gasprice;
+            effectiveGasPrice;
         paymasterIdBalances[extractedPaymasterId] =
             paymasterIdBalances[extractedPaymasterId] -
             balToDeduct;

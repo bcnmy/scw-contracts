@@ -14,8 +14,8 @@ struct PaymasterData {
 
 struct PaymasterContext {
     address paymasterId;
-    // could add maxFeePerGas and maxPriorityFeePerGas if needed
-    // by making approprate changes in paymaster contract
+    uint256 maxFeePerGas;
+    uint256 maxPriorityFeePerGas;
 }
 
 /**
@@ -31,16 +31,11 @@ library PaymasterHelpers {
      */
     function paymasterContext(
         UserOperation calldata op,
-        PaymasterData memory data
-    )
-        internal
-        pure
-        returns (
-            // Could add maxFeePerGas and maxPriorityFeePerGas if needed
-            bytes memory context
-        )
-    {
-        return abi.encode(data.paymasterId);
+        PaymasterData memory data,
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas
+    ) internal pure returns (bytes memory context) {
+        return abi.encode(data.paymasterId, maxFeePerGas, maxPriorityFeePerGas);
     }
 
     /**
@@ -72,7 +67,12 @@ library PaymasterHelpers {
     function _decodePaymasterContext(
         bytes memory context
     ) internal pure returns (PaymasterContext memory) {
-        address paymasterId = abi.decode(context, (address));
-        return PaymasterContext(paymasterId);
+        (
+            address paymasterId,
+            uint256 maxFeePerGas,
+            uint256 maxPriorityFeePerGas
+        ) = abi.decode(context, (address, uint256, uint256));
+        return
+            PaymasterContext(paymasterId, maxFeePerGas, maxPriorityFeePerGas);
     }
 }
