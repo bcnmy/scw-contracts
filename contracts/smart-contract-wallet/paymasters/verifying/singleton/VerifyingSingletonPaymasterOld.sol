@@ -19,6 +19,7 @@ import {SingletonPaymasterErrors} from "../../../common/Errors.sol";
  *  - The paymaster signs to agree to PAY for GAS.
  *  - The wallet signs to prove identity and wallet ownership.
  */
+// V1.0.0
 contract VerifyingSingletonPaymaster is
     BasePaymaster,
     ReentrancyGuard,
