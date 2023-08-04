@@ -68,7 +68,7 @@ contract VerifyingSingletonPaymaster is
         assembly {
             sstore(verifyingSigner.slot, _verifyingSigner)
         }
-        unaccountedEPGasOverhead = 9600;
+        unaccountedEPGasOverhead = 12000;
     }
 
     /**
