@@ -6,19 +6,20 @@ import {
   getDeployerInstance,
   isContract,
 } from "./utils";
-import { Deployer } from "../typechain";
+import { Deployer, Deployer__factory } from "../typechain";
 
 const provider = ethers.provider;
+let baseImpAddress = "";
 let entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
-  "0x0576a174D229E3cFA37253523E645A78A0C91B57";
-let baseImpAddress = "";
-let fallBackHandlerAddress = "";
-const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
-const verifyingSigner = "0x416B03E2E5476B6a2d1dfa627B404Da1781e210d";
+  "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+const owner = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
+const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_DEV || "";
+const DEPLOYER_CONTRACT_ADDRESS =
+  process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
-  if (network.name !== "hardhat" || network.name !== "ganache") {
+  if (network.name !== "hardhat" && network.name !== "ganache") {
     console.log("Entry Point Already Deployed Address: ", entryPointAddress);
     return;
   }
@@ -51,46 +52,6 @@ async function deployEntryPointContract(deployerInstance: Deployer) {
       console.log(
         "Entry Point is Already deployed with address ",
         entryPointAddress
-      );
-    }
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-async function deployCallBackHandlerContract(deployerInstance: Deployer) {
-  try {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.FallBACK_HANDLER)
-    );
-
-    const callBackHandler = await ethers.getContractFactory(
-      "DefaultCallbackHandler"
-    );
-    const callBackHandlerBytecode = `${callBackHandler.bytecode}`;
-    fallBackHandlerAddress = await deployerInstance.addressOf(salt);
-    console.log("CallBack Handler Computed Address: ", fallBackHandlerAddress);
-
-    const isCallBackHandlerDeployed = await isContract(
-      fallBackHandlerAddress,
-      provider
-    ); // true (deployed on-chain)
-    if (!isCallBackHandlerDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.FallBACK_HANDLER,
-        fallBackHandlerAddress,
-        salt,
-        callBackHandlerBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: fallBackHandlerAddress,
-        constructorArguments: [],
-      });
-    } else {
-      console.log(
-        "CallBack Handler is Already deployed with address ",
-        fallBackHandlerAddress
       );
     }
   } catch (err) {
@@ -391,16 +352,46 @@ async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
   }
 }
 
+/*
+ *  This function is added to support the flow with pre-deploying the deployer contract
+ *  using the `deployer-contract.deploy.ts` script.
+ */
+async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
+  const code = await provider.getCode(DEPLOYER_CONTRACT_ADDRESS);
+  const chainId = (await provider.getNetwork()).chainId;
+  const [signer] = await ethers.getSigners();
+
+  if (code === "0x") {
+    console.log(
+      `Deployer not deployed on chain ${chainId}, deploy it with deployer-contract.deploy.ts script before using this script.`
+    );
+    throw new Error("Deployer not deployed");
+  } else {
+    console.log(
+      "Deploying with EOA %s through Deployer Contract %s",
+      signer.address,
+      DEPLOYER_CONTRACT_ADDRESS
+    );
+    return Deployer__factory.connect(DEPLOYER_CONTRACT_ADDRESS, signer);
+  }
+}
+
 async function main() {
-  const deployerInstance = await getDeployerInstance();
+  const deployerInstance = await getPredeployedDeployerContractInstance();
   await deployEntryPointContract(deployerInstance);
-  // await deployCallBackHandlerContract(deployerInstance);
+  console.log("=========================================");
   await deployBaseWalletImpContract(deployerInstance);
+  console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
+  console.log("=========================================");
   await deployGasEstimatorContract(deployerInstance);
+  console.log("=========================================");
   await deployDecoderContract(deployerInstance);
+  console.log("=========================================");
   await deployMultiSendContract(deployerInstance);
+  console.log("=========================================");
   await deployMultiSendCallOnlyContract(deployerInstance);
+  console.log("=========================================");
   await deployVerifySingeltonPaymaster(deployerInstance);
 }
 

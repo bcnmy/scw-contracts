@@ -2,7 +2,6 @@ hardhat.config.ts
 scripts
 test
 artifacts
-typechain
 cache
 coverage
 .env
@@ -17,4 +16,6 @@ src/utils/execution.ts
 src/utils/multisend.ts
 src/Create2Factory.ts
 typings/
-.*
+.husky/pre-commit
+.prettierignore
+.prettierrc

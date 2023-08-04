@@ -20,7 +20,7 @@ import {
   buildSafeTransaction,
 } from "../../src/utils/execution";
 import { encodeTransfer } from "./testUtils";
-import { fillAndSign, fillUserOp } from "../utils/userOp";
+import { fillAndSign } from "../utils/userOp";
 import { arrayify, hexConcat, parseEther } from "ethers/lib/utils";
 import { Signer } from "ethers";
 import { UserOperation } from "../utils/userOpetation";
@@ -41,13 +41,8 @@ async function getUserOpWithPaymasterData(
   walletOwner: Signer,
   entryPoint: EntryPoint
 ) {
-  const nonceFromContract = await paymaster["getSenderPaymasterNonce(address)"](
-    smartAccountAddress
-  );
-
   const hash = await paymaster.getHash(
     userOp,
-    nonceFromContract.toNumber(),
     await offchainPaymasterSigner.getAddress()
   );
   const sig = await offchainPaymasterSigner.signMessage(arrayify(hash));
@@ -64,7 +59,8 @@ async function getUserOpWithPaymasterData(
       ]),
     },
     walletOwner,
-    entryPoint
+    entryPoint,
+    "nonce"
   );
   return userOpWithPaymasterData;
 }
@@ -165,7 +161,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 350000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -220,7 +217,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 200000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -284,7 +282,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 200000,
         },
         walletOwner,
-        entryPoint
+        entryPoint,
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -373,7 +372,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           // callGasLimit: 1000000,
         },
         accounts[5], // since the owner has changed!
-        entryPoint
+        entryPoint,
+        "nonce"
       );
       // Set paymaster data in UserOp
       const userOp = await getUserOpWithPaymasterData(
@@ -539,7 +539,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           callGasLimit: 1000000,
         },
         walletOwner, // since the owner signer is supposed to be walletOwner
-        entryPoint // at this point original entrypoint should process userops
+        entryPoint, // at this point original entrypoint should process userops
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -582,13 +583,15 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // Now here also the wallet with owner and index 1 should have been deployed
       const expectedSmartAccountAddress =
         await walletFactory.getAddressForCounterFactualAccount(owner, 1);
+
       const userOp1 = await fillAndSign(
         {
           sender: expectedSmartAccountAddress,
           verificationGasLimit: 350000,
         },
         walletOwner, // rightful owner signer
-        entryPoint // previous entrypoint
+        entryPoint, // previous entrypoint
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -629,7 +632,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           verificationGasLimit: 350000,
         },
         walletOwner, // rightful owner signer
-        latestEntryPoint // previous entrypoint
+        latestEntryPoint, // previous entrypoint
+        "nonce"
       );
 
       // NOTICE: To use the latestEntryPoint now you mus make the deposits (migrate stakes and deposits!)
@@ -744,7 +748,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           callGasLimit: 1000000,
         },
         walletOwner, // since the owner signer is supposed to be walletOwner
-        entryPoint
+        entryPoint,
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -844,7 +849,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           callGasLimit: 1000000,
         },
         walletOwner, // since the owner signer is supposed to be walletOwner
-        entryPoint
+        entryPoint,
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -952,7 +958,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           callGasLimit: 1000000,
         },
         walletOwner, // since the owner signer is supposed to be walletOwner
-        entryPoint
+        entryPoint,
+        "nonce"
       );
 
       // Set paymaster data in UserOp
@@ -1101,7 +1108,8 @@ describe("Upgrade functionality Via Entrypoint", function () {
           callGasLimit: 1000000,
         },
         walletOwner, // since the owner signer is supposed to be walletOwner
-        entryPoint
+        entryPoint,
+        "nonce"
       );
 
       // Set paymaster data in UserOp

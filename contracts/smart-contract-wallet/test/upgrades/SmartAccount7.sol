@@ -135,11 +135,13 @@ contract SmartAccount7 is
     // all the new implementations MUST have this method!
     function updateImplementation(address _implementation) public mixedAuth {
         require(_implementation.isContract(), "INVALID_IMPLEMENTATION");
+        address oldImplementation;
         // solhint-disable-next-line no-inline-assembly
         assembly {
+            oldImplementation := sload(address())
             sstore(address(), _implementation)
         }
-        emit ImplementationUpdated(address(this), _implementation);
+        emit ImplementationUpdated(oldImplementation, _implementation);
     }
 
     // Getters
@@ -163,11 +165,6 @@ contract SmartAccount7 is
      */
     function getNonce(uint256 batchId) public view returns (uint256) {
         return nonces[batchId];
-    }
-
-    // Standard interface for 1d nonces. Use it for Account Abstraction flow.
-    function nonce() public view virtual override returns (uint256) {
-        return nonces[0];
     }
 
     function entryPoint() public view virtual override returns (IEntryPoint) {
@@ -555,15 +552,6 @@ contract SmartAccount7 is
             msg.sender == address(entryPoint()) || msg.sender == owner,
             "account: not Owner or EntryPoint"
         );
-    }
-
-    /// implement template method of BaseAccount
-    // @notice Nonce space is locked to 0 for AA transactions
-    // userOp could have batchId as well
-    function _validateAndUpdateNonce(
-        UserOperation calldata userOp
-    ) internal override {
-        require(nonces[0]++ == userOp.nonce, "account: invalid nonce");
     }
 
     /**

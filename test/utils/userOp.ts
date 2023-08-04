@@ -7,93 +7,75 @@ import {
   keccak256,
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
-import {
-  AddressZero,
-  callDataCost,
-  HashZero,
-  rethrow,
-} from "../smart-wallet/testutils";
+import { AddressZero, callDataCost, HashZero, rethrow } from "../smart-wallet/testUtils";
 import {
   ecsign,
   toRpcSig,
   keccak256 as keccak256_buffer,
 } from "ethereumjs-util";
-import { EntryPoint, VerifyingPaymaster } from "../../typechain";
-import { UserOperation } from "./userOpetation";
+import { EntryPoint } from "../../typechain";
+import { UserOperation } from "./UserOperation";
 import { Create2Factory } from "../../src/Create2Factory";
-
-function encode(
-  typevalues: Array<{ type: string; val: any }>,
-  forSignature: boolean
-): string {
-  const types = typevalues.map((typevalue) =>
-    typevalue.type === "bytes" && forSignature ? "bytes32" : typevalue.type
-  );
-  const values = typevalues.map((typevalue) =>
-    typevalue.type === "bytes" && forSignature
-      ? keccak256(typevalue.val)
-      : typevalue.val
-  );
-  return defaultAbiCoder.encode(types, values);
-}
-
-// export function packUserOp(op: UserOperation, hashBytes = true): string {
-//   if ( !hashBytes || true ) {
-//     return packUserOp1(op, hashBytes)
-//   }
-//
-//   const opEncoding = Object.values(testUtil.interface.functions).find(func => func.name == 'packUserOp')!.inputs[0]
-//   let packed = defaultAbiCoder.encode([opEncoding], [{...op, signature:'0x'}])
-//   packed = '0x'+packed.slice(64+2) //skip first dword (length)
-//   packed = packed.slice(0,packed.length-64) //remove signature (the zero-length)
-//   return packed
-// }
 
 export function packUserOp(op: UserOperation, forSignature = true): string {
   if (forSignature) {
-    // lighter signature scheme (must match UserOperation#pack): do encode a zero-length signature, but strip afterwards the appended zero-length value
-    const userOpType = {
-      components: [
-        { type: "address", name: "sender" },
-        { type: "uint256", name: "nonce" },
-        { type: "bytes", name: "initCode" },
-        { type: "bytes", name: "callData" },
-        { type: "uint256", name: "callGasLimit" },
-        { type: "uint256", name: "verificationGasLimit" },
-        { type: "uint256", name: "preVerificationGas" },
-        { type: "uint256", name: "maxFeePerGas" },
-        { type: "uint256", name: "maxPriorityFeePerGas" },
-        { type: "bytes", name: "paymasterAndData" },
-        { type: "bytes", name: "signature" },
+    return defaultAbiCoder.encode(
+      [
+        "address",
+        "uint256",
+        "bytes32",
+        "bytes32",
+        "uint256",
+        "uint256",
+        "uint256",
+        "uint256",
+        "uint256",
+        "bytes32",
       ],
-      name: "userOp",
-      type: "tuple",
-    };
-    let encoded = defaultAbiCoder.encode(
-      [userOpType as any],
-      [{ ...op, signature: "0x" }]
+      [
+        op.sender,
+        op.nonce,
+        keccak256(op.initCode),
+        keccak256(op.callData),
+        op.callGasLimit,
+        op.verificationGasLimit,
+        op.preVerificationGas,
+        op.maxFeePerGas,
+        op.maxPriorityFeePerGas,
+        keccak256(op.paymasterAndData),
+      ]
     );
-    // remove leading word (total length) and trailing word (zero-length signature)
-    encoded = "0x" + encoded.slice(66, encoded.length - 64);
-    return encoded;
+  } else {
+    // for the purpose of calculating gas cost encode also signature (and no keccak of bytes)
+    return defaultAbiCoder.encode(
+      [
+        "address",
+        "uint256",
+        "bytes",
+        "bytes",
+        "uint256",
+        "uint256",
+        "uint256",
+        "uint256",
+        "uint256",
+        "bytes",
+        "bytes",
+      ],
+      [
+        op.sender,
+        op.nonce,
+        op.initCode,
+        op.callData,
+        op.callGasLimit,
+        op.verificationGasLimit,
+        op.preVerificationGas,
+        op.maxFeePerGas,
+        op.maxPriorityFeePerGas,
+        op.paymasterAndData,
+        op.signature,
+      ]
+    );
   }
-  const typevalues = [
-    { type: "address", val: op.sender },
-    { type: "uint256", val: op.nonce },
-    { type: "bytes", val: op.initCode },
-    { type: "bytes", val: op.callData },
-    { type: "uint256", val: op.callGasLimit },
-    { type: "uint256", val: op.verificationGasLimit },
-    { type: "uint256", val: op.preVerificationGas },
-    { type: "uint256", val: op.maxFeePerGas },
-    { type: "uint256", val: op.maxPriorityFeePerGas },
-    { type: "bytes", val: op.paymasterAndData },
-  ];
-  if (!forSignature) {
-    // for the purpose of calculating gas cost, also hash signature
-    typevalues.push({ type: "bytes", val: op.signature });
-  }
-  return encode(typevalues, forSignature);
 }
 
 export function packUserOp1(op: UserOperation): string {
@@ -144,8 +126,8 @@ export const DefaultsForUserOp: UserOperation = {
   initCode: "0x",
   callData: "0x",
   callGasLimit: 0,
-  verificationGasLimit: 100000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
-  preVerificationGas: 0, // should also cover calldata cost.
+  verificationGasLimit: 150000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
+  preVerificationGas: 21000, // should also cover calldata cost.
   maxFeePerGas: 0,
   maxPriorityFeePerGas: 1e9,
   paymasterAndData: "0x",
@@ -195,20 +177,21 @@ export function fillUserOpDefaults(
 }
 
 // helper to fill structure:
-// - default callGasLimit to estimate call from entryPoint to wallet (TODO: add overhead)
+// - default callGasLimit to estimate call from entryPoint to account (TODO: add overhead)
 // if there is initCode:
 //  - calculate sender by eth_call the deployment code
 //  - default verificationGasLimit estimateGas of deployment code plus default 100000
 // no initCode:
-//  - update nonce from wallet.nonce()
+//  - update nonce from account.getNonce()
 // entryPoint param is only required to fill in "sender address when specifying "initCode"
-// nonce: assume contract as "nonce()" function, and fill in.
+// nonce: assume contract as "getNonce()" function, and fill in.
 // sender - only in case of construction: fill sender from initCode.
-// callGasLimit: VERY crude estimation (by estimating call to wallet, and add rough entryPoint overhead
+// callGasLimit: VERY crude estimation (by estimating call to account, and add rough entryPoint overhead
 // verificationGasLimit: hard-code default at 100k. should add "create2" cost
 export async function fillUserOp(
   op: Partial<UserOperation>,
-  entryPoint?: EntryPoint
+  entryPoint?: EntryPoint,
+  getNonceFunction = "getNonce"
 ): Promise<UserOperation> {
   const op1 = { ...op };
   const provider = entryPoint?.provider;
@@ -217,15 +200,13 @@ export async function fillUserOp(
     const initCallData = hexDataSlice(op1.initCode!, 20);
     if (op1.nonce == null) op1.nonce = 0;
     if (op1.sender == null) {
-      // hack: if the init contract is our deployer, then we know what the address would be, without a view call
+      // hack: if the init contract is our known deployer, then we know what the address would be, without a view call
       if (
         initAddr.toLowerCase() === Create2Factory.contractAddress.toLowerCase()
       ) {
-        const [ctr] = defaultAbiCoder.decode(
-          ["bytes", "bytes32"],
-          "0x" + initCallData.slice(10)
-        );
-        op1.sender = getCreate2Address(initAddr, HashZero, keccak256(ctr));
+        const ctr = hexDataSlice(initCallData, 32);
+        const salt = hexDataSlice(initCallData, 0, 32);
+        op1.sender = Create2Factory.getDeployedAddress(ctr, salt);
       } else {
         // console.log('\t== not our deployer. our=', Create2Factory.contractAddress, 'got', initAddr)
         if (provider == null) throw new Error("no entrypoint/provider");
@@ -252,10 +233,10 @@ export async function fillUserOp(
       throw new Error("must have entryPoint to autofill nonce");
     const c = new Contract(
       op.sender!,
-      ["function nonce() view returns(uint256)"],
+      [`function ${getNonceFunction}() view returns(uint256)`],
       provider
     );
-    op1.nonce = await c.nonce().catch(rethrow());
+    op1.nonce = await c[getNonceFunction]().catch(rethrow());
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
@@ -287,7 +268,7 @@ export async function fillUserOp(
   // eslint-disable-next-line @typescript-eslint/no-base-to-string
   if (op2.preVerificationGas.toString() === "0") {
     // TODO: we don't add overhead, which is ~21000 for a single TX, but much lower in a batch.
-    op2.preVerificationGas = callDataCost(packUserOp(op2, false)) + 21000;
+    op2.preVerificationGas = callDataCost(packUserOp(op2, false));
   }
   return op2;
 }
@@ -296,12 +277,14 @@ export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
   entryPoint?: EntryPoint,
+  getNonceFunction = "getNonce",
   extraPreVerificationGas: number = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
-  const op2 = await fillUserOp(op, entryPoint);
+  const op2 = await fillUserOp(op, entryPoint, getNonceFunction);
   op2.preVerificationGas =
     Number(op2.preVerificationGas) + extraPreVerificationGas;
+
   const chainId = await provider!.getNetwork().then((net) => net.chainId);
   const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
 

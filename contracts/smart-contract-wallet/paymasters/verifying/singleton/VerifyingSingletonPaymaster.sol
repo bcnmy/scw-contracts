@@ -36,9 +36,6 @@ contract VerifyingSingletonPaymaster is
 
     address public verifyingSigner;
 
-    // paymaster nonce for account
-    mapping(address => uint256) private paymasterNonces;
-
     event EPGasOverheadChanged(
         uint256 indexed _oldValue,
         uint256 indexed _newValue
@@ -157,7 +154,6 @@ contract VerifyingSingletonPaymaster is
      */
     function getHash(
         UserOperation calldata userOp,
-        uint256 senderPaymasterNonce,
         address paymasterId
     ) public view returns (bytes32) {
         //can't use userOp.hash(), since it contains also the paymasterAndData itself.
@@ -176,23 +172,9 @@ contract VerifyingSingletonPaymaster is
                     userOp.maxPriorityFeePerGas,
                     block.chainid,
                     address(this),
-                    paymasterId,
-                    senderPaymasterNonce
+                    paymasterId
                 )
             );
-    }
-
-    function getSenderPaymasterNonce(
-        UserOperation calldata userOp
-    ) public view returns (uint256) {
-        address account = userOp.getSender();
-        return paymasterNonces[account];
-    }
-
-    function getSenderPaymasterNonce(
-        address account
-    ) public view returns (uint256) {
-        return paymasterNonces[account];
     }
 
     /**
@@ -210,11 +192,7 @@ contract VerifyingSingletonPaymaster is
         uint256 requiredPreFund
     ) internal override returns (bytes memory context, uint256 validationData) {
         PaymasterData memory paymasterData = userOp._decodePaymasterData();
-        bytes32 hash = getHash(
-            userOp,
-            paymasterNonces[userOp.getSender()],
-            paymasterData.paymasterId
-        );
+        bytes32 hash = getHash(userOp, paymasterData.paymasterId);
         uint256 sigLength = paymasterData.signatureLength;
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
         if (sigLength != 65) revert InvalidPaymasterSignatureLength(sigLength);
@@ -226,17 +204,12 @@ contract VerifyingSingletonPaymaster is
             // empty context and sigTimeRange 1
             return ("", 1);
         }
-        _updateNonce(userOp);
         if (requiredPreFund > paymasterIdBalances[paymasterData.paymasterId])
             revert InsufficientBalance(
                 requiredPreFund,
                 paymasterIdBalances[paymasterData.paymasterId]
             );
         return (userOp.paymasterContext(paymasterData, userOp.gasPrice()), 0);
-    }
-
-    function _updateNonce(UserOperation calldata userOp) internal {
-        ++paymasterNonces[userOp.getSender()];
     }
 
     /**
