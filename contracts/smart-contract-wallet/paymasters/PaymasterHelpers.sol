@@ -6,6 +6,8 @@ import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOpera
 
 struct PaymasterData {
     address paymasterId;
+    uint48 validUntil;
+    uint48 validAfter;
     bytes signature;
     uint256 signatureLength;
 }
@@ -42,11 +44,20 @@ library PaymasterHelpers {
         UserOperation calldata op
     ) internal pure returns (PaymasterData memory) {
         bytes calldata paymasterAndData = op.paymasterAndData;
-        (address paymasterId, bytes memory signature) = abi.decode(
-            paymasterAndData[20:],
-            (address, bytes)
-        );
-        return PaymasterData(paymasterId, signature, signature.length);
+        (
+            address paymasterId,
+            uint48 validUntil,
+            uint48 validAfter,
+            bytes memory signature
+        ) = abi.decode(paymasterAndData[20:], (address, uint48, uint48, bytes));
+        return
+            PaymasterData(
+                paymasterId,
+                validUntil,
+                validAfter,
+                signature,
+                signature.length
+            );
     }
 
     /**

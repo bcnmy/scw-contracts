@@ -33,6 +33,7 @@ const config: HardhatUserConfig = {
         version: "0.8.17",
         settings: {
           optimizer: { enabled: true, runs: 800 },
+          viaIR: true,
         },
       },
     ],
@@ -185,12 +186,18 @@ const config: HardhatUserConfig = {
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 420,
     },
     optimismMainnet: {
       url: `https://mainnet.optimism.io`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 10,
     },
     moonbeam_mainnet: {
@@ -211,19 +218,28 @@ const config: HardhatUserConfig = {
     },
     celoTestnet: {
       url: `https://alfajores-forno.celo-testnet.org`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 44787,
       // gasPrice: 6400000
     },
     celoMainnet: {
       url: `https://forno.celo.org`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 42220,
       // gasPrice: 6400000
     },
     neonDevnet: {
       url: `https://proxy.devnet.neonlabs.org/solana`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 245022926,
       // gasPrice: 6400000
     },
@@ -244,6 +260,24 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
       chainId: 59140,
+    },
+    lineaMainnet: {
+      url: process.env.LINEA_MAINNET_URL || ``,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 59144,
+    },
+    baseMainnet: {
+      url:
+        process.env.BASE_MAINNET_URL ||
+        `https://developer-access-mainnet.base.org`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 8453,
     },
   },
   gasReporter: {
@@ -269,6 +303,7 @@ const config: HardhatUserConfig = {
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
       "base-goerli": "PLACEHOLDER_STRING",
       "linea-goerli": "PLACEHOLDER_STRING",
+      "base-mainnet": process.env.BASE_API_KEY || "",
     },
     customChains: [
       {
@@ -285,6 +320,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-goerli.basescan.org/api",
           browserURL: "https://goerli.basescan.org",
+        },
+      },
+      {
+        network: "base-mainnet",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
         },
       },
     ],

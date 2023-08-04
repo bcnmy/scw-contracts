@@ -24,6 +24,9 @@ import {
   Transaction,
 } from "../../src/utils/execution";
 
+const MOCK_VALID_UNTIL = "0x00000000deadbeef";
+const MOCK_VALID_AFTER = "0x0000000000001234";
+
 export async function deployEntryPoint(
   provider = ethers.provider
 ): Promise<EntryPoint> {
@@ -178,7 +181,9 @@ describe("Account Functionality: 4337", function () {
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      await offchainSigner.getAddress()
+      await offchainSigner.getAddress(),
+      MOCK_VALID_UNTIL,
+      MOCK_VALID_AFTER
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
     const userOp = await fillAndSign(
@@ -187,8 +192,13 @@ describe("Account Functionality: 4337", function () {
         paymasterAndData: hexConcat([
           paymasterAddress,
           ethers.utils.defaultAbiCoder.encode(
-            ["address", "bytes"],
-            [await offchainSigner.getAddress(), sig]
+            ["address", "uint48", "uint48", "bytes"],
+            [
+              await offchainSigner.getAddress(),
+              MOCK_VALID_UNTIL,
+              MOCK_VALID_AFTER,
+              sig,
+            ]
           ),
         ]),
       },
@@ -269,7 +279,9 @@ describe("Account Functionality: 4337", function () {
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      await offchainSigner.getAddress()
+      await offchainSigner.getAddress(),
+      MOCK_VALID_UNTIL,
+      MOCK_VALID_AFTER
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
     const userOp = await fillAndSign(
@@ -278,8 +290,13 @@ describe("Account Functionality: 4337", function () {
         paymasterAndData: hexConcat([
           paymasterAddress,
           ethers.utils.defaultAbiCoder.encode(
-            ["address", "bytes"],
-            [await offchainSigner.getAddress(), sig]
+            ["address", "uint48", "uint48", "bytes"],
+            [
+              await offchainSigner.getAddress(),
+              MOCK_VALID_UNTIL,
+              MOCK_VALID_AFTER,
+              sig,
+            ]
           ),
         ]),
       },
@@ -360,7 +377,9 @@ describe("Account Functionality: 4337", function () {
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      await offchainSigner.getAddress()
+      await offchainSigner.getAddress(),
+      MOCK_VALID_UNTIL,
+      MOCK_VALID_AFTER
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
     const userOp = await fillAndSign(
@@ -369,8 +388,13 @@ describe("Account Functionality: 4337", function () {
         paymasterAndData: hexConcat([
           paymasterAddress,
           ethers.utils.defaultAbiCoder.encode(
-            ["address", "bytes"],
-            [await offchainSigner.getAddress(), sig]
+            ["address", "uint48", "uint48", "bytes"],
+            [
+              await offchainSigner.getAddress(),
+              MOCK_VALID_UNTIL,
+              MOCK_VALID_AFTER,
+              sig,
+            ]
           ),
         ]),
       },
@@ -461,7 +485,9 @@ describe("Account Functionality: 4337", function () {
 
     const hash = await verifyingSingletonPaymaster.getHash(
       userOp1,
-      await offchainSigner.getAddress()
+      await offchainSigner.getAddress(),
+      MOCK_VALID_UNTIL,
+      MOCK_VALID_AFTER
     );
     const sig = await offchainSigner.signMessage(arrayify(hash));
     const userOp = await fillAndSign(
@@ -470,8 +496,13 @@ describe("Account Functionality: 4337", function () {
         paymasterAndData: hexConcat([
           paymasterAddress,
           ethers.utils.defaultAbiCoder.encode(
-            ["address", "bytes"],
-            [await offchainSigner.getAddress(), sig]
+            ["address", "uint48", "uint48", "bytes"],
+            [
+              await offchainSigner.getAddress(),
+              MOCK_VALID_UNTIL,
+              MOCK_VALID_AFTER,
+              sig,
+            ]
           ),
         ]),
       },
