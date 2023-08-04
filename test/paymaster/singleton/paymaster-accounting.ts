@@ -126,7 +126,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
         await paymaster.connect(accounts[0]).setUnaccountedEPGasOverhead(10000)
       )
         .to.emit(paymaster, "EPGasOverheadChanged")
-        .withArgs(9600, 10000);
+        .withArgs(12000, 10000);
 
       const txnData = await getExecuteCallData(
         destinationAddress,
@@ -153,7 +153,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       ).deposit;
       const paymasterIdDepositBefore = await paymaster.getBalance(paymasterId);
 
-      // Set it back to 9600
+      // Set it back to 12000
       expect(
         await paymaster.connect(accounts[0]).setUnaccountedEPGasOverhead(12000)
       )
