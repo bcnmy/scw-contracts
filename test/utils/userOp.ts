@@ -19,6 +19,7 @@ import {
 import { EntryPoint, VerifyingSingletonPaymaster } from "../../typechain";
 import { UserOperation } from "./userOperation";
 import { Create2Factory } from "../../src/Create2Factory";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 export function packUserOp(op: UserOperation, forSignature = true): string {
   if (forSignature) {
@@ -355,7 +356,10 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   entryPoint: EntryPoint,
   moduleAddress: string,
   paymaster: Contract,
-  verifiedSigner: Wallet,
+  verifiedSigner: Wallet | SignerWithAddress,
+  options?: {
+    preVerificationGas?: number;
+  }
 ) : Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
   
@@ -367,7 +371,8 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
-      callData: txnDataAA1
+      callData: txnDataAA1,
+      ...options,
     },
     userOpSigner,
     entryPoint,
