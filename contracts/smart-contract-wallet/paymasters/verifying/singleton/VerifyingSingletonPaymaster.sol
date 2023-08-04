@@ -226,7 +226,7 @@ contract VerifyingSingletonPaymaster is
                 paymasterIdBalances[paymasterData.paymasterId]
             );
         return (
-            userOp.paymasterContext(paymasterData, userOp.gasPrice()),
+            userOp.paymasterContext(paymasterData),
             _packValidationData(
                 false,
                 paymasterData.validUntil,
@@ -250,7 +250,7 @@ contract VerifyingSingletonPaymaster is
         address extractedPaymasterId = data.paymasterId;
         uint256 balToDeduct = actualGasCost +
             unaccountedEPGasOverhead *
-            data.gasPrice;
+            tx.gasprice;
         paymasterIdBalances[extractedPaymasterId] =
             paymasterIdBalances[extractedPaymasterId] -
             balToDeduct;
