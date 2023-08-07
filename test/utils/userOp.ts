@@ -453,6 +453,8 @@ export async function makeMultichainEcdsaModuleUserOp(
   entryPoint: EntryPoint,
   moduleAddress: string,
   leaves: string[],
+  validUntil: number = 0,
+  validAfter: number = 0
 ) : Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
   
@@ -470,8 +472,15 @@ export async function makeMultichainEcdsaModuleUserOp(
     entryPoint,
     'nonce'
   );
-
-  leaves.push(await entryPoint.getUserOpHash(userOp));
+  
+  const leafOfThisUserOp = hexConcat([
+    hexZeroPad(ethers.utils.hexlify(validUntil),6),
+    hexZeroPad(ethers.utils.hexlify(validAfter),6),
+    hexZeroPad(await entryPoint.getUserOpHash(userOp),32),
+  ]);  
+  
+  leaves.push(leafOfThisUserOp);
+  leaves = leaves.map(x => ethers.utils.keccak256(x));
   
   const chainMerkleTree = new MerkleTree(
     leaves,
@@ -486,8 +495,10 @@ export async function makeMultichainEcdsaModuleUserOp(
   // this is done by dapp automatically
   const merkleProof = chainMerkleTree.getHexProof(leaves[leaves.length - 1]);
   const moduleSignature = defaultAbiCoder.encode(
-    ["bytes32", "bytes32[]", "bytes"],
+    ["uint48", "uint48", "bytes32", "bytes32[]", "bytes"],
     [
+      validUntil,
+      validAfter,
       chainMerkleTree.getHexRoot(),
       merkleProof,
       multichainSignature,

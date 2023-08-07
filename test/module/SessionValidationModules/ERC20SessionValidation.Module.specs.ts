@@ -119,6 +119,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
   it ("should be able to process Session Key signed userOp", async () => {
     const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, mockToken } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+    await mockToken.mint(charlie.address, ethers.utils.parseEther("10")); //make warm recepient
 
     const transferUserOp = await makeErc20TransferUserOp(
       mockToken.address, 
@@ -129,7 +130,12 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     );
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
+    const handleOpsTxn = await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
+    const receipt = await handleOpsTxn.wait();
+      console.log(
+        "Send erc20 with erc20 Session Validation Module: ",
+        receipt.gasUsed.toString()
+      );
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
   });
 

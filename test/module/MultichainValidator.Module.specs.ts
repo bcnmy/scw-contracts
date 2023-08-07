@@ -3,7 +3,7 @@ import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign, makeMultichainEcdsaModuleUserOp } from "../utils/userOp";
 import { getERC20SessionKeyParams } from "../utils/sessionKey";
 import { encodeTransfer } from "../utils/testUtils";
-import { defaultAbiCoder } from "ethers/lib/utils";
+import { defaultAbiCoder, hexZeroPad, hexConcat } from "ethers/lib/utils";
 import { 
   getEntryPoint, 
   getSmartAccountImplementation, 
@@ -130,13 +130,21 @@ describe("MultichainValidator Module", async () => {
     
     // =============== make a multichain signature for a userOp ===============
     
-    const leaf1 = ethers.utils.keccak256('0xb0bb0b');
-    const leaf2 = await entryPoint.getUserOpHash(deploymentUserOp);
-    const leaf3 = ethers.utils.keccak256('0xdecafdecaf');
-    const leaf4 = ethers.utils.keccak256('0xa11cea11ce');
+    const validUntil = 0; //unlimited
+    const validAfter = 0;
+
+    const leaf1 = '0xb0bb0b'; //some random hash
+    const leaf2 = hexConcat([
+                    hexZeroPad(ethers.utils.hexlify(validUntil),6),
+                    hexZeroPad(ethers.utils.hexlify(validAfter),6),
+                    hexZeroPad(await entryPoint.getUserOpHash(deploymentUserOp),32),
+                  ]);
+    const leaf3 = '0xdecafdecaf';
+    const leaf4 = '0xa11cea11ce';
 
     // prepare the merkle tree containing the leaves with chainId info
-    const leaves = [leaf1, leaf2, leaf3, leaf4];
+    const leaves = [leaf1, leaf2, leaf3, leaf4].map(x => ethers.utils.keccak256(x));
+
     const chainMerkleTree = new MerkleTree(
       leaves,
       keccak256,
@@ -147,8 +155,10 @@ describe("MultichainValidator Module", async () => {
     const multichainSignature = await smartAccountOwner.signMessage(ethers.utils.arrayify(chainMerkleTree.getHexRoot()));
 
     const moduleSignature = defaultAbiCoder.encode(
-      ["bytes32", "bytes32[]", "bytes"],
+      ["uint48", "uint48", "bytes32", "bytes32[]", "bytes"],
       [
+        validUntil,
+        validAfter,
         chainMerkleTree.getHexRoot(),
         merkleProof,
         multichainSignature,
@@ -208,8 +218,6 @@ describe("MultichainValidator Module", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
       const tokenAmountToTransfer = ethers.utils.parseEther("0.5945");
 
-      const chainId = 31337;
-      const leaveId = 0; //index of the leave (chainId) that we are making the userOp for
       const sendTokenMultichainUserOp = await makeMultichainEcdsaModuleUserOp(
         "executeCall_s1m",
         [
@@ -221,7 +229,7 @@ describe("MultichainValidator Module", async () => {
         smartAccountOwner,
         entryPoint,
         multichainECDSAValidator.address,
-        [ethers.utils.keccak256('0xb0bb0b'), ethers.utils.keccak256('0xdecaf0')],
+        ['0xb0bb0b', '0xdecaf0'],
       );
 
       const handleOpsTxn = await entryPoint.handleOps([sendTokenMultichainUserOp], alice.address, {gasLimit: 10000000});
@@ -232,6 +240,70 @@ describe("MultichainValidator Module", async () => {
       );
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+    });
+
+    it ("should not process an expired userOp", async () => {
+      const { userSA, entryPoint, multichainECDSAValidator, mockToken} = await setupTests();
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.5945");
+
+      const validUntil = 1; //less tjan block.timestamp and not 0 as 0 means unlimited
+      const validAfter = 0;
+
+      const sendTokenMultichainUserOp = await makeMultichainEcdsaModuleUserOp(
+        "executeCall_s1m",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        multichainECDSAValidator.address,
+        ['0xb0bb0b', '0xdecaf0'],
+        validUntil,
+        validAfter,
+      );
+
+      await expect(
+        entryPoint.handleOps([sendTokenMultichainUserOp], alice.address, {gasLimit: 10000000})
+      ).to.be.revertedWith("FailedOp").withArgs(0, "AA22 expired or not due");
+
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+    });
+
+    it ("should not process a not due userOp", async () => {
+      const { userSA, entryPoint, multichainECDSAValidator, mockToken} = await setupTests();
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.5945");
+
+      const validUntil = 0;
+      const validAfter = 32490999253; // year 2999
+
+      const sendTokenMultichainUserOp = await makeMultichainEcdsaModuleUserOp(
+        "executeCall_s1m",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        multichainECDSAValidator.address,
+        ['0xb0bb0b', '0xdecaf0'],
+        validUntil,
+        validAfter,
+      );
+
+      await expect(
+        entryPoint.handleOps([sendTokenMultichainUserOp], alice.address, {gasLimit: 10000000})
+      ).to.be.revertedWith("FailedOp").withArgs(0, "AA22 expired or not due");
+
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
     });
 
     it ("should not allow to replay a userOp with the same nonce", async () => {
@@ -252,7 +324,7 @@ describe("MultichainValidator Module", async () => {
         smartAccountOwner,
         entryPoint,
         multichainECDSAValidator.address,
-        [ethers.utils.keccak256('0xb0bb0b'), ethers.utils.keccak256('0xdecaf0')],
+        ['0xb0bb0b', '0xdecaf0'],
       );
 
       const handleOpsTxn = await entryPoint.handleOps([sendTokenMultichainUserOp], alice.address, {gasLimit: 10000000});
@@ -274,7 +346,7 @@ describe("MultichainValidator Module", async () => {
         smartAccountOwner,
         entryPoint,
         multichainECDSAValidator.address,
-        [ethers.utils.keccak256('0xb0bb0b'), ethers.utils.keccak256('0xdecaf0')],
+        ['0xb0bb0b', '0xdecaf0'],
       );
 
       sendTokenMultichainUserOp2.nonce = sendTokenMultichainUserOp.nonce;
@@ -284,7 +356,6 @@ describe("MultichainValidator Module", async () => {
       ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: Invalid UserOp");
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceAfterFirstUserOp);
-      
     });
 
     it ("should not process a userOp if the merkle root provided was not signed", async () => {
@@ -315,8 +386,19 @@ describe("MultichainValidator Module", async () => {
         'nonce'
       );
 
-      const leaves = [ethers.utils.keccak256('0xa11ce0'), ethers.utils.keccak256('0xbeef')];
-      leaves.push(await entryPoint.getUserOpHash(userOp));
+      const validUntil = 0;
+      const validAfter = 0;
+
+      let leaves = ['0xa11ce0', '0xbeef'];
+      const leafOfThisUserOp = hexConcat([
+        hexZeroPad(ethers.utils.hexlify(validUntil),6),
+        hexZeroPad(ethers.utils.hexlify(validAfter),6),
+        hexZeroPad(await entryPoint.getUserOpHash(userOp),32),
+      ]);  
+
+      leaves.push(leafOfThisUserOp);
+
+      leaves = leaves.map(x => ethers.utils.keccak256(x));
       
       const correctMerkleTree = new MerkleTree(
         leaves,
@@ -325,7 +407,7 @@ describe("MultichainValidator Module", async () => {
       );
       
       const wrongMerkleTree = new MerkleTree(
-        [ethers.utils.keccak256('0xb0bb0b'), ethers.utils.keccak256('0xdecaf0')],
+        ['0xb0bb0b', '0xdecaf0'].map(x => ethers.utils.keccak256(x)),
         keccak256,
         { sortPairs: true }
       );
@@ -334,8 +416,10 @@ describe("MultichainValidator Module", async () => {
     
       const merkleProof = correctMerkleTree.getHexProof(leaves[leaves.length-1]);
       const moduleSignature = defaultAbiCoder.encode(
-        ["bytes32", "bytes32[]", "bytes"],
+        ["uint48", "uint48", "bytes32", "bytes32[]", "bytes"],
         [
+          validUntil,
+          validAfter,
           correctMerkleTree.getHexRoot(),
           merkleProof,
           wrongSignature,
@@ -385,8 +469,17 @@ describe("MultichainValidator Module", async () => {
         'nonce'
       );
 
-      const leaves = [ethers.utils.keccak256('0xa11ce0'), ethers.utils.keccak256('0xbeef')];
-      leaves.push(await entryPoint.getUserOpHash(userOp));
+      const validUntil = 0;
+      const validAfter = 0;
+
+      let leaves = ['0xa11ce0', '0xbeef'];
+      const leafOfThisUserOp = hexConcat([
+        hexZeroPad(ethers.utils.hexlify(validUntil),6),
+        hexZeroPad(ethers.utils.hexlify(validAfter),6),
+        hexZeroPad(await entryPoint.getUserOpHash(userOp),32),
+      ]);  
+      leaves.push(leafOfThisUserOp);
+      leaves = leaves.map(x => ethers.utils.keccak256(x));
       
       const correctMerkleTree = new MerkleTree(
         leaves,
@@ -399,8 +492,10 @@ describe("MultichainValidator Module", async () => {
       const wrongLeaf = ethers.utils.keccak256('0xa11ce0');
       const wrongProof = correctMerkleTree.getHexProof(wrongLeaf);
       const moduleSignature = defaultAbiCoder.encode(
-        ["bytes32", "bytes32[]", "bytes"],
+        ["uint48", "uint48", "bytes32", "bytes32[]", "bytes"],
         [
+          validUntil,
+          validAfter,
           correctMerkleTree.getHexRoot(),
           wrongProof,
           signature,

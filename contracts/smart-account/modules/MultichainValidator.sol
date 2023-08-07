@@ -3,17 +3,9 @@ pragma solidity 0.8.17;
 
 import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
 import {EcdsaOwnershipRegistryModule} from "./EcdsaOwnershipRegistryModule.sol";
-import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import {calldataKeccak} from "@account-abstraction/contracts/core/Helpers.sol";
-
-interface ISmartAccount {
-    function nonce() external view returns (uint256);
-}
-
-struct SessionStorage {
-    bytes32 merkleRoot;
-}
+import {calldataKeccak, _packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 
 contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
     using UserOperationLib for UserOperation;
@@ -47,19 +39,24 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
 
         //otherwise it is a multichain signature
         (
+            uint48 validUntil,
+            uint48 validAfter,
             bytes32 merkleTreeRoot,
             bytes32[] memory merkleProof,
             bytes memory multichainSignature
-        ) = abi.decode(moduleSignature, (bytes32, bytes32[], bytes));
+        ) = abi.decode(
+                moduleSignature,
+                (uint48, uint48, bytes32, bytes32[], bytes)
+            );
 
-        if (!MerkleProof.verify(merkleProof, merkleTreeRoot, userOpHash)) {
+        //make a leaf out of userOpHash, validUntil and validAfter
+        bytes32 leaf = keccak256(
+            abi.encodePacked(validUntil, validAfter, userOpHash)
+        );
+
+        if (!MerkleProof.verify(merkleProof, merkleTreeRoot, leaf)) {
             revert("Invalid UserOp");
         }
-
-        // reconstruct hash = all the userOp fileds except nonce + merkleTreeRoot that is based on chainId, nonce, address(this)
-        /* bytes32 multichainHash = keccak256(
-            abi.encode(getChainAgnosticUserOpHash(userOp), merkleTreeRoot)
-        ); */
 
         return
             _verifySignature(
@@ -67,7 +64,11 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
                 multichainSignature,
                 address(uint160(sender))
             )
-                ? VALIDATION_SUCCESS
+                ? _packValidationData(
+                    false, //sigVerificationFailed = false
+                    validUntil == 0 ? type(uint48).max : validUntil,
+                    validAfter
+                )
                 : SIG_VALIDATION_FAILED;
     }
 
@@ -76,10 +77,4 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
      * isValidSignature is intended to work not with a multichain signature
      * but with a regular ecdsa signature over a message hash
      */
-
-    // what else can vary?
-    // userOp.maxFeePerGas,
-    // userOp.maxPriorityFeePerGas,
-    // paymaster and data
-    // ?initcode? can it vary as well?
 }
