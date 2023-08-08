@@ -10,7 +10,7 @@
     "clean": "npx hardhat clean",
     "build": "npm run clean && npx hardhat compile",
     "test": "npx hardhat test",
-    "bundler-test": "bash -c ./scripts/bundler-tests.sh",
+    "bundler-test": "./scripts/bundler-tests.sh",
     "lint": "prettier --write 'contracts/**/*.sol'",
     "postinstall": "husky install",
     "prepack": "pinst --disable",
