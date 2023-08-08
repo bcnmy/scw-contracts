@@ -108,7 +108,10 @@ export const getSmartAccountWithModule = async (
   );
 };
 
-export const compile = async (source: string) => {
+export const compile = async (
+  source: string,
+  settingsOverrides?: { evmVersion?: string }
+) => {
   const input = JSON.stringify({
     language: "Solidity",
     settings: {
@@ -117,6 +120,7 @@ export const compile = async (source: string) => {
           "*": ["abi", "evm.bytecode"],
         },
       },
+      ...settingsOverrides,
     },
     sources: {
       "tmp.sol": {
@@ -141,10 +145,11 @@ export const compile = async (source: string) => {
 };
 
 export const deployContract = async (
-  deployer: Wallet,
-  source: string
+  deployer: Wallet | SignerWithAddress,
+  source: string,
+  settingsOverrides?: { evmVersion?: string }
 ): Promise<Contract> => {
-  const output = await compile(source);
+  const output = await compile(source, settingsOverrides);
   const transaction = await deployer.sendTransaction({
     data: output.data,
     gasLimit: 6000000,
