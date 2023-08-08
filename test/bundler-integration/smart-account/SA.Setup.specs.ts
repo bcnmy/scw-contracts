@@ -33,18 +33,6 @@ describe("Smart Account Setup (with Bundler)", async () => {
     defaultSnapshot = await environment.snapshot();
   });
 
-  afterEach(async function () {
-    const chainId = (await ethers.provider.getNetwork()).chainId;
-    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-      this.skip();
-    }
-
-    await Promise.all([
-      environment.revert(defaultSnapshot),
-      environment.resetBundler(),
-    ]);
-  });
-
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
       await deployments.fixture();
@@ -93,6 +81,18 @@ describe("Smart Account Setup (with Bundler)", async () => {
   );
 
   describe("Update Implementation", async () => {
+    afterEach(async function () {
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+        this.skip();
+      }
+
+      await Promise.all([
+        environment.revert(defaultSnapshot),
+        environment.resetBundler(),
+      ]);
+    });
+
     // updates the implementation and calls are forwarded to the new implementation and the event
     it("can update to an implementation and calls are forwarded and event is emitted", async () => {
       const { entryPoint, ecdsaModule, userSA } = await setupTests();
@@ -139,6 +139,18 @@ describe("Smart Account Setup (with Bundler)", async () => {
 
   // update callback handler
   describe("Update Implementation", async () => {
+    afterEach(async function () {
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+        this.skip();
+      }
+
+      await Promise.all([
+        environment.revert(defaultSnapshot),
+        environment.resetBundler(),
+      ]);
+    });
+
     // updates the callback handler and calls are forwarded to the new callback handler and the event is emitted
     it("can update to a callback handler and calls are forwarded and event is emitted", async () => {
       const { entryPoint, ecdsaModule, userSA } = await setupTests();

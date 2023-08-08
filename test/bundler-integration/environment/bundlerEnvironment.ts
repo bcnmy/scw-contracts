@@ -149,6 +149,26 @@ export class BundlerTestEnvironment {
     }
   };
 
+  dumpMempool = async () => {
+    const result = await this.apiClient.post("/rpc", {
+      jsonrpc: "2.0",
+      method: "debug_bundler_dumpMempool",
+      params: [],
+    });
+    if (result.status !== 200) {
+      throw new Error(
+        `Failed to send reset bundler: ${JSON.stringify(
+          result.data.error.message
+        )}`
+      );
+    }
+    if (result.data.error) {
+      throw new BundlerResetError(JSON.stringify(result.data.error));
+    }
+
+    return result.data.result;
+  };
+
   revert = async (snapshot: Snapshot) => {
     await this.provider.send("debug_setHead", [
       utils.hexValue(BigNumber.from(snapshot.blockNumber)),

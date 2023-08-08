@@ -32,18 +32,6 @@ describe("Ownerless Smart Account Modules (with Bundler)", async () => {
     defaultSnapshot = await environment.snapshot();
   });
 
-  afterEach(async function () {
-    const chainId = (await ethers.provider.getNetwork()).chainId;
-    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-      this.skip();
-    }
-
-    await Promise.all([
-      environment.revert(defaultSnapshot),
-      environment.resetBundler(),
-    ]);
-  });
-
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
       await deployments.fixture();
@@ -92,6 +80,18 @@ describe("Ownerless Smart Account Modules (with Bundler)", async () => {
   );
 
   describe("enableModule: ", async () => {
+    afterEach(async function () {
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+        this.skip();
+      }
+
+      await Promise.all([
+        environment.revert(defaultSnapshot),
+        environment.resetBundler(),
+      ]);
+    });
+
     it("Can enable module and it is enabled", async () => {
       const { ecdsaModule, userSA, entryPoint } = await setupTests();
 
@@ -117,6 +117,18 @@ describe("Ownerless Smart Account Modules (with Bundler)", async () => {
   });
 
   describe("setupAndEnableModule: ", async () => {
+    afterEach(async function () {
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+        this.skip();
+      }
+
+      await Promise.all([
+        environment.revert(defaultSnapshot),
+        environment.resetBundler(),
+      ]);
+    });
+
     it("Can enable and setup another module and it is enabled and setup", async () => {
       const { ecdsaModule, userSA, entryPoint } = await setupTests();
 
@@ -166,6 +178,18 @@ describe("Ownerless Smart Account Modules (with Bundler)", async () => {
   });
 
   describe("disableModule: ", async () => {
+    afterEach(async function () {
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+        this.skip();
+      }
+
+      await Promise.all([
+        environment.revert(defaultSnapshot),
+        environment.resetBundler(),
+      ]);
+    });
+
     it("Can disable module and it is disabled", async () => {
       const { ecdsaModule, userSA, entryPoint } = await setupTests();
 
