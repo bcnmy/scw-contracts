@@ -42,7 +42,10 @@ describe("Ownerless Smart Account Basics (with Bundler)", async () => {
       this.skip();
     }
 
-    await environment.revert(defaultSnapshot);
+    await Promise.all([
+      environment.revert(defaultSnapshot),
+      environment.resetBundler(),
+    ]);
   });
 
   const setupTests = deployments.createFixture(

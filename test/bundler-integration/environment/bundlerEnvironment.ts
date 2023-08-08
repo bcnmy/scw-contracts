@@ -15,6 +15,12 @@ export class UserOperationSubmissionError extends Error {
     this.name = "UserOperationSubmissionError";
   }
 }
+export class BundlerResetError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "BundleResetError";
+  }
+}
 
 export class BundlerTestEnvironment {
   public static BUNDLER_ENVIRONMENT_CHAIN_ID = 1337;
@@ -117,6 +123,30 @@ export class BundlerTestEnvironment {
     }
 
     return result.data;
+  };
+
+  resetBundler = async () => {
+    const result = await this.apiClient.post("/rpc", {
+      jsonrpc: "2.0",
+      method: "debug_bundler_clearState",
+      params: [],
+    });
+    if (result.status !== 200) {
+      throw new Error(
+        `Failed to send reset bundler: ${JSON.stringify(
+          result.data.error.message
+        )}`
+      );
+    }
+    if (result.data.error) {
+      throw new BundlerResetError(JSON.stringify(result.data.error));
+    }
+
+    if (result.data.result !== "ok") {
+      throw new BundlerResetError(
+        `Failed to reset bundler: ${JSON.stringify(result.data.result)}`
+      );
+    }
   };
 
   revert = async (snapshot: Snapshot) => {
