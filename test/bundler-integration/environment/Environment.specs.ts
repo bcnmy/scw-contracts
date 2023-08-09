@@ -19,31 +19,17 @@ import {
 } from "../../../typechain";
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
 import { encodeTransfer } from "../../utils/testUtils";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("Bundler Environment", async () => {
-  const signers = await ethers.getSigners();
-  const [deployer, alice, bob, charlie, smartAccountOwner] = signers;
+  let signers: SignerWithAddress[];
+  let deployer: SignerWithAddress,
+    alice: SignerWithAddress,
+    bob: SignerWithAddress,
+    charlie: SignerWithAddress,
+    smartAccountOwner: SignerWithAddress;
   let environment: BundlerTestEnvironment;
   let defaultSnapshot: Snapshot;
-
-  before(async function () {
-    const chainId = (await ethers.provider.getNetwork()).chainId;
-    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-      this.skip();
-    }
-
-    environment = await BundlerTestEnvironment.getDefaultInstance();
-    defaultSnapshot = await environment.snapshot();
-  });
-
-  afterEach(async function () {
-    const chainId = (await ethers.provider.getNetwork()).chainId;
-    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-      this.skip();
-    }
-
-    await environment.revert(defaultSnapshot);
-  });
 
   const setupTests = deployments.createFixture(async ({ deployments }) => {
     await deployments.fixture();
@@ -82,6 +68,30 @@ describe("Bundler Environment", async () => {
       ecdsaModule: ecdsaModule,
       userSA: userSA,
     };
+  });
+
+  before(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
+    environment = await BundlerTestEnvironment.getDefaultInstance();
+    defaultSnapshot = await environment.snapshot();
+  });
+
+  beforeEach(async () => {
+    signers = await ethers.getSigners();
+    [deployer, alice, bob, charlie, smartAccountOwner] = signers;
+  });
+
+  afterEach(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
+    await environment.revert(defaultSnapshot);
   });
 
   it("Default Signers should have funds after environment setup", async () => {
@@ -230,15 +240,18 @@ describe("Bundler Environment", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.54245");
 
-    const storageAccessViolatingEcdsaModule = await (await ethers.getContractFactory("WrongStorageAccessValidationModule")).deploy();
+    const storageAccessViolatingEcdsaModule = await (
+      await ethers.getContractFactory("WrongStorageAccessValidationModule")
+    ).deploy();
 
     // enable and initiate the violating module
-    const setupCalldata = storageAccessViolatingEcdsaModule.interface.encodeFunctionData(
-      "initForSmartAccount",
-      [await smartAccountOwner.getAddress()]
-    );
+    const setupCalldata =
+      storageAccessViolatingEcdsaModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
+      );
 
-    let userOp = await makeEcdsaModuleUserOp(
+    const userOp = await makeEcdsaModuleUserOp(
       "setupAndEnableModule",
       [storageAccessViolatingEcdsaModule.address, setupCalldata],
       userSA.address,
@@ -267,8 +280,6 @@ describe("Bundler Environment", async () => {
       }
     );
 
-    //await environment.sendUserOperation(violatingUserOp, entryPoint.address);
-    
     const expectedError = new UserOperationSubmissionError(
       '{"message":"account has forbidden read from'
     );
@@ -281,7 +292,8 @@ describe("Bundler Environment", async () => {
     }
 
     expect(thrownError).to.contain(expectedError);
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
-
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(
+      charlieTokenBalanceBefore
+    );
   });
 });

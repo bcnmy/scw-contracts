@@ -11,17 +11,16 @@ import {
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
-import {
-  BundlerTestEnvironment,
-  Snapshot,
-} from "../environment/bundlerEnvironment";
+import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("UserOps (with Bundler)", async () => {
-  const [deployer, smartAccountOwner, charlie, verifiedSigner] =
-    await ethers.getSigners();
+  let deployer: SignerWithAddress,
+    smartAccountOwner: SignerWithAddress,
+    charlie: SignerWithAddress,
+    verifiedSigner: SignerWithAddress;
 
   let environment: BundlerTestEnvironment;
-  let defaultSnapshot: Snapshot;
 
   before(async function () {
     const chainId = (await ethers.provider.getNetwork()).chainId;
@@ -30,7 +29,21 @@ describe("UserOps (with Bundler)", async () => {
     }
 
     environment = await BundlerTestEnvironment.getDefaultInstance();
-    defaultSnapshot = await environment.snapshot();
+  });
+
+  beforeEach(async () => {
+    [deployer, smartAccountOwner, charlie, verifiedSigner] =
+      await ethers.getSigners();
+  });
+
+  afterEach(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
+    await environment.revert(environment.defaultSnapshot!);
+    await environment.resetBundler();
   });
 
   const setupTests = deployments.createFixture(
@@ -81,16 +94,6 @@ describe("UserOps (with Bundler)", async () => {
   );
 
   describe("validateUserOp ", async () => {
-    afterEach(async function () {
-      const chainId = (await ethers.provider.getNetwork()).chainId;
-      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-        this.skip();
-      }
-
-      await environment.revert(defaultSnapshot);
-      await environment.resetBundler();
-    });
-
     it("Can validate a userOp via proper Authorization Module", async () => {
       const { entryPoint, mockToken, userSA, ecdsaModule } = await setupTests();
 

@@ -11,17 +11,15 @@ import {
   deployContract,
 } from "../../utils/setupHelper";
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
-import {
-  BundlerTestEnvironment,
-  Snapshot,
-} from "../environment/bundlerEnvironment";
+import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("Smart Account Setup (with Bundler)", async () => {
-  const [deployer, smartAccountOwner, verifiedSigner] =
-    await ethers.getSigners();
+  let deployer: SignerWithAddress,
+    smartAccountOwner: SignerWithAddress,
+    verifiedSigner: SignerWithAddress;
 
   let environment: BundlerTestEnvironment;
-  let defaultSnapshot: Snapshot;
 
   before(async function () {
     const chainId = (await ethers.provider.getNetwork()).chainId;
@@ -30,7 +28,22 @@ describe("Smart Account Setup (with Bundler)", async () => {
     }
 
     environment = await BundlerTestEnvironment.getDefaultInstance();
-    defaultSnapshot = await environment.snapshot();
+  });
+
+  beforeEach(async () => {
+    [deployer, smartAccountOwner, verifiedSigner] = await ethers.getSigners();
+  });
+
+  afterEach(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
+    await Promise.all([
+      environment.revert(environment.defaultSnapshot!),
+      environment.resetBundler(),
+    ]);
   });
 
   const setupTests = deployments.createFixture(
@@ -81,18 +94,6 @@ describe("Smart Account Setup (with Bundler)", async () => {
   );
 
   describe("Update Implementation", async () => {
-    afterEach(async function () {
-      const chainId = (await ethers.provider.getNetwork()).chainId;
-      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-        this.skip();
-      }
-
-      await Promise.all([
-        environment.revert(defaultSnapshot),
-        environment.resetBundler(),
-      ]);
-    });
-
     // updates the implementation and calls are forwarded to the new implementation and the event
     it("can update to an implementation and calls are forwarded and event is emitted", async () => {
       const { entryPoint, ecdsaModule, userSA } = await setupTests();
@@ -139,18 +140,6 @@ describe("Smart Account Setup (with Bundler)", async () => {
 
   // update callback handler
   describe("Update Implementation", async () => {
-    afterEach(async function () {
-      const chainId = (await ethers.provider.getNetwork()).chainId;
-      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-        this.skip();
-      }
-
-      await Promise.all([
-        environment.revert(defaultSnapshot),
-        environment.resetBundler(),
-      ]);
-    });
-
     // updates the callback handler and calls are forwarded to the new callback handler and the event is emitted
     it("can update to a callback handler and calls are forwarded and event is emitted", async () => {
       const { entryPoint, ecdsaModule, userSA } = await setupTests();

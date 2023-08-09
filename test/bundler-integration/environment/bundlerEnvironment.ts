@@ -30,6 +30,7 @@ export class BundlerTestEnvironment {
   DOCKER_COMPOSE_BUNDLER_SERVICE = "bundler";
 
   private apiClient: AxiosInstance;
+  public defaultSnapshot: Snapshot | undefined;
   private static instance: BundlerTestEnvironment;
 
   constructor(
@@ -65,6 +66,8 @@ export class BundlerTestEnvironment {
       defaultAddresses,
       defaultAddresses.map((_) => this.DEFAULT_FUNDING_AMOUNT)
     );
+
+    this.instance.defaultSnapshot = await this.instance.snapshot();
 
     return this.instance;
   };
