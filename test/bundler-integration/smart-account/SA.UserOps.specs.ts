@@ -87,10 +87,8 @@ describe("UserOps (with Bundler)", async () => {
         this.skip();
       }
 
-      console.log("mempool", await environment.dumpMempool());
       await environment.revert(defaultSnapshot);
       await environment.resetBundler();
-      console.log("mempool after", await environment.dumpMempool());
     });
 
     it("Can validate a userOp via proper Authorization Module", async () => {
