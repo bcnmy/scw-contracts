@@ -221,4 +221,67 @@ describe("Bundler Environment", async () => {
 
     expect(thrownError).to.deep.equal(expectedError);
   });
+
+  it("Should not submit userOp which accesses not associated storage in the validation phase", async () => {
+    const { entryPoint, mockToken, userSA, ecdsaModule } = await setupTests();
+
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(
+      charlie.address
+    );
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.54245");
+
+    const storageAccessViolatingEcdsaModule = await (await ethers.getContractFactory("WrongStorageAccessValidationModule")).deploy();
+
+    // enable and initiate the violating module
+    const setupCalldata = storageAccessViolatingEcdsaModule.interface.encodeFunctionData(
+      "initForSmartAccount",
+      [await smartAccountOwner.getAddress()]
+    );
+
+    let userOp = await makeEcdsaModuleUserOp(
+      "setupAndEnableModule",
+      [storageAccessViolatingEcdsaModule.address, setupCalldata],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address,
+      {
+        preVerificationGas: 50000,
+      }
+    );
+    await environment.sendUserOperation(userOp, entryPoint.address);
+
+    const violatingUserOp = await makeEcdsaModuleUserOp(
+      "executeCall",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      storageAccessViolatingEcdsaModule.address,
+      {
+        preVerificationGas: 50000,
+      }
+    );
+
+    //await environment.sendUserOperation(violatingUserOp, entryPoint.address);
+    
+    const expectedError = new UserOperationSubmissionError(
+      '{"message":"account has forbidden read from'
+    );
+    let thrownError: Error | null = null;
+
+    try {
+      await environment.sendUserOperation(violatingUserOp, entryPoint.address);
+    } catch (e) {
+      thrownError = e as Error;
+    }
+
+    expect(thrownError).to.contain(expectedError);
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+
+  });
 });
