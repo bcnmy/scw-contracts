@@ -26,17 +26,17 @@ describe("Ownerless Smart Account Basics (with Bundler)", async () => {
   let environment: BundlerTestEnvironment;
   let defaultSnapshot: Snapshot;
 
-  before(async function () {
-    const chainId = (await ethers.provider.getNetwork()).chainId;
-    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
-      this.skip();
-    }
+  describe("Ownerless Smart Account Basics (with Bundler)", async () => {
+    before(async function () {
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+      if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+        this.skip();
+      }
 
-    environment = await BundlerTestEnvironment.getDefaultInstance();
-    defaultSnapshot = await environment.snapshot();
-  });
+      environment = await BundlerTestEnvironment.getDefaultInstance();
+      defaultSnapshot = await environment.snapshot();
+    });
 
-  describe("basics", async () => {
     afterEach(async function () {
       const chainId = (await ethers.provider.getNetwork()).chainId;
       if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
