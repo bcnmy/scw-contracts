@@ -19,7 +19,7 @@ import {
   Snapshot,
 } from "../environment/bundlerEnvironment";
 
-describe("Ownerless Smart Account Basics (with Bundler)", async () => {
+describe("Modular Smart Account Basics (with Bundler)", async () => {
   const [deployer, smartAccountOwner, charlie, verifiedSigner] =
     await ethers.getSigners();
 

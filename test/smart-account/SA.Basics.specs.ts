@@ -13,7 +13,7 @@ import {
 } from "../utils/setupHelper";
 import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
-describe("Ownerless Smart Account Basics: ", async () => {
+describe("Modular Smart Account Basics: ", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 

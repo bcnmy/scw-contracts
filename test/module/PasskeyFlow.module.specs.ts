@@ -54,7 +54,7 @@ describe("Passkeys Registry Module:", function () {
     };
   });
 
-  it("Deploys Ownerless Smart Account with Passkey Validation Module", async () => {
+  it("Deploys Modular Smart Account with Passkey Validation Module", async () => {
     const { userSA } = await setupTests();
     expect(await userSA.isModuleEnabled(passKeyModule.address)).to.equal(true);
     // console.log(await passKeyModule.smartAccountPassKeys(userSA.address));
