@@ -12,7 +12,7 @@ import {
 } from "../../utils/setupHelper";
 import { fillAndSign, makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../../utils/userOp";
 
-describe("Upgrade v1 to Ownerless", async () => {
+describe("Upgrade v1 to Modular (v2) (ex. Ownerless)", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
 
@@ -95,7 +95,7 @@ describe("Upgrade v1 to Ownerless", async () => {
 
     const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
     const SmartAccountV1 = await ethers.getContractFactory("SmartAccountV1");
-    const SmartAccountOwnerless = await ethers.getContractFactory("SmartAccount");
+    const SmartAccountModular = await ethers.getContractFactory("SmartAccount");
 
     const updateImplCallData = SmartAccountV1.interface.encodeFunctionData(
       "updateImplementation",
@@ -107,7 +107,7 @@ describe("Upgrade v1 to Ownerless", async () => {
       [smartAccountOwner.address]
     );
 
-    const setupAndEnableModuleCallData = SmartAccountOwnerless.interface.encodeFunctionData(
+    const setupAndEnableModuleCallData = SmartAccountModular.interface.encodeFunctionData(
       "setupAndEnableModule",
       [
         ecdsaModule.address,
@@ -115,13 +115,13 @@ describe("Upgrade v1 to Ownerless", async () => {
       ]
     );
 
-    const userSAOwnerless = await ethers.getContractAt("SmartAccount", userSAV1.address);
+    const userSAModular = await ethers.getContractAt("SmartAccount", userSAV1.address);
 
     // UserOp calldata
     const userOpExecuteBatchCallData = SmartAccountV1.interface.encodeFunctionData(
       "executeBatchCall",
       [
-        [userSAV1.address, userSAOwnerless.address],
+        [userSAV1.address, userSAModular.address],
         [ethers.utils.parseEther("0"),ethers.utils.parseEther("0")],
         [updateImplCallData, setupAndEnableModuleCallData]  
       ]
@@ -147,7 +147,7 @@ describe("Upgrade v1 to Ownerless", async () => {
       smartAccountFactory: smartAccountFactory,
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
-      userSAOwnerless: userSAOwnerless,
+      userSAModular: userSAModular,
       verifyingPaymaster: verifyingPaymaster,
     };
   }
@@ -189,44 +189,44 @@ describe("Upgrade v1 to Ownerless", async () => {
   
   });
 
-  it ("Can upgrade v1 to ownerless, owner info moved to module", async () => {
+  it ("Can upgrade v1 to Modular, owner info moved to module", async () => {
     
     const { 
       ecdsaModule,
-      userSAOwnerless,
+      userSAModular,
     } = await setupTestsAndUpgrade();
 
-    expect(await userSAOwnerless.isModuleEnabled(ecdsaModule.address)).to.equal(true);
-    expect(await ecdsaModule.getOwner(userSAOwnerless.address)).to.equal(smartAccountOwner.address);
+    expect(await userSAModular.isModuleEnabled(ecdsaModule.address)).to.equal(true);
+    expect(await ecdsaModule.getOwner(userSAModular.address)).to.equal(smartAccountOwner.address);
   
   });
 
-  it ("Can receive tokens to Ownerless Smart Account", async () => {
+  it ("Can receive tokens to Modular Smart Account", async () => {
 
-    const { userSAOwnerless, mockToken } = await setupTestsAndUpgrade();
+    const { userSAModular, mockToken } = await setupTestsAndUpgrade();
     
-    const nativeBalanceBefore = await ethers.provider.getBalance(userSAOwnerless.address);
-    const tokenBalanceBefore = await mockToken.balanceOf(userSAOwnerless.address);
+    const nativeBalanceBefore = await ethers.provider.getBalance(userSAModular.address);
+    const tokenBalanceBefore = await mockToken.balanceOf(userSAModular.address);
         
     await deployer.sendTransaction({
-        to: userSAOwnerless.address,
+        to: userSAModular.address,
         value: ethers.utils.parseEther("10"),
     });
 
-    await mockToken.mint(userSAOwnerless.address, ethers.utils.parseEther("1000000"));
+    await mockToken.mint(userSAModular.address, ethers.utils.parseEther("1000000"));
 
     const expectedNativeBalanceAfter = nativeBalanceBefore.add(ethers.utils.parseEther("10"));
     const expectedTokenBalanceAfter = tokenBalanceBefore.add(ethers.utils.parseEther("1000000"));
 
-    expect(await ethers.provider.getBalance(userSAOwnerless.address)).to.equal(expectedNativeBalanceAfter);
-    expect(await mockToken.balanceOf(userSAOwnerless.address)).to.equal(expectedTokenBalanceAfter);
+    expect(await ethers.provider.getBalance(userSAModular.address)).to.equal(expectedNativeBalanceAfter);
+    expect(await mockToken.balanceOf(userSAModular.address)).to.equal(expectedTokenBalanceAfter);
   });
   
-  it ("Can send userOp via Ownerless Smart Account", async () => {
+  it ("Can send userOp via Modular Smart Account", async () => {
     const { 
       entryPoint, 
       mockToken,
-      userSAOwnerless,
+      userSAModular,
       ecdsaModule
     } = await setupTestsAndUpgrade();
 
@@ -240,7 +240,7 @@ describe("Upgrade v1 to Ownerless", async () => {
         ethers.utils.parseEther("0"),
         encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
       ],
-      userSAOwnerless.address,
+      userSAModular.address,
       smartAccountOwner,
       entryPoint,
       ecdsaModule.address
