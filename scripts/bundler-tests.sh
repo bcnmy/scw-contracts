@@ -36,8 +36,8 @@ while true; do
   fi
 done
 
-echo "⚙️  5. Running tests..."
-npx hardhat test test/bundler-integration/**/*.ts --network local
+echo "⚙️  5. Running tests with params --network local $@"
+npx hardhat test test/bundler-integration/**/*.ts --network local "$@"
 
 echo "⚙️  6. Stopping geth and bundler...."
 docker compose -f $COMPOSE_FILE_PATH down
