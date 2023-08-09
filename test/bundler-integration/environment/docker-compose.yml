@@ -4,7 +4,7 @@ services:
   bundler:
     ports: ["3000:3000"]
     image: ankurdubeybiconomy/bundler:latest # Image based off accountabstraction/bundler:0.6.1 with fixes for debug_bundler_clearState
-    command: --network http://geth-dev:8545 --entryPoint 0x1E1EDc60c3C65E45C18D30a5D6E614c2e12d08E1 --show-stack-traces
+    command: --network http://geth-dev:8545 --entryPoint ${ENTRYPOINT} --show-stack-traces
     volumes:
       - ./workdir:/app/workdir:ro
 
