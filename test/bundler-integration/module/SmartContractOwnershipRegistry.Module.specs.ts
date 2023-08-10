@@ -220,8 +220,6 @@ describe("Smart Contract Ownership Registry Module (with Bundler):", async () =>
       const chainId = await provider!.getNetwork().then((net) => net.chainId);
       const userOpHash = getUserOpHash(userOp, entryPoint.address, chainId);
 
-      console.log(userOp);
-
       const res = await smartContractOwnershipRegistryModule.validateUserOp(
         userOp,
         userOpHash
