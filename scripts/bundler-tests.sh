@@ -2,6 +2,7 @@
 
 SCRIPT=$(realpath $0)
 SCRIPT_PATH=$(dirname $SCRIPT)
+ROOT_PATH=$SCRIPT_PATH/..
 ENVIONRMENT_PATH=$SCRIPT_PATH/../test/bundler-integration/environment
 COMPOSE_FILE_PATH=$ENVIONRMENT_PATH/docker-compose.yml
 ENTRYPOINT_DEPLOY_SCRIPT_PATH=$ENVIONRMENT_PATH/deployEntrypoint.ts
@@ -37,7 +38,7 @@ while true; do
 done
 
 echo "⚙️  5. Running tests with params --network local $@"
-npx hardhat test test/bundler-integration/**/*.ts --network local "$@"
+npx hardhat test $(find $ROOT_PATH/test/bundler-integration -type f -name "*.ts") --network local "$@"
 
 echo "⚙️  6. Stopping geth and bundler...."
 docker compose -f $COMPOSE_FILE_PATH down

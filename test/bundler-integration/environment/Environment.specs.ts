@@ -1,7 +1,6 @@
 import { ethers, deployments } from "hardhat";
 import {
   BundlerTestEnvironment,
-  Snapshot,
   UserOperationSubmissionError,
 } from "./bundlerEnvironment";
 import { expect } from "chai";
@@ -29,7 +28,6 @@ describe("Bundler Environment", async () => {
     charlie: SignerWithAddress,
     smartAccountOwner: SignerWithAddress;
   let environment: BundlerTestEnvironment;
-  let defaultSnapshot: Snapshot;
 
   const setupTests = deployments.createFixture(async ({ deployments }) => {
     await deployments.fixture();
@@ -77,7 +75,6 @@ describe("Bundler Environment", async () => {
     }
 
     environment = await BundlerTestEnvironment.getDefaultInstance();
-    defaultSnapshot = await environment.snapshot();
   });
 
   beforeEach(async () => {
@@ -91,7 +88,10 @@ describe("Bundler Environment", async () => {
       this.skip();
     }
 
-    await environment.revert(defaultSnapshot);
+    await Promise.all([
+      environment.revert(environment.defaultSnapshot!),
+      environment.resetBundler(),
+    ]);
   });
 
   it("Default Signers should have funds after environment setup", async () => {
