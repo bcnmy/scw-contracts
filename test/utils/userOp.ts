@@ -420,7 +420,10 @@ export async function makeSARegistryModuleUserOp(
   userOpSigner: Signer,
   entryPoint: EntryPoint,
   saRegistryModuleAddress: string,
-  ecdsaModuleAddress: string
+  ecdsaModuleAddress: string,
+  options?: {
+    preVerificationGas?: number;
+  }
 ) : Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -432,7 +435,8 @@ export async function makeSARegistryModuleUserOp(
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
-      callData: txnDataAA1
+      callData: txnDataAA1,
+      ...options,
     },
     userOpSigner,
     entryPoint,
