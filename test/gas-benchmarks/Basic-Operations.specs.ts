@@ -64,25 +64,32 @@ describe("Gas Benchmarking. Basic operations", async () => {
       );
 
       // ===============  deply SA via userOp =================
-      
+
       const deploymentData = SmartAccountFactory.interface.encodeFunctionData(
         "deployCounterFactualAccount",
-        [ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex+1]
+        [
+          ecdsaModule.address,
+          ecdsaOwnershipSetupData,
+          smartAccountDeploymentIndex + 1,
+        ]
       );
-  
+
       const expectedSmartAccountAddress2 =
         await smartAccountFactory.getAddressForCounterFactualAccount(
           ecdsaModule.address,
           ecdsaOwnershipSetupData,
           smartAccountDeploymentIndex + 1
         );
-  
+
       // funding account
       await deployer.sendTransaction({
         to: expectedSmartAccountAddress2,
         value: ethers.utils.parseEther("10"),
       });
-      await mockToken.mint(expectedSmartAccountAddress2, ethers.utils.parseEther("1000000"));
+      await mockToken.mint(
+        expectedSmartAccountAddress2,
+        ethers.utils.parseEther("1000000")
+      );
 
       // deployment userOp
       const deploymentUserOp = await fillAndSign(
@@ -101,7 +108,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
       );
 
       let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-        ["bytes", "address"], 
+        ["bytes", "address"],
         [deploymentUserOp.signature, ecdsaModule.address]
       );
 
@@ -112,7 +119,11 @@ describe("Gas Benchmarking. Basic operations", async () => {
         expectedSmartAccountAddress2
       );
 
-      const handleOpsTxn = await entryPoint.handleOps([deploymentUserOp], alice.address, {gasLimit: 10000000});
+      const handleOpsTxn = await entryPoint.handleOps(
+        [deploymentUserOp],
+        alice.address,
+        { gasLimit: 10000000 }
+      );
       const receipt2 = await handleOpsTxn.wait();
       console.log(
         "Deploy with an ecdsa signature via userOp gas used: ",
@@ -255,7 +266,11 @@ describe("Gas Benchmarking. Basic operations", async () => {
 
     const deploymentData = SmartAccountFactory.interface.encodeFunctionData(
       "deployCounterFactualAccount",
-      [ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex]
+      [
+        ecdsaModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex,
+      ]
     );
 
     const expectedSmartAccountAddress =
