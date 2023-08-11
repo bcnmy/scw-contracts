@@ -17,10 +17,12 @@ contract Stakeable is Ownable {
         address epAddress,
         uint32 unstakeDelaySec
     ) external payable onlyOwner {
+        require(epAddress != address(0), "Invalid EP address");
         IEntryPoint(epAddress).addStake{value: msg.value}(unstakeDelaySec);
     }
 
     function unlockStake(address epAddress) external onlyOwner {
+        require(epAddress != address(0), "Invalid EP address");
         IEntryPoint(epAddress).unlockStake();
     }
 
@@ -28,6 +30,7 @@ contract Stakeable is Ownable {
         address epAddress,
         address payable withdrawAddress
     ) external onlyOwner {
+        require(epAddress != address(0), "Invalid EP address");
         IEntryPoint(epAddress).withdrawStake(withdrawAddress);
     }
 }
