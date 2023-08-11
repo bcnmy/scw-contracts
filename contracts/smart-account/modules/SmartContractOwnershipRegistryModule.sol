@@ -16,7 +16,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
  * Thus it will not be compatible with the standard bundlers.
  * You can still use it in private environments or with custom bundlers which have
- * less restrictions that ones participating in the unfied userOps mempool.
+ * less restrictions than ones participating in the unified userOps mempool.
  *
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
