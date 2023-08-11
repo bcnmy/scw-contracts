@@ -3,6 +3,20 @@ pragma solidity 0.8.17;
 import "./ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+/**
+ * @title ERC20 Session Validation Modul for Biconomy Smart Accounts.
+ * @dev Validates ERC20 transfers (and approvals) session key signed userOps
+ * Performs basic verifications for every session key signed userOp.
+ * Checks if the session key has been enabled, that it is not due and has not yet expired
+ * Then passes the validation flow to appropriate Session Validation module
+ *         - Does not have an explicit selector check, as relies on the calldata format
+ *         - Recommended to use with standard ERC20 tokens only
+ *         - Can be used with any method of any contract which implement
+ *           method(address, uint256) interface
+ *
+ * @author Fil Makarov - <filipp.makarov@biconomy.io>
+ */
+
 contract ERC20SessionValidationModule {
     /**
      * @dev validates if the _op (UserOperation) matches the SessionKey permissions
@@ -46,7 +60,7 @@ contract ERC20SessionValidationModule {
             uint256 length = uint256(
                 bytes32(_op.callData[4 + offset:4 + offset + 32])
             );
-            //we expect data to be the `IERC20.transfer` calldata
+            //we expect data to be the `IERC20.transfer(address, uint256)` calldata
             data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
         }
         if (address(bytes20(data[16:36])) != recipient) {

@@ -7,8 +7,29 @@ import {UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOp
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {calldataKeccak, _packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 
+/**
+ * @title Multichain Validator module for Biconomy Smart Accounts.
+ * @dev Biconomy’s Multichain Validator module enables use cases which
+ * require several actions to be authorized for several chains with just one
+ * signature required from user.
+ *         - Leverages Merkle Trees to efficiently manage large datasets
+ *         - Compatible with Biconomy Modular Interface v 0.1
+ *         - Does not introduce any additional security trade-offs compared to the
+ *           vanilla ERC-4337 flow.
+ * @author Fil Makarov - <filipp.makarov@biconomy.io>
+ */
+
 contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
     using UserOperationLib for UserOperation;
+
+    /**
+     * @dev Validates User Operation.
+     * leaf = validUntil + validAfter + userOpHash
+     * If the leaf is the part of the Tree with a root provided, userOp considered
+     * to be authorized by user
+     * @param userOp user operation to be validated
+     * @param userOpHash hash of the userOp provided by the EP
+     */
 
     function validateUserOp(
         UserOperation calldata userOp,

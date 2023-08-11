@@ -10,6 +10,18 @@ struct SessionStorage {
     bytes32 merkleRoot;
 }
 
+/**
+ * @title Session Key Manager module for Biconomy Modular Smart Accounts.
+ * @dev Performs basic verifications for every session key signed userOp.
+ * Checks if the session key has been enabled, that it is not due and has not yet expired
+ * Then passes the validation flow to appropriate Session Validation module
+ *         - For the sake of efficiency and flexibility, doesn't limit what operations
+ *           Session Validation modules can perform
+ *         - Should be used with carefully verified and audited Session Validation Modules only
+ *         - Compatible with Biconomy Modular Interface v 0.1
+ * @author Fil Makarov - <filipp.makarov@biconomy.io>
+ */
+
 contract SessionKeyManager is BaseAuthorizationModule {
     /**
      * @dev mapping of Smart Account to a SessionStorage
@@ -34,6 +46,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
      */
     function setMerkleRoot(bytes32 _merkleRoot) external {
         userSessions[msg.sender].merkleRoot = _merkleRoot;
+        // TODO:should we add an event here? which emits the new merkle root
     }
 
     /**
