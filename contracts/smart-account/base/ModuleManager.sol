@@ -238,27 +238,29 @@ abstract contract ModuleManager is
 
         for (uint256 i; i < to.length; ) {
             // Execute transaction without further confirmations.
-            success = execute(
+            success = _executeFromModule(
                 to[i],
                 value[i],
                 data[i],
-                operations[i],
-                gasleft()
+                operations[i]
             );
-            if (success) {
-                emit ModuleTransaction(
-                    msg.sender,
-                    to[i],
-                    value[i],
-                    data[i],
-                    operations[i]
-                );
-                emit ExecutionFromModuleSuccess(msg.sender);
-            } else emit ExecutionFromModuleFailure(msg.sender);
             unchecked {
                 ++i;
             }
         }
+    }
+
+    function _executeFromModule(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) internal returns (bool success) {
+        success = execute(to, value, data, operation, gasleft());
+        if (success) {
+            emit ModuleTransaction(msg.sender, to, value, data, operation);
+            emit ExecutionFromModuleSuccess(msg.sender);
+        } else emit ExecutionFromModuleFailure(msg.sender);
     }
 
     /**

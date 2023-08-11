@@ -10,13 +10,16 @@ import { Deployer, Deployer__factory } from "../typechain";
 
 const provider = ethers.provider;
 let baseImpAddress = "";
-let entryPointAddress = process.env.ENTRY_POINT_ADDRESS || "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+let entryPointAddress =
+  process.env.ENTRY_POINT_ADDRESS ||
+  "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 const owner = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
 const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_DEV || "";
-const DEPLOYER_CONTRACT_ADDRESS = process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
+const DEPLOYER_CONTRACT_ADDRESS =
+  process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
-  if (network.name !== "hardhat" && network.name !== "ganache") {
+  if (network.name !== "hardhat" && network.name !== "local") {
     console.log("Entry Point Already Deployed Address: ", entryPointAddress);
     return;
   }
@@ -359,13 +362,18 @@ async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
   const [signer] = await ethers.getSigners();
 
   if (code === "0x") {
-    console.log(`Deployer not deployed on chain ${chainId}, deploy it with deployer-contract.deploy.ts script before using this script.`);
-    throw new Error ('Deployer not deployed');
+    console.log(
+      `Deployer not deployed on chain ${chainId}, deploy it with deployer-contract.deploy.ts script before using this script.`
+    );
+    throw new Error("Deployer not deployed");
   } else {
-    console.log('Deploying with EOA %s through Deployer Contract %s', signer.address, DEPLOYER_CONTRACT_ADDRESS);
+    console.log(
+      "Deploying with EOA %s through Deployer Contract %s",
+      signer.address,
+      DEPLOYER_CONTRACT_ADDRESS
+    );
     return Deployer__factory.connect(DEPLOYER_CONTRACT_ADDRESS, signer);
   }
-
 }
 
 async function main() {

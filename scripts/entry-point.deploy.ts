@@ -12,9 +12,9 @@ const options = { gasLimit: 7000000, gasPrice: 70000000000 };
 async function main() {
   const provider = ethers.provider;
 
-  if (network.name !== 'hardhat' || network.name !== 'ganache'){
+  if (network.name !== "hardhat" || network.name !== "local") {
     console.log("Entry Point Already Deployed Address: ", entryPointAddress);
-    return
+    return;
   }
 
   const deployerInstance = await getDeployerInstance();

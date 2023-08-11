@@ -23,7 +23,10 @@ export async function makeEcdsaSessionKeySignedUserOp(
   validAfter: number,
   sessionValidationModuleAddress: string,
   sessionKeyParamsData: BytesLike,
-  merkleProof: any
+  merkleProof: any,
+  options?: {
+    preVerificationGas?: number;
+  }
 ) : Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
   
@@ -35,7 +38,8 @@ export async function makeEcdsaSessionKeySignedUserOp(
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
-      callData: txnDataAA1
+      callData: txnDataAA1,
+      ...options,
     },
     sessionKey,
     entryPoint,

@@ -1,4 +1,3 @@
-
 # Biconomy Smart Account (Smart Contract Wallet) Overview
 
 Biconomy Modular Smart Account is an [EIP-4337](https://eips.ethereum.org/EIPS/eip-4337) compatible modular smart contract wallet.
@@ -32,9 +31,15 @@ The project comes with a sample contract, a test for that contract, a sample scr
 Try running some of the following tasks:
 
 ```shell
+# Regular Tests
 npx hardhat test
 
-// other
+# Bundler Integration Tests
+# Install realpath
+brew install coreutils
+yarn bundler-test
+
+# other
 npx hardhat accounts
 npx hardhat compile
 npx hardhat clean
