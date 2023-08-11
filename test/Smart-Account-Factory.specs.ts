@@ -5,6 +5,7 @@ import {
   getSmartAccountFactory, 
   getMockToken, 
   getEcdsaOwnershipRegistryModule,
+  getEntryPoint
 } from "./utils/setupHelper";
 import { AddressZero } from "@ethersproject/constants";
 
@@ -20,11 +21,14 @@ describe("Smart Account Factory", async () => {
     
     const ecdsaModule = await getEcdsaOwnershipRegistryModule();
 
+    const entryPoint = await getEntryPoint();
+
     return {
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
+      entryPoint: entryPoint,
     };
   });
   describe("Constructor", async () => {
@@ -62,6 +66,23 @@ describe("Smart Account Factory", async () => {
       expect(await testFactory.owner()).to.equal(charlie.address);
       expect(await testFactory.owner()).to.not.equal(deployer.address);
     });
+  });
+
+  describe("Stakeable", async () => {
+    it ("can add stake to the EP", async () => {
+      const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+      const stakeAmount = ethers.utils.parseEther("1.234256");
+      await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });
+      const depositInfo = await entryPoint.getDepositInfo(smartAccountFactory.address);
+      expect(depositInfo.stake).to.equal(stakeAmount);
+    });
+
+    // can unlock
+
+    // can withdraw
+
+    // not owner cannot add, unlock, withdraw
+
   });
 
   describe("Deploy CounterFactual Account", async () => { 
@@ -207,6 +228,5 @@ describe("Smart Account Factory", async () => {
     });
 
   });
-
 
 });
