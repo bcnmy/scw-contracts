@@ -116,21 +116,8 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     return transferUserOp;
   }
 
-  it ("should be able to process Session Key signed userOp", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, mockToken } = await setupTests();
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
-
-    const transferUserOp = await makeErc20TransferUserOp(
-      mockToken.address, 
-      tokenAmountToTransfer, 
-      charlie.address, 
-      ethers.utils.parseEther("0"),
-      { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree }
-    );
-
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+  it ("MOVED: should be able to process Session Key signed userOp", async () => {
+    // moved to /test/bundler-integration/module/SessionValidationModules/ERC20SessionValidation.Module.specs.ts
   });
 
   it ("should revert when userOp is for an invalid token", async () => {

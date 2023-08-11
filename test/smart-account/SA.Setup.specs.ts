@@ -187,53 +187,8 @@ describe("Smart Account Setup", async () => {
     });
 
     //updates the implementation and calls are forwarded to the new implementation and the event 
-    it ("can update to an implementation and calls are forwarded and event is emitted", async () => {
-      const { 
-        entryPoint,
-        ecdsaModule,
-        userSA,
-      } = await setupTests();
-
-      const NEW_IMPL_SOURCE = `
-        contract Impl2 {
-          function selfIdentify() public returns (string memory) {
-              return "implementation 2";
-          }
-          function getImplementation()
-            external
-            view
-            returns (address _implementation)
-          {
-              assembly {
-                  _implementation := sload(address())
-              }
-          }
-        }`;
-      const impl2 = await deployContract(deployer, NEW_IMPL_SOURCE);
-      
-      const implementationInSaBefore = await userSA.getImplementation();
-
-      const userOp = await makeEcdsaModuleUserOp(
-        "updateImplementation",
-        [
-          impl2.address
-        ],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      )
-  
-      const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
-      expect(handleOpsTx).to.emit(userSA, "ImplementationUpdated").withArgs(implementationInSaBefore, impl2.address);
-
-      const abi = [
-        'function selfIdentify() view returns(string memory)'
-      ];
-      const userSAImpl2 = new ethers.Contract(userSA.address, abi, deployer);
-      
-      expect(await userSA.getImplementation()).to.equal(impl2.address);
-      expect(await userSAImpl2.selfIdentify()).to.equal("implementation 2");
+    it ("MOVED: can update to an implementation and calls are forwarded and event is emitted", async () => {
+      //moved to /test/bundler-integration/smart-account/SA.Setup.specs.ts
     });
       
   });
@@ -304,44 +259,8 @@ describe("Smart Account Setup", async () => {
     });
 
     // updates the callback handler and calls are forwarded to the new callback handler and the event is emitted
-    it("can update to a callback handler and calls are forwarded and event is emitted", async () => {
-      const { 
-        entryPoint,
-        ecdsaModule,
-        userSA,
-      } = await setupTests();
-
-      const NEW_HANDLER_SOURCE = `
-        contract Handler2 {
-          function selfIdentify() public returns (string memory) {
-              return "handler 2";
-          }
-        }`;
-      const handler2 = await deployContract(deployer, NEW_HANDLER_SOURCE);
-      
-      const handlerInSaBefore = await userSA.getFallbackHandler();
-
-      const userOp = await makeEcdsaModuleUserOp(
-        "setFallbackHandler",
-        [
-          handler2.address
-        ],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      )
-  
-      const handleOpsTx = await entryPoint.handleOps([userOp], alice.address);
-      expect(handleOpsTx).to.emit(userSA, "ChangedFallbackHandler").withArgs(handlerInSaBefore, handler2.address);
-
-      const abi = [
-        'function selfIdentify() view returns(string memory)'
-      ];
-      const userSAWithHandler2 = new ethers.Contract(userSA.address, abi, deployer);
-      
-      expect(await userSA.getFallbackHandler()).to.equal(handler2.address);
-      expect(await userSAWithHandler2.selfIdentify()).to.equal("handler 2");
+    it("MOVED: can update to a callback handler and calls are forwarded and event is emitted", async () => {
+      //moved to /test/bundler-integration/smart-account/SA.Setup.specs.ts
     });
 
   });
