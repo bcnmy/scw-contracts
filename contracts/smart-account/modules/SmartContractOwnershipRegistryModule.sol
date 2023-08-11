@@ -10,8 +10,14 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  *         - It allows to validate user operations signed by other smart contracts via EIP-1271.
  *         - EIP-1271 compatible (ensures Smart Account can validate signed messages).
  *         - One owner per Smart Account.
- * !!!!!!! No EOA owners supported
+ * @dev No EOA owners supported
  *         For EOA Owners check EcdsaOwnership module instead
+ * @notice !!! This module doesn't follow the Storage Access Rules set by ERC-4337 !!!
+ * https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
+ * Thus it will not be compatible with the standard bundlers.
+ * You can still use it in private environments or with custom bundlers which have
+ * less restrictions that ones participating in the unfied userOps mempool.
+ *
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
