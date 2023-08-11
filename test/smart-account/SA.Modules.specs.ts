@@ -53,29 +53,8 @@ describe("Modular Smart Account Modules: ", async () => {
 
   describe ("enableModule: ", async () => {
 
-    it ("Can enable module and it is enabled", async () => {
-      const {
-        ecdsaModule,
-        userSA,
-        entryPoint
-      } = await setupTests();
-
-      const MockAuthModule = await ethers.getContractFactory("MockAuthModule");
-      const mockAuthModule = await MockAuthModule.deploy();
-
-      let userOp = await makeEcdsaModuleUserOp(
-        "enableModule",
-        [mockAuthModule.address],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
-
-      const tx = await entryPoint.handleOps([userOp], alice.address);
-      await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-
-      expect(await userSA.isModuleEnabled(mockAuthModule.address)).to.be.true;
+    it ("MOVED: Can enable module and it is enabled", async () => {
+      // moved to test/bundler-integration/smart-account/SA.Modules.specs.ts
     });
 
     // can not enable address(0) as module
@@ -190,39 +169,8 @@ describe("Modular Smart Account Modules: ", async () => {
       expect(await userSA.isModuleEnabled(ethers.constants.AddressZero)).to.be.false;
     });
 
-    it ("Can enable and setup another module and it is enabled and setup", async () => {
-      const {
-        ecdsaModule,
-        userSA,
-        entryPoint
-      } = await setupTests();
-
-      const SocialRecoveryModule = await ethers.getContractFactory("SocialRecoveryModule");
-      const socialRecoveryModule = await SocialRecoveryModule.deploy();
-
-      let socialRecoverySetupData = SocialRecoveryModule.interface.encodeFunctionData(
-        "setup",
-        [[await alice.getAddress(), await bob.getAddress(), await charlie.getAddress()], 2]
-      );
-
-      let userOp = await makeEcdsaModuleUserOp(
-        "setupAndEnableModule",
-        [socialRecoveryModule.address, socialRecoverySetupData],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
-
-      const tx = await entryPoint.handleOps([userOp], alice.address);
-      await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-
-      expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.be.true;
-
-      expect(await socialRecoveryModule.isFriend(userSA.address, alice.address)).to.be.true;
-      expect(await socialRecoveryModule.isFriend(userSA.address, bob.address)).to.be.true;
-      expect(await socialRecoveryModule.isFriend(userSA.address, charlie.address)).to.be.true;
-      expect(await socialRecoveryModule.isFriend(userSA.address, deployer.address)).to.be.false;
+    it ("MOVED: Can enable and setup another module and it is enabled and setup", async () => {
+      // moved to test/bundler-integration/smart-account/SA.Modules.specs.ts
     });
 
     // can not enable address(0) as module
@@ -321,56 +269,8 @@ describe("Modular Smart Account Modules: ", async () => {
   });
 
   describe ("disableModule: ", async () => {
-    it ("Can disable module and it is disabled", async () => {
-      const {
-        ecdsaModule,
-        userSA,
-        entryPoint
-      } = await setupTests();
-
-      const MockAuthModule = await ethers.getContractFactory("MockAuthModule");
-      const module2 = await MockAuthModule.deploy();
-      const module3 = await MockAuthModule.deploy();
-
-      let userOp2 = await makeEcdsaModuleUserOp(
-        "enableModule",
-        [module2.address],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
-      let tx = await entryPoint.handleOps([userOp2], alice.address);
-      await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-      expect(await userSA.isModuleEnabled(module2.address)).to.be.true;
-
-      let userOp3 = await makeEcdsaModuleUserOp(
-        "enableModule",
-        [module3.address],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
-      tx = await entryPoint.handleOps([userOp3], alice.address);
-      await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-      expect(await userSA.isModuleEnabled(module3.address)).to.be.true;
-
-      let userOpDisable = await makeEcdsaModuleUserOp(
-        "disableModule",
-        [module3.address, module2.address],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
-      tx = await entryPoint.handleOps([userOpDisable], alice.address);
-      await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-
-      expect(await userSA.isModuleEnabled(module2.address)).to.be.false;
-      expect(await userSA.isModuleEnabled(ethers.constants.AddressZero)).to.be.false;
-      const returnedValue = await userSA.getModulesPaginated("0x0000000000000000000000000000000000000001", 10);
-      expect(returnedValue.array.length).to.equal(2);
+    it ("MOVED: Can disable module and it is disabled", async () => {
+      // moved to test/bundler-integration/smart-account/SA.Modules.specs.ts
     });
   });
 
