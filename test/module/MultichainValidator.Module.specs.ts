@@ -263,6 +263,7 @@ describe("MultichainValidator Module", async () => {
         entryPoint,
         multichainECDSAValidator.address,
         ['0xb0bb0b', '0xdecaf0'],
+        {},
         validUntil,
         validAfter,
       );
@@ -295,6 +296,7 @@ describe("MultichainValidator Module", async () => {
         entryPoint,
         multichainECDSAValidator.address,
         ['0xb0bb0b', '0xdecaf0'],
+        {},
         validUntil,
         validAfter,
       );

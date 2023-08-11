@@ -45,12 +45,6 @@ describe("Gas Benchmarking. Basic operations", async () => {
       const smartAccountDeploymentIndex = 0;
 
       const factory = await getSmartAccountFactory();
-      const expectedSmartAccountAddress =
-        await factory.getAddressForCounterFactualAccount(
-          ecdsaModule.address,
-          ecdsaOwnershipSetupData,
-          smartAccountDeploymentIndex
-        );
 
       const deploySATx = await factory.deployCounterFactualAccount(
         ecdsaModule.address,
@@ -114,11 +108,6 @@ describe("Gas Benchmarking. Basic operations", async () => {
 
       deploymentUserOp.signature = signatureWithModuleAddress;
 
-      const userSA = await ethers.getContractAt(
-        "SmartAccount",
-        expectedSmartAccountAddress2
-      );
-
       const handleOpsTxn = await entryPoint.handleOps(
         [deploymentUserOp],
         alice.address,
@@ -130,6 +119,11 @@ describe("Gas Benchmarking. Basic operations", async () => {
         receipt2.gasUsed.toString()
       );
       //this moves nonce from 0 to further tests using userSA
+
+      const userSA = await ethers.getContractAt(
+        "SmartAccount",
+        expectedSmartAccountAddress2
+      );
 
       // ===== rest of setup ====
 

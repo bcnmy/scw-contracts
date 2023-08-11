@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, deployments } from "hardhat";
-import { makeEcdsaModuleUserOp, getUserOpHash } from "../../utils/userOp";
+import { makeEcdsaModuleUserOp, getUserOpHash, fillAndSign } from "../../utils/userOp";
 import {
   getEntryPoint,
   getSmartAccountFactory,
@@ -55,18 +55,29 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       ecdsaRegistryModule.interface.encodeFunctionData("initForSmartAccount", [
         smartAccountOwner.address,
       ]);
-    const userSA = await getSmartAccountWithModule(
-      ecdsaRegistryModule.address,
-      ecdsaOwnershipSetupData,
-      smartAccountDeploymentIndex
-    );
+    
+      const deploymentData = saFactory.interface.encodeFunctionData(
+        "deployCounterFactualAccount",
+        [
+          ecdsaRegistryModule.address,
+          ecdsaOwnershipSetupData,
+          smartAccountDeploymentIndex,
+        ]
+      );
+
+      const expectedSmartAccountAddress =
+        await saFactory.getAddressForCounterFactualAccount(
+          ecdsaRegistryModule.address,
+          ecdsaOwnershipSetupData,
+          smartAccountDeploymentIndex
+        );
 
     const tokensToMint = ethers.utils.parseEther("100");
-    await mockToken.mint(userSA.address, tokensToMint.toString());
+    await mockToken.mint(expectedSmartAccountAddress, tokensToMint.toString());
     await mockToken.mint(bob.address, tokensToMint.toString());
 
     await deployer.sendTransaction({
-      to: userSA.address,
+      to: expectedSmartAccountAddress,
       value: ethers.utils.parseEther("60"),
     });
 
@@ -75,23 +86,42 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       value: ethers.utils.parseEther("60"),
     });
 
-    const randomContractCode = `
-            contract random {
-                function returnAddress() public view returns(address){
-                    return address(this);
-                }
-            }
-            `;
-    const randomContract = await deployContract(deployer, randomContractCode, {
-      evmVersion: "london",
-    });
+    // deployment userOp
+    const deploymentUserOp = await fillAndSign(
+      {
+        sender: expectedSmartAccountAddress,
+        callGasLimit: 1_000_000,
+        initCode: ethers.utils.hexConcat([
+          saFactory.address,
+          deploymentData,
+        ]),
+        callData: "0x",
+        preVerificationGas: 50000,
+      },
+      smartAccountOwner,
+      entryPoint,
+      "nonce"
+    );
+
+    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [deploymentUserOp.signature, ecdsaRegistryModule.address]
+    );
+
+    deploymentUserOp.signature = signatureWithModuleAddress;
+
+    await environment.sendUserOperation(deploymentUserOp, entryPoint.address);
+
+    const userSA = await ethers.getContractAt(
+      "SmartAccount",
+      expectedSmartAccountAddress
+    );
 
     return {
       entryPoint: entryPoint,
       saFactory: saFactory,
       ecdsaRegistryModule: ecdsaRegistryModule,
       ecdsaOwnershipSetupData: ecdsaOwnershipSetupData,
-      randomContract: randomContract,
       userSA: userSA,
       mockToken: mockToken,
     };
@@ -100,6 +130,8 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
   describe("transferOwnership: ", async () => {
     it("Call transferOwnership from userSA and it successfully changes owner ", async () => {
       const { ecdsaRegistryModule, entryPoint, userSA } = await setupTests();
+      //console.log(await userSA.getImplementation());
+      
       // Calldata to set Bob as owner
       const txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
         "transferOwnership",

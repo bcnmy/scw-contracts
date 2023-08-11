@@ -467,8 +467,11 @@ export async function makeMultichainEcdsaModuleUserOp(
   entryPoint: EntryPoint,
   moduleAddress: string,
   leaves: string[],
+  options?: {
+    preVerificationGas?: number;
+  },
   validUntil: number = 0,
-  validAfter: number = 0
+  validAfter: number = 0,
 ) : Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
   
@@ -480,7 +483,8 @@ export async function makeMultichainEcdsaModuleUserOp(
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
-      callData: txnDataAA1
+      callData: txnDataAA1,
+      ...options,
     },
     userOpSigner,
     entryPoint,
