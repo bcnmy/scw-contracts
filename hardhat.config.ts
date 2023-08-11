@@ -7,10 +7,11 @@ import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
-import 'hardhat-deploy';
-import '@nomiclabs/hardhat-ethers';
-import 'hardhat-deploy-ethers';
-import 'hardhat-dependency-compiler';
+import "hardhat-deploy";
+import "@nomiclabs/hardhat-ethers";
+import "hardhat-deploy-ethers";
+import "hardhat-dependency-compiler";
+import { parseUnits } from "ethers/lib/utils";
 
 const walletUtils = require("./walletUtils");
 
@@ -37,9 +38,9 @@ const config: HardhatUserConfig = {
     sources: "contracts",
   },
   namedAccounts: {
-		deployer: 0,
+    deployer: 0,
     verifiedSigner: 5,
-	},
+  },
   solidity: {
     compilers: [
       {
@@ -59,7 +60,9 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       chainId: 31337,
     },
-    ganache: {
+    local: {
+      live: false,
+      saveDeployments: false,
       chainId: 1337,
       url: "http://localhost:8545",
       accounts: {
@@ -69,6 +72,7 @@ const config: HardhatUserConfig = {
         initialIndex: 0,
         count: 20,
       },
+      gasPrice: parseUnits("1", "gwei").toNumber(),
     },
     eth_mainnet: {
       url: process.env.ETH_MAINNET_URL || "",
@@ -93,7 +97,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      //: 200e9,    
+      //: 200e9,
     },
     polygon_mumbai: {
       url: process.env.POLYGON_MUMBAI_URL || "",
@@ -120,7 +124,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-          gasPrice: 50e9
+      gasPrice: 50e9,
     },
     avalancheMain: {
       url: "https://api.avax.network/ext/bc/C/rpc",
@@ -186,7 +190,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      //gasPrice: 50e9,    
+      //gasPrice: 50e9,
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
@@ -233,16 +237,14 @@ const config: HardhatUserConfig = {
       // gasPrice: 6400000
     },
   },
-  
+
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     onlyCalledMethods: true,
   },
-  
+
   dependencyCompiler: {
-    paths: [
-      '@account-abstraction/contracts/core/EntryPoint.sol',
-    ],
+    paths: ["@account-abstraction/contracts/core/EntryPoint.sol"],
   },
   etherscan: {
     apiKey: {
