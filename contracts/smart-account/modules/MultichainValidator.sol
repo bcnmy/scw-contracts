@@ -8,11 +8,12 @@ import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProo
 import {calldataKeccak, _packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 
 /**
- * @title Multichain Validator module for Biconomy Smart Accounts.
+ * @title ECDSA Multichain Validator module for Biconomy Smart Accounts.
  * @dev Biconomy’s Multichain Validator module enables use cases which
  * require several actions to be authorized for several chains with just one
  * signature required from user.
  *         - Leverages Merkle Trees to efficiently manage large datasets
+ *         - Inherits from the ECDSA Ownership Registry Module
  *         - Compatible with Biconomy Modular Interface v 0.1
  *         - Does not introduce any additional security trade-offs compared to the
  *           vanilla ERC-4337 flow.
