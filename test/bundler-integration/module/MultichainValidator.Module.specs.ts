@@ -61,7 +61,6 @@ describe("MultichainValidator Module", async () => {
     const entryPoint = await getEntryPoint();
     const smartAccountFactory = await getSmartAccountFactory();
     const mockToken = await getMockToken();
-    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
     
     const MultichainECDSAValidator = await ethers.getContractFactory("MultichainECDSAValidator");
     const multichainECDSAValidator = await MultichainECDSAValidator.deploy();
@@ -218,7 +217,6 @@ describe("MultichainValidator Module", async () => {
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: smartAccountFactory,
       mockToken: mockToken,
-      ecdsaModule: ecdsaModule,
       userSA: userSA,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       multichainECDSAValidator: multichainECDSAValidator,
@@ -228,7 +226,6 @@ describe("MultichainValidator Module", async () => {
   });
 
   describe ("Multichain userOp validation", async () => {
-
     it ("should process a userOp with a multichain signature", async () => {
       const { userSA, entryPoint, multichainECDSAValidator, mockToken} = await setupTests();
 

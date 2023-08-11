@@ -4,12 +4,8 @@ import "./ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
- * @title ERC20 Session Validation Modul for Biconomy Smart Accounts.
- * @dev Validates ERC20 transfers (and approvals) session key signed userOps
- * Performs basic verifications for every session key signed userOp.
- * Checks if the session key has been enabled, that it is not due and has not yet expired
- * Then passes the validation flow to appropriate Session Validation module
- *         - Does not have an explicit selector check, as relies on the calldata format
+ * @title ERC20 Session Validation Module for Biconomy Smart Accounts.
+ * @dev Validates userOps for ERC20 transfers and approvals using a session key signature.
  *         - Recommended to use with standard ERC20 tokens only
  *         - Can be used with any method of any contract which implement
  *           method(address, uint256) interface

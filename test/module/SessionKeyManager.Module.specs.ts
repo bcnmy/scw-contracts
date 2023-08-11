@@ -132,7 +132,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
     });
 
     it ("should add new session key to the existing merkle tree", async () => {
-      const { userSA, sessionKeyManager, mockSessionValidationModule, entryPoint, ecdsaModule } = await setupTests();
+      const { userSA, sessionKeyManager, mockSessionValidationModule, entryPoint, ecdsaModule, mockToken } = await setupTests();
 
       const leaf1Data = hexConcat([
         hexZeroPad("0x00",6),
@@ -168,6 +168,31 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         ecdsaModule.address
       );
       expect((await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot).to.equal(merkleTree2.getHexRoot());
+      
+      //now check the new session key can sign userOps
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.7734");
+      const sessionKeyData2 = hexZeroPad(sessionKey2.address, 20);
+      const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "executeCall",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+        ],
+        userSA.address,
+        sessionKey2,
+        entryPoint,
+        sessionKeyManager.address,
+        0, 
+        0,
+        mockSessionValidationModule.address,
+        sessionKeyData2,
+        merkleTree2.getHexProof(ethers.utils.keccak256(leaf2Data)),
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+      await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
     });
   });
 
