@@ -24,7 +24,21 @@ export const getSmartAccountFactory = async () => {
   const SmartAccountFactory = await hre.ethers.getContractFactory(
     "SmartAccountFactory"
   );
-  return SmartAccountFactory.attach(SAFactoryDeployment.address);
+  const smartAccountFactory = SmartAccountFactory.attach(SAFactoryDeployment.address);
+  return smartAccountFactory;
+};
+
+export const getStakedSmartAccountFactory = async () => {
+  const SAFactoryDeployment = await deployments.get("SmartAccountFactory");
+  const SmartAccountFactory = await hre.ethers.getContractFactory(
+    "SmartAccountFactory"
+  );
+  const smartAccountFactory = SmartAccountFactory.attach(SAFactoryDeployment.address);
+  const entryPoint = await getEntryPoint();
+  const unstakeDelay = 600;
+  const stakeValue = ethers.utils.parseEther("10");
+  await smartAccountFactory.addStake(entryPoint.address, unstakeDelay, {value: stakeValue});
+  return smartAccountFactory;
 };
 
 export const getMockToken = async () => {

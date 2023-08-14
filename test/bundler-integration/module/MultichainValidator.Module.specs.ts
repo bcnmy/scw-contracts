@@ -9,7 +9,7 @@ import {
   getSmartAccountImplementation, 
   getSmartAccountFactory, 
   getMockToken, 
-  getEcdsaOwnershipRegistryModule,
+  getStakedSmartAccountFactory,
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import {keccak256} from "ethereumjs-util";
@@ -59,7 +59,7 @@ describe("MultichainValidator Module", async () => {
     await deployments.fixture();
 
     const entryPoint = await getEntryPoint();
-    const smartAccountFactory = await getSmartAccountFactory();
+    const smartAccountFactory = await getStakedSmartAccountFactory();
     const mockToken = await getMockToken();
     
     const MultichainECDSAValidator = await ethers.getContractFactory("MultichainECDSAValidator");

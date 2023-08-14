@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import hre , { ethers, deployments, waffle } from "hardhat";
 import { hashMessage } from "ethers/lib/utils";
-import { makeEcdsaModuleUserOp, getUserOpHash } from "../utils/userOp";
+import { makeEcdsaModuleUserOp, getUserOpHash, fillAndSign } from "../utils/userOp";
 import {getEntryPoint,getSmartAccountFactory, getEcdsaOwnershipRegistryModule,deployContract, getMockToken, getSmartAccountWithModule} from "../utils/setupHelper";
 import { encodeTransfer } from "../utils/testUtils";
 import { AddressZero } from "@ethersproject/constants";
@@ -64,15 +64,73 @@ describe("ECDSA Registry Module: ", async()=>{
     });
 
     describe("initForSmartAccount: ", async() =>{
-        it("Reverts when trying to set Smart Contract as owner of the Smart Account", async()=>{
-            const {saFactory,ecdsaRegistryModule, randomContract} = await setupTests();
-            let EcdsaOwnershipSetupData = ecdsaRegistryModule.interface.encodeFunctionData(
+        it("Reverts when trying to set Smart Contract as owner of the Smart Account via deployment userOp", async()=>{
+
+            // DISCLAIMER:
+            // In theory it is still possible to set smart contractd address as owner of a SA via initForSmartAccount,
+            // if factory has been called directly, not via userOp.
+            // In Biconomy SDK will will perform an additional off-chain verification that address provided as owner is EOA
+            // Also the initForSmartAccount method's parameter is now called `eoaOwner` instead of just `owner` to
+            // highlight it should be EOA.
+            // Assuming this, the explicit check for eoaOwner is not smart contract can be removed because of this
+            // issue: https://github.com/eth-infinitism/bundler/issues/137 
+
+            const {saFactory,ecdsaRegistryModule, randomContract, entryPoint} = await setupTests();
+            
+            let ecdsaOwnershipSetupData = ecdsaRegistryModule.interface.encodeFunctionData(
                 "initForSmartAccount",
                 [randomContract.address]
+            );
+  
+            const deploymentData = saFactory.interface.encodeFunctionData(
+              "deployCounterFactualAccount",
+              [
+                ecdsaRegistryModule.address,
+                ecdsaOwnershipSetupData,
+                smartAccountDeploymentIndex,
+              ]
+            );
+        
+            const expectedSmartAccountAddress =
+              await saFactory.getAddressForCounterFactualAccount(
+                ecdsaRegistryModule.address,
+                ecdsaOwnershipSetupData,
+                smartAccountDeploymentIndex
               );
+    
+            await deployer.sendTransaction({
+              to: expectedSmartAccountAddress,
+              value: ethers.utils.parseEther("60"),
+            });
+        
+            // deployment userOp
+            const deploymentUserOp = await fillAndSign(
+              {
+                sender: expectedSmartAccountAddress,
+                callGasLimit: 1_000_000,
+                initCode: ethers.utils.hexConcat([
+                  saFactory.address,
+                  deploymentData,
+                ]),
+                callData: "0x",
+                preVerificationGas: 50000,
+              },
+              smartAccountOwner, //need to sign by someone at least
+              entryPoint,
+              "nonce"
+            );
+        
+            let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+              ["bytes", "address"],
+              [deploymentUserOp.signature, ecdsaRegistryModule.address]
+            );
+        
+            deploymentUserOp.signature = signatureWithModuleAddress;
+            
+            await expect(
+                entryPoint.handleOps([deploymentUserOp],charlie.address)
+            ).to.be.revertedWith("FailedOp").withArgs(0, "AA24 signature error");
 
-            const expectedSmartAccountAddress = await saFactory.getAddressForCounterFactualAccount(ecdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex+1);
-            await expect(saFactory.deployCounterFactualAccount(ecdsaRegistryModule.address,EcdsaOwnershipSetupData,smartAccountDeploymentIndex)).to.be.revertedWith("NotEOA");
             await expect(ecdsaRegistryModule.getOwner(expectedSmartAccountAddress)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
         });
 
@@ -102,7 +160,7 @@ describe("ECDSA Registry Module: ", async()=>{
         });
 
         it("Reverts when trying to set Smart Contract Address as owner via transferOwnership() ", async()=>{
-            const {ecdsaRegistryModule,entryPoint, randomContract, userSA} = await setupTests();
+            const {ecdsaRegistryModule, entryPoint, randomContract, userSA} = await setupTests();
             const previousOwner = await ecdsaRegistryModule.getOwner(userSA.address);
             let txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
                 "transferOwnership",
@@ -110,7 +168,7 @@ describe("ECDSA Registry Module: ", async()=>{
             );
             let userOp = await makeEcdsaModuleUserOp(
                 "executeCall",
-                [ecdsaRegistryModule.address,0,txnData1],
+                [ecdsaRegistryModule.address, 0, txnData1],
                 userSA.address,
                 smartAccountOwner,
                 entryPoint,

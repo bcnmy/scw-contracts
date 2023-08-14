@@ -7,7 +7,7 @@ import {
   getEcdsaOwnershipRegistryModule,
   deployContract,
   getMockToken,
-  getSmartAccountWithModule,
+  getStakedSmartAccountFactory,
 } from "../../utils/setupHelper";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
@@ -47,7 +47,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
     await deployments.fixture();
 
     const entryPoint = await getEntryPoint();
-    const saFactory = await getSmartAccountFactory();
+    const saFactory = await getStakedSmartAccountFactory();
     const ecdsaRegistryModule = await getEcdsaOwnershipRegistryModule();
     const mockToken = await getMockToken();
 
@@ -56,21 +56,21 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
         smartAccountOwner.address,
       ]);
     
-      const deploymentData = saFactory.interface.encodeFunctionData(
-        "deployCounterFactualAccount",
-        [
-          ecdsaRegistryModule.address,
-          ecdsaOwnershipSetupData,
-          smartAccountDeploymentIndex,
-        ]
-      );
+    const deploymentData = saFactory.interface.encodeFunctionData(
+      "deployCounterFactualAccount",
+      [
+        ecdsaRegistryModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex,
+      ]
+    );
 
-      const expectedSmartAccountAddress =
-        await saFactory.getAddressForCounterFactualAccount(
-          ecdsaRegistryModule.address,
-          ecdsaOwnershipSetupData,
-          smartAccountDeploymentIndex
-        );
+    const expectedSmartAccountAddress =
+      await saFactory.getAddressForCounterFactualAccount(
+        ecdsaRegistryModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex
+      );
 
     const tokensToMint = ethers.utils.parseEther("100");
     await mockToken.mint(expectedSmartAccountAddress, tokensToMint.toString());
