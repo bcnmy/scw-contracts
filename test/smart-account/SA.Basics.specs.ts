@@ -64,96 +64,14 @@ describe("Modular Smart Account Basics: ", async () => {
     expect(await mockToken.balanceOf(userSA.address)).to.equal(ethers.utils.parseEther("1000000"));
   });
 
-  it ("Can send an ERC20 Transfer userOp", async () => {
-    const { 
-      entryPoint, 
-      mockToken,
-      userSA,
-      ecdsaModule
-    } = await setupTests();
-
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
-
-    const userOp = await makeEcdsaModuleUserOp(
-      "executeCall_s1m",
-      [
-        mockToken.address,
-        ethers.utils.parseEther("0"),
-        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      ],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address
-    )
-
-    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
-    await handleOpsTxn.wait();
-
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
-  });
-
-  it ("Can send a Native Token Transfer userOp", async () => {
-    const { 
-      entryPoint, 
-      userSA,
-      ecdsaModule
-    } = await setupTests();
-
-    const charlieBalanceBefore = await charlie.getBalance();
-    const amountToTransfer = ethers.utils.parseEther("0.5345");
-
-    const userOp = await makeEcdsaModuleUserOp(
-      "executeCall_s1m",
-      [
-        charlie.address,
-        amountToTransfer,
-        "0x",
-      ],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address
-    );
-
-    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
-    await handleOpsTxn.wait();
-    expect(await charlie.getBalance()).to.equal(charlieBalanceBefore.add(amountToTransfer));
-  });
-
-  it ("Can send a userOp with Paymaster payment", async () => {
-    const { 
-      entryPoint, 
-      mockToken,
-      userSA,
-      ecdsaModule,
-      verifyingPaymaster
-    } = await setupTests();
-
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
-
-    const userOp = await makeEcdsaModuleUserOpWithPaymaster(
-      "executeCall_s1m",
-      [
-        mockToken.address,
-        ethers.utils.parseEther("0"),
-        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      ],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address,
-      verifyingPaymaster,
-      verifiedSigner,
-    );
-
-    const handleOpsTxn = await entryPoint.handleOps([userOp], verifiedSigner.address);
-    await handleOpsTxn.wait();
-
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
-  });
+  /**
+   * To test that SA and Modules work properly in the wild, the most important tests
+   * such as "Send userOp" and "Send userOp with Paymaster" need to be tested in a 
+   * bundler-enabled environment. Thus such test has been moved into the /bundler-integration
+   * suite.
+   *  
+   * See test/bundler-integration/smart-account/SA.Basics.specs.ts for more Basic SA tests
+   */
 
   it ("Can verify a signature through isValidSignature", async () => {    
     const { 

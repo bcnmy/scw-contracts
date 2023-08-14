@@ -96,39 +96,8 @@ describe("SessionKey: SessionKey Manager Module", async () => {
   });
 
   describe ("setMerkleRoot", async () => {
-    it ("should add new session key by setting new merkle tree root", async () => {
-      const { userSA, sessionKeyManager, mockSessionValidationModule, entryPoint, ecdsaModule } = await setupTests();
-
-      const data = hexConcat([
-        hexZeroPad("0x00",6),
-        hexZeroPad("0x00",6),
-        hexZeroPad(mockSessionValidationModule.address,20),
-        hexZeroPad(sessionKey.address, 20),
-      ]);
-
-      const merkleTree = new MerkleTree(
-        [ethers.utils.keccak256(data)],
-        keccak256,
-        { sortPairs: false, hashLeaves: false }
-      );
-      let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
-        "executeCall",
-        [
-          sessionKeyManager.address,
-          ethers.utils.parseEther("0"),
-          sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [merkleTree.getHexRoot()]),
-        ],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
-      const tx = await entryPoint.handleOps([addMerkleRootUserOp], alice.address);
-      await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-      
-      expect(
-        (await sessionKeyManager.getSessionKeys(userSA.address)).merkleRoot
-      ).to.equal(merkleTree.getHexRoot());
+    it ("MOVED: should add new session key by setting new merkle tree root", async () => {
+      //moved to /test/bundler-integration/module/SessionKeyManager.Module.specs.ts
     });
 
     it ("should add new session key to the existing merkle tree", async () => {
@@ -197,31 +166,8 @@ describe("SessionKey: SessionKey Manager Module", async () => {
   });
 
   describe ("validateUserOp", async () => {
-    it ("should be able to process Session Key signed userOp via Mock session validation module", async () => {
-      const { entryPoint, userSA, sessionKeyManager, mockSessionValidationModule, mockToken, sessionKeyData, leafData, merkleTree } = await setupTests();
-      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-
-      const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
-        [
-          mockToken.address,
-          ethers.utils.parseEther("0"),
-          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-        ],
-        userSA.address,
-        sessionKey,
-        entryPoint,
-        sessionKeyManager.address,
-        0, 
-        0,
-        mockSessionValidationModule.address,
-        sessionKeyData,
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-      );
-
-      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-      await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
-      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+    it ("MOVED: should be able to process Session Key signed userOp via Mock session validation module", async () => {
+      // moved to /test/bundler-integration/module/SessionKeyManager.Module.specs.ts
     });
 
     // reverts if signed with the session key that is not in the merkle tree 

@@ -11,7 +11,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
 
     await deploy("SmartAccountFactory", {
         from: deployer,
-        args: [smartAccountImplementation.address],
+        args: [smartAccountImplementation.address, deployer],
         log: true,
         deterministicDeployment: true,
         autoMine: true,
