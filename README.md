@@ -12,23 +12,24 @@ Smart Account is designed in such a way that it is:
 
 # How to run the project
 
-This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
-
 ## 1. Install
 ```shell
 > npm install
 // or
 > yarn install
 ```
+For Bundler Integration Tests also install Docker. 
 
 ## 2. Configure
 Place a mnemonic in a `.secret` file in the root folder of the project.
 
-### 3. Run
+## 3. Run
+All the smart contracts are carefully tested.
+There are two kinds of tests:
+* Standard Hardhat environment tests which test the main contracts logic
+* Bundler Integration tests which feature custom bundler-enabled environment to test that Smart Account and Modules operate properly in the wild with all the ERC-4337 limitations such as banned opcodes and storage access rules.
 
-The project comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts. It also comes with a variety of other tools, preconfigured to work with the project code.
-
-Try running some of the following tasks:
+For Bundler integration tests you also need active Docker Environment.
 
 ```shell
 # Regular Tests
@@ -37,6 +38,7 @@ npx hardhat test
 # Bundler Integration Tests
 # Install realpath
 brew install coreutils
+# Run Bundler Integration Tests
 yarn bundler-test
 
 # other

@@ -17,7 +17,7 @@ import {
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-describe("Ownerless Smart Account Basics (with Bundler)", async () => {
+describe("Modular Smart Account Basics (with Bundler)", async () => {
   let deployer: SignerWithAddress,
     smartAccountOwner: SignerWithAddress,
     charlie: SignerWithAddress,

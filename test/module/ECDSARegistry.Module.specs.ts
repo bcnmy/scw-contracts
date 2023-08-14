@@ -97,25 +97,8 @@ describe("ECDSA Registry Module: ", async()=>{
     });
 
     describe("transferOwnership: ",async()=>{
-        it("Call transferOwnership from userSA and it successfully changes owner ", async()=>{
-            const {ecdsaRegistryModule,entryPoint,userSA} = await setupTests();
-            // Calldata to set Bob as owner
-            let txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
-                "transferOwnership",
-                [bob.address]
-            );
-            let userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
-                [ecdsaRegistryModule.address,0,txnData1],
-                userSA.address,
-                smartAccountOwner,
-                entryPoint,
-                ecdsaRegistryModule.address
-            );
-
-            const tx = await entryPoint.handleOps([userOp],charlie.address);
-            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-            expect(await ecdsaRegistryModule.getOwner(userSA.address)).to.be.equal(bob.address);
+        it("MOVED: Call transferOwnership from userSA and it successfully changes owner ", async()=>{
+            // moved to /test/bundler-integration/module/ECDSARegistry.Module.specs.ts
         });
 
         it("Reverts when trying to set Smart Contract Address as owner via transferOwnership() ", async()=>{
@@ -162,58 +145,15 @@ describe("ECDSA Registry Module: ", async()=>{
     });
 
     describe("renounceOwnership():", async()=>{
-        it("Should be able to renounce ownership and the new owner should be address(0)", async()=>{
-            const {ecdsaRegistryModule, entryPoint, userSA} = await setupTests();
-            let txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
-                "renounceOwnership",
-                []
-            );
-            let userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
-                [ecdsaRegistryModule.address,0,txnData1],
-                userSA.address,
-                smartAccountOwner,
-                entryPoint,
-                ecdsaRegistryModule.address
-            );
-
-            const tx = await entryPoint.handleOps([userOp],charlie.address);
-            await expect(tx).to.not.emit(entryPoint, "UserOperationRevertReason");
-            await expect(ecdsaRegistryModule.getOwner(userSA.address)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
+        it("MOVED: Should be able to renounce ownership and the new owner should be address(0)", async()=>{
+            // moved to /test/bundler-integration/module/ECDSARegistry.Module.specs.ts
         });
     });
 
     // validateUserOp(UserOperation calldata userOp,bytes32 userOpHash)
     describe("validateUserOp(): ", async()=>{
-
-        it("Returns SIG_VALIDATION_SUCCESS for a valid UserOp and valid userOpHash ", async()=>{
-            const {ecdsaRegistryModule,entryPoint,userSA,mockToken} = await setupTests();
-            const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
-            const bobBalanceBefore = await mockToken.balanceOf(bob.address);
-            const tokenAmountToTransfer = ethers.utils.parseEther("3.5672");
-
-            let txnData = await mockToken.interface.encodeFunctionData(
-                "transfer",
-                [bob.address,tokenAmountToTransfer.toString()]
-            );
-            const userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
-                [mockToken.address,0,txnData],
-                userSA.address,
-                smartAccountOwner,
-                entryPoint,
-                ecdsaRegistryModule.address
-            );
-            // Construct userOpHash
-            const provider = entryPoint?.provider;
-            const chainId = await provider!.getNetwork().then((net) => net.chainId);
-            const userOpHash = getUserOpHash(userOp,entryPoint.address,chainId);
-            
-            let res = await ecdsaRegistryModule.validateUserOp(userOp, userOpHash);
-            expect(res).to.be.equal(SIG_VALIDATION_SUCCESS);
-            await entryPoint.handleOps([userOp],smartAccountOwner.address);
-            expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore.add(tokenAmountToTransfer));
-            expect(await mockToken.balanceOf(userSA.address)).to.equal(userSABalanceBefore.sub(tokenAmountToTransfer));
+        it("MOVED: Returns SIG_VALIDATION_SUCCESS for a valid UserOp and valid userOpHash ", async()=>{
+            // moved to /test/bundler-integration/module/ECDSARegistry.Module.specs.ts
         });
 
         // Pass in valid userOp with invalid userOpHash

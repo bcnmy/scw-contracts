@@ -53,34 +53,8 @@ describe("UserOps", async () => {
 
   describe("validateUserOp ", async () => {
 
-    it ("Can validate a userOp via proper Authorization Module", async () => {
-      const { 
-        entryPoint, 
-        mockToken,
-        userSA,
-        ecdsaModule
-      } = await setupTests();
-
-      const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-      const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
-
-      const userOp = await makeEcdsaModuleUserOp(
-        "executeCall",
-        [
-          mockToken.address,
-          ethers.utils.parseEther("0"),
-          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-        ],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      )
-
-      const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
-      await handleOpsTxn.wait();
-
-      expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+    it ("MOVED: Can validate a userOp via proper Authorization Module", async () => {
+      // moved to /test/bundler-integration/smart-account/SA.UserOps.specs.ts
     });
 
     it ("Reverts when trying to forward validateUserOp flow to the enabled module that doesnt implement proper interface", async () => {

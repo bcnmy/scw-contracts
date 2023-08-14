@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import "./Proxy.sol";
-import "./BaseSmartAccount.sol";
-import {DefaultCallbackHandler} from "./handler/DefaultCallbackHandler.sol";
-import {SmartAccountFactoryErrors} from "./common/Errors.sol";
+import "../Proxy.sol";
+import "../BaseSmartAccount.sol";
+import {DefaultCallbackHandler} from "../handler/DefaultCallbackHandler.sol";
+import {SmartAccountFactoryErrors} from "../common/Errors.sol";
+import {Stakeable} from "../common/Stakeable.sol";
 
 /**
  * @title Smart Account Factory - factory responsible for deploying Smart Accounts using CREATE2 and CREATE
@@ -12,7 +13,7 @@ import {SmartAccountFactoryErrors} from "./common/Errors.sol";
  *      This allows keeping the same address for the same Smart Account owner on various chains via CREATE2
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
-contract SmartAccountFactory {
+contract SmartAccountFactory is Stakeable {
     address public immutable basicImplementation;
     DefaultCallbackHandler public immutable minimalHandler;
 
@@ -26,7 +27,10 @@ contract SmartAccountFactory {
         address indexed initialAuthModule
     );
 
-    constructor(address _basicImplementation) {
+    constructor(
+        address _basicImplementation,
+        address _newOwner
+    ) Stakeable(_newOwner) {
         require(
             _basicImplementation != address(0),
             "implementation cannot be zero"
