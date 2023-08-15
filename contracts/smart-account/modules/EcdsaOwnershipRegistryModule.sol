@@ -39,14 +39,13 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     /**
      * @dev Initializes the module for a Smart Account.
      * Should be used at a time of first enabling the module for a Smart Account.
-     * @param owner The owner of the Smart Account.
+     * @param eoaOwner The owner of the Smart Account. Should be EOA!
      */
-    function initForSmartAccount(address owner) external returns (address) {
+    function initForSmartAccount(address eoaOwner) external returns (address) {
         if (smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
-        if (_isSmartContract(owner)) revert NotEOA(owner);
-        if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
-        smartAccountOwners[msg.sender] = owner;
+        if (eoaOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
+        smartAccountOwners[msg.sender] = eoaOwner;
         return address(this);
     }
 

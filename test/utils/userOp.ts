@@ -7,6 +7,7 @@ import {
   hexDataSlice,
   hexValue,
   keccak256,
+  hexZeroPad,
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
 import { ethers } from "hardhat";
@@ -19,6 +20,7 @@ import {
 import { EntryPoint, VerifyingSingletonPaymaster } from "../../typechain";
 import { UserOperation } from "./userOperation";
 import { Create2Factory } from "../../src/Create2Factory";
+import { MerkleTree } from "merkletreejs";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 export function packUserOp(op: UserOperation, forSignature = true): string {
@@ -454,6 +456,82 @@ export async function makeSARegistryModuleUserOp(
   );
 
   userOp.signature = signatureForECDSAOwnershipRegistry;
+  return userOp;
+}
+
+export async function makeMultichainEcdsaModuleUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+  leaves: string[],
+  options?: {
+    preVerificationGas?: number;
+  },
+  validUntil: number = 0,
+  validAfter: number = 0,
+) : Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+  
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+  
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      ...options,
+    },
+    userOpSigner,
+    entryPoint,
+    'nonce'
+  );
+  
+  const leafOfThisUserOp = hexConcat([
+    hexZeroPad(ethers.utils.hexlify(validUntil),6),
+    hexZeroPad(ethers.utils.hexlify(validAfter),6),
+    hexZeroPad(await entryPoint.getUserOpHash(userOp),32),
+  ]);  
+  
+  leaves.push(leafOfThisUserOp);
+  leaves = leaves.map(x => ethers.utils.keccak256(x));
+  
+  const chainMerkleTree = new MerkleTree(
+    leaves,
+    keccak256,
+    { sortPairs: true }
+  );
+
+  // user only signs once
+  const multichainSignature = await userOpSigner.signMessage(ethers.utils.arrayify(chainMerkleTree.getHexRoot()));
+  
+  // but still required to pad the signature with the required data (unsigned) for every chain
+  // this is done by dapp automatically
+  const merkleProof = chainMerkleTree.getHexProof(leaves[leaves.length - 1]);
+  const moduleSignature = defaultAbiCoder.encode(
+    ["uint48", "uint48", "bytes32", "bytes32[]", "bytes"],
+    [
+      validUntil,
+      validAfter,
+      chainMerkleTree.getHexRoot(),
+      merkleProof,
+      multichainSignature,
+    ]
+  );
+
+  // add validator module address to the signature
+  const signatureWithModuleAddress = defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [moduleSignature, moduleAddress]
+  );
+  
+  // =================== put signature into userOp and execute ===================
+  userOp.signature = signatureWithModuleAddress;
+
   return userOp;
 }
 

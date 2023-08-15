@@ -63,7 +63,7 @@ describe("Modular Smart Account Basics: ", async () => {
     expect(await ethers.provider.getBalance(userSA.address)).to.equal(ethers.utils.parseEther("10"));
     expect(await mockToken.balanceOf(userSA.address)).to.equal(ethers.utils.parseEther("1000000"));
   });
-
+  
   /**
    * To test that SA and Modules work properly in the wild, the most important tests
    * such as "Send userOp" and "Send userOp with Paymaster" need to be tested in a 
