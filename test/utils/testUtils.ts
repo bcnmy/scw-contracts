@@ -163,5 +163,7 @@ export const encodeTransferFrom = (
 };
 
 export const encodeSignMessage = (data: string): string => {
-  return SignMessageLibInterface.encodeFunctionData("signMessageOnchain", [data]);
+  return SignMessageLibInterface.encodeFunctionData("signMessageOnchain", [
+    data,
+  ]);
 };

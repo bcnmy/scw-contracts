@@ -101,7 +101,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
         "nonce"
       );
 
-      let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
         ["bytes", "address"],
         [deploymentUserOp.signature, ecdsaModule.address]
       );
@@ -118,7 +118,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
         "Deploy with an ecdsa signature via userOp gas used: ",
         receipt2.gasUsed.toString()
       );
-      //this moves nonce from 0 to further tests using userSA
+      // this moves nonce from 0 to further tests using userSA
 
       const userSA = await ethers.getContractAt(
         "SmartAccount",
@@ -158,7 +158,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
 
     expect(await ethers.provider.getBalance(userSA.address)).to.be.above(
-      ethers.utils.parseEther("9") //gas was used for first userOp
+      ethers.utils.parseEther("9") // gas was used for first userOp
     );
     expect(await mockToken.balanceOf(userSA.address)).to.equal(
       ethers.utils.parseEther("1000000")

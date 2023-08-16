@@ -1,10 +1,7 @@
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import {
-  Deployer,
-  Deployer__factory
-} from "../../typechain";
+import { Deployer, Deployer__factory } from "../../typechain";
 
 import { DEPLOYMENT_SALTS, isContract } from "../../scripts/utils";
 
@@ -25,7 +22,7 @@ describe("Deploy the deployer and then deploy more contracts using it", function
       factoryDeployerSigner
     ).deploy();
     await deployerInstance.deployed();
-    //console.log("deployerInstance deployed ", deployerInstance.address);
+    // console.log("deployerInstance deployed ", deployerInstance.address);
   });
 
   it("Deploys Entrypoint", async function () {
@@ -39,7 +36,7 @@ describe("Deploy the deployer and then deploy more contracts using it", function
     const entryPointBytecode = `${EntryPoint.bytecode}`;
 
     entryPointAddress = await deployerInstance.addressOf(salt);
-    //console.log("Entry Point Computed Address: ", entryPointAddress);
+    // console.log("Entry Point Computed Address: ", entryPointAddress);
 
     const isEntryPointDeployed = await isContract(entryPointAddress, provider); // true (deployed on-chain)
     if (!isEntryPointDeployed) {
@@ -52,7 +49,7 @@ describe("Deploy the deployer and then deploy more contracts using it", function
         .withArgs(entryPointAddress);
     }
 
-    //console.log("entrypoint deployed at: ", entryPointAddress);
+    // console.log("entrypoint deployed at: ", entryPointAddress);
     const code = await provider.getCode(entryPointAddress);
     expect(code).to.not.equal("0x");
 
@@ -72,7 +69,7 @@ describe("Deploy the deployer and then deploy more contracts using it", function
     const multiSendBytecode = `${multiSend.bytecode}`;
     const multiSendComputedAddr = await deployerInstance.addressOf(salt);
 
-    //console.log("MultiSend Computed Address: ", multiSendComputedAddr);
+    // console.log("MultiSend Computed Address: ", multiSendComputedAddr);
 
     const ismultiSendDeployed = await isContract(
       multiSendComputedAddr,
@@ -80,16 +77,16 @@ describe("Deploy the deployer and then deploy more contracts using it", function
     ); // true (deployed on-chain)
     if (!ismultiSendDeployed) {
       const code = await provider.getCode(multiSendComputedAddr);
-      //console.log("code before.. ", code);
+      // console.log("code before.. ", code);
       expect(code).to.be.equal("0x");
       await deployerInstance
         .connect(anyDeployer)
         .deploy(salt, multiSendBytecode);
     }
 
-    //console.log("entrypoint deployed at: ", multiSendComputedAddr);
+    // console.log("entrypoint deployed at: ", multiSendComputedAddr);
     const code = await provider.getCode(multiSendComputedAddr);
-    //console.log("code after.. ", code);
+    // console.log("code after.. ", code);
     expect(code).to.not.equal("0x");
 
     await expect(

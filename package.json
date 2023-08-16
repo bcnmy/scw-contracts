@@ -12,6 +12,7 @@
     "test": "npx hardhat test",
     "bundler-test": "./scripts/bundler-tests.sh",
     "lint": "prettier --write 'contracts/**/*.sol'",
+    "lint-fix": "eslint -c .eslintrc.js 'test/**/*.ts' --fix",
     "postinstall": "husky install",
     "prepack": "pinst --disable",
     "postpack": "pinst --enable",
