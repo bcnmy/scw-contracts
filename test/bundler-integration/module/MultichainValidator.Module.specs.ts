@@ -195,9 +195,6 @@ describe("MultichainValidator Module", async () => {
       ["bytes", "address"],
       [moduleSignature, multichainECDSAValidator.address]
     );
-
-    console.log("expectedSmartAccountAddress: ", expectedSmartAccountAddress);
-    console.log("multiChainECDSAValidator: ", multichainECDSAValidator.address);
     
     // =================== put signature into userOp and execute ===================
     deploymentUserOp.signature = signatureWithModuleAddress;
