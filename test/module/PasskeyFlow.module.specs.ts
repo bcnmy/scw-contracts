@@ -10,9 +10,9 @@ import { fillAndSign } from "../utils/userOp";
 
 const keyId = "test";
 const pubX =
-  "0xa736f00b7d22e878a2fe3836773219ddac3c9b2bdcb066b3c480232262b410ad";
+  "0xdf0512fd74006638b347e1921c624305a103133a10c6e35ac436017fbcd2b890";
 const pubY =
-  "0xd238d6f412bbf0334a592d4cba3862d28853f9f27d4ff6a9546de355761eb0f8";
+  "0x4726e5f551a0abd8ac7867e7f887ff1f244fa04b163f0bf1834667d1775b81f3";
 
 describe("Passkeys Registry Module:", function () {
   const [deployer, offchainSigner, charlie] = waffle.provider.getWallets();
@@ -44,6 +44,7 @@ describe("Passkeys Registry Module:", function () {
       to: userSA.address,
       value: ethers.utils.parseEther("10"),
     });
+    // console.log(await passKeyModule.smartAccountPassKeys(userSA.address));
     // await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
     return {
@@ -79,33 +80,31 @@ describe("Passkeys Registry Module:", function () {
 
     const txnDataAA1 = userSA.interface.encodeFunctionData("executeCall", [
       charlie.address,
-      ethers.utils.parseEther("1"),
+      ethers.utils.parseEther("0.1"),
       "0x",
     ]);
-    const userOp1 = await fillAndSign(
-      {
-        sender: userSA.address,
-        callData: txnDataAA1,
-      },
-      offchainSigner, // random eoa signing the transaction
-      entryPoint,
-      "nonce"
-    );
-    userOp1.signature = "";
-    console.log("userOp1 before", userOp1);
-    // add validator module address to the signature
+    // const userOp = await fillAndSign(
+    //   {
+    //     sender: userSA.address,
+    //     callData: txnDataAA1,
+    //   },
+    //   // offchainSigner, // random eoa signing the transaction
+    //   deployer, // random eoa signing the transaction
+    //   entryPoint,
+    //   "nonce"
+    // );
+    // userOp.signature = "";
+    // console.log("userOp before", userOp);
+    // // add validator module address to the signature
     // const signatureWithModuleAddress =
-    //   "0x26877a3a3c8313f8a23dd5323d74523613e8ed12581731be9df482b969efc6b0917f457dfe4fea9bffa6323a29e9ca56bebcec612129f76883690434ae168e3d1d9dbfe496790f59daeeb62c5c8b00fc5a9751c9caa76b194e5472b190b8690100000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000002549960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000247b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a22000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000037222c226f726967696e223a22687474703a2f2f6c6f63616c686f73743a35313733222c2263726f73734f726967696e223a66616c73657d000000000000000000";
+    //   "0x154f13ac390ea148e340b66e94125d6b30c4a807563966b0e98d18aa51a28e4ac339e0956fa12ea2798c943a6eb28fd4fa79ccffaf8661f8b7f9316bb5569f289572fd2c21fcdd6b7eea76e41889cedabfd140721d6dbb8c6f7ce6f6bb1f12f900000000000000000000000000000000000000000000000000000000000000c000000000000000000000000000000000000000000000000000000000000001200000000000000000000000000000000000000000000000000000000000000180000000000000000000000000000000000000000000000000000000000000002549960de5880e8c687434170f6476605b8fe4aeb9a28632c7995cf3ba831d9763050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000247b2274797065223a22776562617574686e2e676574222c226368616c6c656e6765223a22000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000037222c226f726967696e223a22687474703a2f2f6c6f63616c686f73743a35313733222c2263726f73734f726967696e223a66616c73657d000000000000000000";
 
-    // userOp1.signature = signatureWithModuleAddress;
-    // console.log("userOp1", userOp1);
+    // userOp.signature = signatureWithModuleAddress;
+    // console.log("userOp", userOp);
 
     // const handleOpsTxn = await entryPoint.handleOps(
-    //   [userOp1],
-    //   await offchainSigner.getAddress(),
-    //   {
-    //     gasLimit: 20000000,
-    //   }
+    //   [userOp],
+    //   await offchainSigner.getAddress()
     // );
     // await handleOpsTxn.wait();
   });
