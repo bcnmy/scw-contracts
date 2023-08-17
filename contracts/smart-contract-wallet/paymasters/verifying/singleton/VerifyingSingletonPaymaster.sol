@@ -68,7 +68,7 @@ contract VerifyingSingletonPaymaster is
         assembly {
             sstore(verifyingSigner.slot, _verifyingSigner)
         }
-        unaccountedEPGasOverhead = 9600;
+        unaccountedEPGasOverhead = 12000;
     }
 
     /**
@@ -226,13 +226,32 @@ contract VerifyingSingletonPaymaster is
                 paymasterIdBalances[paymasterData.paymasterId]
             );
         return (
-            userOp.paymasterContext(paymasterData, userOp.gasPrice()),
+            userOp.paymasterContext(
+                paymasterData,
+                userOp.maxFeePerGas,
+                userOp.maxPriorityFeePerGas
+            ),
             _packValidationData(
                 false,
                 paymasterData.validUntil,
                 paymasterData.validAfter
             )
         );
+    }
+
+    function getGasPrice(
+        uint256 maxFeePerGas,
+        uint256 maxPriorityFeePerGas
+    ) internal view returns (uint256) {
+        if (maxFeePerGas == maxPriorityFeePerGas) {
+            //legacy mode (for networks that don't support basefee opcode)
+            return maxFeePerGas;
+        }
+        return min(maxFeePerGas, maxPriorityFeePerGas + block.basefee);
+    }
+
+    function min(uint256 a, uint256 b) internal pure returns (uint256) {
+        return a < b ? a : b;
     }
 
     /**
@@ -248,9 +267,13 @@ contract VerifyingSingletonPaymaster is
     ) internal virtual override {
         PaymasterContext memory data = context._decodePaymasterContext();
         address extractedPaymasterId = data.paymasterId;
+        uint256 effectiveGasPrice = getGasPrice(
+            data.maxFeePerGas,
+            data.maxPriorityFeePerGas
+        );
         uint256 balToDeduct = actualGasCost +
             unaccountedEPGasOverhead *
-            data.gasPrice;
+            effectiveGasPrice;
         paymasterIdBalances[extractedPaymasterId] =
             paymasterIdBalances[extractedPaymasterId] -
             balToDeduct;

@@ -126,7 +126,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
         await paymaster.connect(accounts[0]).setUnaccountedEPGasOverhead(10000)
       )
         .to.emit(paymaster, "EPGasOverheadChanged")
-        .withArgs(9600, 10000);
+        .withArgs(12000, 10000);
 
       const txnData = await getExecuteCallData(
         destinationAddress,
@@ -153,12 +153,12 @@ describe("Upgrade functionality Via Entrypoint", function () {
       ).deposit;
       const paymasterIdDepositBefore = await paymaster.getBalance(paymasterId);
 
-      // Set it back to 9600
+      // Set it back to 12000
       expect(
-        await paymaster.connect(accounts[0]).setUnaccountedEPGasOverhead(9600)
+        await paymaster.connect(accounts[0]).setUnaccountedEPGasOverhead(12000)
       )
         .to.emit(paymaster, "EPGasOverheadChanged")
-        .withArgs(10000, 9600);
+        .withArgs(10000, 12000);
 
       console.log(
         "pre verification gas used ",
@@ -200,6 +200,7 @@ describe("Upgrade functionality Via Entrypoint", function () {
       // Get actual transaction fee paid by bundler
       const transactionFee = await getTransactionFee(tx);
 
+      // Review
       expect(feePaidByPaymasterID.toNumber()).to.be.greaterThan(
         feePaidByPaymasterDeposit.toNumber()
       );
