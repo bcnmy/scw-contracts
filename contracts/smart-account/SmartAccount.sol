@@ -217,7 +217,7 @@ contract SmartAccount is
     }
 
     /**
-     * @dev Interface function with the standard name for executeBatchCall_4by
+     * @dev Interface function with the standard name for executeBatch_y6U
      * @param dest Addresses of the contracts to call
      * @param value Amounts of native tokens to send along with the transactions
      * @param func Data of the transactions
