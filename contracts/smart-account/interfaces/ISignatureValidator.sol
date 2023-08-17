@@ -12,7 +12,7 @@ abstract contract ISignatureValidator is ISignatureValidatorConstants {
      * @param _dataHash Arbitrary length data signed on behalf of address(this)
      * @param _signature Signature byte array associated with _data
      *
-     * MUST return the bytes4 magic value 0x20c13b0b when function passes.
+     * MUST return the bytes4 magic value 0x1626ba7e when function passes.
      * MUST NOT modify state (using STATICCALL for solc < 0.5, view modifier for solc > 0.5)
      * MUST allow external calls
      */
