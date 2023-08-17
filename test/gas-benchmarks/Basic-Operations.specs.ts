@@ -183,7 +183,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall_s1m",
+      "execute_ncC",
       [charlie.address, tokenAmountToTransfer, "0x"],
       userSA.address,
       smartAccountOwner,
@@ -215,7 +215,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("10");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall_s1m",
+      "execute_ncC",
       [
         mockToken.address,
         "0",
@@ -280,7 +280,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     });
 
     const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-      "executeCall_s1m",
+      "execute_ncC",
       [charlie.address, tokenAmountToTransfer, "0x"]
     );
 
@@ -335,7 +335,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
     const userOp = await makeEcdsaModuleUserOpWithPaymaster(
-      "executeCall_s1m",
+      "execute_ncC",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),

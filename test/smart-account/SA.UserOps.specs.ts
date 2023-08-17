@@ -86,7 +86,7 @@ describe("UserOps", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -127,7 +127,7 @@ describe("UserOps", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -167,7 +167,7 @@ describe("UserOps", async () => {
 
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),

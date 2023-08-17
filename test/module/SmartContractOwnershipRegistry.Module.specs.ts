@@ -101,7 +101,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
                 [bob.address],
             );
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [smartContractOwnershipRegistryModule.address,0,txnData],
                  userSA.address,
                  baseSmartAccountOwner1,
@@ -123,7 +123,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
                 [smartAccountOwnerContract2.address]
             );
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [smartContractOwnershipRegistryModule.address,0,txnData],
                  userSA.address,
                  baseSmartAccountOwner1,
@@ -146,7 +146,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
                 [invalidEOAOwner]
             );
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [smartContractOwnershipRegistryModule.address,0,txnData],
                  userSA.address,
                  baseSmartAccountOwner1,
@@ -169,7 +169,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
                 [invalidOwner]
             );
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [smartContractOwnershipRegistryModule.address,0,txnData],
                  userSA.address,
                  baseSmartAccountOwner1,
@@ -192,7 +192,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
                 []
             );
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [smartContractOwnershipRegistryModule.address,0,txnData],
                  userSA.address,
                  baseSmartAccountOwner1,
@@ -218,7 +218,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
                 [bob.address,tokenAmountToTransfer.toString()]
             );
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address,0,txnData],
                  userSA.address,
                  baseSmartAccountOwner1,
@@ -248,7 +248,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
                 [bob.address,tokenAmountToTransfer.toString()]
             );
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address,0,txnData],
                  userSA.address,
                  baseSmartAccountOwner1,
@@ -272,7 +272,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
                 [bob.address,tokenAmountToTransfer.toString()]
             );
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address,0,txnData],
                  userSA.address,
                  baseSmartAccountOwner1,
@@ -301,7 +301,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
 
             const notSmartAccountOwner = alice;
             let userOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address,0,txnData],
                  userSA.address,
                  notSmartAccountOwner,
@@ -337,7 +337,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             });
             //renounce ownership
             const renounceOwnershipUserOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [smartContractOwnershipRegistryModule.address,0,smartContractOwnershipRegistryModule.interface.encodeFunctionData("renounceOwnership",[])],
                 unregisteredSmartAccountAddress,
                 baseSmartAccountOwner1,
@@ -350,7 +350,7 @@ describe("Smart Contract Ownership Registry Module: ", async()=>{
             await expect(smartContractOwnershipRegistryModule.getOwner(unregisteredSA.address)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
 
             const sendTokenUserOp = await makeSARegistryModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address, 0, encodeTransfer(bob.address,tokenAmountToTransfer.toString())],
                 unregisteredSmartAccountAddress,
                 baseSmartAccountOwner1,

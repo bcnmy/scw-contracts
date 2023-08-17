@@ -77,7 +77,7 @@ describe("Passkeys Registry Module:", function () {
   it("Can send a userOp with a default validation module", async () => {
     const { userSA, entryPoint } = await setupTests();
 
-    const txnDataAA1 = userSA.interface.encodeFunctionData("executeCall", [
+    const txnDataAA1 = userSA.interface.encodeFunctionData("execute", [
       charlie.address,
       ethers.utils.parseEther("1"),
       "0x",

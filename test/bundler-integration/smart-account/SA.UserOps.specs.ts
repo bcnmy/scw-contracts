@@ -103,7 +103,7 @@ describe("UserOps (with Bundler)", async () => {
       const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
       const userOp = await makeEcdsaModuleUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),

@@ -37,7 +37,7 @@ contract ERC20SessionValidationModule {
         ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
 
         {
-            // we expect _op.callData to be `SmartAccount.executeCall(to, value, calldata)` calldata
+            // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
             (address tokenAddr, uint256 callValue, ) = abi.decode(
                 _op.callData[4:], // skip selector
                 (address, uint256, bytes)

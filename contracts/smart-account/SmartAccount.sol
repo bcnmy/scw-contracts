@@ -167,7 +167,7 @@ contract SmartAccount is
      * @param value Amount of native tokens to send along with the transaction
      * @param func Data of the transaction
      */
-    function executeCall_s1m(
+    function execute_ncC(
         address dest,
         uint256 value,
         bytes calldata func
@@ -177,17 +177,17 @@ contract SmartAccount is
     }
 
     /**
-     * @dev Interface function with the standard name for executeCall_s1m
+     * @dev Interface function with the standard name for execute_ncC
      * @param dest Address of the contract to call
      * @param value Amount of native tokens to send along with the transaction
      * @param func Data of the transaction
      */
-    function executeCall(
+    function execute(
         address dest,
         uint256 value,
         bytes calldata func
     ) external {
-        executeCall_s1m(dest, value, func);
+        execute_ncC(dest, value, func);
     }
 
     /**
@@ -197,7 +197,7 @@ contract SmartAccount is
      * @param value Amounts of native tokens to send along with the transactions
      * @param func Data of the transactions
      */
-    function executeBatchCall_4by(
+    function executeBatch_y6U(
         address[] calldata dest,
         uint256[] calldata value,
         bytes[] calldata func
@@ -222,12 +222,12 @@ contract SmartAccount is
      * @param value Amounts of native tokens to send along with the transactions
      * @param func Data of the transactions
      */
-    function executeBatchCall(
+    function executeBatch(
         address[] calldata dest,
         uint256[] calldata value,
         bytes[] calldata func
     ) external {
-        executeBatchCall_4by(dest, value, func);
+        executeBatch_y6U(dest, value, func);
     }
 
     /**
