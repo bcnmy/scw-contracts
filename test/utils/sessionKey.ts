@@ -83,7 +83,7 @@ export async function enableNewTreeForSmartAccountViaEcdsa(
     { sortPairs: false, hashLeaves: false }
   );
   let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
-    "executeCall",
+    "execute_ncC",
     [
       sessionKeyManager.address,
       ethers.utils.parseEther("0"),
@@ -113,7 +113,7 @@ export async function addLeavesForSmartAccountViaEcdsa(
   
   merkleTree.addLeaves(newLeaves);
   let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
-    "executeCall",
+    "execute_ncC",
     [
       sessionKeyManager.address,
       ethers.utils.parseEther("0"),

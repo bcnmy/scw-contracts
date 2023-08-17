@@ -132,7 +132,7 @@ describe("Bundler Environment", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "execute_ncC",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),
@@ -203,7 +203,7 @@ describe("Bundler Environment", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "execute_ncC",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),
@@ -265,7 +265,7 @@ describe("Bundler Environment", async () => {
     await environment.sendUserOperation(userOp, entryPoint.address);
 
     const violatingUserOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "execute_ncC",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),

@@ -129,7 +129,7 @@ describe("MultichainValidator Module", async () => {
     // ============== make userOp ===============
 
     const batchUserOpCallData = SmartAccount.interface.encodeFunctionData(
-      "executeBatchCall_4by",
+      "executeBatch_y6U",
       [
         [expectedSmartAccountAddress, sessionKeyManager.address],
         [0, 0],
@@ -230,7 +230,7 @@ describe("MultichainValidator Module", async () => {
       const tokenAmountToTransfer = ethers.utils.parseEther("0.5945");
 
       const sendTokenMultichainUserOp = await makeMultichainEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -269,7 +269,7 @@ describe("MultichainValidator Module", async () => {
       const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
   
       const userOp = await makeEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
