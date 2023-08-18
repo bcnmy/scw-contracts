@@ -43,6 +43,18 @@ export enum DEPLOYMENT_SALTS {
   SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE = "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_xxxxxxxxxxxxx",
 }
 
+type StakingConfig = {
+  unstakeDelayInSec: number;
+  stakeInWei: BigNumber;
+};
+
+export const factoryStakeConfig: Record<number, StakingConfig> = {
+  80001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: ethers.utils.parseEther("0.001"),
+  },
+};
+
 export const factoryAbi = [
   {
     inputs: [
