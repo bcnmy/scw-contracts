@@ -9,11 +9,16 @@ import {
   Decoder__factory,
   Deployer,
   Deployer__factory,
+  ERC20SessionValidationModule__factory,
+  EcdsaOwnershipRegistryModule__factory,
   GasEstimator__factory,
   MultiSend__factory,
-  SmartAccount,
+  MultichainECDSAValidator__factory,
+  PasskeyRegistryModule__factory,
+  SessionKeyManager__factory,
   SmartAccountFactory__factory,
   SmartAccount__factory,
+  SmartContractOwnershipRegistryModule__factory,
 } from "../typechain";
 import {
   EntryPoint__factory,
@@ -168,6 +173,68 @@ async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
   );
 }
 
+async function deployEcdsaOwnershipRegistryModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.ECDSA_REGISTRY_MODULE,
+    `${EcdsaOwnershipRegistryModule__factory.bytecode}`,
+    "EcdsaOwnershipRegistryModule",
+    []
+  );
+}
+
+async function deployMultichainValidatorModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.MULTICHAIN_VALIDATOR_MODULE,
+    `${MultichainECDSAValidator__factory.bytecode}`,
+    "MultichainValidatorModule",
+    []
+  );
+}
+
+async function deployPasskeyModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.PASSKEY_MODULE,
+    `${PasskeyRegistryModule__factory.bytecode}`,
+    "PasskeyModule",
+    []
+  );
+}
+
+async function deploySessionKeyManagerModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.SESSION_KEY_MANAGER_MODULE,
+    `${SessionKeyManager__factory.bytecode}`,
+    "SessionKeyManagerModule",
+    []
+  );
+}
+
+async function deployErc20SessionValidationModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.ERC20_SESSION_VALIDATION_MODULE,
+    `${ERC20SessionValidationModule__factory.bytecode}`,
+    "ERC20SessionValidationModule",
+    []
+  );
+}
+
+async function deploySmartContractOwnershipRegistryModule(
+  deployerInstance: Deployer
+) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE,
+    `${SmartContractOwnershipRegistryModule__factory.bytecode}`,
+    "SmartContractOwnershipRegistryModule",
+    []
+  );
+}
+
 /*
  *  This function is added to support the flow with pre-deploying the deployer contract
  *  using the `deployer-contract.deploy.ts` script.
@@ -209,6 +276,19 @@ async function main() {
   await deployMultiSendCallOnlyContract(deployerInstance);
   console.log("=========================================");
   await deployVerifySingeltonPaymaster(deployerInstance);
+  console.log("=========================================");
+  await deployEcdsaOwnershipRegistryModule(deployerInstance);
+  console.log("=========================================");
+  await deployMultichainValidatorModule(deployerInstance);
+  console.log("=========================================");
+  await deployPasskeyModule(deployerInstance);
+  console.log("=========================================");
+  await deploySessionKeyManagerModule(deployerInstance);
+  console.log("=========================================");
+  await deployErc20SessionValidationModule(deployerInstance);
+  console.log("=========================================");
+  await deploySmartContractOwnershipRegistryModule(deployerInstance);
+  console.log("=========================================");
 }
 
 main().catch((error) => {

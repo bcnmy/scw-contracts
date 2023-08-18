@@ -1,14 +1,6 @@
 import { ethers as hardhatEthersInstance } from "hardhat";
+import { BigNumber, BigNumberish, Contract, ethers } from "ethers";
 import {
-  BigNumber,
-  BigNumberish,
-  Contract,
-  ethers,
-  Signer,
-  ContractFactory,
-} from "ethers";
-import {
-  getContractAddress,
   arrayify,
   hexConcat,
   hexlify,
@@ -43,6 +35,12 @@ export enum DEPLOYMENT_SALTS {
   WALLET_FACTORY = "DEVX_WALLET_FACTORY_V0_11042023_vyLkpGh",
   WALLET_IMP = "DEVX_WALLET_IMP_V0_11042023_AwPKF0R",
   SINGELTON_PAYMASTER = "DEVX_SINGLETON_PAYMASTER_V0_11042023_v6ISI9i",
+  ECDSA_REGISTRY_MODULE = "DEVX_ECDSA_REGISTRY_MODULE_V0_xxxxxxxxxxxxx",
+  MULTICHAIN_VALIDATOR_MODULE = "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_xxxxxxxxxxxxx",
+  PASSKEY_MODULE = "DEVX_PASSKEY_MODULE_V0_xxxxxxxxxxxxx",
+  SESSION_KEY_MANAGER_MODULE = "DEVX_SESSION_KEY_MANAGER_MODULE_V0_xxxxxxxxxxxxx",
+  ERC20_SESSION_VALIDATION_MODULE = "DEVX_ERC20_SESSION_VALIDATION_MODULE_V0_xxxxxxxxxxxxx",
+  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE = "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_xxxxxxxxxxxxx",
 }
 
 export const factoryAbi = [
@@ -112,7 +110,7 @@ export const getDeployerInstance = async (): Promise<Deployer> => {
   //   from: metaDeployer.address,
   //   nonce: 0,
   // });
-  
+
   const provider = hardhatEthersInstance.provider;
   const [signer] = await hardhatEthersInstance.getSigners();
   const chainId = (await provider.getNetwork()).chainId;
@@ -146,7 +144,9 @@ export const deployContract = async (
   deployerInstance: Deployer
 ): Promise<string> => {
   //const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {maxFeePerGas: 200e9, maxPriorityFeePerGas: 75e9});
-  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {gasPrice: 40e9});
+  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {
+    gasPrice: 40e9,
+  });
 
   console.log(`Submitted transaction ${hash} for deployment`);
 
