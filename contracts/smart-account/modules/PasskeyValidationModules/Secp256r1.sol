@@ -51,7 +51,7 @@ library Secp256r1 {
         uint r,
         uint s,
         uint e
-    ) public view returns (bool) {
+    ) internal view returns (bool) {
         if (r == 0 || s == 0 || r >= nn || s >= nn) {
             return false;
         }
