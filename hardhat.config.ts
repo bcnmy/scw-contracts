@@ -60,6 +60,13 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       chainId: 31337,
     },
+    hardhat_node: {
+      live: false,
+      saveDeployments: false,
+      chainId: 31337,
+      url: "http://localhost:8545",
+    },
+
     local: {
       live: false,
       saveDeployments: false,
