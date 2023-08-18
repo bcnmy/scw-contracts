@@ -66,7 +66,6 @@ const config: HardhatUserConfig = {
       chainId: 31337,
       url: "http://localhost:8545",
     },
-
     local: {
       live: false,
       saveDeployments: false,

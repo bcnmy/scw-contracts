@@ -30,10 +30,14 @@ let baseImpAddress = "";
 let entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
   "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
-const owner = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
+const smartAccountFactoryOwnerAddress =
+  process.env.SMART_ACCOUNT_FACTORY_OWNER_ADDRESS_DEV || "";
+const paymasterOwnerAddress = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
 const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_DEV || "";
 const DEPLOYER_CONTRACT_ADDRESS =
   process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
+
+const contractsDeployed: Record<string, string> = {};
 
 export async function deployGeneric(
   deployerInstance: Deployer,
@@ -66,6 +70,8 @@ export async function deployGeneric(
         `${contractName} is Already deployed with address ${computedAddress}`
       );
     }
+
+    contractsDeployed[contractName] = computedAddress;
 
     return computedAddress;
   } catch (err) {
@@ -109,9 +115,11 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
     `${SmartAccountFactory__factory.bytecode}${encodeParam(
       "address",
       baseImpAddress
-    ).slice(2)}`,
+    ).slice(2)}${encodeParam("address", smartAccountFactoryOwnerAddress).slice(
+      2
+    )}`,
     "SmartAccountFactory",
-    [baseImpAddress]
+    [baseImpAddress, smartAccountFactoryOwnerAddress]
   );
 }
 
@@ -158,7 +166,7 @@ async function deployMultiSendCallOnlyContract(deployerInstance: Deployer) {
 async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
   const bytecode = `${VerifyingPaymaster__factory.bytecode}${encodeParam(
     "address",
-    owner
+    paymasterOwnerAddress
   ).slice(2)}${encodeParam("address", entryPointAddress).slice(2)}${encodeParam(
     "address",
     verifyingSigner
@@ -169,7 +177,7 @@ async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
     DEPLOYMENT_SALTS.SINGELTON_PAYMASTER,
     bytecode,
     "VerifyingPaymaster",
-    [owner, entryPointAddress, verifyingSigner]
+    [paymasterOwnerAddress, entryPointAddress, verifyingSigner]
   );
 }
 
@@ -289,6 +297,11 @@ async function main() {
   console.log("=========================================");
   await deploySmartContractOwnershipRegistryModule(deployerInstance);
   console.log("=========================================");
+
+  console.log(
+    "Deployed Contracts: ",
+    JSON.stringify(contractsDeployed, null, 2)
+  );
 }
 
 main().catch((error) => {
