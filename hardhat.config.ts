@@ -242,6 +242,42 @@ const config: HardhatUserConfig = {
       chainId: 245022926,
       // gasPrice: 6400000
     },
+    baseGoerli: {
+      url:
+        process.env.BASE_TESTNET_URL ||
+        `https://base-goerli.blockpi.network/v1/rpc/public`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 84531,
+    },
+    lineaGoerli: {
+      url: process.env.LINEA_TESTNET_URL || `https://rpc.goerli.linea.build`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 59140,
+    },
+    lineaMainnet: {
+      url: process.env.LINEA_MAINNET_URL || ``,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 59144,
+    },
+    baseMainnet: {
+      url:
+        process.env.BASE_MAINNET_URL ||
+        `https://developer-access-mainnet.base.org`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 8453,
+    },
   },
 
   gasReporter: {
@@ -269,7 +305,45 @@ const config: HardhatUserConfig = {
       arbitrumOne: process.env.ARBITRUM_API_KEY || "",
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
+      baseGoerli: process.env.BASE_API_KEY || "",
+      lineaGoerli: "PLACEHOLDER_STRING",
+      lineaMainnet: "PLACEHOLDER_STRING",
+      baseMainnet: process.env.BASE_API_KEY || "",
     },
+    customChains: [
+      {
+        network: "lineaGoerli",
+        chainId: 59140,
+        urls: {
+          apiURL: "https://explorer.goerli.linea.build/api",
+          browserURL: "https://goerli.lineascan.build",
+        },
+      },
+      {
+        network: "lineaMainnet",
+        chainId: 59144,
+        urls: {
+          apiURL: "http://explorer.linea.build/api",
+          browserURL: "https://explorer.lineascan.build",
+        },
+      },
+      {
+        network: "baseGoerli",
+        chainId: 84531,
+        urls: {
+          apiURL: "https://api-goerli.basescan.org/api",
+          browserURL: "https://goerli.basescan.org",
+        },
+      },
+      {
+        network: "baseMainnet",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
+    ],
   },
 };
 
