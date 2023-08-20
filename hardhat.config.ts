@@ -54,12 +54,25 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
+      // Normal Config
       accounts: {
         accountsBalance: "10000000000000000000000000",
         //   mnemonic: MNEMONIC,
       },
       allowUnlimitedContractSize: true,
       chainId: 31337,
+
+      // Forking Conifg
+      // chainId: 80001,
+      // forking: {
+      //   url: process.env.POLYGON_MUMBAI_URL!,
+      // },
+      // accounts: [
+      //   {
+      //     privateKey: process.env.PRIVATE_KEY!,
+      //     balance: "10000000000000000000000000",
+      //   },
+      // ],
     },
     hardhat_node: {
       live: false,

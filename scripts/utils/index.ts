@@ -7,6 +7,8 @@ import {
   hexZeroPad,
   keccak256,
   Interface,
+  formatUnits,
+  parseUnits,
 } from "ethers/lib/utils";
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
 import { Deployer, Deployer__factory } from "../../typechain";
@@ -27,21 +29,32 @@ const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
 // TODO
 // remove TEST for production deployments
 export enum DEPLOYMENT_SALTS {
-  DECODER = "DEVX_DECODER_V0_11042023_uNQch4l",
+  DECODER = "DEVX_DECODER_V0_21082023",
   ENTRY_POINT = "DEVX_ENTRY_POINT_V0_30032023",
-  GAS_ESTIMATOR = "DEVX_GAS_ESTIMATOR_V0_11042023_z45NetJ",
-  MULTI_SEND = "DEVX_MULTI_SEND_V0_11042023_lLsNPAb",
-  MULTI_SEND_CALLONLY = "DEVX_MULTI_SEND_CALLONLY_V0_11042023_pcnXVXc",
-  WALLET_FACTORY = "DEVX_WALLET_FACTORY_V0_11042023_vyLkpGh",
-  WALLET_IMP = "DEVX_WALLET_IMP_V0_11042023_AwPKF0R",
-  SINGELTON_PAYMASTER = "DEVX_SINGLETON_PAYMASTER_V0_11042023_v6ISI9i",
-  ECDSA_REGISTRY_MODULE = "DEVX_ECDSA_REGISTRY_MODULE_V0_xxxxxxxxxxxxx",
-  MULTICHAIN_VALIDATOR_MODULE = "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_xxxxxxxxxxxxx",
-  PASSKEY_MODULE = "DEVX_PASSKEY_MODULE_V0_xxxxxxxxxxxxx",
-  SESSION_KEY_MANAGER_MODULE = "DEVX_SESSION_KEY_MANAGER_MODULE_V0_xxxxxxxxxxxxx",
-  ERC20_SESSION_VALIDATION_MODULE = "DEVX_ERC20_SESSION_VALIDATION_MODULE_V0_xxxxxxxxxxxxx",
-  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE = "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_xxxxxxxxxxxxx",
+  GAS_ESTIMATOR = "DEVX_GAS_ESTIMATOR_V0_21082023",
+  MULTI_SEND = "DEVX_MULTI_SEND_V0_21082023",
+  MULTI_SEND_CALLONLY = "DEVX_MULTI_SEND_CALLONLY_V0_21082023",
+  WALLET_FACTORY = "DEVX_WALLET_FACTORY_V0_21082023",
+  WALLET_IMP = "DEVX_WALLET_IMP_V0_21082023",
+  SINGELTON_PAYMASTER = "DEVX_SINGLETON_PAYMASTER_V1_21082023",
+  ECDSA_REGISTRY_MODULE = "DEVX_ECDSA_REGISTRY_MODULE_V0_21082023",
+  MULTICHAIN_VALIDATOR_MODULE = "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_21082023",
+  PASSKEY_MODULE = "DEVX_PASSKEY_MODULE_V0_21082023",
+  SESSION_KEY_MANAGER_MODULE = "DEVX_SESSION_KEY_MANAGER_MODULE_V0_21082023",
+  ERC20_SESSION_VALIDATION_MODULE = "DEVX_ERC20_SESSION_VALIDATION_MODULE_V0_21082023",
+  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE = "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_21082023",
 }
+
+export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
+  number,
+  | { maxFeePerGas?: BigNumberish; maxPriorityFeePerGas?: BigNumberish }
+  | { gasPrice: BigNumberish }
+> = {
+  // Testnets
+  80001: { gasPrice: parseUnits("100", "gwei") },
+
+  // Mainnets
+};
 
 type StakingConfig = {
   unstakeDelayInSec: number;
@@ -155,9 +168,13 @@ export const deployContract = async (
   contractByteCode: string,
   deployerInstance: Deployer
 ): Promise<string> => {
-  //const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {maxFeePerGas: 200e9, maxPriorityFeePerGas: 75e9});
+  const chainId = (await hardhatEthersInstance.provider.getNetwork()).chainId;
+  const deploymentGasPrice = DEPLOYMENT_CHAIN_GAS_PRICES[chainId];
+  if (!deploymentGasPrice) {
+    throw new Error(`No deployment gas price set for chain ${chainId}`);
+  }
   const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {
-    gasPrice: 40e9,
+    ...deploymentGasPrice,
   });
 
   console.log(`Submitted transaction ${hash} for deployment`);

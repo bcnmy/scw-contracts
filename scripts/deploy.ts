@@ -1,8 +1,9 @@
-import { ethers, run, network } from "hardhat";
+import { ethers, run } from "hardhat";
 import {
   deployContract,
   DEPLOYMENT_SALTS,
   encodeParam,
+  factoryStakeConfig,
   isContract,
 } from "./utils";
 import {
@@ -61,10 +62,16 @@ export async function deployGeneric(
         bytecode,
         deployerInstance
       );
-      await run(`verify:verify`, {
-        address: computedAddress,
-        constructorArguments,
-      });
+      // if (network.name !== "hardhat") {
+      try {
+        await run(`verify:verify`, {
+          address: computedAddress,
+          constructorArguments,
+        });
+      } catch (err) {
+        console.log(err);
+      }
+      // }
     } else {
       console.log(
         `${contractName} is Already deployed with address ${computedAddress}`
@@ -81,7 +88,8 @@ export async function deployGeneric(
 }
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
-  if (network.name !== "hardhat" && network.name !== "local") {
+  const chainId = (await provider.getNetwork()).chainId;
+  if (chainId !== 31337) {
     console.log("Entry Point Already Deployed Address: ", entryPointAddress);
     return;
   }
@@ -109,18 +117,52 @@ async function deployBaseWalletImpContract(deployerInstance: Deployer) {
 }
 
 async function deployWalletFactoryContract(deployerInstance: Deployer) {
-  await deployGeneric(
+  const [signer] = await ethers.getSigners();
+  const chainId = (await provider.getNetwork()).chainId;
+  if (!factoryStakeConfig[chainId]) {
+    throw new Error(`Paymaster stake config not found for chainId ${chainId}`);
+  }
+
+  if (!baseImpAddress || baseImpAddress.length === 0) {
+    throw new Error("Base Imp Address not found");
+  }
+
+  const smartAccountFactoryAddress = await deployGeneric(
     deployerInstance,
     DEPLOYMENT_SALTS.WALLET_FACTORY,
     `${SmartAccountFactory__factory.bytecode}${encodeParam(
       "address",
       baseImpAddress
-    ).slice(2)}${encodeParam("address", smartAccountFactoryOwnerAddress).slice(
-      2
-    )}`,
+    ).slice(2)}${encodeParam("address", signer.address).slice(2)}`,
     "SmartAccountFactory",
-    [baseImpAddress, smartAccountFactoryOwnerAddress]
+    [baseImpAddress, signer.address]
   );
+
+  console.log("Staking Paymaster...");
+  const { unstakeDelayInSec, stakeInWei } = factoryStakeConfig[chainId];
+  const smartAccountFactory = SmartAccountFactory__factory.connect(
+    smartAccountFactoryAddress,
+    signer
+  );
+  let { hash, wait } = await smartAccountFactory.addStake(
+    entryPointAddress,
+    unstakeDelayInSec,
+    {
+      value: stakeInWei,
+    }
+  );
+  console.log("SmartAccountFactory Stake Transaction Hash: ", hash);
+  await wait();
+
+  console.log("Transferring Ownership of SmartAccountFactory...");
+  ({ hash, wait } = await smartAccountFactory.transferOwnership(
+    smartAccountFactoryOwnerAddress
+  ));
+  console.log(
+    "SmartAccountFactory Transfer Ownership Transaction Hash: ",
+    hash
+  );
+  await wait();
 }
 
 async function deployGasEstimatorContract(deployerInstance: Deployer) {
@@ -267,21 +309,21 @@ async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
   }
 }
 
-async function main() {
+export async function mainDeploy(): Promise<Record<string, string>> {
   const deployerInstance = await getPredeployedDeployerContractInstance();
   await deployEntryPointContract(deployerInstance);
   console.log("=========================================");
   await deployBaseWalletImpContract(deployerInstance);
   console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
-  console.log("=========================================");
-  await deployGasEstimatorContract(deployerInstance);
-  console.log("=========================================");
-  await deployDecoderContract(deployerInstance);
-  console.log("=========================================");
-  await deployMultiSendContract(deployerInstance);
-  console.log("=========================================");
-  await deployMultiSendCallOnlyContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployGasEstimatorContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployDecoderContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployMultiSendContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployMultiSendCallOnlyContract(deployerInstance);
   console.log("=========================================");
   await deployVerifySingeltonPaymaster(deployerInstance);
   console.log("=========================================");
@@ -302,9 +344,13 @@ async function main() {
     "Deployed Contracts: ",
     JSON.stringify(contractsDeployed, null, 2)
   );
+
+  return contractsDeployed;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  mainDeploy().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}
