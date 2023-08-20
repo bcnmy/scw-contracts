@@ -52,8 +52,11 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
 > = {
   // Testnets
   80001: { gasPrice: parseUnits("100", "gwei") },
+  97: { gasPrice: parseUnits("5", "gwei") },
 
   // Mainnets
+  137: { maxPriorityFeePerGas: parseUnits("50", "gwei") },
+  56: { maxPriorityFeePerGas: parseUnits("10", "gwei") },
 };
 
 type StakingConfig = {
@@ -62,9 +65,24 @@ type StakingConfig = {
 };
 
 export const factoryStakeConfig: Record<number, StakingConfig> = {
+  // Testnets
   80001: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: ethers.utils.parseEther("0.001"),
+    stakeInWei: ethers.utils.parseEther("0.01"),
+  },
+  97: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: ethers.utils.parseEther("0.01"),
+  },
+
+  // Mainnets
+  137: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: ethers.utils.parseEther("173"), // 1 MATIC = $0.5788
+  },
+  56: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: ethers.utils.parseEther("0.46"), // 1 BNB = $217.43
   },
 };
 

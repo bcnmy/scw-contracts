@@ -32,6 +32,16 @@ describe("Deployment", async function () {
       hexValue(realBalance),
     ]);
 
+    const hardhatConfigChainId = config.networks.hardhat.chainId;
+    const realChainId = await networkProvider
+      .getNetwork()
+      .then((n) => n.chainId);
+    if (hardhatConfigChainId !== realChainId) {
+      throw new Error(
+        `Hardhat config chainId ${hardhatConfigChainId} does not match real chainId ${realChainId}`
+      );
+    }
+
     await network.provider.send("evm_setIntervalMining", [50]);
 
     console.log(

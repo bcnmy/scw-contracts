@@ -62,7 +62,7 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       chainId: 31337,
 
-      // Forking Conifg
+      // Forking Conifg for Deployment Testing
       // chainId: 80001,
       // forking: {
       //   url: process.env.POLYGON_MUMBAI_URL!,

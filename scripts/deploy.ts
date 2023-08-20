@@ -1,6 +1,7 @@
 import { ethers, run } from "hardhat";
 import {
   deployContract,
+  DEPLOYMENT_CHAIN_GAS_PRICES,
   DEPLOYMENT_SALTS,
   encodeParam,
   factoryStakeConfig,
@@ -62,7 +63,6 @@ export async function deployGeneric(
         bytecode,
         deployerInstance
       );
-      // if (network.name !== "hardhat") {
       try {
         await run(`verify:verify`, {
           address: computedAddress,
@@ -71,7 +71,6 @@ export async function deployGeneric(
       } catch (err) {
         console.log(err);
       }
-      // }
     } else {
       console.log(
         `${contractName} is Already deployed with address ${computedAddress}`
@@ -119,8 +118,13 @@ async function deployBaseWalletImpContract(deployerInstance: Deployer) {
 async function deployWalletFactoryContract(deployerInstance: Deployer) {
   const [signer] = await ethers.getSigners();
   const chainId = (await provider.getNetwork()).chainId;
+  const gasPriceConfig = DEPLOYMENT_CHAIN_GAS_PRICES[chainId];
+
   if (!factoryStakeConfig[chainId]) {
     throw new Error(`Paymaster stake config not found for chainId ${chainId}`);
+  }
+  if (!gasPriceConfig) {
+    throw new Error(`Gas price config not found for chainId ${chainId}`);
   }
 
   if (!baseImpAddress || baseImpAddress.length === 0) {
@@ -149,6 +153,7 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
     unstakeDelayInSec,
     {
       value: stakeInWei,
+      ...gasPriceConfig,
     }
   );
   console.log("SmartAccountFactory Stake Transaction Hash: ", hash);
@@ -156,7 +161,10 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
 
   console.log("Transferring Ownership of SmartAccountFactory...");
   ({ hash, wait } = await smartAccountFactory.transferOwnership(
-    smartAccountFactoryOwnerAddress
+    smartAccountFactoryOwnerAddress,
+    {
+      ...gasPriceConfig,
+    }
   ));
   console.log(
     "SmartAccountFactory Transfer Ownership Transaction Hash: ",
