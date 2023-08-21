@@ -21,11 +21,10 @@ import {
   SmartAccountFactory__factory,
   SmartAccount__factory,
   SmartContractOwnershipRegistryModule__factory,
+  VerifyingSingletonPaymaster__factory,
 } from "../typechain";
-import {
-  EntryPoint__factory,
-  VerifyingPaymaster__factory,
-} from "@account-abstraction/contracts";
+import { EntryPoint__factory } from "@account-abstraction/contracts";
+import { formatEther } from "ethers/lib/utils";
 
 const provider = ethers.provider;
 let baseImpAddress = "";
@@ -148,29 +147,36 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
     smartAccountFactoryAddress,
     signer
   );
-  let { hash, wait } = await smartAccountFactory.addStake(
-    entryPointAddress,
-    unstakeDelayInSec,
-    {
-      value: stakeInWei,
-      ...gasPriceConfig,
-    }
-  );
-  console.log("SmartAccountFactory Stake Transaction Hash: ", hash);
-  await wait();
 
-  console.log("Transferring Ownership of SmartAccountFactory...");
-  ({ hash, wait } = await smartAccountFactory.transferOwnership(
-    smartAccountFactoryOwnerAddress,
-    {
-      ...gasPriceConfig,
-    }
-  ));
-  console.log(
-    "SmartAccountFactory Transfer Ownership Transaction Hash: ",
-    hash
-  );
-  await wait();
+  const contractOwner = await smartAccountFactory.owner();
+
+  if (contractOwner === signer.address) {
+    const { hash, wait } = await smartAccountFactory.addStake(
+      entryPointAddress,
+      unstakeDelayInSec,
+      {
+        value: stakeInWei,
+        ...gasPriceConfig,
+      }
+    );
+    console.log("SmartAccountFactory Stake Transaction Hash: ", hash);
+    await wait();
+  }
+
+  if (contractOwner !== smartAccountFactoryOwnerAddress) {
+    console.log("Transferring Ownership of SmartAccountFactory...");
+    const { hash, wait } = await smartAccountFactory.transferOwnership(
+      smartAccountFactoryOwnerAddress,
+      {
+        ...gasPriceConfig,
+      }
+    );
+    console.log(
+      "SmartAccountFactory Transfer Ownership Transaction Hash: ",
+      hash
+    );
+    await wait();
+  }
 }
 
 async function deployGasEstimatorContract(deployerInstance: Deployer) {
@@ -214,13 +220,12 @@ async function deployMultiSendCallOnlyContract(deployerInstance: Deployer) {
 }
 
 async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
-  const bytecode = `${VerifyingPaymaster__factory.bytecode}${encodeParam(
+  const bytecode = `${
+    VerifyingSingletonPaymaster__factory.bytecode
+  }${encodeParam("address", paymasterOwnerAddress).slice(2)}${encodeParam(
     "address",
-    paymasterOwnerAddress
-  ).slice(2)}${encodeParam("address", entryPointAddress).slice(2)}${encodeParam(
-    "address",
-    verifyingSigner
-  ).slice(2)}`;
+    entryPointAddress
+  ).slice(2)}${encodeParam("address", verifyingSigner).slice(2)}`;
 
   await deployGeneric(
     deployerInstance,
@@ -318,6 +323,14 @@ async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
 }
 
 export async function mainDeploy(): Promise<Record<string, string>> {
+  const [deployer] = await ethers.getSigners();
+  const deployerBalanceBefore = await deployer.getBalance();
+  console.log(
+    `Deployer ${deployer.address} initial balance: ${formatEther(
+      deployerBalanceBefore
+    )}`
+  );
+
   const deployerInstance = await getPredeployedDeployerContractInstance();
   await deployEntryPointContract(deployerInstance);
   console.log("=========================================");
@@ -351,6 +364,18 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log(
     "Deployed Contracts: ",
     JSON.stringify(contractsDeployed, null, 2)
+  );
+
+  const deployerBalanceAfter = await deployer.getBalance();
+  console.log(
+    `Deployer ${deployer.address} initial balance: ${formatEther(
+      deployerBalanceAfter
+    )}`
+  );
+  console.log(
+    `Funds used: ${formatEther(
+      deployerBalanceBefore.sub(deployerBalanceAfter)
+    )}`
   );
 
   return contractsDeployed;

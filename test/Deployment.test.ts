@@ -2,14 +2,14 @@ import { network, ethers, config } from "hardhat";
 import { mainDeploy } from "../scripts/deploy";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
-import { formatEther, hexValue } from "ethers/lib/utils";
+import { hexValue } from "ethers/lib/utils";
 
 describe("Deployment", async function () {
   this.timeout(1000000);
 
   let deployerWallet: SignerWithAddress;
 
-  before(async () => {
+  before(async function () {
     if (!config?.networks?.hardhat?.forking?.url) {
       throw new Error("No forking url found in hardhat.config.ts");
     }
@@ -42,22 +42,14 @@ describe("Deployment", async function () {
       );
     }
 
-    await network.provider.send("evm_setIntervalMining", [50]);
+    if (hardhatConfigChainId === 31337) {
+      this.skip();
+    }
 
-    console.log(
-      "Deployer balance: ",
-      formatEther(await deployerWallet.getBalance())
-    );
+    await network.provider.send("evm_setIntervalMining", [50]);
   });
 
   it("Should deploy all the contracts", async () => {
     await mainDeploy();
-  });
-
-  after(async () => {
-    console.log(
-      "Deployer balance: ",
-      formatEther(await deployerWallet.getBalance())
-    );
   });
 });

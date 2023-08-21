@@ -62,14 +62,16 @@ const config: HardhatUserConfig = {
       allowUnlimitedContractSize: true,
       chainId: 31337,
 
-      // Forking Conifg for Deployment Testing
-      // chainId: 80001,
+      // Forking Config for Deployment Testing
+      // chainId: 84531,
       // forking: {
-      //   url: process.env.POLYGON_MUMBAI_URL!,
+      //   url: "https://base-goerli.blockpi.network/v1/rpc/public",
       // },
       // accounts: [
       //   {
       //     privateKey: process.env.PRIVATE_KEY!,
+      //     // This is a dummy value and will be overriden in the test by
+      //     // the account's actual balance from the forked chain
       //     balance: "10000000000000000000000000",
       //   },
       // ],
@@ -214,12 +216,18 @@ const config: HardhatUserConfig = {
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 420,
     },
     optimismMainnet: {
       url: `https://mainnet.optimism.io`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 10,
     },
     moonbeam_mainnet: {
@@ -319,10 +327,12 @@ const config: HardhatUserConfig = {
       arbitrumOne: process.env.ARBITRUM_API_KEY || "",
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
-      baseGoerli: process.env.BASE_API_KEY || "",
       lineaGoerli: "PLACEHOLDER_STRING",
       lineaMainnet: "PLACEHOLDER_STRING",
+      baseGoerli: process.env.BASE_API_KEY || "",
       baseMainnet: process.env.BASE_API_KEY || "",
+      zkEVMMainnet: process.env.ZKEVM_API_KEY || "",
+      zkEVMGoerli: process.env.ZKEVM_API_KEY || "",
     },
     customChains: [
       {
@@ -355,6 +365,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api.basescan.org/api",
           browserURL: "https://basescan.org",
+        },
+      },
+      {
+        network: "zkEVMMainnet",
+        chainId: 1101,
+        urls: {
+          apiURL: "https://api-zkevm.polygonscan.com/api",
+          browserURL: "https://zkevm.polygonscan.com",
+        },
+      },
+      {
+        network: "zkEVMGoerli",
+        chainId: 1442,
+        urls: {
+          apiURL: "https://api-testnet-zkevm.polygonscan.com/api",
+          browserURL: "https://testnet-zkevm.polygonscan.com",
         },
       },
     ],

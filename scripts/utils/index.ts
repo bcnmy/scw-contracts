@@ -7,8 +7,8 @@ import {
   hexZeroPad,
   keccak256,
   Interface,
-  formatUnits,
   parseUnits,
+  parseEther,
 } from "ethers/lib/utils";
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
 import { Deployer, Deployer__factory } from "../../typechain";
@@ -36,7 +36,7 @@ export enum DEPLOYMENT_SALTS {
   MULTI_SEND_CALLONLY = "DEVX_MULTI_SEND_CALLONLY_V0_21082023",
   WALLET_FACTORY = "DEVX_WALLET_FACTORY_V0_21082023",
   WALLET_IMP = "DEVX_WALLET_IMP_V0_21082023",
-  SINGELTON_PAYMASTER = "DEVX_SINGLETON_PAYMASTER_V1_21082023",
+  SINGELTON_PAYMASTER = "DEVX_SINGLETON_PAYMASTER_V1_21082024",
   ECDSA_REGISTRY_MODULE = "DEVX_ECDSA_REGISTRY_MODULE_V0_21082023",
   MULTICHAIN_VALIDATOR_MODULE = "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_21082023",
   PASSKEY_MODULE = "DEVX_PASSKEY_MODULE_V0_21082023",
@@ -53,10 +53,39 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   // Testnets
   80001: { gasPrice: parseUnits("100", "gwei") },
   97: { gasPrice: parseUnits("5", "gwei") },
+  5: {
+    maxPriorityFeePerGas: parseUnits("1", "gwei"),
+    maxFeePerGas: parseUnits("100", "gwei"),
+  },
+  421613: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
+  420: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
+  43113: {
+    gasPrice: parseUnits("30", "gwei"),
+  },
+  1442: {
+    gasPrice: parseUnits("1", "gwei"),
+  },
+  59140: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
+  84531: {
+    gasPrice: parseUnits("1.5", "gwei"),
+  },
 
   // Mainnets
   137: { maxPriorityFeePerGas: parseUnits("50", "gwei") },
   56: { maxPriorityFeePerGas: parseUnits("10", "gwei") },
+  1: { maxPriorityFeePerGas: parseUnits("30", "gwei") },
+  42161: { gasPrice: parseUnits("0.1", "gwei") },
+  10: { gasPrice: parseUnits("0.1", "gwei") },
+  43114: { gasPrice: parseUnits("30", "gwei") },
+  1101: { gasPrice: parseUnits("1", "gwei") },
+  59144: { gasPrice: parseUnits("2", "gwei") },
+  8453: { gasPrice: parseUnits("1.5", "gwei") },
 };
 
 type StakingConfig = {
@@ -68,21 +97,77 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
   // Testnets
   80001: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: ethers.utils.parseEther("0.01"),
+    stakeInWei: parseEther("0.01"),
   },
   97: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: ethers.utils.parseEther("0.01"),
+    stakeInWei: parseEther("0.01"),
+  },
+  5: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  421613: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  420: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  43113: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  1442: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  59140: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  84531: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
   },
 
   // Mainnets
   137: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: ethers.utils.parseEther("173"), // 1 MATIC = $0.5788
+    stakeInWei: parseEther("173"), // 1 MATIC = $0.5788
   },
   56: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: ethers.utils.parseEther("0.46"), // 1 BNB = $217.43
+    stakeInWei: parseEther("0.46"), // 1 BNB = $217.43
+  },
+  1: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  42161: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  10: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  43114: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("9.337"), // 1 AVAX = $10.71
+  },
+  1101: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  59144: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  8453: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
   },
 };
 
