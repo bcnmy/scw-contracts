@@ -160,6 +160,10 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
+    const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+    const validUntil = blockTimestamp + 1000;
+    const validAfter = blockTimestamp;
+
     const userOp = await makeEcdsaModuleUserOpWithPaymaster(
       "execute_ncC",
       [
@@ -173,6 +177,8 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
       ecdsaModule.address,
       verifyingPaymaster,
       verifiedSigner,
+      validUntil,
+      validAfter,
       {
         preVerificationGas: 50000,
       }
