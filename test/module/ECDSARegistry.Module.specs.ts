@@ -141,7 +141,7 @@ describe("ECDSA Registry Module: ", async()=>{
                 [bob.address],
             );
             let userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [ecdsaRegistryModule.address,0, txnData1],
                 userSA.address,
                 smartAccountOwner,
@@ -167,7 +167,7 @@ describe("ECDSA Registry Module: ", async()=>{
                 [randomContract.address]
             );
             let userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [ecdsaRegistryModule.address, 0, txnData1],
                 userSA.address,
                 smartAccountOwner,
@@ -188,7 +188,7 @@ describe("ECDSA Registry Module: ", async()=>{
                 [AddressZero]
             );
             let userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [ecdsaRegistryModule.address,0,txnData1],
                 userSA.address,
                 smartAccountOwner,
@@ -224,7 +224,7 @@ describe("ECDSA Registry Module: ", async()=>{
                 [bob.address,tokenAmountToTransfer.toString()]
             );
             const userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
@@ -248,7 +248,7 @@ describe("ECDSA Registry Module: ", async()=>{
                 [bob.address,tokenAmountToTransfer.toString()]
             );
             const userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,
@@ -275,7 +275,7 @@ describe("ECDSA Registry Module: ", async()=>{
 
             const notSmartAccountOwner = charlie;
             const userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address,0,txnData],
                 userSA.address,
                 notSmartAccountOwner,
@@ -312,7 +312,7 @@ describe("ECDSA Registry Module: ", async()=>{
 
             //renounce ownership
             const renounceOwnershipUserOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [ecdsaRegistryModule.address, 0, EcdsaOwnershipRegistryModule.interface.encodeFunctionData("renounceOwnership",[])],
                 unregisteredSmartAccountAddress,
                 smartAccountOwner,
@@ -324,7 +324,7 @@ describe("ECDSA Registry Module: ", async()=>{
             await expect(ecdsaRegistryModule.getOwner(unregisteredSA.address)).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
 
             const sendTokenUserOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address, 0, encodeTransfer(bob.address,tokenAmountToTransfer.toString())],
                 unregisteredSmartAccountAddress,
                 smartAccountOwner,
@@ -355,7 +355,7 @@ describe("ECDSA Registry Module: ", async()=>{
             );
 
             const userOp = await makeEcdsaModuleUserOp(
-                "executeCall",
+                "execute_ncC",
                 [mockToken.address,0,txnData],
                 userSA.address,
                 smartAccountOwner,

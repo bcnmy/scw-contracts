@@ -114,7 +114,7 @@ describe("MultichainValidator Module", async () => {
 
     // Batched calldata to enable the session key manager and set the merkle root
     const batchUserOpCallData = SmartAccount.interface.encodeFunctionData(
-      "executeBatchCall_4by",
+      "executeBatch_y6U",
       [
         [expectedSmartAccountAddress, sessionKeyManager.address],
         [0, 0],
@@ -240,7 +240,7 @@ describe("MultichainValidator Module", async () => {
 
       // make a userOp to send tokens to charlie which is expired
       const sendTokenMultichainUserOp = await makeMultichainEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -274,7 +274,7 @@ describe("MultichainValidator Module", async () => {
 
       // make a userOp to send tokens to charlie which is not due yet
       const sendTokenMultichainUserOp = await makeMultichainEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -305,7 +305,7 @@ describe("MultichainValidator Module", async () => {
       const tokenAmountToTransfer = ethers.utils.parseEther("0.591145");
       
       const sendTokenMultichainUserOp = await makeMultichainEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -327,7 +327,7 @@ describe("MultichainValidator Module", async () => {
       //other userOp, but with the same nonce encoded into merkle tree and signed
       //it has correct userOp.nonce field
       const sendTokenMultichainUserOp2 = await makeMultichainEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -360,7 +360,7 @@ describe("MultichainValidator Module", async () => {
   
       // make calldata for a userOp to send tokens to charlie
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -446,7 +446,7 @@ describe("MultichainValidator Module", async () => {
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
   
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -533,7 +533,7 @@ describe("MultichainValidator Module", async () => {
       const notOwner = alice;
   
       const userOp = await makeEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),

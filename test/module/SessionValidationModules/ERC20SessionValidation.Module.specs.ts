@@ -98,7 +98,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     testParams: any = {}
   ) : Promise<UserOperation> {
     const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-      "executeCall",
+      "execute_ncC",
       [
         token,
         txnValue,
@@ -204,7 +204,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
     
     const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-      "executeCall",
+      "execute_ncC",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),

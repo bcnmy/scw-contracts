@@ -28,15 +28,16 @@ contract ERC20SessionValidationModule {
         bytes32 _userOpHash,
         bytes calldata _sessionKeyData,
         bytes calldata _sessionKeySignature
-    ) external view returns (bool) {
-        address sessionKey = address(bytes20(_sessionKeyData[0:20]));
-        // 20:40 is token address
-        address recipient = address(bytes20(_sessionKeyData[40:60]));
-        uint256 maxAmount = abi.decode(_sessionKeyData[60:92], (uint256));
-        {
-            address token = address(bytes20(_sessionKeyData[20:40]));
+    ) external pure returns (bool) {
+        (
+            address sessionKey,
+            address token,
+            address recipient,
+            uint256 maxAmount
+        ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
 
-            // we expect _op.callData to be `SmartAccount.executeCall(to, value, calldata)` calldata
+        {
+            // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
             (address tokenAddr, uint256 callValue, ) = abi.decode(
                 _op.callData[4:], // skip selector
                 (address, uint256, bytes)

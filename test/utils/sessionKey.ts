@@ -83,7 +83,7 @@ export async function enableNewTreeForSmartAccountViaEcdsa(
     { sortPairs: false, hashLeaves: false }
   );
   let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
-    "executeCall",
+    "execute_ncC",
     [
       sessionKeyManager.address,
       ethers.utils.parseEther("0"),
@@ -113,7 +113,7 @@ export async function addLeavesForSmartAccountViaEcdsa(
   
   merkleTree.addLeaves(newLeaves);
   let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
-    "executeCall",
+    "execute_ncC",
     [
       sessionKeyManager.address,
       ethers.utils.parseEther("0"),
@@ -140,12 +140,15 @@ export async function getERC20SessionKeyParams(
   sessionValidationModuleAddress: string,
 ) : Promise<SessionKeyParams> {
 
-  const sessionKeyData = hexConcat([
-    hexZeroPad(sessionKey, 20),
-    hexZeroPad(erc20TokenAddress, 20),
-    hexZeroPad(receiverAddress, 20),
-    hexZeroPad(maxAmountToTransfer.toHexString(), 32)
-  ]);
+  const sessionKeyData = defaultAbiCoder.encode(
+    ["address", "address", "address", "uint256"],
+    [
+      sessionKey,
+      erc20TokenAddress,
+      receiverAddress,
+      maxAmountToTransfer.toHexString()
+    ]
+  );
 
   const leafData = hexConcat([
     hexZeroPad(ethers.utils.hexlify(validUntil),6),

@@ -104,7 +104,7 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "execute_ncC",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),
@@ -133,7 +133,7 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
     const amountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "execute_ncC",
       [charlie.address, amountToTransfer, "0x"],
       userSA.address,
       smartAccountOwner,
@@ -161,7 +161,7 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
     const userOp = await makeEcdsaModuleUserOpWithPaymaster(
-      "executeCall",
+      "execute_ncC",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),
