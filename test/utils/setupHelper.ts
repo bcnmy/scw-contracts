@@ -1,12 +1,11 @@
 import hre, { deployments, ethers } from "hardhat";
-import { Wallet, Contract, BytesLike, Signer } from "ethers";
+import { Wallet, Contract, BytesLike, Signer, BigNumberish } from "ethers";
 import { EntryPoint__factory } from "../../typechain";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 const solc = require("solc");
 
 export const getEntryPoint = async () => {
   const EntryPointDeployment = await deployments.get("EntryPoint");
-  const EntryPoint = await hre.ethers.getContractFactory("EntryPoint");
   return EntryPoint__factory.connect(
     EntryPointDeployment.address,
     ethers.provider.getSigner()
@@ -24,7 +23,9 @@ export const getSmartAccountFactory = async () => {
   const SmartAccountFactory = await hre.ethers.getContractFactory(
     "SmartAccountFactory"
   );
-  const smartAccountFactory = SmartAccountFactory.attach(SAFactoryDeployment.address);
+  const smartAccountFactory = SmartAccountFactory.attach(
+    SAFactoryDeployment.address
+  );
   return smartAccountFactory;
 };
 
@@ -33,11 +34,15 @@ export const getStakedSmartAccountFactory = async () => {
   const SmartAccountFactory = await hre.ethers.getContractFactory(
     "SmartAccountFactory"
   );
-  const smartAccountFactory = SmartAccountFactory.attach(SAFactoryDeployment.address);
+  const smartAccountFactory = SmartAccountFactory.attach(
+    SAFactoryDeployment.address
+  );
   const entryPoint = await getEntryPoint();
   const unstakeDelay = 600;
   const stakeValue = ethers.utils.parseEther("10");
-  await smartAccountFactory.addStake(entryPoint.address, unstakeDelay, {value: stakeValue});
+  await smartAccountFactory.addStake(entryPoint.address, unstakeDelay, {
+    value: stakeValue,
+  });
   return smartAccountFactory;
 };
 
@@ -170,4 +175,16 @@ export const deployContract = async (
   });
   const receipt = await transaction.wait();
   return new Contract(receipt.contractAddress, output.interface, deployer);
+};
+
+export const getRandomFundedWallet = async (
+  fundingAccount: SignerWithAddress,
+  amount: BigNumberish
+): Promise<Wallet> => {
+  const wallet = Wallet.createRandom();
+  await fundingAccount.sendTransaction({
+    to: wallet.address,
+    value: amount,
+  });
+  return wallet;
 };

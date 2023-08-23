@@ -1,6 +1,10 @@
 import { expect } from "chai";
 import { ethers, deployments } from "hardhat";
-import { makeEcdsaModuleUserOp, getUserOpHash, fillAndSign } from "../../utils/userOp";
+import {
+  makeEcdsaModuleUserOp,
+  getUserOpHash,
+  fillAndSign,
+} from "../../utils/userOp";
 import {
   getEntryPoint,
   getSmartAccountFactory,
@@ -8,12 +12,16 @@ import {
   deployContract,
   getMockToken,
   getStakedSmartAccountFactory,
+  getRandomFundedWallet,
 } from "../../utils/setupHelper";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { parseEther } from "ethers/lib/utils";
+import { Wallet } from "ethers";
 
 describe("ECDSA Registry Module (with Bundler):", async () => {
-  let [deployer, smartAccountOwner, bob] = [] as SignerWithAddress[];
+  let [deployer, bob] = [] as SignerWithAddress[];
+  let smartAccountOwner: Wallet;
   const smartAccountDeploymentIndex = 0;
   const SIG_VALIDATION_SUCCESS = 0;
   let environment: BundlerTestEnvironment;
@@ -28,7 +36,8 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
   });
 
   beforeEach(async function () {
-    [deployer, smartAccountOwner, bob] = await ethers.getSigners();
+    [deployer, bob] = await ethers.getSigners();
+    smartAccountOwner = await getRandomFundedWallet(deployer, parseEther("1"));
   });
 
   afterEach(async function () {
@@ -37,10 +46,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       this.skip();
     }
 
-    await Promise.all([
-      environment.revert(environment.defaultSnapshot!),
-      environment.resetBundler(),
-    ]);
+    await environment.resetBundler();
   });
 
   const setupTests = deployments.createFixture(async ({ deployments }) => {
@@ -55,7 +61,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       ecdsaRegistryModule.interface.encodeFunctionData("initForSmartAccount", [
         smartAccountOwner.address,
       ]);
-    
+
     const deploymentData = saFactory.interface.encodeFunctionData(
       "deployCounterFactualAccount",
       [
@@ -91,10 +97,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       {
         sender: expectedSmartAccountAddress,
         callGasLimit: 1_000_000,
-        initCode: ethers.utils.hexConcat([
-          saFactory.address,
-          deploymentData,
-        ]),
+        initCode: ethers.utils.hexConcat([saFactory.address, deploymentData]),
         callData: "0x",
         preVerificationGas: 50000,
       },
@@ -131,7 +134,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
     it("Call transferOwnership from userSA and it successfully changes owner ", async () => {
       const { ecdsaRegistryModule, entryPoint, userSA } = await setupTests();
       //console.log(await userSA.getImplementation());
-      
+
       // Calldata to set Bob as owner
       const txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
         "transferOwnership",

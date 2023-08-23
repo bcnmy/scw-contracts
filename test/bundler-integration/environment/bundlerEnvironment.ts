@@ -1,13 +1,9 @@
-import { providers, BigNumberish, utils, BigNumber } from "ethers";
+import { providers, BigNumberish, utils } from "ethers";
 import axios, { AxiosInstance } from "axios";
 import { ethers, config, getNamedAccounts } from "hardhat";
 import type { HttpNetworkConfig } from "hardhat/types";
 import { UserOperation } from "../../utils/userOperation";
 import { serializeUserOp } from "../../utils/userOp";
-
-export type Snapshot = {
-  blockNumber: number;
-};
 
 export class UserOperationSubmissionError extends Error {
   constructor(message: string) {
@@ -24,13 +20,12 @@ export class BundlerResetError extends Error {
 
 export class BundlerTestEnvironment {
   public static BUNDLER_ENVIRONMENT_CHAIN_ID = 1337;
-  public static DEFAULT_FUNDING_AMOUNT = utils.parseEther("1000");
+  public static DEFAULT_FUNDING_AMOUNT = utils.parseEther("1000000");
 
   DOCKER_COMPOSE_DIR = __dirname;
   DOCKER_COMPOSE_BUNDLER_SERVICE = "bundler";
 
   private apiClient: AxiosInstance;
-  public defaultSnapshot: Snapshot | undefined;
   private static instance: BundlerTestEnvironment;
 
   constructor(
@@ -67,8 +62,6 @@ export class BundlerTestEnvironment {
       defaultAddresses.map((_) => this.DEFAULT_FUNDING_AMOUNT)
     );
 
-    this.instance.defaultSnapshot = await this.instance.snapshot();
-
     return this.instance;
   };
 
@@ -100,10 +93,6 @@ export class BundlerTestEnvironment {
       )
     );
   };
-
-  snapshot = async (): Promise<Snapshot> => ({
-    blockNumber: await this.provider.getBlockNumber(),
-  });
 
   sendUserOperation = async (
     userOperation: UserOperation,
@@ -170,21 +159,5 @@ export class BundlerTestEnvironment {
     }
 
     return result.data.result;
-  };
-
-  revert = async (snapshot: Snapshot) => {
-    await this.provider.send("debug_setHead", [
-      utils.hexValue(BigNumber.from(snapshot.blockNumber)),
-    ]);
-
-    // getBlockNumber() caches the result, so we directly call the rpc method instead
-    const currentBlockNumber = BigNumber.from(
-      await this.provider.send("eth_blockNumber", [])
-    );
-    if (!BigNumber.from(snapshot.blockNumber).eq(currentBlockNumber)) {
-      throw new Error(
-        `Failed to revert to block ${snapshot.blockNumber}. Current block number is ${currentBlockNumber}`
-      );
-    }
   };
 }

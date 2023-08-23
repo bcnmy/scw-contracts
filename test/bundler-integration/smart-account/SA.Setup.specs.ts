@@ -9,14 +9,17 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
   deployContract,
+  getRandomFundedWallet,
 } from "../../utils/setupHelper";
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { Wallet } from "ethers";
+import { parseEther } from "ethers/lib/utils";
 
 describe("Smart Account Setup (with Bundler)", async () => {
   let deployer: SignerWithAddress,
-    smartAccountOwner: SignerWithAddress,
+    smartAccountOwner: Wallet,
     verifiedSigner: SignerWithAddress;
 
   let environment: BundlerTestEnvironment;
@@ -31,7 +34,8 @@ describe("Smart Account Setup (with Bundler)", async () => {
   });
 
   beforeEach(async () => {
-    [deployer, smartAccountOwner, verifiedSigner] = await ethers.getSigners();
+    [deployer, verifiedSigner] = await ethers.getSigners();
+    smartAccountOwner = await getRandomFundedWallet(deployer, parseEther("1"));
   });
 
   afterEach(async function () {
@@ -40,10 +44,7 @@ describe("Smart Account Setup (with Bundler)", async () => {
       this.skip();
     }
 
-    await Promise.all([
-      environment.revert(environment.defaultSnapshot!),
-      environment.resetBundler(),
-    ]);
+    await environment.resetBundler();
   });
 
   const setupTests = deployments.createFixture(

@@ -9,6 +9,7 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
+  getRandomFundedWallet,
 } from "../../utils/setupHelper";
 import {
   makeEcdsaModuleUserOp,
@@ -16,10 +17,12 @@ import {
 } from "../../utils/userOp";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { parseEther } from "ethers/lib/utils";
+import { Wallet } from "ethers";
 
 describe("Modular Smart Account Basics (with Bundler)", async () => {
   let deployer: SignerWithAddress,
-    smartAccountOwner: SignerWithAddress,
+    smartAccountOwner: Wallet,
     charlie: SignerWithAddress,
     verifiedSigner: SignerWithAddress;
   let environment: BundlerTestEnvironment;
@@ -34,8 +37,8 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
   });
 
   beforeEach(async function () {
-    [deployer, smartAccountOwner, charlie, verifiedSigner] =
-      await ethers.getSigners();
+    [deployer, charlie, verifiedSigner] = await ethers.getSigners();
+    smartAccountOwner = await getRandomFundedWallet(deployer, parseEther("1"));
   });
 
   afterEach(async function () {
@@ -44,10 +47,7 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
       this.skip();
     }
 
-    await Promise.all([
-      environment.revert(environment.defaultSnapshot!),
-      environment.resetBundler(),
-    ]);
+    await environment.resetBundler();
   });
 
   const setupTests = deployments.createFixture(

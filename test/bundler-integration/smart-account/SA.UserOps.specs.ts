@@ -9,14 +9,17 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
+  getRandomFundedWallet,
 } from "../../utils/setupHelper";
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { Wallet } from "ethers";
+import { parseEther } from "ethers/lib/utils";
 
 describe("UserOps (with Bundler)", async () => {
   let deployer: SignerWithAddress,
-    smartAccountOwner: SignerWithAddress,
+    smartAccountOwner: Wallet,
     charlie: SignerWithAddress,
     verifiedSigner: SignerWithAddress;
 
@@ -32,8 +35,8 @@ describe("UserOps (with Bundler)", async () => {
   });
 
   beforeEach(async () => {
-    [deployer, smartAccountOwner, charlie, verifiedSigner] =
-      await ethers.getSigners();
+    [deployer, charlie, verifiedSigner] = await ethers.getSigners();
+    smartAccountOwner = await getRandomFundedWallet(deployer, parseEther("1"));
   });
 
   afterEach(async function () {
@@ -42,7 +45,6 @@ describe("UserOps (with Bundler)", async () => {
       this.skip();
     }
 
-    await environment.revert(environment.defaultSnapshot!);
     await environment.resetBundler();
   });
 

@@ -6,7 +6,7 @@ import {
   enableNewTreeForSmartAccountViaEcdsa,
 } from "../../utils/sessionKey";
 import { encodeTransfer } from "../../utils/testUtils";
-import { hexZeroPad, hexConcat } from "ethers/lib/utils";
+import { hexZeroPad, hexConcat, parseEther } from "ethers/lib/utils";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -15,15 +15,18 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
+  getRandomFundedWallet,
 } from "../../utils/setupHelper";
 import { keccak256 } from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
+import { Wallet } from "ethers";
 
 describe("SessionKey: SessionKey Manager Module (with Bundler)", async () => {
-  let [deployer, smartAccountOwner, charlie, verifiedSigner, sessionKey] =
+  let [deployer, charlie, verifiedSigner, sessionKey] =
     [] as SignerWithAddress[];
+  let smartAccountOwner: Wallet;
 
   let environment: BundlerTestEnvironment;
 
@@ -37,8 +40,8 @@ describe("SessionKey: SessionKey Manager Module (with Bundler)", async () => {
   });
 
   beforeEach(async function () {
-    [deployer, smartAccountOwner, charlie, verifiedSigner, sessionKey] =
-      await ethers.getSigners();
+    [deployer, charlie, verifiedSigner, sessionKey] = await ethers.getSigners();
+    smartAccountOwner = await getRandomFundedWallet(deployer, parseEther("1"));
   });
 
   afterEach(async function () {
@@ -47,10 +50,7 @@ describe("SessionKey: SessionKey Manager Module (with Bundler)", async () => {
       this.skip();
     }
 
-    await Promise.all([
-      environment.revert(environment.defaultSnapshot!),
-      environment.resetBundler(),
-    ]);
+    await environment.resetBundler();
   });
 
   const setupTests = deployments.createFixture(

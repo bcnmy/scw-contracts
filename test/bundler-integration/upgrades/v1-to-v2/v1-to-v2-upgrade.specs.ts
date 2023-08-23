@@ -9,14 +9,17 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
+  getRandomFundedWallet,
 } from "../../../utils/setupHelper";
 import { fillAndSign, makeEcdsaModuleUserOp } from "../../../utils/userOp";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BundlerTestEnvironment } from "../../environment/bundlerEnvironment";
+import { Wallet } from "ethers";
+import { parseEther } from "ethers/lib/utils";
 
 describe("Upgrade v1 to Modular (v2) (ex. Ownerless) (with Bundler)", async () => {
-  let [deployer, smartAccountOwner, charlie, verifiedSigner] =
-    [] as SignerWithAddress[];
+  let [deployer, charlie, verifiedSigner] = [] as SignerWithAddress[];
+  let smartAccountOwner: Wallet;
 
   let environment: BundlerTestEnvironment;
 
@@ -30,8 +33,8 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless) (with Bundler)", async () =
   });
 
   beforeEach(async function () {
-    [deployer, smartAccountOwner, charlie, verifiedSigner] =
-      await ethers.getSigners();
+    [deployer, charlie, verifiedSigner] = await ethers.getSigners();
+    smartAccountOwner = await getRandomFundedWallet(deployer, parseEther("1"));
   });
 
   afterEach(async function () {
@@ -40,10 +43,7 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless) (with Bundler)", async () =
       this.skip();
     }
 
-    await Promise.all([
-      environment.revert(environment.defaultSnapshot!),
-      environment.resetBundler(),
-    ]);
+    await environment.resetBundler();
   });
 
   const setupTests = deployments.createFixture(

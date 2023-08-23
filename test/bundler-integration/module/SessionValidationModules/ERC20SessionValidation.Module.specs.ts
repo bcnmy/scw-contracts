@@ -15,21 +15,18 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
+  getRandomFundedWallet,
 } from "../../../utils/setupHelper";
-import { BigNumber } from "ethers";
+import { BigNumber, Wallet } from "ethers";
 import { UserOperation } from "../../../utils/userOperation";
 import { BundlerTestEnvironment } from "../../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { parseEther } from "ethers/lib/utils";
 
 describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () => {
-  let [
-    deployer,
-    smartAccountOwner,
-    alice,
-    charlie,
-    verifiedSigner,
-    sessionKey,
-  ] = [] as SignerWithAddress[];
+  let [deployer, alice, charlie, verifiedSigner, sessionKey] =
+    [] as SignerWithAddress[];
+  let smartAccountOwner: Wallet;
   const maxAmount = ethers.utils.parseEther("100");
 
   let environment: BundlerTestEnvironment;
@@ -44,8 +41,9 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
   });
 
   beforeEach(async function () {
-    [deployer, smartAccountOwner, alice, charlie, verifiedSigner, sessionKey] =
+    [deployer, alice, charlie, verifiedSigner, sessionKey] =
       await ethers.getSigners();
+    smartAccountOwner = await getRandomFundedWallet(deployer, parseEther("1"));
   });
 
   afterEach(async function () {
@@ -54,10 +52,7 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
       this.skip();
     }
 
-    await Promise.all([
-      environment.revert(environment.defaultSnapshot!),
-      environment.resetBundler(),
-    ]);
+    await environment.resetBundler();
   });
 
   const setupTests = deployments.createFixture(

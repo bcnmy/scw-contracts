@@ -8,6 +8,7 @@ import {
   getEcdsaOwnershipRegistryModule,
   getEntryPoint,
   getMockToken,
+  getRandomFundedWallet,
   getSmartAccountFactory,
   getSmartAccountImplementation,
   getSmartAccountWithModule,
@@ -19,14 +20,14 @@ import {
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
 import { encodeTransfer } from "../../utils/testUtils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { parseEther } from "ethers/lib/utils";
+import { Wallet } from "ethers";
 
 describe("Bundler Environment", async () => {
   let signers: SignerWithAddress[];
   let deployer: SignerWithAddress,
-    alice: SignerWithAddress,
-    bob: SignerWithAddress,
     charlie: SignerWithAddress,
-    smartAccountOwner: SignerWithAddress;
+    smartAccountOwner: Wallet;
   let environment: BundlerTestEnvironment;
 
   const setupTests = deployments.createFixture(async ({ deployments }) => {
@@ -79,7 +80,8 @@ describe("Bundler Environment", async () => {
 
   beforeEach(async () => {
     signers = await ethers.getSigners();
-    [deployer, alice, bob, charlie, smartAccountOwner] = signers;
+    [deployer, charlie] = signers;
+    smartAccountOwner = await getRandomFundedWallet(deployer, parseEther("1"));
   });
 
   afterEach(async function () {
@@ -88,10 +90,7 @@ describe("Bundler Environment", async () => {
       this.skip();
     }
 
-    await Promise.all([
-      environment.revert(environment.defaultSnapshot!),
-      environment.resetBundler(),
-    ]);
+    await environment.resetBundler();
   });
 
   it("Default Signers should have funds after environment setup", async () => {
@@ -100,27 +99,6 @@ describe("Bundler Environment", async () => {
         BundlerTestEnvironment.DEFAULT_FUNDING_AMOUNT
       );
     }
-  });
-
-  it("Should be able to revert to snapshot", async () => {
-    await setupTests();
-
-    const aliceBalance = await ethers.provider.getBalance(alice.address);
-    const bobBalance = await ethers.provider.getBalance(bob.address);
-
-    const snapshot = await environment.snapshot();
-
-    await expect(
-      alice.sendTransaction({
-        to: bob.address,
-        value: ethers.utils.parseEther("1"),
-      })
-    ).to.not.be.reverted;
-
-    await environment.revert(snapshot);
-
-    expect(await ethers.provider.getBalance(alice.address)).to.eq(aliceBalance);
-    expect(await ethers.provider.getBalance(bob.address)).to.eq(bobBalance);
   });
 
   it("Should be able to submit user operation using bundler", async () => {

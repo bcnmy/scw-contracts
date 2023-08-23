@@ -11,6 +11,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
     args: [],
     log: true,
     deterministicDeployment: true, // Needed for bundler tests to ensure the entrypoint address does not change b/w tests
+    skipIfAlreadyDeployed: true,
     autoMine: true,
   });
 };
