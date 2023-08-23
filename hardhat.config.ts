@@ -17,6 +17,8 @@ const walletUtils = require("./walletUtils");
 
 dotenv.config();
 
+const shouldRunInForkMode = !!process.env.FORK_MODE;
+
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -54,27 +56,31 @@ const config: HardhatUserConfig = {
   },
   networks: {
     hardhat: {
-      // Normal Config
-      accounts: {
-        accountsBalance: "10000000000000000000000000",
-        //   mnemonic: MNEMONIC,
-      },
-      allowUnlimitedContractSize: true,
-      chainId: 31337,
-
-      // Forking Config for Deployment Testing
-      // chainId: 84531,
-      // forking: {
-      //   url: "https://base-goerli.blockpi.network/v1/rpc/public",
-      // },
-      // accounts: [
-      //   {
-      //     privateKey: process.env.PRIVATE_KEY!,
-      //     // This is a dummy value and will be overriden in the test by
-      //     // the account's actual balance from the forked chain
-      //     balance: "10000000000000000000000000",
-      //   },
-      // ],
+      ...(shouldRunInForkMode
+        ? // Normal Config
+          {
+            // Forking Config for Deployment Testing
+            chainId: 10,
+            forking: {
+              url: "https://mainnet.optimism.io",
+            },
+            accounts: [
+              {
+                privateKey: process.env.PRIVATE_KEY!,
+                // This is a dummy value and will be overriden in the test by
+                // the account's actual balance from the forked chain
+                balance: "10000000000000000000000000",
+              },
+            ],
+          }
+        : {
+            accounts: {
+              accountsBalance: "10000000000000000000000000",
+              //   mnemonic: MNEMONIC,
+            },
+            allowUnlimitedContractSize: true,
+            chainId: 31337,
+          }),
     },
     hardhat_node: {
       live: false,

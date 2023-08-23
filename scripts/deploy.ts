@@ -8,13 +8,10 @@ import {
   isContract,
 } from "./utils";
 import {
-  Decoder__factory,
   Deployer,
   Deployer__factory,
   ERC20SessionValidationModule__factory,
   EcdsaOwnershipRegistryModule__factory,
-  GasEstimator__factory,
-  MultiSend__factory,
   MultichainECDSAValidator__factory,
   PasskeyRegistryModule__factory,
   SessionKeyManager__factory,
@@ -26,18 +23,20 @@ import {
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther } from "ethers/lib/utils";
 
-const provider = ethers.provider;
-let baseImpAddress = "";
+// Constants
+const smartAccountFactoryOwnerAddress =
+  process.env.SMART_ACCOUNT_FACTORY_OWNER_ADDRESS_PROD || "";
+const paymasterOwnerAddress = process.env.PAYMASTER_OWNER_ADDRESS_PROD || "";
+const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_PROD || "";
+const DEPLOYER_CONTRACT_ADDRESS =
+  process.env.DEPLOYER_CONTRACT_ADDRESS_PROD || "";
+
+// State
 let entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
   "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
-const smartAccountFactoryOwnerAddress =
-  process.env.SMART_ACCOUNT_FACTORY_OWNER_ADDRESS_DEV || "";
-const paymasterOwnerAddress = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
-const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_DEV || "";
-const DEPLOYER_CONTRACT_ADDRESS =
-  process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
-
+let baseImpAddress = "";
+const provider = ethers.provider;
 const contractsDeployed: Record<string, string> = {};
 
 export async function deployGeneric(
@@ -179,46 +178,6 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
   }
 }
 
-async function deployGasEstimatorContract(deployerInstance: Deployer) {
-  await deployGeneric(
-    deployerInstance,
-    DEPLOYMENT_SALTS.GAS_ESTIMATOR,
-    `${GasEstimator__factory.bytecode}`,
-    "GasEstimator",
-    []
-  );
-}
-
-async function deployDecoderContract(deployerInstance: Deployer) {
-  await deployGeneric(
-    deployerInstance,
-    DEPLOYMENT_SALTS.DECODER,
-    `${Decoder__factory.bytecode}`,
-    "Decoder",
-    []
-  );
-}
-
-async function deployMultiSendContract(deployerInstance: Deployer) {
-  await deployGeneric(
-    deployerInstance,
-    DEPLOYMENT_SALTS.MULTI_SEND,
-    `${MultiSend__factory.bytecode}`,
-    "MultiSend",
-    []
-  );
-}
-
-async function deployMultiSendCallOnlyContract(deployerInstance: Deployer) {
-  await deployGeneric(
-    deployerInstance,
-    DEPLOYMENT_SALTS.MULTI_SEND_CALLONLY,
-    `${MultiSend__factory.bytecode}`,
-    "MultiSendCallOnly",
-    []
-  );
-}
-
 async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
   const bytecode = `${
     VerifyingSingletonPaymaster__factory.bytecode
@@ -323,6 +282,15 @@ async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
 }
 
 export async function mainDeploy(): Promise<Record<string, string>> {
+  console.log("=========================================");
+  console.log(
+    "Smart Account Factory Owner Address: ",
+    smartAccountFactoryOwnerAddress
+  );
+  console.log("Paymaster Owner Address: ", paymasterOwnerAddress);
+  console.log("Verifying Signer Address: ", verifyingSigner);
+  console.log("Deployer Contract Address: ", DEPLOYER_CONTRACT_ADDRESS);
+
   const [deployer] = await ethers.getSigners();
   const deployerBalanceBefore = await deployer.getBalance();
   console.log(
@@ -330,6 +298,7 @@ export async function mainDeploy(): Promise<Record<string, string>> {
       deployerBalanceBefore
     )}`
   );
+  console.log("=========================================");
 
   const deployerInstance = await getPredeployedDeployerContractInstance();
   await deployEntryPointContract(deployerInstance);
@@ -337,14 +306,6 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   await deployBaseWalletImpContract(deployerInstance);
   console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
-  // console.log("=========================================");
-  // await deployGasEstimatorContract(deployerInstance);
-  // console.log("=========================================");
-  // await deployDecoderContract(deployerInstance);
-  // console.log("=========================================");
-  // await deployMultiSendContract(deployerInstance);
-  // console.log("=========================================");
-  // await deployMultiSendCallOnlyContract(deployerInstance);
   console.log("=========================================");
   await deployVerifySingeltonPaymaster(deployerInstance);
   console.log("=========================================");

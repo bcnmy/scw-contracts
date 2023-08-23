@@ -10,9 +10,15 @@ describe("Deployment", async function () {
   let deployerWallet: SignerWithAddress;
 
   before(async function () {
-    if (!config?.networks?.hardhat?.forking?.url) {
-      throw new Error("No forking url found in hardhat.config.ts");
+    const hardhatConfigChainId = config.networks.hardhat.chainId;
+    if (hardhatConfigChainId === 31337) {
+      this.skip();
     }
+
+    if (!config?.networks?.hardhat?.forking?.url) {
+      this.skip();
+    }
+
     [deployerWallet] = await ethers.getSigners();
 
     console.log("Deployer address: ", deployerWallet.address);
@@ -32,7 +38,6 @@ describe("Deployment", async function () {
       hexValue(realBalance),
     ]);
 
-    const hardhatConfigChainId = config.networks.hardhat.chainId;
     const realChainId = await networkProvider
       .getNetwork()
       .then((n) => n.chainId);
@@ -40,10 +45,6 @@ describe("Deployment", async function () {
       throw new Error(
         `Hardhat config chainId ${hardhatConfigChainId} does not match real chainId ${realChainId}`
       );
-    }
-
-    if (hardhatConfigChainId === 31337) {
-      this.skip();
     }
 
     await network.provider.send("evm_setIntervalMining", [50]);
