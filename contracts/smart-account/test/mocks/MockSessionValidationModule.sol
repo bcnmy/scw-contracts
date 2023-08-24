@@ -11,7 +11,7 @@ contract MockSessionValidationModule is ISessionValidationModule {
         bytes32 _userOpHash,
         bytes calldata _data,
         bytes calldata _sig
-    ) external view returns (bool) {
+    ) external view override returns (bool) {
         address sessionKey = address(bytes20(_data[0:20]));
         return
             ECDSA.recover(ECDSA.toEthSignedMessageHash(_userOpHash), _sig) ==

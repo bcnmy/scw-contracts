@@ -5,7 +5,7 @@ import {
   getERC20SessionKeyParams,
 } from "../../../utils/sessionKey";
 import { ethers, deployments } from "hardhat";
-import { makeEcdsaModuleUserOp } from "../../../utils/userOp";
+import { makeEcdsaModuleUserOp, fillAndSign } from "../../../utils/userOp";
 import { encodeTransfer } from "../../../utils/testUtils";
 import {
   getEntryPoint,
@@ -210,4 +210,5 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
       charlieTokenBalanceBefore.add(tokenAmountToTransfer)
     );
   });
+
 });

@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { makeEcdsaSessionKeySignedUserOp, enableNewTreeForSmartAccountViaEcdsa, getERC20SessionKeyParams } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
-import { makeEcdsaModuleUserOp } from "../../utils/userOp";
+import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
 import { encodeTransfer } from "../../utils/testUtils";
 import { 
   getEntryPoint, 
@@ -224,6 +224,82 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
     ).to.be.revertedWith("FailedOp").withArgs(0, "AA24 signature error");
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+  });
+
+  it("Should not allow to call methods except execute or execute_ncC", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      mockToken,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+    mockToken.mint(charlie.address, tokenAmountToTransfer);
+
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+  
+    const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+      "execute_ncC",
+      [mockToken.address, 0, encodeTransfer(charlie.address, tokenAmountToTransfer.toString())]
+    );
+
+    const setImplSelector = ethers.utils.hexDataSlice(
+      ethers.utils.keccak256(
+        ethers.utils.toUtf8Bytes("updateImplementation(address)")
+      ),
+      0,
+      4
+    );
+
+    const spoofedData = setImplSelector + txnDataAA1.slice(10);
+    
+    const userOp = await fillAndSign(
+      {
+        sender: userSA.address,
+        callData: spoofedData,
+        preVerificationGas: 50000,
+      },
+      sessionKey,
+      entryPoint,
+      'nonce'
+    );
+
+    const paddedSig = ethers.utils.defaultAbiCoder.encode(
+      //validUntil, validAfter, sessionVerificationModule address, validationData, merkleProof, signature
+      ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
+      [ 
+        0, 
+        0, 
+        erc20SessionModule.address, 
+        sessionKeyData, 
+        merkleTree.getHexProof(
+          ethers.utils.keccak256(leafData)
+        ), 
+        userOp.signature
+      ]
+    );
+
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"], 
+      [paddedSig, sessionKeyManager.address]
+    );
+    userOp.signature = signatureWithModuleAddress;
+
+    const transferUserOp = userOp;
+
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(
+      charlie.address
+    );
+    
+    await expect(
+      entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000})
+    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: ERC20SV Invalid Selector");
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
+
   });
   
 });
