@@ -359,6 +359,8 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   moduleAddress: string,
   paymaster: Contract,
   verifiedSigner: Wallet | SignerWithAddress,
+  validUntil: number,
+  validAfter: number,
   options?: {
     preVerificationGas?: number;
   }
@@ -383,7 +385,9 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
 
   const hash = await paymaster.getHash(
     userOp,
-    verifiedSigner.address
+    verifiedSigner.address,
+    validUntil,
+    validAfter
   );
   const paymasterSig = await verifiedSigner.signMessage(arrayify(hash));
   const userOpWithPaymasterData = await fillAndSign(
@@ -393,8 +397,8 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
       paymasterAndData: hexConcat([
         paymaster.address,
         ethers.utils.defaultAbiCoder.encode(
-          ["address", "bytes"],
-          [verifiedSigner.address, paymasterSig]
+          ["address","uint48", "uint48", "bytes"],
+          [verifiedSigner.address, validUntil, validAfter, paymasterSig]
         ),
       ]),
     },

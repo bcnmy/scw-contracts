@@ -1,355 +1,260 @@
-import { ethers, run, network } from "hardhat";
+import { ethers, run } from "hardhat";
 import {
   deployContract,
+  DEPLOYMENT_CHAIN_GAS_PRICES,
   DEPLOYMENT_SALTS,
   encodeParam,
-  getDeployerInstance,
+  factoryStakeConfig,
   isContract,
 } from "./utils";
-import { Deployer, Deployer__factory } from "../typechain";
+import {
+  Deployer,
+  Deployer__factory,
+  ERC20SessionValidationModule__factory,
+  EcdsaOwnershipRegistryModule__factory,
+  MultichainECDSAValidator__factory,
+  PasskeyRegistryModule__factory,
+  SessionKeyManager__factory,
+  SmartAccountFactory__factory,
+  SmartAccount__factory,
+  SmartContractOwnershipRegistryModule__factory,
+  VerifyingSingletonPaymaster__factory,
+} from "../typechain";
+import { EntryPoint__factory } from "@account-abstraction/contracts";
+import { formatEther } from "ethers/lib/utils";
 
-const provider = ethers.provider;
-let baseImpAddress = "";
+// Constants
+const smartAccountFactoryOwnerAddress =
+  process.env.SMART_ACCOUNT_FACTORY_OWNER_ADDRESS_PROD || "";
+const paymasterOwnerAddress = process.env.PAYMASTER_OWNER_ADDRESS_PROD || "";
+const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_PROD || "";
+const DEPLOYER_CONTRACT_ADDRESS =
+  process.env.DEPLOYER_CONTRACT_ADDRESS_PROD || "";
+
+// State
 let entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
   "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
-const owner = process.env.PAYMASTER_OWNER_ADDRESS_DEV || "";
-const verifyingSigner = process.env.PAYMASTER_SIGNER_ADDRESS_DEV || "";
-const DEPLOYER_CONTRACT_ADDRESS =
-  process.env.DEPLOYER_CONTRACT_ADDRESS_DEV || "";
+let baseImpAddress = "";
+const provider = ethers.provider;
+const contractsDeployed: Record<string, string> = {};
+
+export async function deployGeneric(
+  deployerInstance: Deployer,
+  salt: string,
+  bytecode: string,
+  contractName: string,
+  constructorArguments: any[]
+): Promise<string> {
+  try {
+    const derivedSalt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(salt));
+    const computedAddress = await deployerInstance.addressOf(derivedSalt);
+
+    console.log(`${contractName} Computed Address: ${computedAddress}`);
+
+    const isDeployed = await isContract(computedAddress, provider); // true (deployed on-chain)
+    if (!isDeployed) {
+      await deployContract(
+        salt,
+        computedAddress,
+        derivedSalt,
+        bytecode,
+        deployerInstance
+      );
+      try {
+        await run(`verify:verify`, {
+          address: computedAddress,
+          constructorArguments,
+        });
+      } catch (err) {
+        console.log(err);
+      }
+    } else {
+      console.log(
+        `${contractName} is Already deployed with address ${computedAddress}`
+      );
+    }
+
+    contractsDeployed[contractName] = computedAddress;
+
+    return computedAddress;
+  } catch (err) {
+    console.log(err);
+    return "";
+  }
+}
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
-  if (network.name !== "hardhat" && network.name !== "local") {
+  const chainId = (await provider.getNetwork()).chainId;
+  if (chainId !== 31337) {
     console.log("Entry Point Already Deployed Address: ", entryPointAddress);
     return;
   }
 
-  try {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.ENTRY_POINT)
-    );
-
-    const EntryPoint = await ethers.getContractFactory("EntryPoint");
-    const entryPointBytecode = `${EntryPoint.bytecode}`;
-    entryPointAddress = await deployerInstance.addressOf(salt);
-
-    console.log("Entry Point Computed Address: ", entryPointAddress);
-
-    const isEntryPointDeployed = await isContract(entryPointAddress, provider); // true (deployed on-chain)
-    if (!isEntryPointDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.ENTRY_POINT,
-        entryPointAddress,
-        salt,
-        entryPointBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: entryPointAddress,
-        constructorArguments: [],
-      });
-    } else {
-      console.log(
-        "Entry Point is Already deployed with address ",
-        entryPointAddress
-      );
-    }
-  } catch (err) {
-    console.log(err);
-  }
+  entryPointAddress = await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.ENTRY_POINT,
+    EntryPoint__factory.bytecode,
+    "EntryPoint",
+    []
+  );
 }
 
 async function deployBaseWalletImpContract(deployerInstance: Deployer) {
-  try {
-    const BASE_WALLET_IMP_SALT = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_IMP)
-    );
-
-    const SmartAccount = await ethers.getContractFactory("SmartAccount");
-    const smartAccountBytecode = `${SmartAccount.bytecode}${encodeParam(
+  baseImpAddress = await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.WALLET_IMP,
+    `${SmartAccount__factory.bytecode}${encodeParam(
       "address",
       entryPointAddress
-    ).slice(2)}`;
-    baseImpAddress = await deployerInstance.addressOf(BASE_WALLET_IMP_SALT);
-    console.log("Base wallet Computed Address: ", baseImpAddress);
-
-    const isBaseImpDeployed = await isContract(baseImpAddress, provider); // true (deployed on-chain)
-    if (!isBaseImpDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.WALLET_IMP,
-        baseImpAddress,
-        BASE_WALLET_IMP_SALT,
-        smartAccountBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: baseImpAddress,
-        constructorArguments: [entryPointAddress],
-      });
-    } else {
-      console.log("Base Imp is already deployed with address ", baseImpAddress);
-    }
-  } catch (err) {
-    console.log(err);
-  }
+    ).slice(2)}`,
+    "SmartAccount",
+    [entryPointAddress]
+  );
 }
 
 async function deployWalletFactoryContract(deployerInstance: Deployer) {
-  try {
-    const WalletFactory = await ethers.getContractFactory(
-      "SmartAccountFactory"
-    );
+  const [signer] = await ethers.getSigners();
+  const chainId = (await provider.getNetwork()).chainId;
+  const gasPriceConfig = DEPLOYMENT_CHAIN_GAS_PRICES[chainId];
 
-    const WALLET_FACTORY_SALT = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.WALLET_FACTORY)
-    );
+  if (!factoryStakeConfig[chainId]) {
+    throw new Error(`Paymaster stake config not found for chainId ${chainId}`);
+  }
+  if (!gasPriceConfig) {
+    throw new Error(`Gas price config not found for chainId ${chainId}`);
+  }
 
-    const walletFactoryBytecode = `${WalletFactory.bytecode}${encodeParam(
+  if (!baseImpAddress || baseImpAddress.length === 0) {
+    throw new Error("Base Imp Address not found");
+  }
+
+  const smartAccountFactoryAddress = await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.WALLET_FACTORY,
+    `${SmartAccountFactory__factory.bytecode}${encodeParam(
       "address",
       baseImpAddress
-    ).slice(2)}`;
+    ).slice(2)}${encodeParam("address", signer.address).slice(2)}`,
+    "SmartAccountFactory",
+    [baseImpAddress, signer.address]
+  );
 
-    const walletFactoryComputedAddr = await deployerInstance.addressOf(
-      WALLET_FACTORY_SALT
+  console.log("Staking Paymaster...");
+  const { unstakeDelayInSec, stakeInWei } = factoryStakeConfig[chainId];
+  const smartAccountFactory = SmartAccountFactory__factory.connect(
+    smartAccountFactoryAddress,
+    signer
+  );
+
+  const contractOwner = await smartAccountFactory.owner();
+
+  if (contractOwner === signer.address) {
+    const { hash, wait } = await smartAccountFactory.addStake(
+      entryPointAddress,
+      unstakeDelayInSec,
+      {
+        value: stakeInWei,
+        ...gasPriceConfig,
+      }
     );
-
-    console.log("Wallet Factory Computed Address: ", walletFactoryComputedAddr);
-
-    const iswalletFactoryDeployed = await isContract(
-      walletFactoryComputedAddr,
-      provider
-    ); // true (deployed on-chain)
-    if (!iswalletFactoryDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.WALLET_FACTORY,
-        walletFactoryComputedAddr,
-        WALLET_FACTORY_SALT,
-        walletFactoryBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: walletFactoryComputedAddr,
-        constructorArguments: [baseImpAddress],
-      });
-    } else {
-      console.log(
-        "Wallet Factory is Already Deployed with address ",
-        walletFactoryComputedAddr
-      );
-    }
-  } catch (err) {
-    console.log(err);
+    console.log("SmartAccountFactory Stake Transaction Hash: ", hash);
+    await wait();
   }
-}
 
-async function deployGasEstimatorContract(deployerInstance: Deployer) {
-  try {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.GAS_ESTIMATOR)
-    );
-
-    const gasEstimator = await ethers.getContractFactory("GasEstimator");
-    const gasEstimatorBytecode = `${gasEstimator.bytecode}`;
-    const gasEstimatorComputedAddr = await deployerInstance.addressOf(salt);
-
-    console.log("gasEstimator Computed Address: ", gasEstimatorComputedAddr);
-
-    const isgasEstimatorDeployed = await isContract(
-      gasEstimatorComputedAddr,
-      provider
-    ); // true (deployed on-chain)
-    if (!isgasEstimatorDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.GAS_ESTIMATOR,
-        gasEstimatorComputedAddr,
-        salt,
-        gasEstimatorBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: gasEstimatorComputedAddr,
-        constructorArguments: [],
-      });
-    } else {
-      console.log(
-        "GasEstimator is Already deployed with address ",
-        gasEstimatorComputedAddr
-      );
-    }
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-async function deployDecoderContract(deployerInstance: Deployer) {
-  try {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.DECODER)
-    );
-
-    const decoder = await ethers.getContractFactory("Decoder");
-    const decoderBytecode = `${decoder.bytecode}`;
-    const decoderComputedAddr = await deployerInstance.addressOf(salt);
-
-    console.log("decoder Computed Address: ", decoderComputedAddr);
-
-    const isdecoderDeployed = await isContract(decoderComputedAddr, provider); // true (deployed on-chain)
-    if (!isdecoderDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.DECODER,
-        decoderComputedAddr,
-        salt,
-        decoderBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: decoderComputedAddr,
-        constructorArguments: [],
-      });
-    } else {
-      console.log(
-        "decoder is Already deployed with address ",
-        decoderComputedAddr
-      );
-    }
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-async function deployMultiSendContract(deployerInstance: Deployer) {
-  try {
-    const MULTI_SEND_SALT = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.MULTI_SEND)
-    );
-
-    const multiSend = await ethers.getContractFactory("MultiSend");
-    const multiSendBytecode = `${multiSend.bytecode}`;
-    const multiSendComputedAddr = await deployerInstance.addressOf(
-      MULTI_SEND_SALT
-    );
-
-    console.log("MultiSend Computed Address: ", multiSendComputedAddr);
-
-    const ismultiSendDeployed = await isContract(
-      multiSendComputedAddr,
-      provider
-    ); // true (deployed on-chain)
-    if (!ismultiSendDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.MULTI_SEND,
-        multiSendComputedAddr,
-        MULTI_SEND_SALT,
-        multiSendBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: multiSendComputedAddr,
-        constructorArguments: [],
-      });
-    } else {
-      console.log(
-        "MultiSend is Already deployed with address ",
-        multiSendComputedAddr
-      );
-    }
-  } catch (err) {
-    console.log(err);
-  }
-}
-
-async function deployMultiSendCallOnlyContract(deployerInstance: Deployer) {
-  try {
-    const MULTI_SEND_CALLONLY_SALT = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.MULTI_SEND_CALLONLY)
-    );
-
-    const multiSendCallOnly = await ethers.getContractFactory(
-      "MultiSendCallOnly"
-    );
-    const multiSendCallOnlyBytecode = `${multiSendCallOnly.bytecode}`;
-    const multiSendCallOnlyComputedAddr = await deployerInstance.addressOf(
-      MULTI_SEND_CALLONLY_SALT
+  if (contractOwner !== smartAccountFactoryOwnerAddress) {
+    console.log("Transferring Ownership of SmartAccountFactory...");
+    const { hash, wait } = await smartAccountFactory.transferOwnership(
+      smartAccountFactoryOwnerAddress,
+      {
+        ...gasPriceConfig,
+      }
     );
     console.log(
-      "MultiSend Callonly Computed Address: ",
-      multiSendCallOnlyComputedAddr
+      "SmartAccountFactory Transfer Ownership Transaction Hash: ",
+      hash
     );
-
-    const ismultiSendCallOnlyDeployed = await isContract(
-      multiSendCallOnlyComputedAddr,
-      provider
-    ); // true (deployed on-chain)
-    if (!ismultiSendCallOnlyDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.MULTI_SEND_CALLONLY,
-        multiSendCallOnlyComputedAddr,
-        MULTI_SEND_CALLONLY_SALT,
-        multiSendCallOnlyBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: multiSendCallOnlyComputedAddr,
-        constructorArguments: [],
-      });
-    } else {
-      console.log(
-        "MultiSend Call Only is Already deployed with address ",
-        multiSendCallOnlyComputedAddr
-      );
-    }
-  } catch (err) {
-    console.log(err);
+    await wait();
   }
 }
 
 async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
-  try {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS.SINGELTON_PAYMASTER)
-    );
+  const bytecode = `${
+    VerifyingSingletonPaymaster__factory.bytecode
+  }${encodeParam("address", paymasterOwnerAddress).slice(2)}${encodeParam(
+    "address",
+    entryPointAddress
+  ).slice(2)}${encodeParam("address", verifyingSigner).slice(2)}`;
 
-    const VerifyingSingletonPaymaster = await ethers.getContractFactory(
-      "VerifyingSingletonPaymaster"
-    );
-    const verifyingSingletonPaymasterBytecode = `${
-      VerifyingSingletonPaymaster.bytecode
-    }${encodeParam("address", owner).slice(2)}${encodeParam(
-      "address",
-      entryPointAddress
-    ).slice(2)}${encodeParam("address", verifyingSigner).slice(2)}`;
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.SINGELTON_PAYMASTER,
+    bytecode,
+    "VerifyingPaymaster",
+    [paymasterOwnerAddress, entryPointAddress, verifyingSigner]
+  );
+}
 
-    const verifyingSingletonPaymasterComputedAddr =
-      await deployerInstance.addressOf(salt);
-    console.log(
-      "verifyingSingletonPaymaster Computed Address: ",
-      verifyingSingletonPaymasterComputedAddr
-    );
-    const isContractDeployed = await isContract(
-      verifyingSingletonPaymasterComputedAddr,
-      provider
-    );
-    if (!isContractDeployed) {
-      await deployContract(
-        DEPLOYMENT_SALTS.SINGELTON_PAYMASTER,
-        verifyingSingletonPaymasterComputedAddr,
-        salt,
-        verifyingSingletonPaymasterBytecode,
-        deployerInstance
-      );
-      await run(`verify:verify`, {
-        address: verifyingSingletonPaymasterComputedAddr,
-        constructorArguments: [owner, entryPointAddress, verifyingSigner],
-      });
-    } else {
-      console.log(
-        "verifyingSingletonPaymaster is Already deployed with address ",
-        verifyingSingletonPaymasterComputedAddr
-      );
-    }
-  } catch (err) {
-    console.log(err);
-  }
+async function deployEcdsaOwnershipRegistryModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.ECDSA_REGISTRY_MODULE,
+    `${EcdsaOwnershipRegistryModule__factory.bytecode}`,
+    "EcdsaOwnershipRegistryModule",
+    []
+  );
+}
+
+async function deployMultichainValidatorModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.MULTICHAIN_VALIDATOR_MODULE,
+    `${MultichainECDSAValidator__factory.bytecode}`,
+    "MultichainValidatorModule",
+    []
+  );
+}
+
+async function deployPasskeyModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.PASSKEY_MODULE,
+    `${PasskeyRegistryModule__factory.bytecode}`,
+    "PasskeyModule",
+    []
+  );
+}
+
+async function deploySessionKeyManagerModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.SESSION_KEY_MANAGER_MODULE,
+    `${SessionKeyManager__factory.bytecode}`,
+    "SessionKeyManagerModule",
+    []
+  );
+}
+
+async function deployErc20SessionValidationModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.ERC20_SESSION_VALIDATION_MODULE,
+    `${ERC20SessionValidationModule__factory.bytecode}`,
+    "ERC20SessionValidationModule",
+    []
+  );
+}
+
+async function deploySmartContractOwnershipRegistryModule(
+  deployerInstance: Deployer
+) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE,
+    `${SmartContractOwnershipRegistryModule__factory.bytecode}`,
+    "SmartContractOwnershipRegistryModule",
+    []
+  );
 }
 
 /*
@@ -376,7 +281,25 @@ async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
   }
 }
 
-async function main() {
+export async function mainDeploy(): Promise<Record<string, string>> {
+  console.log("=========================================");
+  console.log(
+    "Smart Account Factory Owner Address: ",
+    smartAccountFactoryOwnerAddress
+  );
+  console.log("Paymaster Owner Address: ", paymasterOwnerAddress);
+  console.log("Verifying Signer Address: ", verifyingSigner);
+  console.log("Deployer Contract Address: ", DEPLOYER_CONTRACT_ADDRESS);
+
+  const [deployer] = await ethers.getSigners();
+  const deployerBalanceBefore = await deployer.getBalance();
+  console.log(
+    `Deployer ${deployer.address} initial balance: ${formatEther(
+      deployerBalanceBefore
+    )}`
+  );
+  console.log("=========================================");
+
   const deployerInstance = await getPredeployedDeployerContractInstance();
   await deployEntryPointContract(deployerInstance);
   console.log("=========================================");
@@ -384,18 +307,44 @@ async function main() {
   console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
   console.log("=========================================");
-  await deployGasEstimatorContract(deployerInstance);
-  console.log("=========================================");
-  await deployDecoderContract(deployerInstance);
-  console.log("=========================================");
-  await deployMultiSendContract(deployerInstance);
-  console.log("=========================================");
-  await deployMultiSendCallOnlyContract(deployerInstance);
-  console.log("=========================================");
   await deployVerifySingeltonPaymaster(deployerInstance);
+  console.log("=========================================");
+  await deployEcdsaOwnershipRegistryModule(deployerInstance);
+  console.log("=========================================");
+  await deployMultichainValidatorModule(deployerInstance);
+  console.log("=========================================");
+  await deployPasskeyModule(deployerInstance);
+  console.log("=========================================");
+  await deploySessionKeyManagerModule(deployerInstance);
+  console.log("=========================================");
+  await deployErc20SessionValidationModule(deployerInstance);
+  console.log("=========================================");
+  await deploySmartContractOwnershipRegistryModule(deployerInstance);
+  console.log("=========================================");
+
+  console.log(
+    "Deployed Contracts: ",
+    JSON.stringify(contractsDeployed, null, 2)
+  );
+
+  const deployerBalanceAfter = await deployer.getBalance();
+  console.log(
+    `Deployer ${deployer.address} initial balance: ${formatEther(
+      deployerBalanceAfter
+    )}`
+  );
+  console.log(
+    `Funds used: ${formatEther(
+      deployerBalanceBefore.sub(deployerBalanceAfter)
+    )}`
+  );
+
+  return contractsDeployed;
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  mainDeploy().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

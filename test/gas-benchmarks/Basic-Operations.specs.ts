@@ -334,6 +334,10 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
+    const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+    const validUntil = blockTimestamp + 1000;
+    const validAfter = blockTimestamp;
+
     const userOp = await makeEcdsaModuleUserOpWithPaymaster(
       "execute_ncC",
       [
@@ -346,7 +350,9 @@ describe("Gas Benchmarking. Basic operations", async () => {
       entryPoint,
       ecdsaModule.address,
       verifyingPaymaster,
-      verifiedSigner
+      verifiedSigner,
+      validUntil,
+      validAfter
     );
 
     const handleOpsTxn = await entryPoint.handleOps(
