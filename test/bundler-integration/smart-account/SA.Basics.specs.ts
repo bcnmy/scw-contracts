@@ -162,7 +162,7 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
 
     const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
     const validUntil = blockTimestamp + 1000;
-    const validAfter = blockTimestamp;
+    const validAfter = blockTimestamp - 1000;
 
     const userOp = await makeEcdsaModuleUserOpWithPaymaster(
       "execute_ncC",
