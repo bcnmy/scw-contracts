@@ -255,12 +255,13 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       4
     );
 
+    // change method selector to updateImplementation
     const spoofedData = setImplSelector + txnDataAA1.slice(10);
     
     const userOp = await fillAndSign(
       {
         sender: userSA.address,
-        callData: spoofedData,
+        callData: spoofedData, //use spoofed data
         preVerificationGas: 50000,
       },
       sessionKey,
