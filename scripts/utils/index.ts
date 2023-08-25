@@ -44,6 +44,7 @@ export enum DEPLOYMENT_SALTS {
   WALLET_IMP = "DEVX_WALLET_IMP_V0_11042023_AwPKF0R",
   // intermediate
   // SINGELTON_PAYMASTER = "PROD_SINGLETON_PAYMASTER_V1_03082023_y2TivQY", // 0x0000071ac30e805190f7c5b5d2e24bfa589d867e
+  // SINGELTON_PAYMASTER = "DEVX_SINGLETON_PAYMASTER_V1_03082023_0Af0vtw", // 0x0000064e9c653e373af18ef27f70be83df5476b7
   // latest
   SINGELTON_PAYMASTER = "PROD_SINGLETON_PAYMASTER_V1_06082023_II1mWTr", // 0x00000f79b7faf42eebadba19acc07cd08af44789
 }
@@ -115,7 +116,7 @@ export const getDeployerInstance = async (): Promise<Deployer> => {
   //   from: metaDeployer.address,
   //   nonce: 0,
   // });
-  
+
   const provider = hardhatEthersInstance.provider;
   const [signer] = await hardhatEthersInstance.getSigners();
   const chainId = (await provider.getNetwork()).chainId;
@@ -148,8 +149,11 @@ export const deployContract = async (
   contractByteCode: string,
   deployerInstance: Deployer
 ): Promise<string> => {
-  //const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {maxFeePerGas: 200e9, maxPriorityFeePerGas: 75e9});
-  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {gasPrice: 40e9});
+  // const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {maxFeePerGas: 200e9, maxPriorityFeePerGas: 75e9});
+  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {
+    maxFeePerGas: 2e8,
+    maxPriorityFeePerGas: 1e8,
+  });
 
   console.log(`Submitted transaction ${hash} for deployment`);
 
