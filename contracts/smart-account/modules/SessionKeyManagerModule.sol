@@ -6,8 +6,6 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "./SessionValidationModules/ISessionValidationModule.sol";
 
-import "hardhat/console.sol";
-
 struct SessionStorage {
     bytes32 merkleRoot;
 }
@@ -86,9 +84,6 @@ contract SessionKeyManager is BaseAuthorizationModule {
                 sessionKeyData
             )
         );
-
-        //console.log("leaf in the contract");
-        //console.logBytes32(leaf);
 
         if (
             !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)

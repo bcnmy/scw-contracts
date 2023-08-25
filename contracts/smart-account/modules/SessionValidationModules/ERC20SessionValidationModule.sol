@@ -17,6 +17,7 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
     /**
      * @dev validates if the _op (UserOperation) matches the SessionKey permissions
      * and that _op has been signed by this SessionKey
+     * Please mind the decimals of your exact token when setting maxAmount
      * @param _op User Operation to be validated.
      * @param _userOpHash Hash of the User Operation to be validated.
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions

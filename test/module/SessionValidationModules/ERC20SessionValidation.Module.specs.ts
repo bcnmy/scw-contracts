@@ -308,7 +308,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
 
   });
 
-  it("should be able to execute arbitrary method instead of execute on a vulnerable module", async () => {
+  it("should be able to execute arbitrary method instead of `execute` on a vulnerable module", async () => {
     const {
       entryPoint,
       userSA,
@@ -370,6 +370,10 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       'nonce'
     );
 
+    const proof = merkleTree2.getHexProof(
+      ethers.utils.keccak256(leafData)
+    );
+
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
       ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
       [ 
@@ -377,9 +381,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
         0, 
         vulnerableErc20SessionModule.address, 
         sessionKeyData, 
-        merkleTree2.getHexProof(
-          ethers.utils.keccak256(leafData)
-        ), 
+        proof, 
         userOp.signature
       ]
     );
