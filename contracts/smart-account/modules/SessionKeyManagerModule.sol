@@ -6,6 +6,8 @@ import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "./SessionValidationModules/ISessionValidationModule.sol";
 
+import "hardhat/console.sol";
+
 struct SessionStorage {
     bytes32 merkleRoot;
 }
@@ -58,7 +60,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view virtual returns (uint256) {
+    ) external virtual returns (uint256) {
         SessionStorage storage sessionKeyStorage = _getSessionData(msg.sender);
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
@@ -84,6 +86,10 @@ contract SessionKeyManager is BaseAuthorizationModule {
                 sessionKeyData
             )
         );
+
+        //console.log("leaf in the contract");
+        //console.logBytes32(leaf);
+
         if (
             !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
         ) {

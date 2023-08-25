@@ -108,7 +108,7 @@ export async function addLeavesForSmartAccountViaEcdsa(
   SmartAccountAddress: string,
   smartAccountOwner: Signer,
   entryPoint: EntryPoint,
-  ecdsaModuleAddress: string
+  ecdsaModuleAddress: string,
 ) : Promise<MerkleTree> {
   
   merkleTree.addLeaves(newLeaves);
