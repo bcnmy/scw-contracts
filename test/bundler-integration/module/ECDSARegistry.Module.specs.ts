@@ -139,7 +139,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
         [bob.address]
       );
       const userOp = await makeEcdsaModuleUserOp(
-        "executeCall",
+        "execute_ncC",
         [ecdsaRegistryModule.address, 0, txnData1],
         userSA.address,
         smartAccountOwner,
@@ -164,7 +164,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
           []
         );
         const userOp = await makeEcdsaModuleUserOp(
-          "executeCall",
+          "execute_ncC",
           [ecdsaRegistryModule.address, 0, txnData1],
           userSA.address,
           smartAccountOwner,
@@ -195,7 +195,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
           tokenAmountToTransfer.toString(),
         ]);
         const userOp = await makeEcdsaModuleUserOp(
-          "executeCall",
+          "execute_ncC",
           [mockToken.address, 0, txnData],
           userSA.address,
           smartAccountOwner,

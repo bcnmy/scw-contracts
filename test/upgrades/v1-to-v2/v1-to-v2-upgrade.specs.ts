@@ -271,7 +271,7 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless)", async () => {
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6326");
 
     const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
+      "execute_ncC",
       [
         mockToken.address,
         ethers.utils.parseEther("0"),

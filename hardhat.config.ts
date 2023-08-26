@@ -17,6 +17,8 @@ const walletUtils = require("./walletUtils");
 
 dotenv.config();
 
+const shouldRunInForkMode = !!process.env.FORK_MODE;
+
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
 task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
@@ -47,18 +49,44 @@ const config: HardhatUserConfig = {
         version: "0.8.17",
         settings: {
           optimizer: { enabled: true, runs: 800 },
+          viaIR: true,
         },
       },
     ],
   },
   networks: {
     hardhat: {
-      accounts: {
-        accountsBalance: "10000000000000000000000000",
-        //   mnemonic: MNEMONIC,
-      },
-      allowUnlimitedContractSize: true,
+      ...(shouldRunInForkMode
+        ? // Normal Config
+          {
+            // Forking Config for Deployment Testing
+            chainId: 10,
+            forking: {
+              url: "https://mainnet.optimism.io",
+            },
+            accounts: [
+              {
+                privateKey: process.env.PRIVATE_KEY!,
+                // This is a dummy value and will be overriden in the test by
+                // the account's actual balance from the forked chain
+                balance: "10000000000000000000000000",
+              },
+            ],
+          }
+        : {
+            accounts: {
+              accountsBalance: "10000000000000000000000000",
+              //   mnemonic: MNEMONIC,
+            },
+            allowUnlimitedContractSize: true,
+            chainId: 31337,
+          }),
+    },
+    hardhat_node: {
+      live: false,
+      saveDeployments: false,
       chainId: 31337,
+      url: "http://localhost:8545",
     },
     local: {
       live: false,
@@ -194,12 +222,18 @@ const config: HardhatUserConfig = {
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 420,
     },
     optimismMainnet: {
       url: `https://mainnet.optimism.io`,
-      accounts: walletUtils.makeKeyList(),
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
       chainId: 10,
     },
     moonbeam_mainnet: {
@@ -236,6 +270,42 @@ const config: HardhatUserConfig = {
       chainId: 245022926,
       // gasPrice: 6400000
     },
+    baseGoerli: {
+      url:
+        process.env.BASE_TESTNET_URL ||
+        `https://base-goerli.blockpi.network/v1/rpc/public`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 84531,
+    },
+    lineaGoerli: {
+      url: process.env.LINEA_TESTNET_URL || `https://rpc.goerli.linea.build`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 59140,
+    },
+    lineaMainnet: {
+      url: process.env.LINEA_MAINNET_URL || ``,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 59144,
+    },
+    baseMainnet: {
+      url:
+        process.env.BASE_MAINNET_URL ||
+        `https://developer-access-mainnet.base.org`,
+      accounts:
+        process.env.PRIVATE_KEY !== undefined
+          ? [process.env.PRIVATE_KEY]
+          : walletUtils.makeKeyList(),
+      chainId: 8453,
+    },
   },
 
   gasReporter: {
@@ -263,7 +333,63 @@ const config: HardhatUserConfig = {
       arbitrumOne: process.env.ARBITRUM_API_KEY || "",
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
+      lineaGoerli: "PLACEHOLDER_STRING",
+      lineaMainnet: "PLACEHOLDER_STRING",
+      baseGoerli: process.env.BASE_API_KEY || "",
+      baseMainnet: process.env.BASE_API_KEY || "",
+      zkEVMMainnet: process.env.ZKEVM_API_KEY || "",
+      zkEVMGoerli: process.env.ZKEVM_API_KEY || "",
     },
+    customChains: [
+      {
+        network: "lineaGoerli",
+        chainId: 59140,
+        urls: {
+          apiURL: "https://explorer.goerli.linea.build/api",
+          browserURL: "https://goerli.lineascan.build",
+        },
+      },
+      {
+        network: "lineaMainnet",
+        chainId: 59144,
+        urls: {
+          apiURL: "http://explorer.linea.build/api",
+          browserURL: "https://explorer.lineascan.build",
+        },
+      },
+      {
+        network: "baseGoerli",
+        chainId: 84531,
+        urls: {
+          apiURL: "https://api-goerli.basescan.org/api",
+          browserURL: "https://goerli.basescan.org",
+        },
+      },
+      {
+        network: "baseMainnet",
+        chainId: 8453,
+        urls: {
+          apiURL: "https://api.basescan.org/api",
+          browserURL: "https://basescan.org",
+        },
+      },
+      {
+        network: "zkEVMMainnet",
+        chainId: 1101,
+        urls: {
+          apiURL: "https://api-zkevm.polygonscan.com/api",
+          browserURL: "https://zkevm.polygonscan.com",
+        },
+      },
+      {
+        network: "zkEVMGoerli",
+        chainId: 1442,
+        urls: {
+          apiURL: "https://api-testnet-zkevm.polygonscan.com/api",
+          browserURL: "https://testnet-zkevm.polygonscan.com",
+        },
+      },
+    ],
   },
 };
 

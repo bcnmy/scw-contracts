@@ -30,5 +30,11 @@ module.exports = {
         tryExtensions: [".js", ".json", ".node", ".ts"],
       },
     ],
+    camelcase: [
+      "error",
+      {
+        allow: [".*__factory"],
+      },
+    ],
   },
 };

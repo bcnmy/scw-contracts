@@ -164,7 +164,7 @@ describe("SessionKey: SessionKey Manager Module (with Bundler)", async () => {
         { sortPairs: false, hashLeaves: false }
       );
       const addMerkleRootUserOp = await makeEcdsaModuleUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           sessionKeyManager.address,
           ethers.utils.parseEther("0"),
@@ -207,7 +207,7 @@ describe("SessionKey: SessionKey Manager Module (with Bundler)", async () => {
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),

@@ -6,7 +6,7 @@ pragma solidity 0.8.17;
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {ReentrancyGuard} from "@openzeppelin/contracts/security/ReentrancyGuard.sol";
 import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {BasePaymaster, IEntryPoint} from "../../BasePaymaster.sol";
+import "../../BasePaymaster.sol";
 import {PaymasterHelpers, PaymasterData, PaymasterContext} from "../../PaymasterHelpers.sol";
 import {SingletonPaymasterErrors} from "../../../common/Errors.sol";
 
@@ -154,7 +154,9 @@ contract VerifyingSingletonPaymaster is
      */
     function getHash(
         UserOperation calldata userOp,
-        address paymasterId
+        address paymasterId,
+        uint48 validUntil,
+        uint48 validAfter
     ) public view returns (bytes32) {
         //can't use userOp.hash(), since it contains also the paymasterAndData itself.
         address sender = userOp.getSender();
@@ -172,7 +174,9 @@ contract VerifyingSingletonPaymaster is
                     userOp.maxPriorityFeePerGas,
                     block.chainid,
                     address(this),
-                    paymasterId
+                    paymasterId,
+                    validUntil,
+                    validAfter
                 )
             );
     }
@@ -190,9 +194,19 @@ contract VerifyingSingletonPaymaster is
         UserOperation calldata userOp,
         bytes32 /*userOpHash*/,
         uint256 requiredPreFund
-    ) internal override returns (bytes memory context, uint256 validationData) {
+    )
+        internal
+        view
+        override
+        returns (bytes memory context, uint256 validationData)
+    {
         PaymasterData memory paymasterData = userOp._decodePaymasterData();
-        bytes32 hash = getHash(userOp, paymasterData.paymasterId);
+        bytes32 hash = getHash(
+            userOp,
+            paymasterData.paymasterId,
+            paymasterData.validUntil,
+            paymasterData.validAfter
+        );
         uint256 sigLength = paymasterData.signatureLength;
         // we only "require" it here so that the revert reason on invalid signature will be of "VerifyingPaymaster", and not "ECDSA"
         if (sigLength != 65) revert InvalidPaymasterSignatureLength(sigLength);
@@ -201,15 +215,29 @@ contract VerifyingSingletonPaymaster is
             verifyingSigner !=
             hash.toEthSignedMessageHash().recover(paymasterData.signature)
         ) {
-            // empty context and sigTimeRange 1
-            return ("", 1);
+            // empty context and sigFailed with time range provided
+            return (
+                "",
+                _packValidationData(
+                    true,
+                    paymasterData.validUntil,
+                    paymasterData.validAfter
+                )
+            );
         }
         if (requiredPreFund > paymasterIdBalances[paymasterData.paymasterId])
             revert InsufficientBalance(
                 requiredPreFund,
                 paymasterIdBalances[paymasterData.paymasterId]
             );
-        return (userOp.paymasterContext(paymasterData, userOp.gasPrice()), 0);
+        return (
+            userOp.paymasterContext(paymasterData),
+            _packValidationData(
+                false,
+                paymasterData.validUntil,
+                paymasterData.validAfter
+            )
+        );
     }
 
     /**
@@ -227,7 +255,7 @@ contract VerifyingSingletonPaymaster is
         address extractedPaymasterId = data.paymasterId;
         uint256 balToDeduct = actualGasCost +
             unaccountedEPGasOverhead *
-            data.gasPrice;
+            tx.gasprice;
         paymasterIdBalances[extractedPaymasterId] =
             paymasterIdBalances[extractedPaymasterId] -
             balToDeduct;

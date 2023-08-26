@@ -184,7 +184,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const tokenAmountToTransfer = ethers.utils.parseEther("0.7734");
       const sessionKeyData2 = hexZeroPad(sessionKey2.address, 20);
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -247,7 +247,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       });
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -295,7 +295,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const wrongValidUntil = 1;
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -342,7 +342,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const wrongValidAfter = 9999999999999;
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -406,7 +406,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       );
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -471,7 +471,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       );
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -520,7 +520,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       ).deploy();
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -567,7 +567,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const wrongSessionKeyData = hexZeroPad(sessionKey2.address, 20);
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-        "executeCall",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),

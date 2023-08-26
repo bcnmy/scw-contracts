@@ -87,101 +87,137 @@ describe("MultichainValidator Module", async () => {
       );
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-      // ============ preparing smart account deployment =============
+    // funding account
+    await deployer.sendTransaction({
+      to: expectedSmartAccountAddress,
+      value: ethers.utils.parseEther("10"),
+    });
+    await mockToken.mint(expectedSmartAccountAddress, ethers.utils.parseEther("1000000"));
+    await mockToken.mint(charlie.address, ethers.utils.parseEther("10"));
 
-      const ecdsaOwnershipSetupData =
-        MultichainECDSAValidator.interface.encodeFunctionData(
-          "initForSmartAccount",
-          [smartAccountOwner.address]
-        );
-      const smartAccountDeploymentIndex = 0;
+    // ============== session key setup =============
 
-      const deploymentData = SmartAccountFactory.interface.encodeFunctionData(
-        "deployCounterFactualAccount",
-        [
-          multichainECDSAValidator.address,
-          ecdsaOwnershipSetupData,
-          smartAccountDeploymentIndex,
-        ]
-      );
+    const {sessionKeyData, leafData} = await getERC20SessionKeyParams(
+      sessionKey.address,
+      mockToken.address,
+      charlie.address,
+      maxAmount,
+      0,
+      0,
+      erc20SessionModule.address
+    );
 
-      const expectedSmartAccountAddress =
-        await smartAccountFactory.getAddressForCounterFactualAccount(
-          multichainECDSAValidator.address,
-          ecdsaOwnershipSetupData,
-          smartAccountDeploymentIndex
-        );
+    const sessionKeyMerkleTree = new MerkleTree(
+      [ethers.utils.keccak256(leafData)],
+      keccak256,
+      { sortPairs: true, hashLeaves: false }
+    );
 
-      // funding account
-      await deployer.sendTransaction({
-        to: expectedSmartAccountAddress,
-        value: ethers.utils.parseEther("10"),
-      });
-      await mockToken.mint(
-        expectedSmartAccountAddress,
-        ethers.utils.parseEther("1000000")
-      );
-      await mockToken.mint(charlie.address, ethers.utils.parseEther("10"));
+    const enableSessionKeyManagerData = SmartAccount.interface.encodeFunctionData(
+      "enableModule",
+      [sessionKeyManager.address]
+    );
 
-      // ============== session key setup =============
+    const enableSessionKeyData = sessionKeyManager.interface.encodeFunctionData(
+      "setMerkleRoot",
+      [sessionKeyMerkleTree.getHexRoot()]
+    );
 
-      const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
-        sessionKey.address,
-        mockToken.address,
-        charlie.address,
-        maxAmount,
-        0,
-        0,
-        erc20SessionModule.address
-      );
+    // ============== make userOp ===============
 
-      const sessionKeyMerkleTree = new MerkleTree(
-        [ethers.utils.keccak256(leafData)],
-        keccak256,
-        { sortPairs: true, hashLeaves: false }
-      );
+    const batchUserOpCallData = SmartAccount.interface.encodeFunctionData(
+      "executeBatch_y6U",
+      [
+        [expectedSmartAccountAddress, sessionKeyManager.address],
+        [0, 0],
+        [enableSessionKeyManagerData, enableSessionKeyData],
+      ]
+    );
 
-      const enableSessionKeyManagerData =
-        SmartAccount.interface.encodeFunctionData("enableModule", [
-          sessionKeyManager.address,
-        ]);
+    const deploymentUserOp = await fillAndSign(
+      {
+        sender: expectedSmartAccountAddress,
+        callGasLimit: 1_000_000,
+        initCode: ethers.utils.hexConcat([
+          smartAccountFactory.address,
+          deploymentData,
+        ]),
+        callData: batchUserOpCallData,
+        preVerificationGas: 55000,
+      },
+      smartAccountOwner,
+      entryPoint,
+      "nonce",
+    );
+    
+    // =============== make a multichain signature for a userOp ===============
+    
+    const validUntil = 0; //unlimited
+    const validAfter = 0;
 
-      const enableSessionKeyData =
-        sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [
-          sessionKeyMerkleTree.getHexRoot(),
-        ]);
+    const leaf1 = '0xb0bb0b'; //some random hash
+    const leaf2 = hexConcat([
+                    hexZeroPad(ethers.utils.hexlify(validUntil),6),
+                    hexZeroPad(ethers.utils.hexlify(validAfter),6),
+                    hexZeroPad(await entryPoint.getUserOpHash(deploymentUserOp),32),
+                  ]);
+    const leaf3 = '0xdecafdecaf';
+    const leaf4 = '0xa11cea11ce';
 
-      // ============== make userOp ===============
+    // prepare the merkle tree containing the leaves with chainId info
+    const leaves = [leaf1, leaf2, leaf3, leaf4].map(x => ethers.utils.keccak256(x));
 
-      const batchUserOpCallData = SmartAccount.interface.encodeFunctionData(
-        "executeBatchCall_4by",
-        [
-          [expectedSmartAccountAddress, sessionKeyManager.address],
-          [0, 0],
-          [enableSessionKeyManagerData, enableSessionKeyData],
-        ]
-      );
+    const chainMerkleTree = new MerkleTree(
+      leaves,
+      keccak256,
+      { sortPairs: true }
+    );
+    const merkleProof = chainMerkleTree.getHexProof(leaves[1]);
 
-      const deploymentUserOp = await fillAndSign(
-        {
-          sender: expectedSmartAccountAddress,
-          callGasLimit: 1_000_000,
-          initCode: ethers.utils.hexConcat([
-            smartAccountFactory.address,
-            deploymentData,
-          ]),
-          callData: batchUserOpCallData,
-          preVerificationGas: 55000,
-        },
-        smartAccountOwner,
-        entryPoint,
-        "nonce"
-      );
+    const multichainSignature = await smartAccountOwner.signMessage(ethers.utils.arrayify(chainMerkleTree.getHexRoot()));
 
-      // =============== make a multichain signature for a userOp ===============
+    const moduleSignature = defaultAbiCoder.encode(
+      ["uint48", "uint48", "bytes32", "bytes32[]", "bytes"],
+      [
+        validUntil,
+        validAfter,
+        chainMerkleTree.getHexRoot(),
+        merkleProof,
+        multichainSignature,
+      ]
+    );
 
-      const validUntil = 0; // unlimited
-      const validAfter = 0;
+    // add validator module address to the signature
+    const signatureWithModuleAddress = defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [moduleSignature, multichainECDSAValidator.address]
+    );
+    
+    // =================== put signature into userOp and execute ===================
+    deploymentUserOp.signature = signatureWithModuleAddress;
+    await environment.sendUserOperation(
+      deploymentUserOp,
+      entryPoint.address
+    ); 
+
+    // =================== connect SA and return everything ====================
+    const userSA = await ethers.getContractAt(
+      "SmartAccount",
+      expectedSmartAccountAddress
+    );
+
+    return {
+      entryPoint: entryPoint,
+      smartAccountImplementation: await getSmartAccountImplementation(),
+      smartAccountFactory: smartAccountFactory,
+      mockToken: mockToken,
+      userSA: userSA,
+      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
+      multichainECDSAValidator: multichainECDSAValidator,
+      sessionKeyManager: sessionKeyManager,
+      sessionKeyMerkleTree: sessionKeyMerkleTree,
+    };
+  });
 
       const leaf1 = "0xb0bb0b"; // some random hash
       const leaf2 = hexConcat([
@@ -267,7 +303,7 @@ describe("MultichainValidator Module", async () => {
       const tokenAmountToTransfer = ethers.utils.parseEther("0.5945");
 
       const sendTokenMultichainUserOp = await makeMultichainEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
@@ -305,7 +341,7 @@ describe("MultichainValidator Module", async () => {
       const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
       const userOp = await makeEcdsaModuleUserOp(
-        "executeCall_s1m",
+        "execute_ncC",
         [
           mockToken.address,
           ethers.utils.parseEther("0"),
