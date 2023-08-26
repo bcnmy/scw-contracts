@@ -402,7 +402,7 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
       paymasterAndData: hexConcat([
         paymaster.address,
         ethers.utils.defaultAbiCoder.encode(
-          ["address","uint48", "uint48", "bytes"],
+          ["address", "uint48", "uint48", "bytes"],
           [verifiedSigner.address, validUntil, validAfter, paymasterSig]
         ),
       ]),

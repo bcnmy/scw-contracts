@@ -75,14 +75,12 @@ export async function enableNewTreeForSmartAccountViaEcdsa(
   smartAccountOwner: Signer,
   entryPoint: EntryPoint,
   ecdsaModuleAddress: string
-) : Promise<MerkleTree> {
-
-  const merkleTree = new MerkleTree(
-    leaves,
-    keccak256,
-    { sortPairs: false, hashLeaves: false }
-  );
-  let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
+): Promise<MerkleTree> {
+  const merkleTree = new MerkleTree(leaves, keccak256, {
+    sortPairs: false,
+    hashLeaves: false,
+  });
+  const addMerkleRootUserOp = await makeEcdsaModuleUserOp(
     "execute_ncC",
     [
       sessionKeyManager.address,
@@ -115,7 +113,7 @@ export async function addLeavesForSmartAccountViaEcdsa(
   ecdsaModuleAddress: string
 ): Promise<MerkleTree> {
   merkleTree.addLeaves(newLeaves);
-  let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
+  const addMerkleRootUserOp = await makeEcdsaModuleUserOp(
     "execute_ncC",
     [
       sessionKeyManager.address,
@@ -145,16 +143,15 @@ export async function getERC20SessionKeyParams(
   maxAmountToTransfer: BigNumber,
   validUntil: number,
   validAfter: number,
-  sessionValidationModuleAddress: string,
-) : Promise<SessionKeyParams> {
-
+  sessionValidationModuleAddress: string
+): Promise<SessionKeyParams> {
   const sessionKeyData = defaultAbiCoder.encode(
     ["address", "address", "address", "uint256"],
     [
       sessionKey,
       erc20TokenAddress,
       receiverAddress,
-      maxAmountToTransfer.toHexString()
+      maxAmountToTransfer.toHexString(),
     ]
   );
 

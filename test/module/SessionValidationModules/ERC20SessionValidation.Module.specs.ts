@@ -127,11 +127,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
   ): Promise<UserOperation> {
     const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
       "execute_ncC",
-      [
-        token,
-        txnValue,
-        encodeTransfer(recipient, amount.toString()),
-      ],
+      [token, txnValue, encodeTransfer(recipient, amount.toString())],
       testParams.userSA.address,
       sessionKey,
       testParams.entryPoint,

@@ -127,15 +127,15 @@ describe("MultichainValidator Module", async () => {
         { sortPairs: true, hashLeaves: false }
       );
 
-    // Batched calldata to enable the session key manager and set the merkle root
-    const batchUserOpCallData = SmartAccount.interface.encodeFunctionData(
-      "executeBatch_y6U",
-      [
-        [expectedSmartAccountAddress, sessionKeyManager.address],
-        [0, 0],
-        [enableSessionKeyManagerData, enableSessionKeyData],
-      ]
-    );
+      // Batched calldata to enable the session key manager and set the merkle root
+      const batchUserOpCallData = SmartAccount.interface.encodeFunctionData(
+        "executeBatch_y6U",
+        [
+          [expectedSmartAccountAddress, sessionKeyManager.address],
+          [0, 0],
+          [enableSessionKeyManagerData, enableSessionKeyData],
+        ]
+      );
 
       // Calldata to set the merkle root in the session key manager
       const enableSessionKeyData =
