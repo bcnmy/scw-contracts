@@ -17,7 +17,9 @@ describe("Proxy ", async () => {
 
     it("should store implementation at the slot with address encoded as proxy address", async () => {
       const implementationAddress = randomAddress.address;
-      const Proxy = await ethers.getContractFactory("contracts/smart-account/Proxy.sol:Proxy");
+      const Proxy = await ethers.getContractFactory(
+        "contracts/smart-account/Proxy.sol:Proxy"
+      );
       const proxy = await Proxy.deploy(implementationAddress);
       await proxy.deployed();
 
