@@ -104,8 +104,7 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
           preVerificationGas: 50000,
         }
       );
-      console.log("setupTests 0");
-      //await entryPoint.handleOps([userOp], alice.address);
+      
       await environment.sendUserOperation(userOp, entryPoint.address);
 
       const erc20SessionModule = await (
