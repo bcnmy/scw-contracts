@@ -4,7 +4,7 @@
 
 Biconomy Smart Account is a smart contract wallet focused on implementing Account Abstraction. It builds on the core concepts of Gnosis and Argent safes and is compliant with [EIP-4337](https://eips.ethereum.org/EIPS/eip-4337) and [EIP-6900](https://eips.ethereum.org/EIPS/eip-6900).
 
-![Biconomy Account Abstraction Banner](./assets/biconomy-account-abstraction.png)
+![Biconomy Account Abstraction Banner](./assets/readme/biconomy-account-abstraction.png)
 
 ## 📜 Smart Contracts
 
@@ -125,7 +125,6 @@ Automatically fix issues in Solidity contracts:
 ```shell
 npx solhint 'contracts/**/*.sol' --fix
 ```
-
 ---
 
 This format separates the description from the command, making it clearer and more readable.
