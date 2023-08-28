@@ -10,6 +10,7 @@ import {
   parseUnits,
   parseEther,
 } from "ethers/lib/utils";
+// eslint-disable-next-line node/no-extraneous-import
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
 import { Deployer, Deployer__factory } from "../../typechain";
 
