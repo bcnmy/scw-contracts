@@ -64,7 +64,7 @@ export class BundlerTestEnvironment {
     );
     await this.instance.fundAccounts(
       defaultAddresses,
-      defaultAddresses.map((_) => this.DEFAULT_FUNDING_AMOUNT)
+      defaultAddresses.map(() => this.DEFAULT_FUNDING_AMOUNT)
     );
 
     this.instance.defaultSnapshot = await this.instance.snapshot();

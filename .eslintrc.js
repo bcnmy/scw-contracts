@@ -22,6 +22,8 @@ module.exports = {
       "error",
       { ignores: ["modules"] },
     ],
+    "@typescript-eslint/no-non-null-assertion": "off",
+    "@typescript-eslint/explicit-module-boundary-types": "off",
     "node/no-missing-import": [
       "error",
       {

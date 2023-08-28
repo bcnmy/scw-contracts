@@ -60,90 +60,85 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
     ]);
   });
 
-  const setupTests = deployments.createFixture(
-    async ({ deployments, getNamedAccounts }) => {
-      await deployments.fixture();
-      const mockToken = await getMockToken();
-      const entryPoint = await getEntryPoint();
-      const ecdsaModule = await getEcdsaOwnershipRegistryModule();
-      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
-        "EcdsaOwnershipRegistryModule"
+  const setupTests = deployments.createFixture(async ({ deployments }) => {
+    await deployments.fixture();
+    const mockToken = await getMockToken();
+    const entryPoint = await getEntryPoint();
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
+    );
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
       );
-      const ecdsaOwnershipSetupData =
-        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-          "initForSmartAccount",
-          [await smartAccountOwner.getAddress()]
-        );
-      const smartAccountDeploymentIndex = 0;
-      const userSA = await getSmartAccountWithModule(
-        ecdsaModule.address,
-        ecdsaOwnershipSetupData,
-        smartAccountDeploymentIndex
-      );
+    const smartAccountDeploymentIndex = 0;
+    const userSA = await getSmartAccountWithModule(
+      ecdsaModule.address,
+      ecdsaOwnershipSetupData,
+      smartAccountDeploymentIndex
+    );
 
-      // send funds to userSA and mint tokens
-      await deployer.sendTransaction({
-        to: userSA.address,
-        value: ethers.utils.parseEther("10"),
-      });
-      await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
+    // send funds to userSA and mint tokens
+    await deployer.sendTransaction({
+      to: userSA.address,
+      value: ethers.utils.parseEther("10"),
+    });
+    await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      // deploy forward flow module and enable it in the smart account
-      const sessionKeyManager = await (
-        await ethers.getContractFactory("SessionKeyManager")
-      ).deploy();
-      const userOp = await makeEcdsaModuleUserOp(
-        "enableModule",
-        [sessionKeyManager.address],
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
-      await entryPoint.handleOps([userOp], alice.address);
+    // deploy forward flow module and enable it in the smart account
+    const sessionKeyManager = await (
+      await ethers.getContractFactory("SessionKeyManager")
+    ).deploy();
+    const userOp = await makeEcdsaModuleUserOp(
+      "enableModule",
+      [sessionKeyManager.address],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    );
+    await entryPoint.handleOps([userOp], alice.address);
 
-      const erc20SessionModule = await (
-        await ethers.getContractFactory("ERC20SessionValidationModule")
-      ).deploy();
+    const erc20SessionModule = await (
+      await ethers.getContractFactory("ERC20SessionValidationModule")
+    ).deploy();
 
-      const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
-        sessionKey.address,
-        mockToken.address,
-        charlie.address,
-        maxAmount,
-        0,
-        0,
-        erc20SessionModule.address
-      );
+    const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
+      sessionKey.address,
+      mockToken.address,
+      charlie.address,
+      maxAmount,
+      0,
+      0,
+      erc20SessionModule.address
+    );
 
-      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-        [ethers.utils.keccak256(leafData)],
-        sessionKeyManager,
-        userSA.address,
-        smartAccountOwner,
-        entryPoint,
-        ecdsaModule.address
-      );
+    const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+      [ethers.utils.keccak256(leafData)],
+      sessionKeyManager,
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    );
 
-      return {
-        entryPoint: entryPoint,
-        smartAccountImplementation: await getSmartAccountImplementation(),
-        smartAccountFactory: await getSmartAccountFactory(),
-        ecdsaModule: ecdsaModule,
-        userSA: userSA,
-        mockToken: mockToken,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
-        sessionKeyManager: sessionKeyManager,
-        erc20SessionModule: erc20SessionModule,
-        sessionKeyData: sessionKeyData,
-        leafData: leafData,
-        merkleTree: merkleTree,
-      };
-    }
-  );
+    return {
+      entryPoint: entryPoint,
+      smartAccountImplementation: await getSmartAccountImplementation(),
+      smartAccountFactory: await getSmartAccountFactory(),
+      ecdsaModule: ecdsaModule,
+      userSA: userSA,
+      mockToken: mockToken,
+      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
+      sessionKeyManager: sessionKeyManager,
+      erc20SessionModule: erc20SessionModule,
+      sessionKeyData: sessionKeyData,
+      leafData: leafData,
+      merkleTree: merkleTree,
+    };
+  });
 
   const makeErc20TransferUserOp = async function (
     token: string,
