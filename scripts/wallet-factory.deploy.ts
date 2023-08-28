@@ -7,15 +7,10 @@ import {
   isContract,
 } from "./utils";
 
-const options = { gasLimit: 7000000, gasPrice: 70000000000 };
-
 // should come from env
 const entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
   "0x0576a174D229E3cFA37253523E645A78A0C91B57";
-const fallbackHandlerAddress =
-  process.env.FALLBACK_HANDLER_ADDRESS ||
-  "0x4a3581e10ac4BDd4Da32dE5eBea80C2840255E7a";
 
 async function main() {
   const provider = ethers.provider;
@@ -35,7 +30,6 @@ async function main() {
   );
   console.log("Base wallet Computed Address: ", baseImpComputedAddr);
 
-  let baseImpDeployedAddr;
   const isBaseImpDeployed = await isContract(baseImpComputedAddr, provider); // true (deployed on-chain)
   if (!isBaseImpDeployed) {
     await deployContract(

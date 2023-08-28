@@ -1,4 +1,4 @@
-import hre, { ethers, run, network } from "hardhat";
+import { ethers } from "hardhat";
 async function main() {
   const entryPointAddress = "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
