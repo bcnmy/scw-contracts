@@ -1,64 +1,149 @@
-# Biconomy Smart Account (Smart Contract Wallet) Overview
+![Solidity](https://img.shields.io/badge/Solidity-0.8.17-blue.svg) ![Hardhat](https://img.shields.io/badge/Framework-Hardhat-brightgreen.svg) ![Foundry](https://img.shields.io/badge/Framework-Foundry-orange.svg) ![Test Coverage](https://img.shields.io/badge/Coverage-45%25-red.svg)
 
-Biconomy Modular Smart Account is an [EIP-4337](https://eips.ethereum.org/EIPS/eip-4337) compatible modular smart contract wallet.
-Smart Account is ownerless by nature. UserOp and txns validation happens in Authorization Modules.
+# Biconomy Smart Account: Leading Implementation of Account Abstraction 🌐
 
-Smart Account is designed in such a way that it is:
+Biconomy Smart Account is a smart contract wallet focused on implementing Account Abstraction. It builds on the core concepts of Gnosis and Argent safes and is compliant with [EIP-4337](https://eips.ethereum.org/EIPS/eip-4337) and [EIP-6900](https://eips.ethereum.org/EIPS/eip-6900).
 
-- Modular => highly customizable and extandable. 
-- Cheap to deploy proxy copies of an implementation (user wallets)
-- Wallet addresses are counterfactual in nature (you can know the address in advance and users can have the same address across all EVM chains)
-- Deployment cost can be sponsored 
+![Biconomy Account Abstraction Banner](./assets/biconomy-account-abstraction.png)
 
-# How to run the project
+## 📜 Smart Contracts
 
-## 1. Install
+- **BaseSmartAccount.sol**: An abstract contract implementing the EIP4337 IWallet interface.
+- **Proxy.sol**: A lightweight proxy upgradeable through the UUPS pattern.
+- **SmartAccountFactory.sol**: This factory contract manages the deployment of smart wallets (Account Abstraction).
+- **SmartAccount.sol**: The primary implementation contract for a smart wallet (Account Abstraction).
+- **EntryPoint.sol**: Implements the EIP4337 Entry Point contract.
+- **StakeManager.sol**: A stake manager for wallet and paymaster deposits/stakes.
+- **Executor.sol**: A helper contract facilitating calls and delegate calls to dapp contracts.
+- **FallbackManager.sol**: Manages a fallback handler for delegate calls.
+- **ModuleManager.sol**: Adopts the Gnosis Safe module manager pattern.
+- **DefaultCallbackHandler.sol**: Handles hooks to respond to token receipts.
+- **MultiSend.sol & MultiSendCallOnly.sol**: Facilitates batching multiple transactions into one.
+- **VerifyingSingletonPaymaster.sol**: A paymaster that uses an external service for transaction validation.
+- **PaymasterHelpers.sol**: A library essential for decoding paymaster data and context.
+
+## 🚀 How to Run the Project
+
+Before diving in, place a mnemonic in a `.secret` file at the root. 
+**Remember**: Never commit this file or share it publicly.
+
+
+### 🛠️ Development Commands
+
+Below are the commands you can use for various tasks:
+
+### 🧪 Testing
+
+Run regular tests:
 ```shell
-> npm install
-// or
-> yarn install
-```
-For Bundler Integration Tests also install Docker. 
-
-## 2. Configure
-Place a mnemonic in a `.secret` file in the root folder of the project.
-
-## 3. Run
-All the smart contracts are carefully tested.
-There are two kinds of tests:
-* Standard Hardhat environment tests which test the main contracts logic
-* Bundler Integration tests which feature custom bundler-enabled environment to test that Smart Account and Modules operate properly in the wild with all the ERC-4337 limitations such as banned opcodes and storage access rules.
-
-For Bundler integration tests you also need active Docker Environment.
-
-```shell
-# Regular Tests
 npx hardhat test
+```
 
-# Bundler Integration Tests
-# Install realpath
+For Bundler Integration Tests, first install `realpath`:
+```shell
 brew install coreutils
-# Run Bundler Integration Tests
-yarn bundler-test
+```
 
-# other
-npx hardhat accounts
+Then, run the Bundler Integration Tests:
+```shell
+yarn bundler-test
+```
+
+### 📦 Compilation & Deployment
+
+Compile contracts:
+```shell
 npx hardhat compile
+```
+
+Clean the environment:
+```shell
 npx hardhat clean
+```
+
+Start a local Ethereum node:
+```shell
 npx hardhat node
-npx hardhat help
-REPORT_GAS=true npx hardhat test
-npx hardhat coverage
+```
+
+Deploy contracts:
+```shell
 npx hardhat run scripts/deploy.ts
 TS_NODE_FILES=true npx ts-node scripts/deploy.ts
+```
+
+### 📈 Analysis & Reporting
+
+Display available accounts:
+```shell
+npx hardhat accounts
+```
+
+Get help on Hardhat commands:
+```shell
+npx hardhat help
+```
+
+Test with gas report:
+```shell
+REPORT_GAS=true npx hardhat test
+```
+
+Generate code coverage report:
+```shell
+npx hardhat coverage
+```
+
+### 🧹 Code Quality & Formatting
+
+Lint JavaScript and TypeScript files:
+```shell
 npx eslint '**/*.{js,ts}'
+```
+
+Automatically fix linting issues:
+```shell
 npx eslint '**/*.{js,ts}' --fix
+```
+
+Check formatting for JSON, Solidity, and Markdown files:
+```shell
 npx prettier '**/*.{json,sol,md}' --check
+```
+
+Automatically format files:
+```shell
 npx prettier '**/*.{json,sol,md}' --write
+```
+
+Lint Solidity contracts:
+```shell
 npx solhint 'contracts/**/*.sol'
+```
+
+Automatically fix issues in Solidity contracts:
+```shell
 npx solhint 'contracts/**/*.sol' --fix
 ```
 
-# Performance optimizations
+---
 
-For faster runs of your tests and scripts, consider skipping ts-node's type checking by setting the environment variable `TS_NODE_TRANSPILE_ONLY` to `1` in hardhat's environment. For more details see [the documentation](https://hardhat.org/guides/typescript.html#performance-optimizations).
+This format separates the description from the command, making it clearer and more readable.
+
+## 🔍 Etherscan Verification
+
+To verify on Etherscan, deploy a contract to an Ethereum network supported by Etherscan, like Ropsten. Set up your `.env` file, deploy your contract, and then verify:
+
+```shell
+hardhat run --network ropsten scripts/deploy.ts
+npx hardhat verify --network ropsten DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
+```
+
+## ⚡ Performance Optimizations
+
+Boost your tests and scripts' speed by setting the `TS_NODE_TRANSPILE_ONLY` environment variable to `1` in Hardhat's environment. More details are available in the [documentation](https://hardhat.org/guides/typescript.html#performance-optimizations).
+
+---
+## 🤝 Contributing
+
+Biconomy Smart Account is an open-source project. Contributions are welcome. If you're interested in contributing, please check our [contribution guidelines](./CONTRIBUTING.md) and feel free to submit pull requests or raise issues.
