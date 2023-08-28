@@ -108,16 +108,25 @@ export async function addLeavesForSmartAccountViaEcdsa(
   SmartAccountAddress: string,
   smartAccountOwner: Signer,
   entryPoint: EntryPoint,
-  ecdsaModuleAddress: string
+  ecdsaModuleAddress: string,
 ) : Promise<MerkleTree> {
   
-  merkleTree.addLeaves(newLeaves);
+  // rebuilding the tree instead of doing .addLeaves to make sure tree is always sorted
+  // as it is always considered as sorted in OZ Merkle Tree implementation
+  const leaves = merkleTree.getHexLeaves();
+  const sumLeaves = leaves.concat(newLeaves);
+  const newMerkleTree = new MerkleTree(
+    sumLeaves,
+    keccak256,
+    { sortPairs: true, hashLeaves: false }
+  );
+
   let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
     "execute_ncC",
     [
       sessionKeyManager.address,
       ethers.utils.parseEther("0"),
-      sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [merkleTree.getHexRoot()]),
+      sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [newMerkleTree.getHexRoot()]),
     ],
     SmartAccountAddress,
     smartAccountOwner,
@@ -127,7 +136,7 @@ export async function addLeavesForSmartAccountViaEcdsa(
   const tx = await entryPoint.handleOps([addMerkleRootUserOp], await smartAccountOwner.getAddress());
   await tx.wait();
 
-  return merkleTree;  
+  return newMerkleTree;  
 }
 
 export async function getERC20SessionKeyParams(

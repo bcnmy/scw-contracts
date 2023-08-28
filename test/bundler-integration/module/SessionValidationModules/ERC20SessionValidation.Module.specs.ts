@@ -3,9 +3,10 @@ import {
   makeEcdsaSessionKeySignedUserOp,
   enableNewTreeForSmartAccountViaEcdsa,
   getERC20SessionKeyParams,
+  addLeavesForSmartAccountViaEcdsa
 } from "../../../utils/sessionKey";
 import { ethers, deployments } from "hardhat";
-import { makeEcdsaModuleUserOp } from "../../../utils/userOp";
+import { makeEcdsaModuleUserOp, fillAndSign } from "../../../utils/userOp";
 import { encodeTransfer } from "../../../utils/testUtils";
 import {
   getEntryPoint,
@@ -98,9 +99,14 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
         userSA.address,
         smartAccountOwner,
         entryPoint,
-        ecdsaModule.address
+        ecdsaModule.address,
+        {
+          preVerificationGas: 50000,
+        }
       );
-      await entryPoint.handleOps([userOp], alice.address);
+      console.log("setupTests 0");
+      //await entryPoint.handleOps([userOp], alice.address);
+      await environment.sendUserOperation(userOp, entryPoint.address);
 
       const erc20SessionModule = await (
         await ethers.getContractFactory("ERC20SessionValidationModule")
@@ -210,4 +216,5 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
       charlieTokenBalanceBefore.add(tokenAmountToTransfer)
     );
   });
+
 });
