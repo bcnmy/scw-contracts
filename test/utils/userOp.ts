@@ -298,7 +298,7 @@ export async function fillUserOp(
 export async function fillUserOp2D(
   op: Partial<UserOperation>,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce",
+  getNonceFunction = "nonce",
   nonceKey: number = 0
 ): Promise<UserOperation> {
   const op1 = { ...op };
@@ -346,10 +346,35 @@ export async function fillUserOp2D(
       throw new Error("must have entryPoint to autofill nonce");
     const c = new Contract(
       op.sender!,
-      [`function ${getNonceFunction}(uint192 _key) view returns(uint256)`],
+      [
+        `function nonce() view returns(uint256)`,
+        `function nonce(uint192 _key) view returns(uint256)`,
+      ],
       provider
     );
-    op1.nonce = await c[getNonceFunction](nonceKey).catch(rethrow());
+
+    let getNonceFunction;
+    if (nonceKey === undefined) {
+      getNonceFunction = "nonce()";
+    } else {
+      getNonceFunction = "nonce(uint192)";
+    }
+
+    const functionFragment = c.interface.getFunction(getNonceFunction);
+    let callData;
+
+    if (nonceKey === undefined) {
+      callData = c.interface.encodeFunctionData(functionFragment);
+    } else {
+      callData = c.interface.encodeFunctionData(functionFragment, [nonceKey]);
+    }
+
+    const nonceValue = await provider.call({
+      to: c.address,
+      data: callData,
+    });
+
+    op1.nonce = nonceValue;
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
@@ -400,7 +425,7 @@ export async function fillAndSign2D(
   extraPreVerificationGas: number = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
-  const op2 = await fillUserOp2D(op, entryPoint, "getNonce", nonceKey);
+  const op2 = await fillUserOp2D(op, entryPoint, "nonce", nonceKey); // review
   op2.preVerificationGas =
     Number(op2.preVerificationGas) + extraPreVerificationGas;
 
