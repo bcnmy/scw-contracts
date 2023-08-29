@@ -61,15 +61,15 @@ export async function getBalance(address: string): Promise<number> {
 }
 
 export function rethrow(): (e: Error) => void {
-  const callerStack = new Error()
-    .stack!.replace(/Error.*\n.*at.*\n/, "")
+  const callerStack = new Error().stack
+    ?.replace(/Error.*\n.*at.*\n/, "")
     .replace(/.*at.* \(internal[\s\S]*/, "");
 
-  if (arguments[0] != null) {
-    throw new Error("must use .catch(rethrow()), and NOT .catch(rethrow)");
-  }
+  // if (arguments[0] != null) {
+  //   throw new Error("must use .catch(rethrow()), and NOT .catch(rethrow)");
+  // }
   return function (e: Error) {
-    const solstack = e.stack!.match(/((?:.* at .*\.sol.*\n)+)/);
+    const solstack = e.stack?.match(/((?:.* at .*\.sol.*\n)+)/);
     const stack = (solstack != null ? solstack[1] : "") + callerStack;
     // const regex = new RegExp('error=.*"data":"(.*?)"').compile()
     const found = /error=.*?"data":"(.*?)"/.exec(e.message);
@@ -163,5 +163,7 @@ export const encodeTransferFrom = (
 };
 
 export const encodeSignMessage = (data: string): string => {
-  return SignMessageLibInterface.encodeFunctionData("signMessageOnchain", [data]);
+  return SignMessageLibInterface.encodeFunctionData("signMessageOnchain", [
+    data,
+  ]);
 };

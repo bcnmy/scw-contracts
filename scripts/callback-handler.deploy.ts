@@ -6,8 +6,6 @@ import {
   isContract,
 } from "./utils";
 
-const options = { gasLimit: 7000000 };
-
 async function main() {
   const provider = ethers.provider;
 

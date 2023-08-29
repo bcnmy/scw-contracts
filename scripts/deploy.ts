@@ -62,7 +62,7 @@ export async function deployGeneric(
         deployerInstance
       );
       try {
-        await run(`verify:verify`, {
+        await run("verify:verify", {
           address: computedAddress,
           constructorArguments,
         });

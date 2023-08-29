@@ -46,52 +46,47 @@ describe("UserOps (with Bundler)", async () => {
     await environment.resetBundler();
   });
 
-  const setupTests = deployments.createFixture(
-    async ({ deployments, getNamedAccounts }) => {
-      await deployments.fixture();
+  const setupTests = deployments.createFixture(async ({ deployments }) => {
+    await deployments.fixture();
 
-      const mockToken = await getMockToken();
+    const mockToken = await getMockToken();
 
-      const ecdsaModule = await getEcdsaOwnershipRegistryModule();
-      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
-        "EcdsaOwnershipRegistryModule"
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
+    );
+
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
       );
 
-      const ecdsaOwnershipSetupData =
-        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-          "initForSmartAccount",
-          [await smartAccountOwner.getAddress()]
-        );
+    const smartAccountDeploymentIndex = 0;
 
-      const smartAccountDeploymentIndex = 0;
+    const userSA = await getSmartAccountWithModule(
+      ecdsaModule.address,
+      ecdsaOwnershipSetupData,
+      smartAccountDeploymentIndex
+    );
 
-      const userSA = await getSmartAccountWithModule(
-        ecdsaModule.address,
-        ecdsaOwnershipSetupData,
-        smartAccountDeploymentIndex
-      );
+    await deployer.sendTransaction({
+      to: userSA.address,
+      value: ethers.utils.parseEther("10"),
+    });
 
-      await deployer.sendTransaction({
-        to: userSA.address,
-        value: ethers.utils.parseEther("10"),
-      });
+    await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
-
-      return {
-        entryPoint: await getEntryPoint(),
-        smartAccountImplementation: await getSmartAccountImplementation(),
-        smartAccountFactory: await getSmartAccountFactory(),
-        mockToken: mockToken,
-        ecdsaModule: ecdsaModule,
-        userSA: userSA,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
-      };
-    }
-  );
+    return {
+      entryPoint: await getEntryPoint(),
+      smartAccountImplementation: await getSmartAccountImplementation(),
+      smartAccountFactory: await getSmartAccountFactory(),
+      mockToken: mockToken,
+      ecdsaModule: ecdsaModule,
+      userSA: userSA,
+      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
+    };
+  });
 
   describe("validateUserOp ", async () => {
     it("Can validate a userOp via proper Authorization Module", async () => {

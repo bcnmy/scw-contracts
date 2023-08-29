@@ -10,6 +10,7 @@ import {
   parseUnits,
   parseEther,
 } from "ethers/lib/utils";
+// eslint-disable-next-line node/no-extraneous-import
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
 import { Deployer, Deployer__factory } from "../../typechain";
 
@@ -247,10 +248,6 @@ export const getDeployerInstance = async (): Promise<Deployer> => {
   if (!metaDeployerPrivateKey) {
     throw new Error("FACTORY_DEPLOYER_PRIVATE_KEY not set");
   }
-  const metaDeployer = new ethers.Wallet(
-    metaDeployerPrivateKey,
-    hardhatEthersInstance.provider
-  );
   // const FACTORY_ADDRESS = getContractAddress({
   //   from: metaDeployer.address,
   //   nonce: 0,
