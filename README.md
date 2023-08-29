@@ -35,7 +35,7 @@ Before diving in, place a mnemonic in a `.secret` file at the root.
 
 ## Setup
 
-1. **Setup**: Clone the repository and install dependencies.
+**Setup**: Clone the repository and install dependencies.
 
    ```shell
    git clone https://github.com/bcnmy/scw-contracts.git
@@ -43,7 +43,7 @@ Before diving in, place a mnemonic in a `.secret` file at the root.
    npm install
    ```
 
-2. **Configuration**: Create a `.secret` file at the root to store your mnemonic.
+**Configuration**: Create a `.secret` file at the root to store your mnemonic.
    **Note**: Never commit this file.
    `shell
     echo "your mnemonic here" > .secret
