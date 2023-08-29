@@ -58,7 +58,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view virtual returns (uint256) {
+    ) external virtual returns (uint256) {
         SessionStorage storage sessionKeyStorage = _getSessionData(msg.sender);
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
@@ -84,6 +84,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
                 sessionKeyData
             )
         );
+
         if (
             !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
         ) {
