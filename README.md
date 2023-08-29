@@ -2,7 +2,7 @@
 
 # Biconomy Smart Account: Leading Implementation of Account Abstraction 🌐
 
-Biconomy Smart Account is a smart contract wallet focused on implementing Account Abstraction. It builds on the core concepts of Gnosis and Argent safes and is compliant with [EIP-4337](https://eips.ethereum.org/EIPS/eip-4337) and [EIP-6900](https://eips.ethereum.org/EIPS/eip-6900).
+Biconomy Smart Account is a smart contract wallet focused on implementing Account Abstraction. It builds on the core concepts of Gnosis and Argent safes and is compliant with [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) and [ERC-6900](https://eips.ethereum.org/EIPS/eip-6900).
 
 ![Biconomy Account Abstraction Banner](./assets/readme/biconomy-account-abstraction.png)
 
@@ -10,8 +10,8 @@ Biconomy Smart Account is a smart contract wallet focused on implementing Accoun
 
 - **BaseSmartAccount.sol**: An abstract contract implementing the EIP4337 IWallet interface.
 - **Proxy.sol**: A lightweight proxy upgradeable through the UUPS pattern.
-- **SmartAccountFactory.sol**: This factory contract manages the deployment of smart wallets (Account Abstraction).
-- **SmartAccount.sol**: The primary implementation contract for a smart wallet (Account Abstraction).
+- **SmartAccountFactory.sol**: This factory contract manages the deployment of Smart Account (Account Abstraction).
+- **SmartAccount.sol**: The primary implementation contract for a Smart Account (Account Abstraction).
 - **EntryPoint.sol**: Implements the EIP4337 Entry Point contract.
 - **StakeManager.sol**: A stake manager for wallet and paymaster deposits/stakes.
 - **Executor.sol**: A helper contract facilitating calls and delegate calls to dapp contracts.
@@ -134,8 +134,8 @@ This format separates the description from the command, making it clearer and mo
 To verify on Etherscan, deploy a contract to an Ethereum network supported by Etherscan, like Ropsten. Set up your `.env` file, deploy your contract, and then verify:
 
 ```shell
-hardhat run --network ropsten scripts/deploy.ts
-npx hardhat verify --network ropsten DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
+hardhat run --network goerli scripts/deploy.ts
+npx hardhat verify --network goerli DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
 ```
 
 ## ⚡ Performance Optimizations
