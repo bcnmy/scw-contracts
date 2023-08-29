@@ -120,20 +120,6 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
       erc20SessionModule.address
     );
 
-    const erc20SessionModule = await (
-      await ethers.getContractFactory("ERC20SessionValidationModule")
-    ).deploy();
-
-    const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
-      sessionKey.address,
-      mockToken.address,
-      charlie.address,
-      maxAmount,
-      0,
-      0,
-      erc20SessionModule.address
-    );
-
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
       [ethers.utils.keccak256(leafData)],
       sessionKeyManager,
