@@ -11,6 +11,7 @@ module.exports = {
     "plugin:prettier/recommended",
     "plugin:node/recommended",
     "plugin:@typescript-eslint/recommended",
+    "plugin:security/recommended",
   ],
   parser: "@typescript-eslint/parser",
   parserOptions: {
@@ -38,5 +39,11 @@ module.exports = {
         allow: [".*__factory"],
       },
     ],
+    // "@typescript-eslint/no-explicit-any": "error",
+    // quotes: ["error", "double"],
+    // "no-unused-vars": "error",
+    // "no-console": "error",
+    // "@typescript-eslint/no-unused-vars": "error",
+    // "@typescript-eslint/explicit-function-return-type": "error",
   },
 };
