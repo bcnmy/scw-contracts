@@ -24,4 +24,15 @@ abstract contract ISessionValidationModule {
         bytes calldata _sessionKeyData,
         bytes calldata _sessionKeySignature
     ) external virtual returns (bool);
+
+    /**
+     *..
+     */
+
+    function validateSessionParams(
+        address destinationContract,
+        uint256 callValue,
+        bytes calldata funcCallData,
+        bytes calldata sessionKeyData
+    ) external virtual;
 }

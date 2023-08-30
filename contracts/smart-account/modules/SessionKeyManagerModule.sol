@@ -5,6 +5,7 @@ import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./Bas
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "./SessionValidationModules/ISessionValidationModule.sol";
+import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 
 struct SessionStorage {
     bytes32 merkleRoot;
@@ -22,7 +23,7 @@ struct SessionStorage {
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SessionKeyManager is BaseAuthorizationModule {
+contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
     /**
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
@@ -103,6 +104,32 @@ contract SessionKeyManager is BaseAuthorizationModule {
                 validUntil,
                 validAfter
             );
+    }
+
+    function validateSessionKey(
+        address smartAccount,
+        uint48 validUntil,
+        uint48 validAfter,
+        address sessionValidationModule,
+        bytes calldata sessionKeyData,
+        bytes32[] calldata merkleProof
+    ) external virtual override {
+        SessionStorage storage sessionKeyStorage = _getSessionData(
+            smartAccount
+        );
+        bytes32 leaf = keccak256(
+            abi.encodePacked(
+                validUntil,
+                validAfter,
+                sessionValidationModule,
+                sessionKeyData
+            )
+        );
+        if (
+            !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
+        ) {
+            revert("SessionNotApproved");
+        }
     }
 
     /**

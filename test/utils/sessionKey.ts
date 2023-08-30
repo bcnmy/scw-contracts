@@ -80,7 +80,7 @@ export async function enableNewTreeForSmartAccountViaEcdsa(
   const merkleTree = new MerkleTree(
     leaves,
     keccak256,
-    { sortPairs: false, hashLeaves: false }
+    { sortPairs: true, hashLeaves: false }
   );
   let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
     "execute_ncC",
