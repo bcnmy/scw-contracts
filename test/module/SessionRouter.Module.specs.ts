@@ -43,13 +43,9 @@ describe("SessionKey: Session Router", async () => {
     });
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-    console.log("-1");
-
     //deploy forward flow module and enable it in the smart account
     const sessionKeyManager = await (await ethers.getContractFactory("SessionKeyManager")).deploy();
     const sessionRouter = await (await ethers.getContractFactory("SessionRouter")).deploy();
-
-    console.log("0");
 
     let userOp1 = await makeEcdsaModuleUserOp(
       "enableModule",
@@ -73,15 +69,10 @@ describe("SessionKey: Session Router", async () => {
     );
 
     await entryPoint.handleOps([userOp2], alice.address);
-    
-    console.log("1");
-
 
     const erc20SessionModule = await (await ethers.getContractFactory("ERC20SessionValidationModule")).deploy();
-
     //MockProtocol contract
     const mockProtocol = await (await ethers.getContractFactory("MockProtocol")).deploy();
-    
     //MockProtocol SV Module
     const mockProtocolSVModule = await (await ethers.getContractFactory("MockProtocolSVM")).deploy();
 
@@ -106,8 +97,6 @@ describe("SessionKey: Session Router", async () => {
       mockProtocolSVModule.address
     );
 
-    console.log("2");
-
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
       [ethers.utils.keccak256(leafData), ethers.utils.keccak256(leafData2)],
       sessionKeyManager,
@@ -116,8 +105,6 @@ describe("SessionKey: Session Router", async () => {
       entryPoint,
       ecdsaModule.address
     );
-
-    console.log("3");
     
     return {
       entryPoint: entryPoint,
@@ -140,32 +127,6 @@ describe("SessionKey: Session Router", async () => {
     };
   });
 
-  const makeErc20TransferUserOp = async function (
-    token: string,
-    amount: BigNumber,
-    recipient: string,
-    txnValue: BigNumber,
-    testParams: any = {}
-  ) : Promise<UserOperation> {
-    const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-      "execute_ncC",
-      [
-        token,
-        txnValue,
-        encodeTransfer(recipient, amount.toString()),
-      ],
-      testParams.userSA.address,
-      sessionKey,
-      testParams.entryPoint,
-      testParams.sessionKeyManager.address,
-      0, 0,
-      testParams.erc20SessionModule.address,
-      testParams.sessionKeyData,
-      testParams.merkleTree.getHexProof(ethers.utils.keccak256(testParams.leafData)),
-    );
-    return transferUserOp;
-  }
-
   it ("should process userOp", async () => {
     const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2 } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("5.7534");
@@ -181,8 +142,6 @@ describe("SessionKey: Session Router", async () => {
     const interactCallData = MockProtocol.interface.encodeFunctionData("interact", [mockToken.address, tokenAmountToTransfer]);
     const executeBatchData = SmartAccount.interface.encodeFunctionData("executeBatch", [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]]);
 
-    console.log("it 0");
-
     const userOp = await fillAndSign(
       {
         sender: userSA.address,
@@ -192,40 +151,17 @@ describe("SessionKey: Session Router", async () => {
       entryPoint,
       'nonce'
     ); 
-
-    console.log("it 1");
     
     //create a signature with the sessionKeyManager address
     const userOpHash = await entryPoint.getUserOpHash(userOp);
-    console.log("userOpHash test \n", userOpHash);
-    console.log("SKM test ", sessionKeyManager.address);
-
-    /*
-    const userOpHashAndModuleAddress = ethers.utils.defaultAbiCoder.encode(
-      ["bytes32", "address"],
-      [userOpHash, sessionKeyManager.address]
-    );*/
-
     const userOpHashAndModuleAddress = ethers.utils.hexConcat([
       ethers.utils.hexZeroPad(userOpHash,32),
       ethers.utils.hexZeroPad(sessionKeyManager.address,20),
     ]);
-
-    console.log("abi encoded test \n", userOpHashAndModuleAddress);
     const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
-    console.log("resultingHash in test \n", resultingHash);
-
-    console.log("Signed Message Hash in test \n", ethers.utils.hashMessage(ethers.utils.arrayify(resultingHash)));
-
     const signatureOverUserOpHashAndModuleAddress = await sessionKey.signMessage(ethers.utils.arrayify(resultingHash));
     
-
-    //const {userOpHashContract, messageHashContract} = await sessionRouter.getHash(userOp, sessionKeyManager.address, entryPoint.address);
-    //console.log("userOpHash in the contract: ", userOpHashContract);
-    //console.log("hash in the contract:   ", messageHashContract);
-
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
-      //validUntil, validAfter, sessionVerificationModule address, validationData, merkleProof, signature
       ["address", "uint48[]", "uint48[]", "address[]", "bytes[]", "bytes32[][]", "bytes"],
       [ 
         sessionKeyManager.address,
@@ -244,10 +180,11 @@ describe("SessionKey: Session Router", async () => {
     );
     userOp.signature = signatureWithModuleAddress;
 
-    console.log("it 3");
-    await entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000});
+    const handleTx = await entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000});
+    const receipt = await handleTx.wait();
+    //console.log("gas used for batched routed userOp: ", receipt.gasUsed.toString());
+
     expect(await mockToken.balanceOf(mockProtocol.address)).to.equal(tokenAmountToTransfer);
-    
   });
 
   

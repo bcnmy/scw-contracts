@@ -15,8 +15,12 @@ struct SessionStorage {
 }
 
 /**
- * @title
- * @dev
+ * @title Session Router
+ * @dev Built to process executeBatch and executeBatch_y6U calls
+ *         - Every call inside batch should be covered by an appropriate Session Validation Module
+ *         - Parses data provided and sequentially 
+                a) verifies the session key was enabled via SessionKeyManager
+                b) verifies the session key permissions via Session Validation Modules
  *         - Should be used with carefully verified and audited Session Validation Modules only
  *         - Compatible with Biconomy Modular Interface v 0.1
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
@@ -28,9 +32,10 @@ contract SessionRouter is BaseAuthorizationModule {
 
     /**
      * @dev validates userOperation. Expects it to be a executeBatch or executeBatch_y6U call
+     * If something goes wrong, reverts
      * @param userOp User Operation to be validated.
      * @param userOpHash Hash of the User Operation to be validated.
-     * @return sigValidationResult 0 if signature is valid, SIG_VALIDATION_FAILED otherwise.
+     * @return SIG_VALIDATION_FAILED or packed validation result.
      */
     function validateUserOp(
         UserOperation calldata userOp,
@@ -70,25 +75,6 @@ contract SessionRouter is BaseAuthorizationModule {
                 )
             );
 
-        console.log("UserOpHash in contract");
-        console.logBytes32(userOpHash);
-        console.log("SKM contr ", sessionKeyManager);
-        console.log("abi encoded contr");
-        console.logBytes(abi.encode(userOpHash, sessionKeyManager));
-        console.log("Resulting hash in contract");
-        //console.logBytes32(keccak256(abi.encode(userOpHash, sessionKeyManager)));
-        console.logBytes32(
-            keccak256(abi.encodePacked(userOpHash, sessionKeyManager))
-        );
-
-        console.log("Signed Message Hash in contract");
-        //console.logBytes32(ECDSA.toEthSignedMessageHash(keccak256(abi.encode(userOpHash, sessionKeyManager))));
-        console.logBytes32(
-            ECDSA.toEthSignedMessageHash(
-                keccak256(abi.encodePacked(userOpHash, sessionKeyManager))
-            )
-        );
-
         // check lengths of arrays
         require(
             validUntil.length == validAfter.length,
@@ -107,11 +93,7 @@ contract SessionRouter is BaseAuthorizationModule {
             "SR Invalid data provided"
         );
 
-        //console.log("Signature Over userOpHash and SK Manager address in contract");
-        //console.logBytes(sessionKeySignature);
-
         address recovered = ECDSA.recover(
-            //ECDSA.toEthSignedMessageHash(keccak256(abi.encode(userOpHash, sessionKeyManager))),
             ECDSA.toEthSignedMessageHash(
                 keccak256(abi.encodePacked(userOpHash, sessionKeyManager))
             ),
@@ -140,7 +122,7 @@ contract SessionRouter is BaseAuthorizationModule {
             );
 
             // compare if userOp was signed with the proper session key
-            require(recovered == sessionKey, "Session Key not enabled");
+            if (recovered != sessionKey) return SIG_VALIDATION_FAILED;
 
             // parse userOp.calldata to get calldatas for every specific operation
             (
@@ -181,19 +163,6 @@ contract SessionRouter is BaseAuthorizationModule {
                 earliestValidUntil,
                 latestValidAfter
             )
-        );
-    }
-
-    function getHash(
-        UserOperation memory userOp,
-        address sessionKeyManager,
-        address payable entryPoint
-    ) external view returns (bytes32 userOpHash, bytes32 messageHash) {
-        userOpHash = EntryPoint(entryPoint).getUserOpHash(userOp);
-        //console.log("UserOpHash in contract");
-        //console.logBytes32(userOpHash);
-        messageHash = ECDSA.toEthSignedMessageHash(
-            keccak256(abi.encodePacked(userOpHash, sessionKeyManager))
         );
     }
 
