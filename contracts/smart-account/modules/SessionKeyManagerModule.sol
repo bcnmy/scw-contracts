@@ -106,6 +106,18 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
             );
     }
 
+    /**
+     * @dev validates that Session Key + parameters are enabled
+     * by being included into the merkle tree
+     * @param smartAccount smartAccount for which session key is being validated
+     * @param validUntil timestamp when the session key expires
+     * @param validAfter timestamp when the session key becomes valid
+     * @param sessionValidationModule address of the Session Validation Module
+     * @param sessionKeyData session parameters (limitations/permissions)
+     * @param merkleProof merkle proof for the leaf which represents this session key + params
+     * @dev if doesn't revert, session key is considered valid
+     */
+
     function validateSessionKey(
         address smartAccount,
         uint48 validUntil,

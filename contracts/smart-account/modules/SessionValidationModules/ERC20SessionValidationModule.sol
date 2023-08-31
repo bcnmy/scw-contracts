@@ -80,6 +80,14 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
             ) == sessionKey;
     }
 
+    /**
+     * @dev validates that the call (destinationContract, callValue, funcCallData)
+     * complies with the Session Key permissions represented by sessionKeyData
+     * @param destinationContract address of the contract to be called
+     * @param callValue value to be sent with the call
+     * @param _funcCallData the data for the call. is parsed inside the SVM
+     * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
+     */
     function validateSessionParams(
         address destinationContract,
         uint256 callValue,

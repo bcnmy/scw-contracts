@@ -7,9 +7,6 @@ import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 
-import "@account-abstraction/contracts/core/EntryPoint.sol";
-import "hardhat/console.sol";
-
 struct SessionStorage {
     bytes32 merkleRoot;
 }
@@ -145,7 +142,7 @@ contract SessionRouter is BaseAuthorizationModule {
                 );
 
             //intersect validUntils and validAfters
-            if (validUntil[i] < earliestValidUntil) {
+            if (validUntil[i] != 0 && validUntil[i] < earliestValidUntil) {
                 earliestValidUntil = validUntil[i];
             }
             if (validAfter[i] > latestValidAfter) {
