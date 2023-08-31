@@ -12,10 +12,9 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { BigNumber } from "ethers";
-import { UserOperation } from "../utils/userOperation";
-import { SessionRouter } from "../../typechain";
-import { isCommunityResourcable } from "@ethersproject/providers";
+import { MerkleTree } from "merkletreejs";
+import { intToHex } from "ethereumjs-util";
+
 
 describe("SessionKey: Session Router", async () => {
 
@@ -97,9 +96,10 @@ describe("SessionKey: Session Router", async () => {
       mockProtocolSVModule.address
     );
 
+    // build a big tree
     let leaves = [ethers.utils.keccak256(leafData)];
     for(let i = 0; i < 9999; i++) {
-      if(i == 4987) {
+      if(i == 4988) {
         leaves.push(ethers.utils.keccak256(leafData2));
       }
       leaves.push(ethers.utils.keccak256(ethers.utils.randomBytes(32)));
@@ -137,7 +137,7 @@ describe("SessionKey: Session Router", async () => {
 
   it ("should process userOp", async () => {
     const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2 } = await setupTests();
-    const tokenAmountToTransfer = ethers.utils.parseEther("5.7534");
+    const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     expect(await userSA.isModuleEnabled(sessionKeyManager.address)).to.be.true;
     expect(await userSA.isModuleEnabled(sessionRouter.address)).to.be.true;
@@ -146,7 +146,7 @@ describe("SessionKey: Session Router", async () => {
     const IERC20 = await ethers.getContractFactory("ERC20");
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-    const approveCallData = IERC20.interface.encodeFunctionData("approve", [mockProtocol.address, tokenAmountToTransfer]);
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [mockProtocol.address, tokenAmountToTransfer.mul(50)]);
     const interactCallData = MockProtocol.interface.encodeFunctionData("interact", [mockToken.address, tokenAmountToTransfer]);
     const executeBatchData = SmartAccount.interface.encodeFunctionData("executeBatch_y6U", [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]]);
 
@@ -168,7 +168,7 @@ describe("SessionKey: Session Router", async () => {
     ]);
     const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
     const signatureOverUserOpHashAndModuleAddress = await sessionKey.signMessage(ethers.utils.arrayify(resultingHash));
-    
+
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
       ["address", "uint48[]", "uint48[]", "address[]", "bytes[]", "bytes32[][]", "bytes"],
       [ 
@@ -182,8 +182,7 @@ describe("SessionKey: Session Router", async () => {
       ]
     );
 
-    console.log("padded sig: ", paddedSig);
-    console.log("length ", ethers.utils.toUtf8Bytes(paddedSig).length); // 4226 bytes //216899 gas
+//    console.log("padded sig length ", ethers.utils.toUtf8Bytes(paddedSig).length); // 4226 bytes //216899 gas
 
     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 

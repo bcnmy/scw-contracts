@@ -127,8 +127,17 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
       mockProtocolSVModule.address
     );
 
+    // build a big tree
+    let leaves = [ethers.utils.keccak256(leafData)];
+    for(let i = 0; i < 9999; i++) {
+      if(i == 4988) {
+        leaves.push(ethers.utils.keccak256(leafData2));
+      }
+      leaves.push(ethers.utils.keccak256(ethers.utils.randomBytes(32)));
+    }
+
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-      [ethers.utils.keccak256(leafData), ethers.utils.keccak256(leafData2)],
+      leaves,
       sessionKeyManager,
       userSA.address,
       smartAccountOwner,
@@ -176,7 +185,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
       {
         sender: userSA.address,
         callData: executeBatchData,
-        preVerificationGas: 60000,
+        preVerificationGas: 75000,
       },
       sessionKey,
       entryPoint,
@@ -204,8 +213,6 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
         signatureOverUserOpHashAndModuleAddress
       ]
     );
-
-    
 
     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 
