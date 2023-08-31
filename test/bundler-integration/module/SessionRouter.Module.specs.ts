@@ -1,8 +1,10 @@
 import { expect, use } from "chai";
-import { makeEcdsaSessionKeySignedUserOp, enableNewTreeForSmartAccountViaEcdsa, getERC20SessionKeyParams, addLeavesForSmartAccountViaEcdsa } from "../utils/sessionKey";
+import { 
+  enableNewTreeForSmartAccountViaEcdsa, 
+  getERC20SessionKeyParams,
+} from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
-import { makeEcdsaModuleUserOp, fillAndSign } from "../utils/userOp";
-import { encodeTransfer } from "../utils/testUtils";
+import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
 import { 
   getEntryPoint, 
   getSmartAccountImplementation, 
@@ -11,15 +13,43 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
-} from "../utils/setupHelper";
-import { BigNumber } from "ethers";
-import { UserOperation } from "../utils/userOperation";
-import { SessionRouter } from "../../typechain";
-import { isCommunityResourcable } from "@ethersproject/providers";
+} from "../../utils/setupHelper";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 
-describe("SessionKey: Session Router", async () => {
+describe("SessionKey: Session Router (via Bundler)", async () => {
 
-  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver, sessionKey, nonAuthSessionKey] = waffle.provider.getWallets();
+  let [deployer, smartAccountOwner, charlie, verifiedSigner, sessionKey] =
+    [] as SignerWithAddress[];
+
+  let environment: BundlerTestEnvironment;
+
+  before(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
+    environment = await BundlerTestEnvironment.getDefaultInstance();
+  });
+
+  beforeEach(async function () {
+    [deployer, smartAccountOwner, charlie, verifiedSigner, sessionKey] =
+      await ethers.getSigners();
+  });
+
+  afterEach(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
+    await Promise.all([
+      environment.revert(environment.defaultSnapshot!),
+      environment.resetBundler(),
+    ]);
+  });
+
   const maxAmount = ethers.utils.parseEther("100");
     
   const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
@@ -56,7 +86,7 @@ describe("SessionKey: Session Router", async () => {
       ecdsaModule.address
     );
 
-    await entryPoint.handleOps([userOp1], alice.address);
+    await entryPoint.handleOps([userOp1], charlie.address);
 
 
     let userOp2 = await makeEcdsaModuleUserOp(
@@ -68,7 +98,7 @@ describe("SessionKey: Session Router", async () => {
       ecdsaModule.address
     );
 
-    await entryPoint.handleOps([userOp2], alice.address);
+    await entryPoint.handleOps([userOp2], charlie.address);
 
     const erc20SessionModule = await (await ethers.getContractFactory("ERC20SessionValidationModule")).deploy();
     //MockProtocol contract
@@ -97,16 +127,8 @@ describe("SessionKey: Session Router", async () => {
       mockProtocolSVModule.address
     );
 
-    let leaves = [ethers.utils.keccak256(leafData)];
-    for(let i = 0; i < 9999; i++) {
-      if(i == 4987) {
-        leaves.push(ethers.utils.keccak256(leafData2));
-      }
-      leaves.push(ethers.utils.keccak256(ethers.utils.randomBytes(32)));
-    }
-
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-      leaves,
+      [ethers.utils.keccak256(leafData), ethers.utils.keccak256(leafData2)],
       sessionKeyManager,
       userSA.address,
       smartAccountOwner,
@@ -135,7 +157,7 @@ describe("SessionKey: Session Router", async () => {
     };
   });
 
-  it ("should process userOp", async () => {
+  it ("should process Session Key signed executeBatch userOp", async () => {
     const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2 } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("5.7534");
 
@@ -154,6 +176,7 @@ describe("SessionKey: Session Router", async () => {
       {
         sender: userSA.address,
         callData: executeBatchData,
+        preVerificationGas: 60000,
       },
       sessionKey,
       entryPoint,
@@ -182,8 +205,7 @@ describe("SessionKey: Session Router", async () => {
       ]
     );
 
-    console.log("padded sig: ", paddedSig);
-    console.log("length ", ethers.utils.toUtf8Bytes(paddedSig).length); // 4226 bytes //216899 gas
+    
 
     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"], 
@@ -191,9 +213,7 @@ describe("SessionKey: Session Router", async () => {
     );
     userOp.signature = signatureWithModuleAddress;
 
-    const handleTx = await entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000});
-    const receipt = await handleTx.wait();
-    console.log("gas used for batched routed userOp: ", receipt.gasUsed.toString());
+    await environment.sendUserOperation(userOp, entryPoint.address);
 
     expect(await mockToken.balanceOf(mockProtocol.address)).to.equal(tokenAmountToTransfer);
   });
