@@ -15,6 +15,7 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
+import { computeAddress } from "ethers/lib/utils";
 
 describe("SessionKey: Session Router", async () => {
 
@@ -427,6 +428,90 @@ describe("SessionKey: Session Router", async () => {
       [wrongValidAfter,0],
       [erc20SessionModule.address, mockProtocolSVM.address],
       [sessionKeyData, sessionKeyData2],
+      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      sessionRouter.address
+    );
+
+    await expect(
+      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
+    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+  });
+
+  it ("should revert if SVM address provided in the sig is wrong", async () => {
+    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
+
+    const MockProtocol = await ethers.getContractFactory("MockProtocol");
+    const IERC20 = await ethers.getContractFactory("ERC20");
+
+    const approveCallData = IERC20.interface.encodeFunctionData(
+      "approve", 
+      [mockProtocol.address, tokenAmountToTransfer]
+    );
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact", 
+      [mockToken.address, tokenAmountToTransfer]
+    );
+
+    const wrongSessionValidationModuleAddress = computeAddress(ethers.utils.randomBytes(32));
+
+    const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
+      "executeBatch_y6U",
+      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      [0,validUntilForMockProtocol],
+      [0,0],
+      [wrongSessionValidationModuleAddress, mockProtocolSVM.address],
+      [sessionKeyData, sessionKeyData2],
+      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      sessionRouter.address
+    );
+
+    await expect(
+      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
+    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+  });
+
+  it ("should revert if session key data provided in the sig is wrong", async () => {
+    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
+
+    const MockProtocol = await ethers.getContractFactory("MockProtocol");
+    const IERC20 = await ethers.getContractFactory("ERC20");
+
+    const approveCallData = IERC20.interface.encodeFunctionData(
+      "approve", 
+      [mockProtocol.address, tokenAmountToTransfer]
+    );
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact", 
+      [mockToken.address, tokenAmountToTransfer]
+    );
+
+    const {sessionKeyData: wrongSessionKeyData, leafData: wrongLeafData} = await getERC20SessionKeyParams(
+      sessionKey.address,
+      mockToken.address,
+      mockProtocol.address,
+      maxAmount.add(ethers.utils.parseEther("100")),
+      0,
+      0,
+      erc20SessionModule.address
+    );
+    
+    const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
+      "executeBatch_y6U",
+      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      [0,validUntilForMockProtocol],
+      [0,0],
+      [erc20SessionModule.address, mockProtocolSVM.address],
+      [wrongSessionKeyData, sessionKeyData2],
       [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
       sessionRouter.address
     );
