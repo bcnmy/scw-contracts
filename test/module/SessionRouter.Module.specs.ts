@@ -1,16 +1,16 @@
 import { expect, use } from "chai";
-import {  
-  enableNewTreeForSmartAccountViaEcdsa, 
-  getERC20SessionKeyParams, 
-  makeEcdsaSessionKeySignedBatchUserOp
+import {
+  enableNewTreeForSmartAccountViaEcdsa,
+  getERC20SessionKeyParams,
+  makeEcdsaSessionKeySignedBatchUserOp,
 } from "../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../utils/userOp";
-import { 
-  getEntryPoint, 
-  getSmartAccountImplementation, 
-  getSmartAccountFactory, 
-  getMockToken, 
+import {
+  getEntryPoint,
+  getSmartAccountImplementation,
+  getSmartAccountFactory,
+  getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
@@ -18,170 +18,251 @@ import {
 import { computeAddress } from "ethers/lib/utils";
 
 describe("SessionKey: Session Router", async () => {
-
-  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, refundReceiver, sessionKey, nonAuthSessionKey] = waffle.provider.getWallets();
+  const [
+    deployer,
+    smartAccountOwner,
+    alice,
+    bob,
+    charlie,
+    verifiedSigner,
+    refundReceiver,
+    sessionKey,
+    nonAuthSessionKey,
+  ] = waffle.provider.getWallets();
   const maxAmount = ethers.utils.parseEther("100");
-    
-  const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
-    
-    await deployments.fixture();
-    const mockToken = await getMockToken();
-    const entryPoint = await getEntryPoint();
-    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
-    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
-    let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-      "initForSmartAccount",
-      [await smartAccountOwner.getAddress()]
-    );
-    const smartAccountDeploymentIndex = 0;
-    const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
 
-    // send funds to userSA and mint tokens
-    await deployer.sendTransaction({
-      to: userSA.address,
-      value: ethers.utils.parseEther("10"),
-    });
-    await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
+  const setupTests = deployments.createFixture(
+    async ({ deployments, getNamedAccounts }) => {
+      await deployments.fixture();
+      const mockToken = await getMockToken();
+      const entryPoint = await getEntryPoint();
+      const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+        "EcdsaOwnershipRegistryModule"
+      );
+      const ecdsaOwnershipSetupData =
+        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [await smartAccountOwner.getAddress()]
+        );
+      const smartAccountDeploymentIndex = 0;
+      const userSA = await getSmartAccountWithModule(
+        ecdsaModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex
+      );
 
-    //deploy forward flow module and enable it in the smart account
-    const sessionKeyManager = await (await ethers.getContractFactory("SessionKeyManager")).deploy();
-    const sessionRouter = await (await ethers.getContractFactory("SessionRouter")).deploy();
+      // send funds to userSA and mint tokens
+      await deployer.sendTransaction({
+        to: userSA.address,
+        value: ethers.utils.parseEther("10"),
+      });
+      await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-    let userOp1 = await makeEcdsaModuleUserOp(
-      "enableModule",
-      [sessionKeyManager.address],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address
-    );
+      // deploy forward flow module and enable it in the smart account
+      const sessionKeyManager = await (
+        await ethers.getContractFactory("SessionKeyManager")
+      ).deploy();
+      const sessionRouter = await (
+        await ethers.getContractFactory("SessionRouter")
+      ).deploy();
 
-    await entryPoint.handleOps([userOp1], alice.address);
+      const userOp1 = await makeEcdsaModuleUserOp(
+        "enableModule",
+        [sessionKeyManager.address],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
 
+      await entryPoint.handleOps([userOp1], alice.address);
 
-    let userOp2 = await makeEcdsaModuleUserOp(
-      "enableModule",
-      [sessionRouter.address],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address
-    );
+      const userOp2 = await makeEcdsaModuleUserOp(
+        "enableModule",
+        [sessionRouter.address],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
 
-    await entryPoint.handleOps([userOp2], alice.address);
+      await entryPoint.handleOps([userOp2], alice.address);
 
-    const erc20SessionModule = await (await ethers.getContractFactory("ERC20SessionValidationModule")).deploy();
-    //MockProtocol contract
-    const mockProtocol = await (await ethers.getContractFactory("MockProtocol")).deploy();
-    //MockProtocol SV Module
-    const mockProtocolSVModule = await (await ethers.getContractFactory("MockProtocolSVM")).deploy();
+      const erc20SessionModule = await (
+        await ethers.getContractFactory("ERC20SessionValidationModule")
+      ).deploy();
+      // MockProtocol contract
+      const mockProtocol = await (
+        await ethers.getContractFactory("MockProtocol")
+      ).deploy();
+      // MockProtocol SV Module
+      const mockProtocolSVModule = await (
+        await ethers.getContractFactory("MockProtocolSVM")
+      ).deploy();
 
-    const {sessionKeyData, leafData} = await getERC20SessionKeyParams(
-      sessionKey.address,
-      mockToken.address,
-      mockProtocol.address,
-      maxAmount,
-      0,
-      0,
-      erc20SessionModule.address
-    );
+      const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
+        sessionKey.address,
+        mockToken.address,
+        mockProtocol.address,
+        maxAmount,
+        0,
+        0,
+        erc20SessionModule.address
+      );
 
-    const currentTimestamp = (await ethers.provider.getBlock('latest')).timestamp;
-    const validUntilForMockProtocol = currentTimestamp + 3600;
+      const currentTimestamp = (await ethers.provider.getBlock("latest"))
+        .timestamp;
+      const validUntilForMockProtocol = currentTimestamp + 3600;
 
-    //create leaf for the fakeswap sv module
-    const {sessionKeyData: sessionKeyData2, leafData: leafData2} = await getERC20SessionKeyParams(
-      sessionKey.address,
-      mockProtocol.address, //contract to interact with
-      mockToken.address, // token to transfer to protocol
-      maxAmount,
-      validUntilForMockProtocol,
-      0,
-      mockProtocolSVModule.address
-    );
+      // create leaf for the fakeswap sv module
+      const { sessionKeyData: sessionKeyData2, leafData: leafData2 } =
+        await getERC20SessionKeyParams(
+          sessionKey.address,
+          mockProtocol.address, // contract to interact with
+          mockToken.address, // token to transfer to protocol
+          maxAmount,
+          validUntilForMockProtocol,
+          0,
+          mockProtocolSVModule.address
+        );
 
-    // build a big tree
-    let leaves = [ethers.utils.keccak256(leafData)];
-    for(let i = 0; i < 9999; i++) {
-      if(i == 4988) {
-        leaves.push(ethers.utils.keccak256(leafData2));
+      // build a big tree
+      const leaves = [ethers.utils.keccak256(leafData)];
+      for (let i = 0; i < 9999; i++) {
+        if (i === 4988) {
+          leaves.push(ethers.utils.keccak256(leafData2));
+        }
+        leaves.push(ethers.utils.keccak256(ethers.utils.randomBytes(32)));
       }
-      leaves.push(ethers.utils.keccak256(ethers.utils.randomBytes(32)));
+
+      const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
+        leaves,
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      return {
+        entryPoint: entryPoint,
+        smartAccountImplementation: await getSmartAccountImplementation(),
+        smartAccountFactory: await getSmartAccountFactory(),
+        ecdsaModule: ecdsaModule,
+        userSA: userSA,
+        mockToken: mockToken,
+        verifyingPaymaster: await getVerifyingPaymaster(
+          deployer,
+          verifiedSigner
+        ),
+        sessionKeyManager: sessionKeyManager,
+        erc20SessionModule: erc20SessionModule,
+        sessionKeyData: sessionKeyData,
+        leafData: leafData,
+        sessionKeyData2: sessionKeyData2,
+        leafData2: leafData2,
+        merkleTree: merkleTree,
+        sessionRouter: sessionRouter,
+        mockProtocol: mockProtocol,
+        mockProtocolSVM: mockProtocolSVModule,
+        validUntilForMockProtocol: validUntilForMockProtocol,
+      };
     }
+  );
 
-    const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-      leaves,
-      sessionKeyManager,
-      userSA.address,
-      smartAccountOwner,
+  it("MOVED: Should process Session Key signed executeBatch userOp", async () => {
+    // moved to test/bundler-integrations/module/SessionRouter.Module.specs.ts
+  });
+
+  it("Should revert for a non executeBatch userOp", async () => {
+    const {
       entryPoint,
-      ecdsaModule.address
-    );
-    
-    return {
-      entryPoint: entryPoint,
-      smartAccountImplementation: await getSmartAccountImplementation(),
-      smartAccountFactory: await getSmartAccountFactory(),
-      ecdsaModule: ecdsaModule,
-      userSA: userSA,
-      mockToken: mockToken,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
-      sessionKeyManager: sessionKeyManager,
-      erc20SessionModule: erc20SessionModule,
-      sessionKeyData: sessionKeyData,
-      leafData: leafData,
-      sessionKeyData2: sessionKeyData2,
-      leafData2: leafData2,
-      merkleTree: merkleTree,
-      sessionRouter: sessionRouter,
-      mockProtocol: mockProtocol,
-      mockProtocolSVM: mockProtocolSVModule,
-      validUntilForMockProtocol: validUntilForMockProtocol,
-    };
-  });
-
-  it ("MOVED: Should process Session Key signed executeBatch userOp", async () => {
-      //moved to test/bundler-integrations/module/SessionRouter.Module.specs.ts
-  });
-
-  it ("Should revert for a non executeBatch userOp", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+      validUntilForMockProtocol,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const IERC20 = await ethers.getContractFactory("ERC20");
-    const approveCallData = IERC20.interface.encodeFunctionData("approve", [mockProtocol.address, tokenAmountToTransfer.mul(50)]);
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer.mul(50),
+    ]);
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "execute",
-      [mockToken.address,0,approveCallData],
+      [mockToken.address, 0, approveCallData],
       userSA.address,
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,validUntilForMockProtocol],
-      [0,0],
+      [0, validUntilForMockProtocol],
+      [0, 0],
       [erc20SessionModule.address, mockProtocolSVM.address],
       [sessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SR Invalid Selector");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: SR Invalid Selector");
   });
 
-  it ("Should revert if padded signature is in wrong format", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2 } = await setupTests();
+  it("Should revert if padded signature is in wrong format", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
-    const approveCallData = IERC20.interface.encodeFunctionData("approve", [mockProtocol.address, tokenAmountToTransfer]);
-    const interactCallData = MockProtocol.interface.encodeFunctionData("interact", [mockToken.address, tokenAmountToTransfer]);
-    const executeBatchData = SmartAccount.interface.encodeFunctionData("executeBatch_y6U", [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]]);
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact",
+      [mockToken.address, tokenAmountToTransfer]
+    );
+    const executeBatchData = SmartAccount.interface.encodeFunctionData(
+      "executeBatch_y6U",
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ]
+    );
 
     const userOp = await fillAndSign(
       {
@@ -190,190 +271,331 @@ describe("SessionKey: Session Router", async () => {
       },
       sessionKey,
       entryPoint,
-      'nonce'
-    ); 
-    
-    //create a signature with the sessionKeyManager address
+      "nonce"
+    );
+
+    // create a signature with the sessionKeyManager address
     const userOpHash = await entryPoint.getUserOpHash(userOp);
     const userOpHashAndModuleAddress = ethers.utils.hexConcat([
-      ethers.utils.hexZeroPad(userOpHash,32),
-      ethers.utils.hexZeroPad(sessionKeyManager.address,20),
+      ethers.utils.hexZeroPad(userOpHash, 32),
+      ethers.utils.hexZeroPad(sessionKeyManager.address, 20),
     ]);
     const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
-    const signatureOverUserOpHashAndModuleAddress = await sessionKey.signMessage(ethers.utils.arrayify(resultingHash));
-    
+    const signatureOverUserOpHashAndModuleAddress =
+      await sessionKey.signMessage(ethers.utils.arrayify(resultingHash));
+
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
-      ["address", "uint48", "uint48", "address[]", "bytes[]", "bytes32[][]", "bytes"],
-      [ 
+      [
+        "address",
+        "uint48",
+        "uint48",
+        "address[]",
+        "bytes[]",
+        "bytes32[][]",
+        "bytes",
+      ],
+      [
         sessionKeyManager.address,
-        0, //signle value instead of an array 
-        0, //signle value instead of an array 
-        [erc20SessionModule.address, mockProtocolSVM.address], 
-        [sessionKeyData, sessionKeyData2], 
-        [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))], 
-        signatureOverUserOpHashAndModuleAddress
+        0, // signle value instead of an array
+        0, // signle value instead of an array
+        [erc20SessionModule.address, mockProtocolSVM.address],
+        [sessionKeyData, sessionKeyData2],
+        [
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        ],
+        signatureOverUserOpHashAndModuleAddress,
       ]
     );
 
     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-      ["bytes", "address"], 
+      ["bytes", "address"],
       [paddedSig, sessionRouter.address]
     );
     userOp.signature = signatureWithModuleAddress;
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted (or OOG)");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted (or OOG)");
   });
 
-  it ("Should revert if arrays have various sizes", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2 } = await setupTests();
+  it("Should revert if arrays have various sizes", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
-    const approveCallData = IERC20.interface.encodeFunctionData("approve", [mockProtocol.address, tokenAmountToTransfer]);
-    const interactCallData = MockProtocol.interface.encodeFunctionData("interact", [mockToken.address, tokenAmountToTransfer]);
-    
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact",
+      [mockToken.address, tokenAmountToTransfer]
+    );
+
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
-      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
       userSA.address,
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,0],
-      [0,0],
-      [erc20SessionModule.address, mockProtocolSVM.address, mockProtocolSVM.address],
+      [0, 0],
+      [0, 0],
+      [
+        erc20SessionModule.address,
+        mockProtocolSVM.address,
+        mockProtocolSVM.address,
+      ],
       [sessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SR Invalid data provided");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: SR Invalid data provided");
   });
 
-  it ("Should revert when signed with a session key not matching with session keys enabled for SVMs involved", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2 } = await setupTests();
+  it("Should revert when signed with a session key not matching with session keys enabled for SVMs involved", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
-    const approveCallData = IERC20.interface.encodeFunctionData("approve", [mockProtocol.address, tokenAmountToTransfer]);
-    const interactCallData = MockProtocol.interface.encodeFunctionData("interact", [mockToken.address, tokenAmountToTransfer]);
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact",
+      [mockToken.address, tokenAmountToTransfer]
+    );
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
-      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
       userSA.address,
       nonAuthSessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,0],
-      [0,0],
+      [0, 0],
+      [0, 0],
       [erc20SessionModule.address, mockProtocolSVM.address],
       [sessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA24 signature error");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA24 signature error");
   });
 
-  it ("Should revert when when at least one SVM permission is violated", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+  it("Should revert when when at least one SVM permission is violated", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+      validUntilForMockProtocol,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
-    const approveCallData = IERC20.interface.encodeFunctionData(
-      "approve", 
-      [mockProtocol.address, maxAmount.add(ethers.utils.parseEther("1"))]
-    );
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      maxAmount.add(ethers.utils.parseEther("1")),
+    ]);
     const interactCallData = MockProtocol.interface.encodeFunctionData(
-      "interact", 
+      "interact",
       [mockToken.address, tokenAmountToTransfer]
     );
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
-      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
       userSA.address,
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,validUntilForMockProtocol],
-      [0,0],
+      [0, validUntilForMockProtocol],
+      [0, 0],
       [erc20SessionModule.address, mockProtocolSVM.address],
       [sessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: ERC20SV Max Amount Exceeded");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: ERC20SV Max Amount Exceeded");
   });
 
-  it ("Should revert if at least one session key is expired or not due", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+  it("Should revert if at least one session key is expired or not due", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+      validUntilForMockProtocol,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
-    const approveCallData = IERC20.interface.encodeFunctionData(
-      "approve", 
-      [mockProtocol.address, tokenAmountToTransfer]
-    );
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
     const interactCallData = MockProtocol.interface.encodeFunctionData(
-      "interact", 
+      "interact",
       [mockToken.address, tokenAmountToTransfer]
     );
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
-      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
       userSA.address,
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,validUntilForMockProtocol],
-      [0,0],
+      [0, validUntilForMockProtocol],
+      [0, 0],
       [erc20SessionModule.address, mockProtocolSVM.address],
       [sessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
-    await ethers.provider.send("evm_setNextBlockTimestamp", [validUntilForMockProtocol + 100]);
+    await ethers.provider.send("evm_setNextBlockTimestamp", [
+      validUntilForMockProtocol + 100,
+    ]);
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA22 expired or not due");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA22 expired or not due");
   });
 
   //
-  it ("should revert if validUntil provided in the sig is wrong", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+  it("should revert if validUntil provided in the sig is wrong", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+      validUntilForMockProtocol,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
-    const approveCallData = IERC20.interface.encodeFunctionData(
-      "approve", 
-      [mockProtocol.address, tokenAmountToTransfer]
-    );
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
     const interactCallData = MockProtocol.interface.encodeFunctionData(
-      "interact", 
+      "interact",
       [mockToken.address, tokenAmountToTransfer]
     );
 
@@ -381,37 +603,61 @@ describe("SessionKey: Session Router", async () => {
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
-      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
       userSA.address,
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,wrongValidUntil],
-      [0,0],
+      [0, wrongValidUntil],
+      [0, 0],
       [erc20SessionModule.address, mockProtocolSVM.address],
       [sessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: SessionNotApproved");
   });
 
-  it ("should revert if validAfter provided in the sig is wrong", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+  it("should revert if validAfter provided in the sig is wrong", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+      validUntilForMockProtocol,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
-    const approveCallData = IERC20.interface.encodeFunctionData(
-      "approve", 
-      [mockProtocol.address, tokenAmountToTransfer]
-    );
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
     const interactCallData = MockProtocol.interface.encodeFunctionData(
-      "interact", 
+      "interact",
       [mockToken.address, tokenAmountToTransfer]
     );
 
@@ -419,106 +665,165 @@ describe("SessionKey: Session Router", async () => {
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
-      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
       userSA.address,
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,validUntilForMockProtocol],
-      [wrongValidAfter,0],
+      [0, validUntilForMockProtocol],
+      [wrongValidAfter, 0],
       [erc20SessionModule.address, mockProtocolSVM.address],
       [sessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: SessionNotApproved");
   });
 
-  it ("should revert if SVM address provided in the sig is wrong", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+  it("should revert if SVM address provided in the sig is wrong", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+      validUntilForMockProtocol,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
-    const approveCallData = IERC20.interface.encodeFunctionData(
-      "approve", 
-      [mockProtocol.address, tokenAmountToTransfer]
-    );
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
     const interactCallData = MockProtocol.interface.encodeFunctionData(
-      "interact", 
+      "interact",
       [mockToken.address, tokenAmountToTransfer]
     );
 
-    const wrongSessionValidationModuleAddress = computeAddress(ethers.utils.randomBytes(32));
+    const wrongSessionValidationModuleAddress = computeAddress(
+      ethers.utils.randomBytes(32)
+    );
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
-      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
       userSA.address,
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,validUntilForMockProtocol],
-      [0,0],
+      [0, validUntilForMockProtocol],
+      [0, 0],
       [wrongSessionValidationModuleAddress, mockProtocolSVM.address],
       [sessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: SessionNotApproved");
   });
 
-  it ("should revert if session key data provided in the sig is wrong", async () => {
-    const { entryPoint, userSA, sessionKeyManager, erc20SessionModule, sessionKeyData, leafData, merkleTree, sessionRouter, mockProtocol, mockProtocolSVM, mockToken, sessionKeyData2, leafData2, validUntilForMockProtocol } = await setupTests();
+  it("should revert if session key data provided in the sig is wrong", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+      validUntilForMockProtocol,
+    } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
-    const approveCallData = IERC20.interface.encodeFunctionData(
-      "approve", 
-      [mockProtocol.address, tokenAmountToTransfer]
-    );
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
     const interactCallData = MockProtocol.interface.encodeFunctionData(
-      "interact", 
+      "interact",
       [mockToken.address, tokenAmountToTransfer]
     );
 
-    const {sessionKeyData: wrongSessionKeyData, leafData: wrongLeafData} = await getERC20SessionKeyParams(
-      sessionKey.address,
-      mockToken.address,
-      mockProtocol.address,
-      maxAmount.add(ethers.utils.parseEther("100")),
-      0,
-      0,
-      erc20SessionModule.address
-    );
-    
+    const { sessionKeyData: wrongSessionKeyData, leafData: wrongLeafData } =
+      await getERC20SessionKeyParams(
+        sessionKey.address,
+        mockToken.address,
+        mockProtocol.address,
+        maxAmount.add(ethers.utils.parseEther("100")),
+        0,
+        0,
+        erc20SessionModule.address
+      );
+
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
-      [[mockToken.address, mockProtocol.address],[0,0],[approveCallData, interactCallData]],
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
       userSA.address,
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0,validUntilForMockProtocol],
-      [0,0],
+      [0, validUntilForMockProtocol],
+      [0, 0],
       [erc20SessionModule.address, mockProtocolSVM.address],
       [wrongSessionKeyData, sessionKeyData2],
-      [merkleTree.getHexProof(ethers.utils.keccak256(leafData)), merkleTree.getHexProof(ethers.utils.keccak256(leafData2))],
+      [
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+      ],
       sessionRouter.address
     );
 
     await expect(
-      entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000})
-    ).to.be.revertedWith("FailedOp").withArgs(0, "AA23 reverted: SessionNotApproved");
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: SessionNotApproved");
   });
-  
 });

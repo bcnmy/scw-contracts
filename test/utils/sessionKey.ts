@@ -1,11 +1,11 @@
-import { BigNumber, BytesLike, Contract, Signer, Wallet } from "ethers";
+import { BigNumber, BytesLike, Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { EntryPoint } from "../../typechain";
 import { UserOperation } from "./userOperation";
 import { fillAndSign, makeEcdsaModuleUserOp } from "./userOp";
 import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
 import MerkleTree from "merkletreejs";
-import {keccak256} from "ethereumjs-util";
+import { keccak256 } from "ethereumjs-util";
 
 export interface SessionKeyParams {
   sessionKeyData: string;
@@ -28,14 +28,14 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
   options?: {
     preVerificationGas?: number;
   }
-) : Promise<UserOperation> {
+): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
-  
+
   const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
     functionName,
     functionParams
   );
-  
+
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
@@ -44,32 +44,42 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
     },
     sessionKey,
     entryPoint,
-    'nonce'
+    "nonce"
   );
 
   const userOpHash = await entryPoint.getUserOpHash(userOp);
   const userOpHashAndModuleAddress = ethers.utils.hexConcat([
-    ethers.utils.hexZeroPad(userOpHash,32),
-    ethers.utils.hexZeroPad(sessionKeyManagerAddress,20),
+    ethers.utils.hexZeroPad(userOpHash, 32),
+    ethers.utils.hexZeroPad(sessionKeyManagerAddress, 20),
   ]);
   const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
-  const signatureOverUserOpHashAndModuleAddress = await sessionKey.signMessage(ethers.utils.arrayify(resultingHash));
+  const signatureOverUserOpHashAndModuleAddress = await sessionKey.signMessage(
+    ethers.utils.arrayify(resultingHash)
+  );
 
   const paddedSig = defaultAbiCoder.encode(
-    ["address","uint48[]", "uint48[]", "address[]", "bytes[]", "bytes32[][]", "bytes"],
-    [ 
+    [
+      "address",
+      "uint48[]",
+      "uint48[]",
+      "address[]",
+      "bytes[]",
+      "bytes32[][]",
+      "bytes",
+    ],
+    [
       sessionKeyManagerAddress,
-      validUntil, 
-      validAfter, 
-      sessionValidationModuleAddress, 
-      sessionKeyParamsData, 
-      merkleProof, 
-      signatureOverUserOpHashAndModuleAddress
+      validUntil,
+      validAfter,
+      sessionValidationModuleAddress,
+      sessionKeyParamsData,
+      merkleProof,
+      signatureOverUserOpHashAndModuleAddress,
     ]
   );
 
   const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"], 
+    ["bytes", "address"],
     [paddedSig, sessionRouterAddress]
   );
   userOp.signature = signatureWithModuleAddress;
@@ -92,14 +102,14 @@ export async function makeEcdsaSessionKeySignedUserOp(
   options?: {
     preVerificationGas?: number;
   }
-) : Promise<UserOperation> {
+): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
-  
+
   const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
     functionName,
     functionParams
   );
-  
+
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
@@ -108,24 +118,24 @@ export async function makeEcdsaSessionKeySignedUserOp(
     },
     sessionKey,
     entryPoint,
-    'nonce'
+    "nonce"
   );
 
   const paddedSig = defaultAbiCoder.encode(
-    //validUntil, validAfter, sessionVerificationModule address, validationData, merkleProof, signature
+    // validUntil, validAfter, sessionVerificationModule address, validationData, merkleProof, signature
     ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
-    [ 
-      validUntil, 
-      validAfter, 
-      sessionValidationModuleAddress, 
-      sessionKeyParamsData, 
-      merkleProof, 
-      userOp.signature
+    [
+      validUntil,
+      validAfter,
+      sessionValidationModuleAddress,
+      sessionKeyParamsData,
+      merkleProof,
+      userOp.signature,
     ]
   );
 
   const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"], 
+    ["bytes", "address"],
     [paddedSig, sessionKeyManagerAddress]
   );
   userOp.signature = signatureWithModuleAddress;
@@ -140,31 +150,33 @@ export async function enableNewTreeForSmartAccountViaEcdsa(
   smartAccountOwner: Signer,
   entryPoint: EntryPoint,
   ecdsaModuleAddress: string
-) : Promise<MerkleTree> {
-
-  const merkleTree = new MerkleTree(
-    leaves,
-    keccak256,
-    { sortPairs: true, hashLeaves: false }
-  );
-  let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
+): Promise<MerkleTree> {
+  const merkleTree = new MerkleTree(leaves, keccak256, {
+    sortPairs: true,
+    hashLeaves: false,
+  });
+  const addMerkleRootUserOp = await makeEcdsaModuleUserOp(
     "execute_ncC",
     [
       sessionKeyManager.address,
       ethers.utils.parseEther("0"),
-      sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [merkleTree.getHexRoot()]),
+      sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [
+        merkleTree.getHexRoot(),
+      ]),
     ],
     SmartAccountAddress,
     smartAccountOwner,
     entryPoint,
     ecdsaModuleAddress
   );
-  const tx = await entryPoint.handleOps([addMerkleRootUserOp], await smartAccountOwner.getAddress());
+  const tx = await entryPoint.handleOps(
+    [addMerkleRootUserOp],
+    await smartAccountOwner.getAddress()
+  );
   await tx.wait();
 
   return merkleTree;
 }
-
 
 export async function addLeavesForSmartAccountViaEcdsa(
   merkleTree: MerkleTree,
@@ -173,35 +185,38 @@ export async function addLeavesForSmartAccountViaEcdsa(
   SmartAccountAddress: string,
   smartAccountOwner: Signer,
   entryPoint: EntryPoint,
-  ecdsaModuleAddress: string,
-) : Promise<MerkleTree> {
-  
+  ecdsaModuleAddress: string
+): Promise<MerkleTree> {
   // rebuilding the tree instead of doing .addLeaves to make sure tree is always sorted
   // as it is always considered as sorted in OZ Merkle Tree implementation
   const leaves = merkleTree.getHexLeaves();
   const sumLeaves = leaves.concat(newLeaves);
-  const newMerkleTree = new MerkleTree(
-    sumLeaves,
-    keccak256,
-    { sortPairs: true, hashLeaves: false }
-  );
+  const newMerkleTree = new MerkleTree(sumLeaves, keccak256, {
+    sortPairs: true,
+    hashLeaves: false,
+  });
 
-  let addMerkleRootUserOp = await makeEcdsaModuleUserOp(
+  const addMerkleRootUserOp = await makeEcdsaModuleUserOp(
     "execute_ncC",
     [
       sessionKeyManager.address,
       ethers.utils.parseEther("0"),
-      sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [newMerkleTree.getHexRoot()]),
+      sessionKeyManager.interface.encodeFunctionData("setMerkleRoot", [
+        newMerkleTree.getHexRoot(),
+      ]),
     ],
     SmartAccountAddress,
     smartAccountOwner,
     entryPoint,
     ecdsaModuleAddress
   );
-  const tx = await entryPoint.handleOps([addMerkleRootUserOp], await smartAccountOwner.getAddress());
+  const tx = await entryPoint.handleOps(
+    [addMerkleRootUserOp],
+    await smartAccountOwner.getAddress()
+  );
   await tx.wait();
 
-  return newMerkleTree;  
+  return newMerkleTree;
 }
 
 export async function getERC20SessionKeyParams(
@@ -211,30 +226,28 @@ export async function getERC20SessionKeyParams(
   maxAmountToTransfer: BigNumber,
   validUntil: number,
   validAfter: number,
-  sessionValidationModuleAddress: string,
-) : Promise<SessionKeyParams> {
-
+  sessionValidationModuleAddress: string
+): Promise<SessionKeyParams> {
   const sessionKeyData = defaultAbiCoder.encode(
     ["address", "address", "address", "uint256"],
     [
       sessionKey,
       erc20TokenAddress,
       receiverAddress,
-      maxAmountToTransfer.toHexString()
+      maxAmountToTransfer.toHexString(),
     ]
   );
 
   const leafData = hexConcat([
-    hexZeroPad(ethers.utils.hexlify(validUntil),6),
-    hexZeroPad(ethers.utils.hexlify(validAfter),6),
-    hexZeroPad(sessionValidationModuleAddress,20),
-    sessionKeyData
+    hexZeroPad(ethers.utils.hexlify(validUntil), 6),
+    hexZeroPad(ethers.utils.hexlify(validAfter), 6),
+    hexZeroPad(sessionValidationModuleAddress, 20),
+    sessionKeyData,
   ]);
-  
-  const params : SessionKeyParams = {
-    sessionKeyData: sessionKeyData,
-    leafData: leafData
-  };
-  return params 
-}
 
+  const params: SessionKeyParams = {
+    sessionKeyData: sessionKeyData,
+    leafData: leafData,
+  };
+  return params;
+}

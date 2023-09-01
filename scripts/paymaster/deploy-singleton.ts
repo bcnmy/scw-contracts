@@ -1,4 +1,4 @@
-import hre, { ethers } from "hardhat";
+import { ethers } from "hardhat";
 import {
   deployContract,
   encodeParam,
@@ -7,7 +7,6 @@ import {
   isContract,
 } from "../utils";
 async function main() {
-  let tx, receipt;
   const provider = ethers.provider;
 
   const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";

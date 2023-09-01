@@ -49,52 +49,47 @@ describe("Modular Smart Account Modules (with Bundler)", async () => {
     ]);
   });
 
-  const setupTests = deployments.createFixture(
-    async ({ deployments, getNamedAccounts }) => {
-      await deployments.fixture();
+  const setupTests = deployments.createFixture(async ({ deployments }) => {
+    await deployments.fixture();
 
-      const mockToken = await getMockToken();
+    const mockToken = await getMockToken();
 
-      const ecdsaModule = await getEcdsaOwnershipRegistryModule();
-      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
-        "EcdsaOwnershipRegistryModule"
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
+    );
+
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
       );
 
-      const ecdsaOwnershipSetupData =
-        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-          "initForSmartAccount",
-          [await smartAccountOwner.getAddress()]
-        );
+    const smartAccountDeploymentIndex = 0;
 
-      const smartAccountDeploymentIndex = 0;
+    const userSA = await getSmartAccountWithModule(
+      ecdsaModule.address,
+      ecdsaOwnershipSetupData,
+      smartAccountDeploymentIndex
+    );
 
-      const userSA = await getSmartAccountWithModule(
-        ecdsaModule.address,
-        ecdsaOwnershipSetupData,
-        smartAccountDeploymentIndex
-      );
+    await deployer.sendTransaction({
+      to: userSA.address,
+      value: ethers.utils.parseEther("10"),
+    });
 
-      await deployer.sendTransaction({
-        to: userSA.address,
-        value: ethers.utils.parseEther("10"),
-      });
+    await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
-
-      return {
-        entryPoint: await getEntryPoint(),
-        smartAccountImplementation: await getSmartAccountImplementation(),
-        smartAccountFactory: await getSmartAccountFactory(),
-        mockToken: mockToken,
-        ecdsaModule: ecdsaModule,
-        userSA: userSA,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
-      };
-    }
-  );
+    return {
+      entryPoint: await getEntryPoint(),
+      smartAccountImplementation: await getSmartAccountImplementation(),
+      smartAccountFactory: await getSmartAccountFactory(),
+      mockToken: mockToken,
+      ecdsaModule: ecdsaModule,
+      userSA: userSA,
+      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
+    };
+  });
 
   describe("enableModule: ", async () => {
     it("Can enable module and it is enabled", async () => {
@@ -117,7 +112,9 @@ describe("Modular Smart Account Modules (with Bundler)", async () => {
 
       await environment.sendUserOperation(userOp, entryPoint.address);
 
-      expect(await userSA.isModuleEnabled(mockAuthModule.address)).to.be.true;
+      expect(await userSA.isModuleEnabled(mockAuthModule.address)).to.equal(
+        true
+      );
     });
   });
 
@@ -154,19 +151,21 @@ describe("Modular Smart Account Modules (with Bundler)", async () => {
 
       await environment.sendUserOperation(userOp, entryPoint.address);
 
-      expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.be
-        .true;
-
-      expect(await socialRecoveryModule.isFriend(userSA.address, alice.address))
-        .to.be.true;
-      expect(await socialRecoveryModule.isFriend(userSA.address, bob.address))
-        .to.be.true;
+      expect(
+        await userSA.isModuleEnabled(socialRecoveryModule.address)
+      ).to.equal(true);
+      expect(
+        await socialRecoveryModule.isFriend(userSA.address, alice.address)
+      ).to.equal(true);
+      expect(
+        await socialRecoveryModule.isFriend(userSA.address, bob.address)
+      ).to.equal(true);
       expect(
         await socialRecoveryModule.isFriend(userSA.address, charlie.address)
-      ).to.be.true;
+      ).to.equal(true);
       expect(
         await socialRecoveryModule.isFriend(userSA.address, deployer.address)
-      ).to.be.false;
+      ).to.equal(false);
     });
   });
 
@@ -191,7 +190,7 @@ describe("Modular Smart Account Modules (with Bundler)", async () => {
       );
       await environment.sendUserOperation(userOp2, entryPoint.address);
 
-      expect(await userSA.isModuleEnabled(module2.address)).to.be.true;
+      expect(await userSA.isModuleEnabled(module2.address)).to.equal(true);
 
       const userOp3 = await makeEcdsaModuleUserOp(
         "enableModule",
@@ -205,7 +204,7 @@ describe("Modular Smart Account Modules (with Bundler)", async () => {
         }
       );
       await environment.sendUserOperation(userOp3, entryPoint.address);
-      expect(await userSA.isModuleEnabled(module3.address)).to.be.true;
+      expect(await userSA.isModuleEnabled(module3.address)).to.equal(true);
 
       const userOpDisable = await makeEcdsaModuleUserOp(
         "disableModule",
@@ -220,9 +219,10 @@ describe("Modular Smart Account Modules (with Bundler)", async () => {
       );
       await environment.sendUserOperation(userOpDisable, entryPoint.address);
 
-      expect(await userSA.isModuleEnabled(module2.address)).to.be.false;
-      expect(await userSA.isModuleEnabled(ethers.constants.AddressZero)).to.be
-        .false;
+      expect(await userSA.isModuleEnabled(module2.address)).to.equal(false);
+      expect(
+        await userSA.isModuleEnabled(ethers.constants.AddressZero)
+      ).to.equal(false);
       const returnedValue = await userSA.getModulesPaginated(
         "0x0000000000000000000000000000000000000001",
         10
