@@ -26,8 +26,11 @@
     "no-unused-vars": "error",
     "payable-fallback": "error",
     "constructor-syntax": "error",
+    "explicit-types": "error",
+    "no-unused-import": "error",
+    "one-contract-per-file": "error",
     "not-rely-on-time": "off",
-    "reason-string": "off"
+    "reason-string": "error"
   },
   "plugins": ["prettier"]
 }
