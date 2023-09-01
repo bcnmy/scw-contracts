@@ -7,12 +7,8 @@ import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 
-struct SessionStorage {
-    bytes32 merkleRoot;
-}
-
 /**
- * @title Session Router
+ * @title Batched Session Router
  * @dev Built to process executeBatch and executeBatch_y6U calls
  *         - Every call inside batch should be covered by an appropriate Session Validation Module
  *         - Parses data provided and sequentially 
@@ -23,7 +19,7 @@ struct SessionStorage {
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SessionRouter is BaseAuthorizationModule {
+contract BatchedSessionRouter is BaseAuthorizationModule {
     bytes4 public constant EXECUTE_BATCH_SELECTOR = 0x47e1da2a;
     bytes4 public constant EXECUTE_BATCH_OPTIMIZED_SELECTOR = 0x00004680;
 

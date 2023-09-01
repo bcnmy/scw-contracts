@@ -64,7 +64,7 @@ describe("SessionKey: Session Router", async () => {
         await ethers.getContractFactory("SessionKeyManager")
       ).deploy();
       const sessionRouter = await (
-        await ethers.getContractFactory("SessionRouter")
+        await ethers.getContractFactory("BatchedSessionRouter")
       ).deploy();
 
       const userOp1 = await makeEcdsaModuleUserOp(
@@ -172,7 +172,7 @@ describe("SessionKey: Session Router", async () => {
   );
 
   it("MOVED: Should process Session Key signed executeBatch userOp", async () => {
-    // moved to test/bundler-integrations/module/SessionRouter.Module.specs.ts
+    // moved to test/bundler-integrations/module/BatchedSessionRouter.Module.specs.ts
   });
 
   it("Should revert for a non executeBatch userOp", async () => {

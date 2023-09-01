@@ -84,7 +84,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
         await ethers.getContractFactory("SessionKeyManager")
       ).deploy();
       const sessionRouter = await (
-        await ethers.getContractFactory("SessionRouter")
+        await ethers.getContractFactory("BatchedSessionRouter")
       ).deploy();
 
       const userOp1 = await makeEcdsaModuleUserOp(
