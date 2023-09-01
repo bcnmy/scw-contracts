@@ -1,0 +1,22 @@
+name: Mark Inactive Issues and PRs
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+
+    steps:
+      - uses: actions/stale@v5
+        with:
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          stale-issue-message: "This issue will be closed due to inactivity."
+          stale-pr-message: "This PR will be closed due to inactivity."
+          stale-issue-label: "inactive-issue"
+          stale-pr-label: "inactive-pr"
+          days-before-stale: 30
