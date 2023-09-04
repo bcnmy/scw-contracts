@@ -47,7 +47,6 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
      */
     function setMerkleRoot(bytes32 _merkleRoot) external {
         userSessions[msg.sender].merkleRoot = _merkleRoot;
-        // TODO:should we add an event here? which emits the new merkle root
     }
 
     /**

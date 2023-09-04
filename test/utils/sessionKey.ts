@@ -19,12 +19,7 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
   sessionKey: Signer,
   entryPoint: EntryPoint,
   sessionKeyManagerAddress: string,
-  validUntil: number[],
-  validAfter: number[],
-  sessionValidationModuleAddress: string[],
-  sessionKeyParamsData: BytesLike[],
-  merkleProof: any[],
-  callSpecificData: BytesLike[] | string[],
+  sessionData: any[],
   sessionRouterAddress: string,
   options?: {
     preVerificationGas?: number;
@@ -61,22 +56,12 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
   const paddedSig = defaultAbiCoder.encode(
     [
       "address",
-      "uint48[]",
-      "uint48[]",
-      "address[]",
-      "bytes[]",
-      "bytes32[][]",
-      "bytes[]",
+      "tuple(uint48,uint48,address,bytes,bytes32[],bytes)[]",
       "bytes",
     ],
     [
       sessionKeyManagerAddress,
-      validUntil,
-      validAfter,
-      sessionValidationModuleAddress,
-      sessionKeyParamsData,
-      merkleProof,
-      callSpecificData,
+      sessionData,
       signatureOverUserOpHashAndModuleAddress,
     ]
   );

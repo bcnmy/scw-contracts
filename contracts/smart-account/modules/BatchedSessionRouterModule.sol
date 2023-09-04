@@ -20,6 +20,15 @@ import "@account-abstraction/contracts/core/Helpers.sol";
  */
 
 contract BatchedSessionRouter is BaseAuthorizationModule {
+    struct SessionData {
+        uint48 validUntil;
+        uint48 validAfter;
+        address sessionValidationModule;
+        bytes sessionKeyData;
+        bytes32[] merkleProof;
+        bytes callSpecificData;
+    }
+
     bytes4 public constant EXECUTE_BATCH_SELECTOR = 0x47e1da2a;
     bytes4 public constant EXECUTE_BATCH_OPTIMIZED_SELECTOR = 0x00004680;
 
@@ -46,60 +55,12 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
             (bytes, address)
         );
 
-        /*
-        struct SessionCallData {
-            uint48 validUntil;
-            uint48 validAfter;
-            address sessionValidationModule;
-            bytes sessionKeyData;
-            bytes32[] merkleProof;
-            bytes callSpecificData;
-        }
-        */
-
         // parse the signature to get the array of required parameters
         (
             address sessionKeyManager,
-            uint48[] memory validUntil,
-            uint48[] memory validAfter,
-            address[] memory sessionValidationModule,
-            bytes[] memory sessionKeyData,
-            bytes32[][] memory merkleProof,
-            bytes[] memory callSpecificData,
+            SessionData[] memory sessionData,
             bytes memory sessionKeySignature
-        ) = abi.decode(
-                moduleSignature,
-                (
-                    address,
-                    uint48[],
-                    uint48[],
-                    address[],
-                    bytes[],
-                    bytes32[][],
-                    bytes[],
-                    bytes
-                )
-            );
-
-        // can I use struct instead so don't have to check lengths
-
-        // check lengths of arrays
-        require(
-            validUntil.length == validAfter.length,
-            "SR Invalid data provided"
-        );
-        require(
-            validUntil.length == sessionValidationModule.length,
-            "SR Invalid data provided"
-        );
-        require(
-            validUntil.length == sessionKeyData.length,
-            "SR Invalid data provided"
-        );
-        require(
-            validUntil.length == merkleProof.length,
-            "SR Invalid data provided"
-        );
+        ) = abi.decode(moduleSignature, (address, SessionData[], bytes));
 
         address recovered = ECDSA.recover(
             ECDSA.toEthSignedMessageHash(
@@ -112,20 +73,20 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
         uint48 latestValidAfter;
 
         // iterate over batched operations
-        for (uint i; i < sessionValidationModule.length; ) {
+        for (uint i; i < sessionData.length; ) {
             // validate the sessionKey
             // sessionKeyManager reverts if something wrong
             ISessionKeyManager(sessionKeyManager).validateSessionKey(
                 userOp.sender,
-                validUntil[i],
-                validAfter[i],
-                sessionValidationModule[i],
-                sessionKeyData[i],
-                merkleProof[i]
+                sessionData[i].validUntil,
+                sessionData[i].validAfter,
+                sessionData[i].sessionValidationModule,
+                sessionData[i].sessionKeyData,
+                sessionData[i].merkleProof
             );
 
             (address sessionKey, , , ) = abi.decode(
-                sessionKeyData[i],
+                sessionData[i].sessionKeyData,
                 (address, address, address, uint256)
             );
 
@@ -144,21 +105,24 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
 
             // validate sessionKey permissions
             // sessionValidationModule reverts if something wrong
-            ISessionValidationModule(sessionValidationModule[i])
+            ISessionValidationModule(sessionData[i].sessionValidationModule)
                 .validateSessionParams(
                     destinations[i],
                     callValues[i],
                     operationCalldatas[i],
-                    sessionKeyData[i],
-                    callSpecificData[i]
+                    sessionData[i].sessionKeyData,
+                    sessionData[i].callSpecificData
                 );
 
             //intersect validUntils and validAfters
-            if (validUntil[i] != 0 && validUntil[i] < earliestValidUntil) {
-                earliestValidUntil = validUntil[i];
+            if (
+                sessionData[i].validUntil != 0 &&
+                sessionData[i].validUntil < earliestValidUntil
+            ) {
+                earliestValidUntil = sessionData[i].validUntil;
             }
-            if (validAfter[i] > latestValidAfter) {
-                latestValidAfter = validAfter[i];
+            if (sessionData[i].validAfter > latestValidAfter) {
+                latestValidAfter = sessionData[i].validAfter;
             }
 
             unchecked {

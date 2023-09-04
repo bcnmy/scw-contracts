@@ -249,25 +249,29 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
       [
         "address",
-        "uint48[]",
-        "uint48[]",
-        "address[]",
-        "bytes[]",
-        "bytes32[][]",
-        "bytes[]",
+        "tuple(uint48,uint48,address,bytes,bytes32[],bytes)[]",
         "bytes",
       ],
       [
         sessionKeyManager.address,
-        [0, 0],
-        [0, 0],
-        [erc20SessionModule.address, mockProtocolSVM.address],
-        [sessionKeyData, sessionKeyData2],
         [
-          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          [
+            0,
+            0,
+            erc20SessionModule.address,
+            sessionKeyData,
+            merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+            "0x",
+          ],
+          [
+            0,
+            0,
+            mockProtocolSVM.address,
+            sessionKeyData2,
+            merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+            "0x",
+          ],
         ],
-        ["0x", "0x"],
         signatureOverUserOpHashAndModuleAddress,
       ]
     );

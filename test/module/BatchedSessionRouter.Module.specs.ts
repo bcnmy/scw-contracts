@@ -22,10 +22,7 @@ describe("SessionKey: Session Router", async () => {
     deployer,
     smartAccountOwner,
     alice,
-    bob,
-    charlie,
     verifiedSigner,
-    refundReceiver,
     sessionKey,
     nonAuthSessionKey,
   ] = waffle.provider.getWallets();
@@ -190,7 +187,6 @@ describe("SessionKey: Session Router", async () => {
       mockToken,
       sessionKeyData2,
       leafData2,
-      validUntilForMockProtocol,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
@@ -207,15 +203,24 @@ describe("SessionKey: Session Router", async () => {
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0, validUntilForMockProtocol],
-      [0, 0],
-      [erc20SessionModule.address, mockProtocolSVM.address],
-      [sessionKeyData, sessionKeyData2],
       [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          0,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
       ],
-      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -287,26 +292,30 @@ describe("SessionKey: Session Router", async () => {
 
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
       [
-        "address",
-        "uint48",
-        "uint48",
-        "address[]",
-        "bytes[]",
-        "bytes32[][]",
-        "bytes[]",
+        "uint256", // uint256 instead of address
+        "tuple(uint48,uint48,address,bytes,bytes32[],bytes)[]",
         "bytes",
       ],
       [
-        sessionKeyManager.address,
-        0, // signle value instead of an array
-        0, // signle value instead of an array
-        [erc20SessionModule.address, mockProtocolSVM.address],
-        [sessionKeyData, sessionKeyData2],
+        0,
         [
-          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          [
+            0,
+            0,
+            erc20SessionModule.address,
+            sessionKeyData,
+            merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+            "0x",
+          ],
+          [
+            0,
+            0,
+            mockProtocolSVM.address,
+            sessionKeyData2,
+            merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+            "0x",
+          ],
         ],
-        ["0x", "0x"],
         signatureOverUserOpHashAndModuleAddress,
       ]
     );
@@ -322,70 +331,6 @@ describe("SessionKey: Session Router", async () => {
     )
       .to.be.revertedWith("FailedOp")
       .withArgs(0, "AA23 reverted (or OOG)");
-  });
-
-  it("Should revert if arrays have various sizes", async () => {
-    const {
-      entryPoint,
-      userSA,
-      sessionKeyManager,
-      erc20SessionModule,
-      sessionKeyData,
-      leafData,
-      merkleTree,
-      sessionRouter,
-      mockProtocol,
-      mockProtocolSVM,
-      mockToken,
-      sessionKeyData2,
-      leafData2,
-    } = await setupTests();
-    const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
-
-    const MockProtocol = await ethers.getContractFactory("MockProtocol");
-    const IERC20 = await ethers.getContractFactory("ERC20");
-
-    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
-      mockProtocol.address,
-      tokenAmountToTransfer,
-    ]);
-    const interactCallData = MockProtocol.interface.encodeFunctionData(
-      "interact",
-      [mockToken.address, tokenAmountToTransfer]
-    );
-
-    const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
-      "executeBatch_y6U",
-      [
-        [mockToken.address, mockProtocol.address],
-        [0, 0],
-        [approveCallData, interactCallData],
-      ],
-      userSA.address,
-      sessionKey,
-      entryPoint,
-      sessionKeyManager.address,
-      [0, 0],
-      [0, 0],
-      [
-        erc20SessionModule.address,
-        mockProtocolSVM.address,
-        mockProtocolSVM.address,
-      ],
-      [sessionKeyData, sessionKeyData2],
-      [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-      ],
-      ["0x", "0x"],
-      sessionRouter.address
-    );
-
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: SR Invalid data provided");
   });
 
   it("Should revert when signed with a session key not matching with session keys enabled for SVMs involved", async () => {
@@ -429,15 +374,24 @@ describe("SessionKey: Session Router", async () => {
       nonAuthSessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0, 0],
-      [0, 0],
-      [erc20SessionModule.address, mockProtocolSVM.address],
-      [sessionKeyData, sessionKeyData2],
       [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          0,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
       ],
-      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -490,15 +444,24 @@ describe("SessionKey: Session Router", async () => {
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0, validUntilForMockProtocol],
-      [0, 0],
-      [erc20SessionModule.address, mockProtocolSVM.address],
-      [sessionKeyData, sessionKeyData2],
       [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          validUntilForMockProtocol,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
       ],
-      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -551,15 +514,24 @@ describe("SessionKey: Session Router", async () => {
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0, validUntilForMockProtocol],
-      [0, 0],
-      [erc20SessionModule.address, mockProtocolSVM.address],
-      [sessionKeyData, sessionKeyData2],
       [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          validUntilForMockProtocol,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
       ],
-      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -574,7 +546,6 @@ describe("SessionKey: Session Router", async () => {
       .withArgs(0, "AA22 expired or not due");
   });
 
-  //
   it("should revert if validUntil provided in the sig is wrong", async () => {
     const {
       entryPoint,
@@ -619,15 +590,24 @@ describe("SessionKey: Session Router", async () => {
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0, wrongValidUntil],
-      [0, 0],
-      [erc20SessionModule.address, mockProtocolSVM.address],
-      [sessionKeyData, sessionKeyData2],
       [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          wrongValidUntil,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
       ],
-      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -682,15 +662,24 @@ describe("SessionKey: Session Router", async () => {
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0, validUntilForMockProtocol],
-      [wrongValidAfter, 0],
-      [erc20SessionModule.address, mockProtocolSVM.address],
-      [sessionKeyData, sessionKeyData2],
       [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        [
+          0,
+          wrongValidAfter,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          validUntilForMockProtocol,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
       ],
-      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -747,15 +736,24 @@ describe("SessionKey: Session Router", async () => {
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0, validUntilForMockProtocol],
-      [0, 0],
-      [wrongSessionValidationModuleAddress, mockProtocolSVM.address],
-      [sessionKeyData, sessionKeyData2],
       [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        [
+          0,
+          0,
+          wrongSessionValidationModuleAddress,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          0,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
       ],
-      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -819,15 +817,24 @@ describe("SessionKey: Session Router", async () => {
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [0, validUntilForMockProtocol],
-      [0, 0],
-      [erc20SessionModule.address, mockProtocolSVM.address],
-      [wrongSessionKeyData, sessionKeyData2],
       [
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          wrongSessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          0,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
       ],
-      ["0x", "0x"],
       sessionRouter.address
     );
 
