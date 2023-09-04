@@ -23,8 +23,6 @@ src/AASigner.ts
 typings/
 deployments/
 src/deploy/
-typechain
-typechain-types
 .husky/pre-commit
 .prettierignore
 .prettierrc
