@@ -202,103 +202,8 @@ export function fillUserOpDefaults(
 export async function fillUserOp(
   op: Partial<UserOperation>,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce"
-): Promise<UserOperation> {
-  const op1 = { ...op };
-  const provider = entryPoint?.provider;
-  if (op.initCode != null) {
-    const initAddr = hexDataSlice(op1.initCode!, 0, 20);
-    const initCallData = hexDataSlice(op1.initCode!, 20);
-    if (op1.nonce == null) op1.nonce = 0;
-    if (op1.sender == null) {
-      // hack: if the init contract is our known deployer, then we know what the address would be, without a view call
-      if (
-        initAddr.toLowerCase() === Create2Factory.contractAddress.toLowerCase()
-      ) {
-        const ctr = hexDataSlice(initCallData, 32);
-        const salt = hexDataSlice(initCallData, 0, 32);
-        op1.sender = Create2Factory.getDeployedAddress(ctr, salt);
-      } else {
-        // console.log('\t== not our deployer. our=', Create2Factory.contractAddress, 'got', initAddr)
-        if (provider == null) throw new Error("no entrypoint/provider");
-        op1.sender = await entryPoint!.callStatic
-          .getSenderAddress(op1.initCode!)
-          .catch((e) => e.errorArgs.sender);
-      }
-    }
-    if (op1.verificationGasLimit == null) {
-      if (provider == null) throw new Error("no entrypoint/provider");
-      let initEstimate;
-      try {
-        initEstimate = await provider.estimateGas({
-          from: entryPoint?.address,
-          to: initAddr,
-          data: initCallData,
-          gasLimit: 10e6,
-        });
-      } catch (error) {
-        initEstimate = 1_000_000;
-      }
-      op1.verificationGasLimit = BigNumber.from(
-        DefaultsForUserOp.verificationGasLimit
-      ).add(initEstimate);
-    }
-  }
-  if (op1.nonce == null) {
-    if (provider == null)
-      throw new Error("must have entryPoint to autofill nonce");
-    const c = new Contract(
-      op.sender!,
-      [`function ${getNonceFunction}() view returns(uint256)`],
-      provider
-    );
-    op1.nonce = await c[getNonceFunction]().catch(rethrow());
-  }
-  if (op1.callGasLimit == null && op.callData != null) {
-    if (provider == null)
-      throw new Error("must have entryPoint for callGasLimit estimate");
-    let gasEstimated;
-    try {
-      gasEstimated = await provider.estimateGas({
-        from: entryPoint?.address,
-        to: op1.sender,
-        data: op1.callData,
-      });
-    } catch (error) {
-      // to handle the case when we need to build an userOp that is expected to fail
-      gasEstimated = 3_000_000;
-    }
-
-    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEstimated)
-    // estimateGas assumes direct call from entryPoint. add wrapper cost.
-    op1.callGasLimit = gasEstimated; // .add(55000)
-  }
-  if (op1.maxFeePerGas == null) {
-    if (provider == null)
-      throw new Error("must have entryPoint to autofill maxFeePerGas");
-    const block = await provider.getBlock("latest");
-    op1.maxFeePerGas = block.baseFeePerGas!.add(
-      op1.maxPriorityFeePerGas ?? DefaultsForUserOp.maxPriorityFeePerGas
-    );
-  }
-  // TODO: this is exactly what fillUserOp below should do - but it doesn't.
-  // adding this manually
-  if (op1.maxPriorityFeePerGas == null) {
-    op1.maxPriorityFeePerGas = DefaultsForUserOp.maxPriorityFeePerGas;
-  }
-  const op2 = fillUserOpDefaults(op1);
-  // eslint-disable-next-line @typescript-eslint/no-base-to-string
-  if (op2.preVerificationGas.toString() === "0") {
-    // TODO: we don't add overhead, which is ~21000 for a single TX, but much lower in a batch.
-    op2.preVerificationGas = callDataCost(packUserOp(op2, false));
-  }
-  return op2;
-}
-
-export async function fillUserOp2D(
-  op: Partial<UserOperation>,
-  entryPoint?: EntryPoint,
-  getNonceFunction = "nonce",
+  getNonceFunction = "getNonce",
+  useNonceKey = true,
   nonceKey: number = 0
 ): Promise<UserOperation> {
   const op1 = { ...op };
@@ -344,37 +249,23 @@ export async function fillUserOp2D(
   if (op1.nonce == null) {
     if (provider == null)
       throw new Error("must have entryPoint to autofill nonce");
-    const c = new Contract(
-      op.sender!,
-      [
-        `function nonce() view returns(uint256)`,
-        `function nonce(uint192 _key) view returns(uint256)`,
-      ],
-      provider
-    );
+    // Review/TODO: if someone passes 'nonce' as nonceFunction. or change the default
 
-    let getNonceFunction;
-    if (nonceKey === undefined) {
-      getNonceFunction = "nonce()";
+    if (useNonceKey) {
+      const c = new Contract(
+        op.sender!,
+        [`function nonce(uint192) view returns(uint256)`],
+        provider
+      );
+      op1.nonce = await c.nonce(nonceKey).catch(rethrow());
     } else {
-      getNonceFunction = "nonce(uint192)";
+      const c = new Contract(
+        op.sender!,
+        [`function ${getNonceFunction}() view returns(uint256)`],
+        provider
+      );
+      op1.nonce = await c[getNonceFunction]().catch(rethrow());
     }
-
-    const functionFragment = c.interface.getFunction(getNonceFunction);
-    let callData;
-
-    if (nonceKey === undefined) {
-      callData = c.interface.encodeFunctionData(functionFragment);
-    } else {
-      callData = c.interface.encodeFunctionData(functionFragment, [nonceKey]);
-    }
-
-    const nonceValue = await provider.call({
-      to: c.address,
-      data: callData,
-    });
-
-    op1.nonce = nonceValue;
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
@@ -417,36 +308,23 @@ export async function fillUserOp2D(
   return op2;
 }
 
-export async function fillAndSign2D(
-  op: Partial<UserOperation>,
-  signer: Wallet | Signer,
-  entryPoint?: EntryPoint,
-  nonceKey: number = 0,
-  extraPreVerificationGas: number = 0
-): Promise<UserOperation> {
-  const provider = entryPoint?.provider;
-  const op2 = await fillUserOp2D(op, entryPoint, "nonce", nonceKey); // review
-  op2.preVerificationGas =
-    Number(op2.preVerificationGas) + extraPreVerificationGas;
-
-  const chainId = await provider!.getNetwork().then((net) => net.chainId);
-  const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
-
-  return {
-    ...op2,
-    signature: await signer.signMessage(message),
-  };
-}
-
 export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
   entryPoint?: EntryPoint,
   getNonceFunction = "getNonce",
+  useNonceKey = true,
+  nonceKey: number = 0,
   extraPreVerificationGas: number = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
-  const op2 = await fillUserOp(op, entryPoint, getNonceFunction);
+  const op2 = await fillUserOp(
+    op,
+    entryPoint,
+    getNonceFunction,
+    useNonceKey,
+    nonceKey
+  );
   op2.preVerificationGas =
     Number(op2.preVerificationGas) + extraPreVerificationGas;
 
@@ -457,46 +335,6 @@ export async function fillAndSign(
     ...op2,
     signature: await signer.signMessage(message),
   };
-}
-
-export async function makeEcdsaModuleUserOp2D(
-  functionName: string,
-  functionParams: any,
-  userOpSender: string,
-  userOpSigner: Signer,
-  entryPoint: EntryPoint,
-  moduleAddress: string,
-  options?: {
-    preVerificationGas?: number;
-    nonceKey?: number;
-  }
-): Promise<UserOperation> {
-  const SmartAccount = await ethers.getContractFactory("SmartAccount");
-
-  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-    functionName,
-    functionParams
-  );
-
-  const userOp = await fillAndSign2D(
-    {
-      sender: userOpSender,
-      callData: txnDataAA1,
-      ...options,
-    },
-    userOpSigner,
-    entryPoint,
-    options?.nonceKey
-  );
-
-  // add validator module address to the signature
-  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"],
-    [userOp.signature, moduleAddress]
-  );
-
-  userOp.signature = signatureWithModuleAddress;
-  return userOp;
 }
 
 export async function makeEcdsaModuleUserOp(
@@ -508,7 +346,8 @@ export async function makeEcdsaModuleUserOp(
   moduleAddress: string,
   options?: {
     preVerificationGas?: number;
-  }
+  },
+  nonceKey: number = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -525,7 +364,10 @@ export async function makeEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "getNonce",
+    true,
+    nonceKey,
+    0
   );
 
   // add validator module address to the signature
@@ -551,7 +393,8 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   validAfter: number,
   options?: {
     preVerificationGas?: number;
-  }
+  },
+  nonceKey: number = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -568,7 +411,10 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "getNonce",
+    true,
+    nonceKey,
+    0
   );
 
   const hash = await paymaster.getHash(
@@ -592,7 +438,10 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "getNonce",
+    true,
+    nonceKey,
+    0
   );
 
   // add validator module address to the signature
@@ -616,7 +465,8 @@ export async function makeSARegistryModuleUserOp(
   ecdsaModuleAddress: string,
   options?: {
     preVerificationGas?: number;
-  }
+  },
+  nonceKey: number = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -633,7 +483,10 @@ export async function makeSARegistryModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "getNonce",
+    true,
+    nonceKey,
+    0
   );
 
   const signatureForSAOwnershipRegistry = ethers.utils.defaultAbiCoder.encode(
@@ -663,7 +516,8 @@ export async function makeMultichainEcdsaModuleUserOp(
     preVerificationGas?: number;
   },
   validUntil: number = 0,
-  validAfter: number = 0
+  validAfter: number = 0,
+  nonceKey: number = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -680,7 +534,10 @@ export async function makeMultichainEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "getNonce",
+    true,
+    nonceKey,
+    0
   );
 
   const leafOfThisUserOp = hexConcat([

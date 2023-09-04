@@ -117,7 +117,8 @@ describe("ECDSA Registry Module: ", async()=>{
               },
               smartAccountOwner, //need to sign by someone at least
               entryPoint,
-              "nonce"
+              "getNonce",
+              true
             );
         
             let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(

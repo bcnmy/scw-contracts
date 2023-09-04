@@ -76,7 +76,7 @@ describe("Smart Account Getters", async () => {
 
   it("nonce returns correct nonce", async () => {
     const { userSA, entryPoint } = await setupTests();
-    expect(await userSA.nonce()).to.equal(
+    expect(await userSA.nonce(0)).to.equal(
       await entryPoint.getNonce(userSA.address, 0)
     );
   });

@@ -116,7 +116,7 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const userOp1 = await makeEcdsaModuleUserOp2D(
+    const userOp1 = await makeEcdsaModuleUserOp(
       "execute_ncC",
       [
         mockToken.address,
@@ -129,15 +129,15 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
       ecdsaModule.address,
       {
         preVerificationGas: 50000,
-        nonceKey: 5,
-      }
+      },
+      5 // nonceKey
     );
     console.log("userOp1.nonce", userOp1.nonce.toString());
 
     const charlieBalanceBefore = await charlie.getBalance();
     const amountToTransfer = ethers.utils.parseEther("0.5345");
 
-    const userOp2 = await makeEcdsaModuleUserOp2D(
+    const userOp2 = await makeEcdsaModuleUserOp(
       "execute_ncC",
       [charlie.address, amountToTransfer, "0x"],
       userSA.address,
@@ -146,8 +146,8 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
       ecdsaModule.address,
       {
         preVerificationGas: 50000,
-        nonceKey: 10,
-      }
+      },
+      10 // nonceKey
     );
     console.log("userOp2.nonce", userOp1.nonce.toString());
 

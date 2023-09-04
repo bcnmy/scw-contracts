@@ -135,7 +135,8 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless)", async () => {
       },
       smartAccountOwner,
       entryPoint,
-      'nonce'
+      'nonce',
+      false
     );
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], await alice.getAddress());
@@ -179,7 +180,8 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless)", async () => {
       },
       smartAccountOwner,
       entryPoint,
-      'nonce'
+      'nonce',
+      false
     );
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);

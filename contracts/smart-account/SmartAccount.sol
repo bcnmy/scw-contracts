@@ -71,24 +71,6 @@ contract SmartAccount is
     }
 
     /**
-     * @return nonce the account nonce.
-     * @dev This method returns the next sequential nonce.
-     * @notice For a nonce of a specific key, use `entrypoint.getNonce(account, key)`
-     */
-    function nonce(uint192 _key) public view virtual returns (uint256) {
-        return entryPoint().getNonce(address(this), _key);
-    }
-
-    /**
-     * @return nonce the account nonce.
-     * @dev This method returns the next sequential nonce.
-     * @notice For a nonce of a specific key, use `entrypoint.getNonce(account, key)`
-     */
-    function nonce() public view virtual override returns (uint256) {
-        return entryPoint().getNonce(address(this), 0);
-    }
-
-    /**
      * @dev This function allows entry point or SA itself to execute certain actions.
      * If the caller is not authorized, the function will revert with an error message.
      * @notice This function acts as modifier and is marked as internal to be be called

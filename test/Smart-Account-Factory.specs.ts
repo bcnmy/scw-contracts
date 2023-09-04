@@ -109,7 +109,7 @@ describe("Smart Account Factory", async () => {
       expect(await smartAccount.entryPoint()).to.equal(await smartAccountImplementation.entryPoint());
       expect(await smartAccount.isModuleEnabled(ecdsaModule.address)).to.equal(true);
       expect(await ecdsaModule.getOwner(smartAccount.address)).to.equal(smartAccountOwner.address);
-      expect(await smartAccount.nonce()).to.equal(0);
+      expect(await smartAccount.nonce(0)).to.equal(0);
     });
 
     it ("should revert if already deployed", async () => {   
