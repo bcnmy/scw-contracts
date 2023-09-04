@@ -215,6 +215,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -292,6 +293,7 @@ describe("SessionKey: Session Router", async () => {
         "address[]",
         "bytes[]",
         "bytes32[][]",
+        "bytes[]",
         "bytes",
       ],
       [
@@ -304,6 +306,7 @@ describe("SessionKey: Session Router", async () => {
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
         ],
+        ["0x", "0x"],
         signatureOverUserOpHashAndModuleAddress,
       ]
     );
@@ -374,6 +377,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -433,6 +437,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -493,6 +498,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -553,6 +559,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -620,6 +627,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -682,6 +690,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -746,6 +755,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 
@@ -817,6 +827,7 @@ describe("SessionKey: Session Router", async () => {
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
       ],
+      ["0x", "0x"],
       sessionRouter.address
     );
 

@@ -254,6 +254,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
         "address[]",
         "bytes[]",
         "bytes32[][]",
+        "bytes[]",
         "bytes",
       ],
       [
@@ -266,6 +267,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
         ],
+        ["0x", "0x"],
         signatureOverUserOpHashAndModuleAddress,
       ]
     );

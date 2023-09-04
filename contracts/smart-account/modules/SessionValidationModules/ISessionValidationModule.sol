@@ -37,6 +37,7 @@ abstract contract ISessionValidationModule {
         address destinationContract,
         uint256 callValue,
         bytes calldata funcCallData,
-        bytes calldata sessionKeyData
+        bytes calldata sessionKeyData,
+        bytes calldata callSpecificData
     ) external virtual;
 }

@@ -24,6 +24,7 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
   sessionValidationModuleAddress: string[],
   sessionKeyParamsData: BytesLike[],
   merkleProof: any[],
+  callSpecificData: BytesLike[] | string[],
   sessionRouterAddress: string,
   options?: {
     preVerificationGas?: number;
@@ -65,6 +66,7 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
       "address[]",
       "bytes[]",
       "bytes32[][]",
+      "bytes[]",
       "bytes",
     ],
     [
@@ -74,6 +76,7 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
       sessionValidationModuleAddress,
       sessionKeyParamsData,
       merkleProof,
+      callSpecificData,
       signatureOverUserOpHashAndModuleAddress,
     ]
   );

@@ -46,6 +46,17 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
             (bytes, address)
         );
 
+        /*
+        struct SessionCallData {
+            uint48 validUntil;
+            uint48 validAfter;
+            address sessionValidationModule;
+            bytes sessionKeyData;
+            bytes32[] merkleProof;
+            bytes callSpecificData;
+        }
+        */
+
         // parse the signature to get the array of required parameters
         (
             address sessionKeyManager,
@@ -54,6 +65,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
             address[] memory sessionValidationModule,
             bytes[] memory sessionKeyData,
             bytes32[][] memory merkleProof,
+            bytes[] memory callSpecificData,
             bytes memory sessionKeySignature
         ) = abi.decode(
                 moduleSignature,
@@ -64,9 +76,12 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
                     address[],
                     bytes[],
                     bytes32[][],
+                    bytes[],
                     bytes
                 )
             );
+
+        // can I use struct instead so don't have to check lengths
 
         // check lengths of arrays
         require(
@@ -134,7 +149,8 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
                     destinations[i],
                     callValues[i],
                     operationCalldatas[i],
-                    sessionKeyData[i]
+                    sessionKeyData[i],
+                    callSpecificData[i]
                 );
 
             //intersect validUntils and validAfters

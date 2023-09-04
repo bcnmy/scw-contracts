@@ -92,7 +92,8 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         address destinationContract,
         uint256 callValue,
         bytes calldata _funcCallData,
-        bytes calldata _sessionKeyData
+        bytes calldata _sessionKeyData,
+        bytes calldata /*_callSpecificData*/
     ) external virtual override {
         (, address token, address recipient, uint256 maxAmount) = abi.decode(
             _sessionKeyData,
