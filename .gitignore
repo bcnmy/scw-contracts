@@ -15,6 +15,7 @@ dist/
 types/
 out/
 cache/
+typings/
 
 #ignore .DS_Store recursively
 .DS_Store
