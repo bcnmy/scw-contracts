@@ -1,0 +1,21 @@
+name: Check Branch Name
+on:
+  push:
+    branches-ignore:
+      - 'main'
+      - 'master'
+      - 'development'
+      - 'dev'
+      - 'develop'
+
+jobs:
+  check-branch-name:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Branch Name
+        run: |
+          BRANCH_NAME=${GITHUB_REF#refs/heads/}
+          if [[ ! $BRANCH_NAME =~ ^(features/|fixes/|releases/) ]]; then
+            echo "Invalid branch name. Must start with 'features/', 'fixes/', or 'releases/'."
+            exit 1
+          fi
