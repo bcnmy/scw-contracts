@@ -1,8 +1,6 @@
 import {
   arrayify,
-  BytesLike,
   defaultAbiCoder,
-  getCreate2Address,
   hexConcat,
   hexDataSlice,
   hexValue,
@@ -20,9 +18,9 @@ import {
 import {
   ecsign,
   toRpcSig,
-  keccak256 as keccak256_buffer,
+  keccak256 as keccak256Buffer,
 } from "ethereumjs-util";
-import { EntryPoint, VerifyingSingletonPaymaster } from "../../typechain";
+import { EntryPoint } from "../../typechain";
 import { UserOperation } from "./userOperation";
 import { Create2Factory } from "../../src/Create2Factory";
 import { MerkleTree } from "merkletreejs";
@@ -158,7 +156,7 @@ export function signUserOp(
   ]);
 
   const sig = ecsign(
-    keccak256_buffer(msg1),
+    keccak256Buffer(msg1),
     Buffer.from(arrayify(signer.privateKey))
   );
   // that's equivalent of:  await signer.signMessage(message);
@@ -204,7 +202,7 @@ export async function fillUserOp(
   entryPoint?: EntryPoint,
   getNonceFunction = "getNonce",
   useNonceKey = true,
-  nonceKey: number = 0
+  nonceKey = 0
 ): Promise<UserOperation> {
   const op1 = { ...op };
   const provider = entryPoint?.provider;
@@ -314,8 +312,8 @@ export async function fillAndSign(
   entryPoint?: EntryPoint,
   getNonceFunction = "getNonce",
   useNonceKey = true,
-  nonceKey: number = 0,
-  extraPreVerificationGas: number = 0
+  nonceKey = 0,
+  extraPreVerificationGas = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
   const op2 = await fillUserOp(
@@ -347,7 +345,7 @@ export async function makeEcdsaModuleUserOp(
   options?: {
     preVerificationGas?: number;
   },
-  nonceKey: number = 0
+  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -394,7 +392,7 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   options?: {
     preVerificationGas?: number;
   },
-  nonceKey: number = 0
+  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -466,7 +464,7 @@ export async function makeSARegistryModuleUserOp(
   options?: {
     preVerificationGas?: number;
   },
-  nonceKey: number = 0
+  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -515,9 +513,9 @@ export async function makeMultichainEcdsaModuleUserOp(
   options?: {
     preVerificationGas?: number;
   },
-  validUntil: number = 0,
-  validAfter: number = 0,
-  nonceKey: number = 0
+  validUntil = 0,
+  validAfter = 0,
+  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 

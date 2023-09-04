@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
-import "./ISessionValidationModule.sol";
+import "../../modules/SessionValidationModules/ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
@@ -13,11 +13,10 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract ERC20SessionValidationModule is ISessionValidationModule {
+contract VulnerableERC20SessionValidationModule is ISessionValidationModule {
     /**
      * @dev validates if the _op (UserOperation) matches the SessionKey permissions
      * and that _op has been signed by this SessionKey
-     * Please mind the decimals of your exact token when setting maxAmount
      * @param _op User Operation to be validated.
      * @param _userOpHash Hash of the User Operation to be validated.
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
@@ -30,12 +29,6 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         bytes calldata _sessionKeyData,
         bytes calldata _sessionKeySignature
     ) external pure override returns (bool) {
-        require(
-            bytes4(_op.callData[0:4]) == EXECUTE_OPTIMIZED_SELECTOR ||
-                bytes4(_op.callData[0:4]) == EXECUTE_SELECTOR,
-            "ERC20SV Invalid Selector"
-        );
-
         (
             address sessionKey,
             address token,
