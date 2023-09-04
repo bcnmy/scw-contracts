@@ -33,8 +33,8 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
     bytes4 public constant EXECUTE_BATCH_OPTIMIZED_SELECTOR = 0x00004680;
 
     /**
-     * @dev validates userOperation. Expects it to be a executeBatch or executeBatch_y6U call
-     * If something goes wrong, reverts
+     * @dev validates userOperation. Expects userOp.callData to be an executeBatch
+     * or executeBatch_y6U call. If something goes wrong, reverts.
      * @param userOp User Operation to be validated.
      * @param userOpHash Hash of the User Operation to be validated.
      * @return SIG_VALIDATION_FAILED or packed validation result.
@@ -126,7 +126,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
             }
 
             unchecked {
-                i++;
+                ++i;
             }
         }
 

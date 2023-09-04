@@ -103,12 +103,12 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         require(destinationContract == token, "ERC20SV Invalid Token");
         require(callValue == 0, "ERC20SV Non Zero Value");
 
-        (address recepientCalled, uint256 amount) = abi.decode(
+        (address recipientCalled, uint256 amount) = abi.decode(
             _funcCallData[4:],
             (address, uint256)
         );
 
-        require(recipient == recepientCalled, "ERC20SV Wrong Recipient");
+        require(recipient == recipientCalled, "ERC20SV Wrong Recipient");
         require(amount <= maxAmount, "ERC20SV Max Amount Exceeded");
     }
 }

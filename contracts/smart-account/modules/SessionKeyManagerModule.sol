@@ -76,20 +76,15 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
                 (uint48, uint48, address, bytes, bytes32[], bytes)
             );
 
-        bytes32 leaf = keccak256(
-            abi.encodePacked(
-                validUntil,
-                validAfter,
-                sessionValidationModule,
-                sessionKeyData
-            )
+        validateSessionKey(
+            userOp.sender,
+            validUntil,
+            validAfter,
+            sessionValidationModule,
+            sessionKeyData,
+            merkleProof
         );
 
-        if (
-            !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
-        ) {
-            revert("SessionNotApproved");
-        }
         return
             _packValidationData(
                 //_packValidationData expects true if sig validation has failed, false otherwise
@@ -122,9 +117,9 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
         uint48 validUntil,
         uint48 validAfter,
         address sessionValidationModule,
-        bytes calldata sessionKeyData,
-        bytes32[] calldata merkleProof
-    ) external virtual override {
+        bytes memory sessionKeyData,
+        bytes32[] memory merkleProof
+    ) public virtual override {
         SessionStorage storage sessionKeyStorage = _getSessionData(
             smartAccount
         );
