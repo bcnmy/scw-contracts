@@ -1,5 +1,5 @@
 {
-  "name": "@bcnmy/scw-contracts",
+  "name": "@biconomy/account-contracts",
   "version": "2.0.1",
   "description": "Smart Contract Wallet (SCW) contracts for Biconomy SDK. Enables Account Abstraction, Smart Account, ERC4337, and ERC6900 functionalities.",
   "main": "index.js",
