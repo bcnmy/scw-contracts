@@ -17,7 +17,12 @@ arguments.js
 src/utils/execution.ts
 src/utils/multisend.ts
 src/Create2Factory.ts
+src/utils/execution-2d.ts
+src/runop.ts
+src/AASigner.ts
 typings/
+deployments/
+src/deploy/
 typechain
 typechain-types
 .husky/pre-commit
