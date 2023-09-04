@@ -8,6 +8,7 @@ import {
   isContract,
 } from "./utils";
 import {
+  BatchedSessionRouter__factory,
   Deployer,
   Deployer__factory,
   ERC20SessionValidationModule__factory,
@@ -140,6 +141,9 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
     [baseImpAddress, signer.address]
   );
 
+  // TODO
+  // Should only be done if the factory is not already staked
+
   console.log("Staking Paymaster...");
   const { unstakeDelayInSec, stakeInWei } = factoryStakeConfig[chainId];
   const smartAccountFactory = SmartAccountFactory__factory.connect(
@@ -235,6 +239,16 @@ async function deploySessionKeyManagerModule(deployerInstance: Deployer) {
   );
 }
 
+async function deployBatchedSessionRouterModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.BATCHED_SESSION_ROUTER_MODULE,
+    `${BatchedSessionRouter__factory.bytecode}`,
+    "BatchedSessionRouterModule",
+    []
+  );
+}
+
 async function deployErc20SessionValidationModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
@@ -316,6 +330,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   await deployPasskeyModule(deployerInstance);
   console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
+  console.log("=========================================");
+  await deployBatchedSessionRouterModule(deployerInstance);
   console.log("=========================================");
   await deployErc20SessionValidationModule(deployerInstance);
   console.log("=========================================");
