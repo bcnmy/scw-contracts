@@ -1,7 +1,7 @@
 {
   "name": "@biconomy/account-contracts",
   "version": "2.0.1",
-  "description": "SCW contracts for Biconomy SDK",
+  "description": "Smart Contract Wallet (SCW) contracts for Biconomy SDK. Enables Account Abstraction, Smart Account, ERC4337, and ERC6900 functionalities.",
   "main": "index.js",
   "engines": {
     "node": ">=12.0.0"
@@ -23,13 +23,22 @@
     "coverage": "COVERAGE=1 DISABLE_VIA_IR=true hardhat coverage",
     "prepare": "husky install"
   },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "keywords": [
+    "Account Abstraction",
+    "Smart Account",
+    "ERC4337",
+    "ERC6900",
+    "ERC-4337",
+    "ERC-6900",
+    "Biconomy",
+    "@bcnmy",
+    "Smart Wallet"
+  ],
+  "author": "Biconomy",
+  "license": "MIT",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13",
     "@nomiclabs/hardhat-etherscan": "^3.1.7",
-    "@nomiclabs/hardhat-truffle5": "^2.0.6",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/contracts": "^4.9.3",
@@ -70,43 +79,15 @@
     "solhint-plugin-prettier": "^0.0.5",
     "solidity-coverage": "^0.8.2",
     "ts-node": "^10.8.1",
-    "typechain": "^5.2.0",
+    "typechain": "^8.3.1",
     "typescript": "^4.7.3",
     "web3": "^1.7.4"
   },
-  "overrides": {
-    "@nomiclabs/hardhat-waffle": {
-      "@nomiclabs/hardhat-ethers": "$@nomiclabs/hardhat-ethers"
-    }
-  },
   "dependencies": {
     "@account-abstraction/contracts": "^0.6.0",
-    "@account-abstraction/sdk": "^0.5.0",
-    "@chainlink/contracts": "^0.4.1",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/constants": "^5.6.1",
-    "@openzeppelin/contracts-upgradeable": "4.8.1",
-    "@typechain/hardhat": "^2.3.0",
-    "@types/mocha": "^9.0.0",
     "axios": "^1.4.0",
-    "chai-as-promised": "^7.1.1",
-    "chai-string": "^1.5.0",
-    "eth-gas-reporter": "^0.2.24",
-    "ethereumjs-util": "^7.1.0",
-    "ethereumjs-wallet": "^1.0.1",
-    "ganache": "^7.1.0",
-    "ganache-cli": "^6.12.2",
-    "hardhat": "^2.9.5",
-    "hardhat-deploy-ethers": "^0.3.0-beta.11",
-    "hardhat-gas-reporter": "^1.0.7",
-    "solc": "^0.8.15",
-    "solidity-bytes-utils": "^0.8.0",
-    "source-map-support": "^0.5.19",
-    "typescript": "^4.3.5"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": ""
-    }
+    "ethereumjs-util": "^7.1.0"
   }
 }
