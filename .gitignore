@@ -10,6 +10,12 @@ typechain
 cache
 artifacts
 
+# Compiled output
+dist/
+types/
+out/
+cache/
+
 #ignore .DS_Store recursively
 .DS_Store
 

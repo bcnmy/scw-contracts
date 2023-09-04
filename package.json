@@ -1,6 +1,6 @@
 {
-  "name": "@biconomy/account-contracts",
-  "version": "2.0.1",
+  "name": "@biconomy/smart-account-contracts",
+  "version": "3.0.0",
   "description": "SCW contracts for Biconomy SDK",
   "main": "index.js",
   "engines": {
@@ -8,7 +8,7 @@
   },
   "scripts": {
     "clean": "npx hardhat clean",
-    "build": "npm run clean && npx hardhat compile",
+    "build": "npm run clean && npx hardhat compile && npx tsc index.ts -d --outDir dist",
     "test": "npx hardhat test",
     "bundler-test": "./scripts/bundler-tests.sh",
     "lint:ts": "npx eslint 'test/**/*.ts' 'scripts/**/*.ts'",
