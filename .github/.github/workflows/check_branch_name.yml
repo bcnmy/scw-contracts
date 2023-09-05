@@ -1,16 +1,13 @@
 name: Check Branch Name
 on:
-  push:
-    branches-ignore:
-      - 'main'
-      - 'master'
-      - 'development'
-      - 'dev'
-      - 'develop'
+  create:
 
 jobs:
   check-branch-name:
     runs-on: ubuntu-latest
+    if: |
+      github.event.ref_type == 'branch' && 
+      !contains(['main', 'master', 'development', 'dev', 'develop'], github.ref) # ref_type check ensures the job only runs for branch creation, not tags
     steps:
       - name: Check Branch Name
         run: |
