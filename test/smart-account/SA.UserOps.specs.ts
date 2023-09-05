@@ -110,7 +110,8 @@ describe("UserOps", async () => {
         },
         smartAccountOwner,
         entryPoint,
-        "nonce"
+        "getNonce",
+        true
       );
       // add invalid validator module address to the signature
       const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
@@ -152,7 +153,8 @@ describe("UserOps", async () => {
         },
         smartAccountOwner,
         entryPoint,
-        "nonce"
+        "getNonce",
+        true
       );
       // add sentinel module address to the signature
       const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
@@ -193,7 +195,8 @@ describe("UserOps", async () => {
         },
         smartAccountOwner,
         entryPoint,
-        "nonce"
+        "getNonce",
+        true
       );
       // add not enabled module address to the signature
       const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(

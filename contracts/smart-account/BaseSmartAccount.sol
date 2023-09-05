@@ -26,10 +26,10 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     /**
      * @return nonce the account nonce.
      * @dev This method returns the next sequential nonce.
-     * @notice For a nonce of a specific key, use `entrypoint.getNonce(account, key)`
+     * @notice Provides 2D nonce functionality by allowing to use a nonce of a specific key.
      */
-    function nonce() public view virtual returns (uint256) {
-        return entryPoint().getNonce(address(this), 0);
+    function nonce(uint192 _key) public view virtual returns (uint256) {
+        return entryPoint().getNonce(address(this), _key);
     }
 
     /**
