@@ -71,9 +71,19 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
 
         uint48 earliestValidUntil = type(uint48).max;
         uint48 latestValidAfter;
+        // parse userOp.calldata to get calldatas for every specific operation
+        (
+            address[] memory destinations,
+            uint256[] memory callValues,
+            bytes[] memory operationCalldatas
+        ) = abi.decode(
+                userOp.callData[4:],
+                (address[], uint256[], bytes[])
+            );
 
+        uint256 length = sessionData.length;
         // iterate over batched operations
-        for (uint i; i < sessionData.length; ) {
+        for (uint i; i < length; ) {
             // validate the sessionKey
             // sessionKeyManager reverts if something wrong
             ISessionKeyManager(sessionKeyManager).validateSessionKey(
@@ -92,16 +102,6 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
 
             // compare if userOp was signed with the proper session key
             if (recovered != sessionKey) return SIG_VALIDATION_FAILED;
-
-            // parse userOp.calldata to get calldatas for every specific operation
-            (
-                address[] memory destinations,
-                uint256[] memory callValues,
-                bytes[] memory operationCalldatas
-            ) = abi.decode(
-                    userOp.callData[4:],
-                    (address[], uint256[], bytes[])
-                );
 
             // validate sessionKey permissions
             // sessionValidationModule reverts if something wrong
