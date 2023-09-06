@@ -29,37 +29,29 @@ const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
 
 // // Dev Salts
 // export enum DEPLOYMENT_SALTS {
-//   DECODER = "DEVX_DECODER_V0_21082023",
 //   ENTRY_POINT = "DEVX_ENTRY_POINT_V0_30032023",
-//   GAS_ESTIMATOR = "DEVX_GAS_ESTIMATOR_V0_21082023",
-//   MULTI_SEND = "DEVX_MULTI_SEND_V0_21082023",
-//   MULTI_SEND_CALLONLY = "DEVX_MULTI_SEND_CALLONLY_V0_21082023",
-//   WALLET_FACTORY = "DEVX_WALLET_FACTORY_V0_21082023",
-//   WALLET_IMP = "DEVX_WALLET_IMP_V0_21082023",
+//   WALLET_FACTORY = "DEVX_WALLET_FACTORY_V2_050920203",
+//   WALLET_IMP = "DEVX_WALLET_IMP_V2_05092023",
 //   SINGELTON_PAYMASTER = "DEVX_SINGLETON_PAYMASTER_V1_21082024",
 //   ECDSA_REGISTRY_MODULE = "DEVX_ECDSA_REGISTRY_MODULE_V0_21082023",
 //   MULTICHAIN_VALIDATOR_MODULE = "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_21082023",
 //   PASSKEY_MODULE = "DEVX_PASSKEY_MODULE_V0_21082023",
-//   SESSION_KEY_MANAGER_MODULE = "DEVX_SESSION_KEY_MANAGER_MODULE_V0_21082023",
-//   ERC20_SESSION_VALIDATION_MODULE = "DEVX_ERC20_SESSION_VALIDATION_MODULE_V0_21082023",
+//   SESSION_KEY_MANAGER_MODULE = "DEVX_SESSION_KEY_MANAGER_MODULE_V1_05092023",
+//   ERC20_SESSION_VALIDATION_MODULE = "DEVX_ERC20_SESSION_VALIDATION_MODULE_V1_05092023",
 //   SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE = "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_21082023",
 // }
 
 // Prod Salts
 export enum DEPLOYMENT_SALTS {
-  DECODER = "",
   ENTRY_POINT = "DEVX_ENTRY_POINT_V0_30032023",
-  GAS_ESTIMATOR = "",
-  MULTI_SEND = "",
-  MULTI_SEND_CALLONLY = "",
-  WALLET_FACTORY = "PROD_WALLET_FACTORY_V1_22082023_4vDXpHR",
-  WALLET_IMP = "PROD_WALLET_IMP_V1_22082023_neuwImd",
+  WALLET_FACTORY = "PROD_WALLET_FACTORY_V2_0509023SexZu7Y",
+  WALLET_IMP = "PROD_WALLET_IMP_V2_05092023_ixWZVOM",
   SINGELTON_PAYMASTER = "PROD_SINGLETON_PAYMASTER_V1_22082023N4hlwuH",
   ECDSA_REGISTRY_MODULE = "PROD_ECDSA_REGISTRY_MODULE_V1_22082023_ypI3tHh",
   MULTICHAIN_VALIDATOR_MODULE = "PROD_MULTICHAIN_VALIDATOR_MODULE_V1_22082023_vdQZbfh",
   PASSKEY_MODULE = "PROD_PASSKEY_MODULE_V1_22082023_n0nz9WE",
-  SESSION_KEY_MANAGER_MODULE = "PROD_SESSION_KEY_MANAGER_MODULE_V1_22082023_o3aiYAr",
-  ERC20_SESSION_VALIDATION_MODULE = "PROD_ERC20_SESSION_VALIDATION_MODULE_V1_22082023_QCLznax",
+  SESSION_KEY_MANAGER_MODULE = "PROD_SESSION_KEY_MANAGER_MODULE_V2_05092023_N2WXNDk",
+  ERC20_SESSION_VALIDATION_MODULE = "PROD_ERC20_SESSION_VALIDATION_MODULE_V2_05092023NdquNFM",
   SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE = "PROD_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V1_22082023_6X7yarN",
 }
 
@@ -93,6 +85,15 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   84531: {
     gasPrice: parseUnits("1.5", "gwei"),
   },
+  5611: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
+  91715: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
+  5001: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
 
   // Mainnets
   137: { maxPriorityFeePerGas: parseUnits("50", "gwei") },
@@ -104,6 +105,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   1101: { gasPrice: parseUnits("1", "gwei") },
   59144: { gasPrice: parseUnits("2", "gwei") },
   8453: { gasPrice: parseUnits("1.5", "gwei") },
+  204: { gasPrice: parseUnits("0.1", "gwei") },
+  5000: { gasPrice: parseUnits("0.05", "gwei") },
 };
 
 type StakingConfig = {
@@ -149,6 +152,18 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.01"),
   },
+  5611: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  91715: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  5001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
 
   // Mainnets
   137: {
@@ -187,26 +202,15 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
   },
-};
-
-export const factoryAbi = [
-  {
-    inputs: [
-      { internalType: "bytes", name: "_initCode", type: "bytes" },
-      { internalType: "bytes32", name: "_salt", type: "bytes32" },
-    ],
-    name: "deploy",
-    outputs: [
-      {
-        internalType: "address payable",
-        name: "createdContract",
-        type: "address",
-      },
-    ],
-    stateMutability: "nonpayable",
-    type: "function",
+  204: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.46"), // 1 BNB = $217.43
   },
-];
+  5000: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("226"), // 1 MNT = $0.444
+  },
+};
 
 export const buildBytecode = (
   constructorTypes: any[],
