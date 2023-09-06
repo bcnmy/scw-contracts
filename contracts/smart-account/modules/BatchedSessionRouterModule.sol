@@ -95,17 +95,9 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
                 sessionData[i].merkleProof
             );
 
-            (address sessionKey, , , ) = abi.decode(
-                sessionData[i].sessionKeyData,
-                (address, address, address, uint256)
-            );
-
-            // compare if userOp was signed with the proper session key
-            if (recovered != sessionKey) return SIG_VALIDATION_FAILED;
-
             // validate sessionKey permissions
             // sessionValidationModule reverts if something wrong
-            ISessionValidationModule(sessionData[i].sessionValidationModule)
+            address sessionKey = ISessionValidationModule(sessionData[i].sessionValidationModule)
                 .validateSessionParams(
                     destinations[i],
                     callValues[i],
@@ -113,6 +105,9 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
                     sessionData[i].sessionKeyData,
                     sessionData[i].callSpecificData
                 );
+
+            // compare if userOp was signed with the proper session key
+            if (recovered != sessionKey) return SIG_VALIDATION_FAILED;
 
             //intersect validUntils and validAfters
             if (

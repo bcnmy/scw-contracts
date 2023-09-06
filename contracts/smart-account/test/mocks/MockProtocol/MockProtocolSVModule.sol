@@ -66,8 +66,8 @@ contract MockProtocolSVM is ISessionValidationModule {
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData,
         bytes calldata /*callSpecificData*/
-    ) external virtual override {
-        (, address protocol, address token, uint256 maxAmount) = abi.decode(
+    ) external virtual override returns (address) {
+        (address sessionKey, address protocol, address token, uint256 maxAmount) = abi.decode(
             _sessionKeyData,
             (address, address, address, uint256)
         );
@@ -85,5 +85,7 @@ contract MockProtocolSVM is ISessionValidationModule {
 
         require(tokenAddr == token, "Mock Prot SVM: Wrong Token");
         require(amount <= maxAmount, "Mock Prot SVM: Max Amount Exceeded");
+
+        return sessionKey;
     }
 }

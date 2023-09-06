@@ -24,7 +24,8 @@ contract MockSessionValidationModule is ISessionValidationModule {
         bytes calldata funcCallData,
         bytes calldata sessionKeyData,
         bytes calldata callSpecificData
-    ) external pure override {
+    ) external pure override returns(address) {
         //always validates
+        return address(0);
     }
 }

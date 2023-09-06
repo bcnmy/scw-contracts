@@ -40,5 +40,5 @@ abstract contract ISessionValidationModule {
         bytes calldata funcCallData,
         bytes calldata sessionKeyData,
         bytes calldata callSpecificData
-    ) external virtual;
+    ) external virtual returns (address);
 }

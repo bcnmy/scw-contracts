@@ -79,7 +79,8 @@ contract VulnerableERC20SessionValidationModule is ISessionValidationModule {
         bytes calldata,
         bytes calldata,
         bytes calldata
-    ) external pure override {
+    ) external pure override returns (address){
         callValue;
+        return address(0);
     }
 }

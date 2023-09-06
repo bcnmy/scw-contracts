@@ -94,8 +94,8 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData,
         bytes calldata /*_callSpecificData*/
-    ) external virtual override {
-        (, address token, address recipient, uint256 maxAmount) = abi.decode(
+    ) external virtual override returns (address) {
+        (address sessionKey, address token, address recipient, uint256 maxAmount) = abi.decode(
             _sessionKeyData,
             (address, address, address, uint256)
         );
@@ -110,5 +110,6 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
 
         require(recipient == recipientCalled, "ERC20SV Wrong Recipient");
         require(amount <= maxAmount, "ERC20SV Max Amount Exceeded");
+        return sessionKey;
     }
 }
