@@ -17,8 +17,8 @@ import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
  *         - It is modular by nature. UserOp and txns validation happens in Authorization Modules.
  *         - It provides the functionality to execute AA (EIP-4337) userOps. Gnosis style txns removed to a module.
  *         - It allows to receive and manage assets.
- *         - It is responsible for managing the modules and fallbacks.
- *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
+ *         - It is responsible for managing the _modules and fallbacks.
+ *         - The Smart Account can be extended with _modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>, Filipp Makarov - <filipp.makarov@biconomy.io>
  */
 contract SmartAccount is
@@ -59,7 +59,7 @@ contract SmartAccount is
 
     /**
      * @dev Constructor that sets the entry point contract.
-     *      modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
+     *      _modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
      * @param anEntryPoint The address of the entry point contract.
      */
     constructor(IEntryPoint anEntryPoint) {
@@ -67,7 +67,7 @@ contract SmartAccount is
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
         _entryPoint = anEntryPoint;
-        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
+        _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
     }
 
     /**
@@ -141,7 +141,7 @@ contract SmartAccount is
      * @param handler Default fallback handler provided in Smart Account
      * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
      *                            a registry module that serves several smart accounts
-     * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
+     * @param moduleSetupData _modules setup data (a standard calldata for the module setup contract)
      * @notice devs need to make sure it is only callable once by initializer or state check restrictions
      * @notice any further implementations that introduces a new state must have a reinit method
      * @notice reinitialization is not possible, as _initialSetupModules reverts if the account is already initialized
@@ -153,7 +153,7 @@ contract SmartAccount is
         bytes calldata moduleSetupData
     ) external virtual override returns (address) {
         if (
-            modules[SENTINEL_MODULES] != address(0) ||
+            _modules[SENTINEL_MODULES] != address(0) ||
             getFallbackHandler() != address(0)
         ) revert AlreadyInitialized();
         _setFallbackHandler(handler);
@@ -268,7 +268,7 @@ contract SmartAccount is
             userOp.signature,
             (bytes, address)
         );
-        if (address(modules[validationModule]) != address(0)) {
+        if (address(_modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
         } else {
@@ -293,7 +293,7 @@ contract SmartAccount is
             signature,
             (bytes, address)
         );
-        if (address(modules[validationModule]) != address(0)) {
+        if (address(_modules[validationModule]) != address(0)) {
             return
                 ISignatureValidator(validationModule).isValidSignature(
                     dataHash,

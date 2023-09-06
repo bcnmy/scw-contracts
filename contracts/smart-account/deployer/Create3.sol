@@ -6,10 +6,6 @@ pragma solidity 0.8.17;
   @author Agustin Aguilar <aa@horizon.io>
 */
 library Create3 {
-    error ErrorCreatingProxy();
-    error ErrorCreatingContract();
-    error TargetAlreadyExists();
-
     /**
     @notice The bytecode for a contract that proxies the creation of another contract
     @dev If this code is deployed using CREATE2 it can be used to decouple `creationCode` from the child contract address
@@ -39,6 +35,10 @@ library Create3 {
     //                        KECCAK256_PROXY_CHILD_BYTECODE = keccak256(PROXY_CHILD_BYTECODE);
     bytes32 internal constant KECCAK256_PROXY_CHILD_BYTECODE =
         0x21c35dbe1b344a2488cf3321d6ce542f8e9f305544ff09e4993a62319a497c1f;
+
+    error ErrorCreatingProxy();
+    error ErrorCreatingContract();
+    error TargetAlreadyExists();
 
     /**
     @notice Returns the size of the code on a given address

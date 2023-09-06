@@ -16,7 +16,7 @@ abstract contract ModuleManager is
 {
     address internal constant SENTINEL_MODULES = address(0x1);
 
-    mapping(address => address) internal modules;
+    mapping(address => address) internal _modules;
 
     // Events
     event EnabledModule(address module);
@@ -47,14 +47,14 @@ abstract contract ModuleManager is
 
         // Populate return array
         uint256 moduleCount;
-        address currentModule = modules[start];
+        address currentModule = _modules[start];
         while (
             currentModule != address(0x0) &&
             currentModule != SENTINEL_MODULES &&
             moduleCount < pageSize
         ) {
             array[moduleCount] = currentModule;
-            currentModule = modules[currentModule];
+            currentModule = _modules[currentModule];
             moduleCount++;
         }
         next = currentModule;
@@ -82,10 +82,10 @@ abstract contract ModuleManager is
         if (module == address(0) || module == SENTINEL_MODULES)
             revert ModuleCannotBeZeroOrSentinel(module);
         // Module cannot be added twice.
-        if (modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
+        if (_modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
 
-        modules[module] = modules[SENTINEL_MODULES];
-        modules[SENTINEL_MODULES] = module;
+        _modules[module] = _modules[SENTINEL_MODULES];
+        _modules[SENTINEL_MODULES] = module;
 
         emit EnabledModule(module);
     }
@@ -126,14 +126,14 @@ abstract contract ModuleManager is
         // Validate module address and check that it corresponds to module index.
         if (module == address(0) || module == SENTINEL_MODULES)
             revert ModuleCannotBeZeroOrSentinel(module);
-        if (modules[prevModule] != module)
+        if (_modules[prevModule] != module)
             revert ModuleAndPrevModuleMismatch(
                 module,
-                modules[prevModule],
+                _modules[prevModule],
                 prevModule
             );
-        modules[prevModule] = modules[module];
-        delete modules[module];
+        _modules[prevModule] = _modules[module];
+        delete _modules[module];
         emit DisabledModule(module);
     }
 
@@ -154,8 +154,9 @@ abstract contract ModuleManager is
         uint256 txGas
     ) public virtual returns (bool success) {
         // Only whitelisted modules are allowed.
-        if (msg.sender == SENTINEL_MODULES || modules[msg.sender] == address(0))
-            revert ModuleNotEnabled(msg.sender);
+        if (
+            msg.sender == SENTINEL_MODULES || _modules[msg.sender] == address(0)
+        ) revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
         // Can add guards here to allow delegatecalls for selected modules (msg.senders) only
         success = execute(
@@ -233,8 +234,9 @@ abstract contract ModuleManager is
             );
 
         // Only whitelisted modules are allowed.
-        if (msg.sender == SENTINEL_MODULES || modules[msg.sender] == address(0))
-            revert ModuleNotEnabled(msg.sender);
+        if (
+            msg.sender == SENTINEL_MODULES || _modules[msg.sender] == address(0)
+        ) revert ModuleNotEnabled(msg.sender);
 
         for (uint256 i; i < to.length; ) {
             // Execute transaction without further confirmations.
@@ -268,7 +270,7 @@ abstract contract ModuleManager is
      * @return True if the module is enabled
      */
     function isModuleEnabled(address module) public view returns (bool) {
-        return SENTINEL_MODULES != module && modules[module] != address(0);
+        return SENTINEL_MODULES != module && _modules[module] != address(0);
     }
 
     /**
@@ -292,8 +294,8 @@ abstract contract ModuleManager is
             initialAuthorizationModule == SENTINEL_MODULES
         ) revert ModuleCannotBeZeroOrSentinel(initialAuthorizationModule);
 
-        modules[initialAuthorizationModule] = SENTINEL_MODULES;
-        modules[SENTINEL_MODULES] = initialAuthorizationModule;
+        _modules[initialAuthorizationModule] = SENTINEL_MODULES;
+        _modules[SENTINEL_MODULES] = initialAuthorizationModule;
         return initialAuthorizationModule;
     }
 

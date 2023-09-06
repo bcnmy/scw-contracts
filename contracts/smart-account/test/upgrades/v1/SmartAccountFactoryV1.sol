@@ -4,7 +4,6 @@ pragma solidity 0.8.17;
 import "./Proxy.sol";
 import "./BaseSmartAccountV1.sol";
 import {DefaultCallbackHandler} from "../../../handler/DefaultCallbackHandler.sol";
-import {SmartAccountFactoryErrorsV1} from "./ErrorsV1.sol";
 
 /**
  * @title Smart Account Factory - factory responsible for deploying Smart Accounts using CREATE2 and CREATE
@@ -33,14 +32,6 @@ contract SmartAccountFactoryV1 {
         );
         basicImplementation = _basicImplementation;
         minimalHandler = new DefaultCallbackHandler();
-    }
-
-    /**
-     * @dev Allows to retrieve the creation code used for the Proxy deployment.
-     * @return The creation code for the Proxy.
-     */
-    function accountCreationCode() public pure returns (bytes memory) {
-        return type(Proxy).creationCode;
     }
 
     /**
@@ -96,6 +87,14 @@ contract SmartAccountFactoryV1 {
             }
         }
         emit AccountCreation(proxy, _owner, _index);
+    }
+
+    /**
+     * @dev Allows to retrieve the creation code used for the Proxy deployment.
+     * @return The creation code for the Proxy.
+     */
+    function accountCreationCode() public pure returns (bytes memory) {
+        return type(Proxy).creationCode;
     }
 
     /**

@@ -20,8 +20,8 @@ import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
  * @dev This contract is the base for the Smart Account functionality.
  *         - It provides the functionality to execute both gnosis-style txns and AA (EIP-4337) userOps
  *         - It allows to receive and manage assets.
- *         - It is responsible for managing the modules and fallbacks.
- *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
+ *         - It is responsible for managing the _modules and fallbacks.
+ *         - The Smart Account can be extended with _modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
 contract SmartAccountNoAuth is
@@ -77,11 +77,11 @@ contract SmartAccountNoAuth is
 
     /**
      * @dev Constructor that sets the owner of the contract and the entry point contract.
-     *      modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
+     *      _modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
      * @param anEntryPoint The address of the entry point contract.
      */
     constructor(IEntryPoint anEntryPoint) {
-        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
+        _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         _self = address(this);
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
@@ -190,7 +190,7 @@ contract SmartAccountNoAuth is
      * @param handler Default fallback handler provided in Smart Account
      * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
      *                            a registry module that serves several smart accounts
-     * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
+     * @param moduleSetupData _modules setup data (a standard calldata for the module setup contract)
      * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
      * @notice any further implementations that introduces a new state must have a reinit method
      * @notice reinit is not possible, as _initialSetupModules reverts if the account is already initialized
@@ -313,7 +313,7 @@ contract SmartAccountNoAuth is
             userOp.signature,
             (bytes, address)
         );
-        if (address(modules[validationModule]) != address(0)) {
+        if (address(_modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
         } else {
@@ -342,7 +342,7 @@ contract SmartAccountNoAuth is
             signature,
             (bytes, address)
         );
-        if (address(modules[validationModule]) != address(0)) {
+        if (address(_modules[validationModule]) != address(0)) {
             return
                 ISignatureValidator(validationModule).isValidSignature(
                     ethSignedDataHash,

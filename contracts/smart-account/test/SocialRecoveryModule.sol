@@ -7,6 +7,11 @@ import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 // TODO: To be rebuilt for an ownerless setup => like which validation method does it recover?
 
 contract SocialRecoveryModule is IAuthorizationModule {
+    struct Friends {
+        address[] friends;
+        uint256 threshold;
+    }
+
     string public constant NAME = "Social Recovery Module";
     string public constant VERSION = "0.1.0";
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
@@ -18,16 +23,12 @@ contract SocialRecoveryModule is IAuthorizationModule {
     // @todo
     // Notice validateAndUpdateNonce in just skipped in case of modules. To avoid replay of same userOpHash I think it should be done.
 
-    struct Friends {
-        address[] friends; // the list of friends
-        uint256 threshold; // minimum number of friends required to recover
-    }
-    mapping(address => Friends) internal friendsEntries;
+    mapping(address => Friends) internal _friendsEntries;
     mapping(address => mapping(address => bool)) public isFriend;
 
     // isConfirmed - map of [recoveryHash][friend] to bool
     mapping(bytes32 => mapping(address => bool)) public isConfirmed;
-    mapping(address => uint256) internal walletsNonces;
+    mapping(address => uint256) internal _walletsNonces;
 
     /**
      * @dev Setup function sets initial storage of contract.
@@ -41,7 +42,7 @@ contract SocialRecoveryModule is IAuthorizationModule {
             "Threshold exceeds friends count"
         );
         require(_threshold >= 2, "At least 2 friends required");
-        Friends storage entry = friendsEntries[msg.sender];
+        Friends storage entry = _friendsEntries[msg.sender];
         // check for duplicates in friends list
         for (uint256 i = 0; i < _friends.length; i++) {
             address friend = _friends[i];
@@ -80,6 +81,7 @@ contract SocialRecoveryModule is IAuthorizationModule {
         bytes32 userOpHash,
         bytes memory moduleSignature
     ) internal virtual returns (uint256 sigValidationResult) {
+        (userOp, moduleSignature);
         if (opsSeen[userOpHash] == true) return SIG_VALIDATION_FAILED;
         opsSeen[userOpHash] = true;
         // can perform it's own access control logic, verify agaisnt expected signer and return SIG_VALIDATION_FAILED
@@ -90,21 +92,21 @@ contract SocialRecoveryModule is IAuthorizationModule {
      * @dev Confirm friend recovery transaction. Only by friends.
      */
     function confirmTransaction(address _wallet, address _newOwner) public {
-        require(_onlyFriends(_wallet, msg.sender), "sender not a friend");
+        require(onlyFriends(_wallet, msg.sender), "sender not a friend");
         bytes32 recoveryHash = getRecoveryHash(
             _wallet,
             _newOwner,
-            walletsNonces[_wallet]
+            _walletsNonces[_wallet]
         );
         isConfirmed[recoveryHash][msg.sender] = true;
     }
 
     function recoverAccess(address payable _wallet, address _newOwner) public {
-        // require(_onlyFriends(_wallet, msg.sender), "sender not a friend");
+        // require(onlyFriends(_wallet, msg.sender), "sender not a friend");
         bytes32 recoveryHash = getRecoveryHash(
             _wallet,
             _newOwner,
-            walletsNonces[_wallet]
+            _walletsNonces[_wallet]
         );
         require(
             isConfirmedByRequiredFriends(recoveryHash, _wallet),
@@ -121,7 +123,7 @@ contract SocialRecoveryModule is IAuthorizationModule {
             ),
             "Could not execute recovery"
         );
-        walletsNonces[_wallet]++;
+        _walletsNonces[_wallet]++;
     }
 
     function isConfirmedByRequiredFriends(
@@ -129,7 +131,7 @@ contract SocialRecoveryModule is IAuthorizationModule {
         address _wallet
     ) public view returns (bool) {
         uint256 confirmationCount;
-        Friends storage entry = friendsEntries[_wallet];
+        Friends storage entry = _friendsEntries[_wallet];
         for (uint256 i = 0; i < entry.friends.length; i++) {
             if (isConfirmed[recoveryHash][entry.friends[i]])
                 confirmationCount++;
@@ -138,11 +140,11 @@ contract SocialRecoveryModule is IAuthorizationModule {
         return false;
     }
 
-    function _onlyFriends(
+    function onlyFriends(
         address _wallet,
         address _friend
     ) public view returns (bool) {
-        Friends storage entry = friendsEntries[_wallet];
+        Friends storage entry = _friendsEntries[_wallet];
         for (uint256 i = 0; i < entry.friends.length; i++) {
             if (entry.friends[i] == _friend) return true;
         }

@@ -31,7 +31,7 @@ contract VerifyingSingletonPaymaster is
     using PaymasterHelpers for PaymasterData;
 
     // Gas used in EntryPoint._handlePostOp() method (including this#postOp() call)
-    uint256 private unaccountedEPGasOverhead;
+    uint256 private _unaccountedEPGasOverhead;
     mapping(address => uint256) public paymasterIdBalances;
 
     address public verifyingSigner;
@@ -68,7 +68,7 @@ contract VerifyingSingletonPaymaster is
         assembly {
             sstore(verifyingSigner.slot, _verifyingSigner)
         }
-        unaccountedEPGasOverhead = 9600;
+        _unaccountedEPGasOverhead = 9600;
     }
 
     /**
@@ -140,8 +140,8 @@ contract VerifyingSingletonPaymaster is
     }
 
     function setUnaccountedEPGasOverhead(uint256 value) external onlyOwner {
-        uint256 oldValue = unaccountedEPGasOverhead;
-        unaccountedEPGasOverhead = value;
+        uint256 oldValue = _unaccountedEPGasOverhead;
+        _unaccountedEPGasOverhead = value;
         emit EPGasOverheadChanged(oldValue, value);
     }
 
@@ -200,7 +200,7 @@ contract VerifyingSingletonPaymaster is
         override
         returns (bytes memory context, uint256 validationData)
     {
-        PaymasterData memory paymasterData = userOp._decodePaymasterData();
+        PaymasterData memory paymasterData = userOp.decodePaymasterData();
         bytes32 hash = getHash(
             userOp,
             paymasterData.paymasterId,
@@ -251,10 +251,11 @@ contract VerifyingSingletonPaymaster is
         bytes calldata context,
         uint256 actualGasCost
     ) internal virtual override {
-        PaymasterContext memory data = context._decodePaymasterContext();
+        (mode);
+        PaymasterContext memory data = context.decodePaymasterContext();
         address extractedPaymasterId = data.paymasterId;
         uint256 balToDeduct = actualGasCost +
-            unaccountedEPGasOverhead *
+            _unaccountedEPGasOverhead *
             tx.gasprice;
         paymasterIdBalances[extractedPaymasterId] =
             paymasterIdBalances[extractedPaymasterId] -

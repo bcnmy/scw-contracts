@@ -27,7 +27,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
      */
-    mapping(address => SessionStorage) internal userSessions;
+    mapping(address => SessionStorage) internal _userSessions;
 
     /**
      * @dev returns the SessionStorage object for a given smartAccount
@@ -36,7 +36,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
     function getSessionKeys(
         address smartAccount
     ) external view returns (SessionStorage memory) {
-        return userSessions[smartAccount];
+        return _userSessions[smartAccount];
     }
 
     /**
@@ -45,7 +45,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
      * @param _merkleRoot Merkle Root of a tree that contains session keys with their permissions and parameters
      */
     function setMerkleRoot(bytes32 _merkleRoot) external {
-        userSessions[msg.sender].merkleRoot = _merkleRoot;
+        _userSessions[msg.sender].merkleRoot = _merkleRoot;
         // TODO:should we add an event here? which emits the new merkle root
     }
 
@@ -115,6 +115,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
         bytes32 _dataHash,
         bytes memory _signature
     ) public view override returns (bytes4) {
+        (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }
 
@@ -126,6 +127,6 @@ contract SessionKeyManager is BaseAuthorizationModule {
     function _getSessionData(
         address _account
     ) internal view returns (SessionStorage storage sessionKeyStorage) {
-        sessionKeyStorage = userSessions[_account];
+        sessionKeyStorage = _userSessions[_account];
     }
 }

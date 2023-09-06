@@ -20,8 +20,8 @@ import {IModule} from "./IModuleV1.sol";
  * @dev This contract is the base for the Smart Account functionality.
  *         - It provides the functionality to execute both gnosis-style txns and AA (EIP-4337) userOps
  *         - It allows to receive and manage assets.
- *         - It is responsible for managing the modules and fallbacks.
- *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
+ *         - It is responsible for managing the _modules and fallbacks.
+ *         - The Smart Account can be extended with _modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
 contract SmartAccountV1 is
@@ -80,22 +80,6 @@ contract SmartAccountV1 is
         uint256 indexed value
     );
 
-    /**
-     * @dev Constructor that sets the owner of the contract and the entry point contract.
-     * @param anEntryPoint The address of the entry point contract.
-     */
-    constructor(IEntryPoint anEntryPoint) {
-        _self = address(this);
-        // By setting the owner it is not possible to call init anymore,
-        // so we create an account with fixed non-zero owner.
-        // This is an unusable account, perfect for the singleton
-        owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
-        if (address(anEntryPoint) == address(0))
-            revert EntryPointCannotBeZero();
-        _entryPoint = anEntryPoint;
-        _chainId = block.chainid;
-    }
-
     /// modifiers
     /**
      * @dev Modifier to allow only the owner to call the function.
@@ -116,17 +100,39 @@ contract SmartAccountV1 is
     }
 
     /**
-     * @dev This function allows the owner or entry point to execute certain actions.
-     * If the caller is not authorized, the function will revert with an error message.
-     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     * @dev Constructor that sets the owner of the contract and the entry point contract.
+     * @param anEntryPoint The address of the entry point contract.
      */
-    function _requireFromEntryPointOrOwner() internal view {
-        if (msg.sender != address(entryPoint()) && msg.sender != owner)
-            revert CallerIsNotEntryPointOrOwner(msg.sender);
+    constructor(IEntryPoint anEntryPoint) {
+        _self = address(this);
+        // By setting the owner it is not possible to call init anymore,
+        // so we create an account with fixed non-zero owner.
+        // This is an unusable account, perfect for the singleton
+        owner = address(0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE);
+        if (address(anEntryPoint) == address(0))
+            revert EntryPointCannotBeZero();
+        _entryPoint = anEntryPoint;
+        _chainId = block.chainid;
+    }
+
+    /// Getters
+    /**
+     * @dev Returns the address of the implementation contract associated with this contract.
+     * @notice The implementation address is stored in the contract's storage slot with index 0.
+     */
+    function getImplementation()
+        external
+        view
+        returns (address _implementation)
+    {
+        // solhint-disable-next-line no-inline-assembly
+        assembly {
+            _implementation := sload(address())
+        }
     }
 
     /**
-     * @dev Allows to change the owner of the smart account by current owner or self-call (modules)
+     * @dev Allows to change the owner of the smart account by current owner or self-call (_modules)
      * @param _newOwner Address of the new signatory
      */
     function setOwner(address _newOwner) public mixedAuth {
@@ -158,22 +164,6 @@ contract SmartAccountV1 is
             sstore(address(), _implementation)
         }
         emit ImplementationUpdated(oldImplementation, _implementation);
-    }
-
-    /// Getters
-    /**
-     * @dev Returns the address of the implementation contract associated with this contract.
-     * @notice The implementation address is stored in the contract's storage slot with index 0.
-     */
-    function getImplementation()
-        external
-        view
-        returns (address _implementation)
-    {
-        // solhint-disable-next-line no-inline-assembly
-        assembly {
-            _implementation := sload(address())
-        }
     }
 
     /**
@@ -297,7 +287,7 @@ contract SmartAccountV1 is
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment;
             if (refundInfo.gasPrice != 0) {
-                payment = handlePayment(
+                payment = _handlePayment(
                     startGas - gasleft(),
                     refundInfo.baseGas,
                     refundInfo.gasPrice,
@@ -332,7 +322,7 @@ contract SmartAccountV1 is
      * @param gasToken Token address (or 0 if ETH) that is used for the payment.
      * @return payment The amount of payment made in the specified token.
      */
-    function handlePayment(
+    function _handlePayment(
         uint256 gasUsed,
         uint256 baseGas,
         uint256 gasPrice,
@@ -692,62 +682,6 @@ contract SmartAccountV1 is
     }
 
     /**
-     * @dev internal method that fecilitates the extenral calls from SmartAccount
-     * @dev similar to execute() of Executor.sol
-     * @param target destination address contract/non-contract
-     * @param value amount of native tokens
-     * @param data function singature of destination
-     */
-    function _call(address target, uint256 value, bytes memory data) internal {
-        assembly {
-            let success := call(
-                gas(),
-                target,
-                value,
-                add(data, 0x20),
-                mload(data),
-                0,
-                0
-            )
-            let ptr := mload(0x40)
-            returndatacopy(ptr, 0, returndatasize())
-            if iszero(success) {
-                revert(ptr, returndatasize())
-            }
-        }
-    }
-
-    /**
-     * @dev Implements the template method of BaseAccount and validates the user's signature for a given operation.
-     * @notice This function is marked as internal and virtual, and it overrides the BaseAccount function of the same name.
-     * @param userOp The user operation to be validated, provided as a `UserOperation` calldata struct.
-     * @param userOpHash The hashed version of the user operation, provided as a `bytes32` value.
-     */
-    function _validateSignature(
-        UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal virtual override returns (uint256 validationData) {
-        // below changes need formal verification.
-        bytes calldata userOpData = userOp.callData;
-        if (userOpData.length > 0) {
-            bytes4 methodSig = bytes4(userOpData[:4]);
-            // If method to be called is executeCall then only check for module transaction
-            if (methodSig == this.executeCall.selector) {
-                (address _to, uint _amount, bytes memory _data) = abi.decode(
-                    userOpData[4:],
-                    (address, uint, bytes)
-                );
-                if (address(modules[_to]) != address(0))
-                    return IModule(_to).validateSignature(userOp, userOpHash);
-            }
-        }
-        bytes32 hash = userOpHash.toEthSignedMessageHash();
-        if (owner != hash.recover(userOp.signature))
-            return SIG_VALIDATION_FAILED;
-        return 0;
-    }
-
-    /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
      * @dev If owner is a smart-contract (other smart contract wallet or module, that controls
      *      signature verifications - like multisig), forward isValidSignature request to it.
@@ -820,5 +754,71 @@ contract SmartAccountV1 is
     receive() external payable {
         if (address(this) == _self) revert DelegateCallsOnly();
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
+    }
+
+    /**
+     * @dev This function allows the owner or entry point to execute certain actions.
+     * If the caller is not authorized, the function will revert with an error message.
+     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     */
+    function _requireFromEntryPointOrOwner() internal view {
+        if (msg.sender != address(entryPoint()) && msg.sender != owner)
+            revert CallerIsNotEntryPointOrOwner(msg.sender);
+    }
+
+    /**
+     * @dev internal method that fecilitates the extenral calls from SmartAccount
+     * @dev similar to execute() of Executor.sol
+     * @param target destination address contract/non-contract
+     * @param value amount of native tokens
+     * @param data function singature of destination
+     */
+    function _call(address target, uint256 value, bytes memory data) internal {
+        assembly {
+            let success := call(
+                gas(),
+                target,
+                value,
+                add(data, 0x20),
+                mload(data),
+                0,
+                0
+            )
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
+            }
+        }
+    }
+
+    /**
+     * @dev Implements the template method of BaseAccount and validates the user's signature for a given operation.
+     * @notice This function is marked as internal and virtual, and it overrides the BaseAccount function of the same name.
+     * @param userOp The user operation to be validated, provided as a `UserOperation` calldata struct.
+     * @param userOpHash The hashed version of the user operation, provided as a `bytes32` value.
+     */
+    function _validateSignature(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) internal virtual override returns (uint256 validationData) {
+        // below changes need formal verification.
+        bytes calldata userOpData = userOp.callData;
+        if (userOpData.length > 0) {
+            bytes4 methodSig = bytes4(userOpData[:4]);
+            // If method to be called is executeCall then only check for module transaction
+            if (methodSig == this.executeCall.selector) {
+                (address _to, , ) = abi.decode(
+                    userOpData[4:],
+                    (address, uint, bytes)
+                );
+                if (address(_modules[_to]) != address(0))
+                    return IModule(_to).validateSignature(userOp, userOpHash);
+            }
+        }
+        bytes32 hash = userOpHash.toEthSignedMessageHash();
+        if (owner != hash.recover(userOp.signature))
+            return SIG_VALIDATION_FAILED;
+        return 0;
     }
 }

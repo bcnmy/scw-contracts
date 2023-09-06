@@ -118,6 +118,6 @@ contract PasskeyRegistryModule is BaseAuthorizationModule {
         PassKeyId memory passKey = smartAccountPassKeys[msg.sender];
         if (passKey.pubKeyX == 0 && passKey.pubKeyY == 0)
             revert NoPassKeyRegisteredForSmartAccount(msg.sender);
-        return Secp256r1.Verify(passKey, sigx, sigy, uint256(sigHash));
+        return Secp256r1.verify(passKey, sigx, sigy, uint256(sigHash));
     }
 }

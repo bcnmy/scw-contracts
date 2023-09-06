@@ -139,7 +139,7 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
             // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
             uint256 payment;
             if (refundInfo.gasPrice != 0) {
-                payment = handlePayment(
+                payment = _handlePayment(
                     smartAccount,
                     startGas - gasleft(),
                     refundInfo.baseGas,
@@ -164,7 +164,7 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
      * @param gasToken Token address (or 0 if ETH) that is used for the payment.
      * @return payment The amount of payment made in the specified token.
      */
-    function handlePayment(
+    function _handlePayment(
         address smartAccount,
         uint256 gasUsed,
         uint256 baseGas,

@@ -37,7 +37,7 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
      * @param owner The owner of the Smart Account.
      */
     function initForSmartAccount(address owner) external returns (address) {
-        if (isSmartAccount(owner)) revert NotEOA(owner);
+        if (_isSmartAccount(owner)) revert NotEOA(owner);
         if (smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
         smartAccountOwners[msg.sender] = owner;
@@ -50,7 +50,7 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
      * @param owner The owner of the Smart Account.
      */
     function setOwner(address owner) external {
-        if (isSmartAccount(owner)) revert NotEOA(owner);
+        if (_isSmartAccount(owner)) revert NotEOA(owner);
         smartAccountOwners[msg.sender] = owner;
     }
 
@@ -58,7 +58,7 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
      * @dev Checks if the address provided is a smart contract.
      * @param account Address to be checked.
      */
-    function isSmartAccount(address account) internal view returns (bool) {
+    function _isSmartAccount(address account) internal view returns (bool) {
         uint256 size;
         assembly {
             size := extcodesize(account)

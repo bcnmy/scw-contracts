@@ -74,7 +74,9 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      *
      * solhint-disable-next-line no-empty-blocks
      */
-    function _validateNonce(uint256 _nonce) internal view virtual {}
+    function _validateNonce(uint256 _nonce) internal view virtual {
+        (_nonce);
+    }
 
     /**
      * sends to the entrypoint (msg.sender) the missing funds for this transaction.
