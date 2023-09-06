@@ -200,7 +200,7 @@ export function fillUserOpDefaults(
 export async function fillUserOp(
   op: Partial<UserOperation>,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce",
+  getNonceFunction = "nonce",
   useNonceKey = true,
   nonceKey = 0
 ): Promise<UserOperation> {
@@ -310,7 +310,7 @@ export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce",
+  getNonceFunction = "nonce",
   useNonceKey = true,
   nonceKey = 0,
   extraPreVerificationGas = 0
@@ -362,7 +362,7 @@ export async function makeEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0
@@ -409,7 +409,7 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0
@@ -436,7 +436,7 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0
@@ -481,7 +481,7 @@ export async function makeSARegistryModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0
@@ -532,7 +532,7 @@ export async function makeMultichainEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0

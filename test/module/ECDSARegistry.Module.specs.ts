@@ -201,7 +201,7 @@ describe("ECDSA Registry Module: ", async () => {
         },
         smartAccountOwner, // need to sign by someone at least
         entryPoint,
-        "getNonce",
+        "nonce",
         true
       );
 

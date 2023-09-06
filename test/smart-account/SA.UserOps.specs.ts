@@ -110,7 +110,7 @@ describe("UserOps", async () => {
         },
         smartAccountOwner,
         entryPoint,
-        "getNonce",
+        "nonce",
         true
       );
       // add invalid validator module address to the signature
@@ -153,7 +153,7 @@ describe("UserOps", async () => {
         },
         smartAccountOwner,
         entryPoint,
-        "getNonce",
+        "nonce",
         true
       );
       // add sentinel module address to the signature
@@ -195,7 +195,7 @@ describe("UserOps", async () => {
         },
         smartAccountOwner,
         entryPoint,
-        "getNonce",
+        "nonce",
         true
       );
       // add not enabled module address to the signature

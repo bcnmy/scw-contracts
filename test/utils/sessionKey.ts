@@ -43,7 +43,7 @@ export async function makeEcdsaSessionKeySignedUserOp(
     },
     sessionKey,
     entryPoint,
-    "getNonce",
+    "nonce",
     true
   );
 
