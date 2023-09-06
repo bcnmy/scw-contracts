@@ -27,33 +27,52 @@ export const factoryTxHash =
 const factoryDeploymentFee = (0.0247 * 1e18).toString(); // 0.0247
 const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
 
-// // Dev Salts
-// export enum DEPLOYMENT_SALTS {
-//   ENTRY_POINT = "DEVX_ENTRY_POINT_V0_30032023",
-//   WALLET_FACTORY = "DEVX_WALLET_FACTORY_V2_050920203",
-//   WALLET_IMP = "DEVX_WALLET_IMP_V2_05092023",
-//   SINGELTON_PAYMASTER = "DEVX_SINGLETON_PAYMASTER_V1_21082024",
-//   ECDSA_REGISTRY_MODULE = "DEVX_ECDSA_REGISTRY_MODULE_V0_21082023",
-//   MULTICHAIN_VALIDATOR_MODULE = "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_21082023",
-//   PASSKEY_MODULE = "DEVX_PASSKEY_MODULE_V0_21082023",
-//   SESSION_KEY_MANAGER_MODULE = "DEVX_SESSION_KEY_MANAGER_MODULE_V1_05092023",
-//   ERC20_SESSION_VALIDATION_MODULE = "DEVX_ERC20_SESSION_VALIDATION_MODULE_V1_05092023",
-//   SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE = "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_21082023",
-// }
+type DeploymentSaltsType = {
+  ENTRY_POINT: string;
+  WALLET_FACTORY: string;
+  WALLET_IMP: string;
+  SINGELTON_PAYMASTER: string;
+  ECDSA_REGISTRY_MODULE: string;
+  MULTICHAIN_VALIDATOR_MODULE: string;
+  PASSKEY_MODULE: string;
+  SESSION_KEY_MANAGER_MODULE: string;
+  ERC20_SESSION_VALIDATION_MODULE: string;
+  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE: string;
+};
+
+// Dev Salts
+export const DEPLOYMENT_SALTS_DEV: DeploymentSaltsType = {
+  ENTRY_POINT: "DEVX_ENTRY_POINT_V0_30032023",
+  WALLET_FACTORY: "DEVX_WALLET_FACTORY_V2_050920203",
+  WALLET_IMP: "DEVX_WALLET_IMP_V2_05092023",
+  SINGELTON_PAYMASTER: "DEVX_SINGLETON_PAYMASTER_V1_21082024",
+  ECDSA_REGISTRY_MODULE: "DEVX_ECDSA_REGISTRY_MODULE_V0_21082023",
+  MULTICHAIN_VALIDATOR_MODULE: "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_21082023",
+  PASSKEY_MODULE: "DEVX_PASSKEY_MODULE_V0_21082023",
+  SESSION_KEY_MANAGER_MODULE: "DEVX_SESSION_KEY_MANAGER_MODULE_V1_05092023",
+  ERC20_SESSION_VALIDATION_MODULE:
+    "DEVX_ERC20_SESSION_VALIDATION_MODULE_V1_05092023",
+  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE:
+    "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_21082023",
+};
 
 // Prod Salts
-export enum DEPLOYMENT_SALTS {
-  ENTRY_POINT = "DEVX_ENTRY_POINT_V0_30032023",
-  WALLET_FACTORY = "PROD_WALLET_FACTORY_V2_0509023SexZu7Y",
-  WALLET_IMP = "PROD_WALLET_IMP_V2_05092023_ixWZVOM",
-  SINGELTON_PAYMASTER = "PROD_SINGLETON_PAYMASTER_V1_22082023N4hlwuH",
-  ECDSA_REGISTRY_MODULE = "PROD_ECDSA_REGISTRY_MODULE_V1_22082023_ypI3tHh",
-  MULTICHAIN_VALIDATOR_MODULE = "PROD_MULTICHAIN_VALIDATOR_MODULE_V1_22082023_vdQZbfh",
-  PASSKEY_MODULE = "PROD_PASSKEY_MODULE_V1_22082023_n0nz9WE",
-  SESSION_KEY_MANAGER_MODULE = "PROD_SESSION_KEY_MANAGER_MODULE_V2_05092023_N2WXNDk",
-  ERC20_SESSION_VALIDATION_MODULE = "PROD_ERC20_SESSION_VALIDATION_MODULE_V2_05092023NdquNFM",
-  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE = "PROD_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V1_22082023_6X7yarN",
-}
+export const DEPLOYMENT_SALTS_PROD: DeploymentSaltsType = {
+  ENTRY_POINT: "DEVX_ENTRY_POINT_V0_30032023",
+  WALLET_FACTORY: "PROD_WALLET_FACTORY_V2_0509023SexZu7Y",
+  WALLET_IMP: "PROD_WALLET_IMP_V2_05092023_ixWZVOM",
+  SINGELTON_PAYMASTER: "PROD_SINGLETON_PAYMASTER_V1_22082023N4hlwuH",
+  ECDSA_REGISTRY_MODULE: "PROD_ECDSA_REGISTRY_MODULE_V1_22082023_ypI3tHh",
+  MULTICHAIN_VALIDATOR_MODULE:
+    "PROD_MULTICHAIN_VALIDATOR_MODULE_V1_22082023_vdQZbfh",
+  PASSKEY_MODULE: "PROD_PASSKEY_MODULE_V1_22082023_n0nz9WE",
+  SESSION_KEY_MANAGER_MODULE:
+    "PROD_SESSION_KEY_MANAGER_MODULE_V2_05092023_N2WXNDk",
+  ERC20_SESSION_VALIDATION_MODULE:
+    "PROD_ERC20_SESSION_VALIDATION_MODULE_V2_05092023NdquNFM",
+  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE:
+    "PROD_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V1_22082023_6X7yarN",
+};
 
 export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   number,
@@ -109,12 +128,110 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   5000: { gasPrice: parseUnits("0.05", "gwei") },
 };
 
-type StakingConfig = {
+export type StakingConfig = {
   unstakeDelayInSec: number;
   stakeInWei: BigNumber;
 };
 
 export const factoryStakeConfig: Record<number, StakingConfig> = {
+  // Testnets
+  80001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  97: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  5: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  421613: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  420: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  43113: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  1442: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  59140: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  84531: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  5611: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  91715: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  5001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+
+  // Mainnets
+  137: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("173"), // 1 MATIC = $0.5788
+  },
+  56: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.46"), // 1 BNB = $217.43
+  },
+  1: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  42161: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  10: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  43114: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("9.337"), // 1 AVAX = $10.71
+  },
+  1101: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  59144: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  8453: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  204: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.46"), // 1 BNB = $217.43
+  },
+  5000: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("226"), // 1 MNT = $0.444
+  },
+};
+
+export const paymasterStakeConfig: Record<number, StakingConfig> = {
   // Testnets
   80001: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day

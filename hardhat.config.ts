@@ -61,12 +61,11 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       ...(shouldRunInForkMode
-        ? // Normal Config
-          {
+        ? {
             // Forking Config for Deployment Testing
-            chainId: 10,
+            chainId: 421613,
             forking: {
-              url: "https://mainnet.optimism.io",
+              url: "https://goerli-rollup.arbitrum.io/rpc",
             },
             accounts: [
               {
@@ -78,6 +77,7 @@ const config: HardhatUserConfig = {
             ],
           }
         : {
+            // Normal Config
             accounts: {
               accountsBalance: "10000000000000000000000000",
               //   mnemonic: MNEMONIC,
