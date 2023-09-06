@@ -69,19 +69,87 @@ describe("Smart Account Factory", async () => {
   });
 
   describe("Stakeable", async () => {
-    it ("can add stake to the EP", async () => {
-      const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
-      const stakeAmount = ethers.utils.parseEther("1.234256");
-      await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });
-      const depositInfo = await entryPoint.getDepositInfo(smartAccountFactory.address);
-      expect(depositInfo.stake).to.equal(stakeAmount);
+
+    describe("addStake(): ", async()=>{
+      it ("can add stake to the EP", async () => {
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });
+        const depositInfo = await entryPoint.getDepositInfo(smartAccountFactory.address);
+        expect(depositInfo.stake).to.equal(stakeAmount);
+      });
+
+      it("reverts when unstake delay is not specified", async()=>{
+
+      });
+
+      it("reverts when trying to decrease unstake time", async()=>{
+
+      });
+
+      it("reverts when stake value not specified", async()=>{
+
+      });
+
+      it("reverts when typecasted stake overflows", async()=>{
+
+      });
+
     });
 
-    // can unlock
+    describe("unlockStake(): ", async()=>{
+      // positive cases
+      it ("can unlock stake", async() =>{
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        // staking first
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });
+        // unstake
+        const tx = await smartAccountFactory.unlockStake(entryPoint.address);
+        await expect(tx).to.emit(entryPoint,"StakeUnlocked");
+      });
 
-    // can withdraw
+      // positive cases
+      it("reverts when amount is not staked yet", async()=>{
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        // calling unstake() without staking first
+        await expect(smartAccountFactory.unlockStake(entryPoint.address)).to.be.revertedWith("not staked");       
+      });
 
-    // not owner cannot add, unlock, withdraw
+      it("reverts when amount is already unstaked", async()=>{
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        // staking first
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });
+        // unstake()
+        await smartAccountFactory.unlockStake(entryPoint.address);
+        // calling unstake() again
+        await expect(smartAccountFactory.unlockStake(entryPoint.address)).to.be.revertedWith("already unstaking");         
+      });
+    });
+
+    describe("withdrawStake(): ", async()=>{
+      it("can withdraw Stake", async()=>{
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        const prevBalance = alice.getBalance;  
+
+        // staking first
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });
+      });
+
+      it("reverts on empty stake withdraw", async()=>{
+
+      });
+
+      it("reverts when not calling unlockWithdraw() first", async()=>{
+
+      });
+
+      it("reverts when calling before stake withdrawal", async()=>{
+
+      });
+    });
 
   });
 
