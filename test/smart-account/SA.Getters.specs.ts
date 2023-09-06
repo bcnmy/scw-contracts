@@ -11,50 +11,55 @@ import {
 } from "../utils/setupHelper";
 
 describe("Smart Account Getters", async () => {
-  const [deployer, smartAccountOwner, verifiedSigner] =
+  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] =
     waffle.provider.getWallets();
 
-  const setupTests = deployments.createFixture(async ({ deployments }) => {
-    await deployments.fixture();
+  const setupTests = deployments.createFixture(
+    async ({ deployments, getNamedAccounts }) => {
+      await deployments.fixture();
 
-    const mockToken = await getMockToken();
+      const mockToken = await getMockToken();
 
-    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
-    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
-      "EcdsaOwnershipRegistryModule"
-    );
-
-    const ecdsaOwnershipSetupData =
-      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-        "initForSmartAccount",
-        [await smartAccountOwner.getAddress()]
+      const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+        "EcdsaOwnershipRegistryModule"
       );
 
-    const smartAccountDeploymentIndex = 0;
+      const ecdsaOwnershipSetupData =
+        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [await smartAccountOwner.getAddress()]
+        );
 
-    const userSA = await getSmartAccountWithModule(
-      ecdsaModule.address,
-      ecdsaOwnershipSetupData,
-      smartAccountDeploymentIndex
-    );
+      const smartAccountDeploymentIndex = 0;
 
-    await deployer.sendTransaction({
-      to: userSA.address,
-      value: ethers.utils.parseEther("10"),
-    });
+      const userSA = await getSmartAccountWithModule(
+        ecdsaModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex
+      );
 
-    await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
+      await deployer.sendTransaction({
+        to: userSA.address,
+        value: ethers.utils.parseEther("10"),
+      });
 
-    return {
-      entryPoint: await getEntryPoint(),
-      smartAccountImplementation: await getSmartAccountImplementation(),
-      smartAccountFactory: await getSmartAccountFactory(),
-      mockToken: mockToken,
-      ecdsaModule: ecdsaModule,
-      userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
-    };
-  });
+      await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
+
+      return {
+        entryPoint: await getEntryPoint(),
+        smartAccountImplementation: await getSmartAccountImplementation(),
+        smartAccountFactory: await getSmartAccountFactory(),
+        mockToken: mockToken,
+        ecdsaModule: ecdsaModule,
+        userSA: userSA,
+        verifyingPaymaster: await getVerifyingPaymaster(
+          deployer,
+          verifiedSigner
+        ),
+      };
+    }
+  );
 
   it("getDeposit returns correct EntryPoint deposit", async () => {
     const { userSA } = await setupTests();
@@ -71,7 +76,7 @@ describe("Smart Account Getters", async () => {
 
   it("nonce returns correct nonce", async () => {
     const { userSA, entryPoint } = await setupTests();
-    expect(await userSA.nonce()).to.equal(
+    expect(await userSA.nonce(0)).to.equal(
       await entryPoint.getNonce(userSA.address, 0)
     );
   });

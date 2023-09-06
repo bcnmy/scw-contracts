@@ -43,7 +43,8 @@ export async function makeEcdsaSessionKeySignedUserOp(
     },
     sessionKey,
     entryPoint,
-    "nonce"
+    "nonce",
+    true
   );
 
   const paddedSig = defaultAbiCoder.encode(

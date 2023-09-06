@@ -9,7 +9,12 @@ import {
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
 import { ethers } from "hardhat";
-import { AddressZero, callDataCost, rethrow } from "../utils/testUtils";
+import {
+  AddressZero,
+  callDataCost,
+  HashZero,
+  rethrow,
+} from "../utils/testUtils";
 import {
   ecsign,
   toRpcSig,
@@ -195,7 +200,9 @@ export function fillUserOpDefaults(
 export async function fillUserOp(
   op: Partial<UserOperation>,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce"
+  getNonceFunction = "nonce",
+  useNonceKey = true,
+  nonceKey = 0
 ): Promise<UserOperation> {
   const op1 = { ...op };
   const provider = entryPoint?.provider;
@@ -240,12 +247,23 @@ export async function fillUserOp(
   if (op1.nonce == null) {
     if (provider == null)
       throw new Error("must have entryPoint to autofill nonce");
-    const c = new Contract(
-      op.sender!,
-      [`function ${getNonceFunction}() view returns(uint256)`],
-      provider
-    );
-    op1.nonce = await c[getNonceFunction]().catch(rethrow());
+    // Review/TODO: if someone passes 'nonce' as nonceFunction. or change the default
+
+    if (useNonceKey) {
+      const c = new Contract(
+        op.sender!,
+        [`function nonce(uint192) view returns(uint256)`],
+        provider
+      );
+      op1.nonce = await c.nonce(nonceKey).catch(rethrow());
+    } else {
+      const c = new Contract(
+        op.sender!,
+        [`function ${getNonceFunction}() view returns(uint256)`],
+        provider
+      );
+      op1.nonce = await c[getNonceFunction]().catch(rethrow());
+    }
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
@@ -292,11 +310,19 @@ export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce",
+  getNonceFunction = "nonce",
+  useNonceKey = true,
+  nonceKey = 0,
   extraPreVerificationGas = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
-  const op2 = await fillUserOp(op, entryPoint, getNonceFunction);
+  const op2 = await fillUserOp(
+    op,
+    entryPoint,
+    getNonceFunction,
+    useNonceKey,
+    nonceKey
+  );
   op2.preVerificationGas =
     Number(op2.preVerificationGas) + extraPreVerificationGas;
 
@@ -318,7 +344,8 @@ export async function makeEcdsaModuleUserOp(
   moduleAddress: string,
   options?: {
     preVerificationGas?: number;
-  }
+  },
+  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -335,7 +362,10 @@ export async function makeEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
   // add validator module address to the signature
@@ -361,7 +391,8 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   validAfter: number,
   options?: {
     preVerificationGas?: number;
-  }
+  },
+  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -378,7 +409,10 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
   const hash = await paymaster.getHash(
@@ -402,7 +436,10 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
   // add validator module address to the signature
@@ -426,7 +463,8 @@ export async function makeSARegistryModuleUserOp(
   ecdsaModuleAddress: string,
   options?: {
     preVerificationGas?: number;
-  }
+  },
+  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -443,7 +481,10 @@ export async function makeSARegistryModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
   const signatureForSAOwnershipRegistry = ethers.utils.defaultAbiCoder.encode(
@@ -473,7 +514,8 @@ export async function makeMultichainEcdsaModuleUserOp(
     preVerificationGas?: number;
   },
   validUntil = 0,
-  validAfter = 0
+  validAfter = 0,
+  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -490,7 +532,10 @@ export async function makeMultichainEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "nonce"
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
   const leafOfThisUserOp = hexConcat([

@@ -181,7 +181,8 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless) (with Bundler)", async () =
       },
       smartAccountOwner,
       entryPoint,
-      "nonce"
+      "nonce",
+      false
     );
 
     await environment.sendUserOperation(userOp, entryPoint.address);
@@ -222,7 +223,8 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless) (with Bundler)", async () =
       },
       smartAccountOwner,
       entryPoint,
-      "nonce"
+      "nonce",
+      false
     );
 
     await environment.sendUserOperation(userOp, entryPoint.address);

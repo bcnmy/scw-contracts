@@ -167,7 +167,10 @@ describe("MultichainValidator Module", async () => {
       },
       smartAccountOwner,
       entryPoint,
-      "nonce"
+      "nonce",
+      true,
+      0,
+      0
     );
 
     // =============== make a multichain signature for a userOp ===============
