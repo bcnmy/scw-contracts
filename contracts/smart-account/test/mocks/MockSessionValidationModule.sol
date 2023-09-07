@@ -25,7 +25,7 @@ contract MockSessionValidationModule is ISessionValidationModule {
         bytes calldata sessionKeyData,
         bytes calldata callSpecificData
     ) external pure override returns(address) {
-        //always validates
-        return address(0);
+        address sessionKey = address(bytes20(sessionKeyData[0:20]));
+        return sessionKey;
     }
 }
