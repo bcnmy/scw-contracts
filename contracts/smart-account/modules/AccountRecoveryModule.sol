@@ -349,7 +349,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         return _smartAccountSettings[smartAccount];
     }
 
-    function getRecoverRequest(
+    function getRecoveryRequest(
         address smartAccount
     ) external view returns (recoveryRequest memory) {
         return _smartAccountRequests[smartAccount];

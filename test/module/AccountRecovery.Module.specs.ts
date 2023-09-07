@@ -154,7 +154,7 @@ describe("Account Recovery Module: ", async () => {
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000});
     await handleOpsTxn.wait();
 
-    const recoveryRequest = await accountRecoveryModule.getRecoverRequest(userSA.address);
+    const recoveryRequest = await accountRecoveryModule.getRecoveryRequest(userSA.address);
     expect(recoveryRequest.callDataHash).to.equal(ethers.utils.keccak256(recoveryRequestCallData));
     expect(await ecdsaModule.getOwner(userSA.address)).to.equal(smartAccountOwner.address);
 
@@ -262,7 +262,10 @@ describe("Account Recovery Module: ", async () => {
     it ("Should revert if guardians are not unique", async () => {
 
     });
-    
+
+    it ("Events are emitted properly", async () => {
+
+    });
 
   });
 
@@ -314,11 +317,26 @@ describe("Account Recovery Module: ", async () => {
       expect(guardiansAfter).to.equal(guardiansBefore + 1);
     });
 
-    it ("Should revert if at least one signature is invalid", async () => {
+    it ("_________", async () => {
 
     });
 
-    
+  });
+
+  describe ("changeGuardian", async () => {
+
+    it ("_________", async () => {
+
+    });
+
+  });
+
+  describe ("removeGuardian", async () => {
+
+    it ("_________", async () => {
+
+    });
+
   });
 
 });
