@@ -14,7 +14,7 @@ import {
 import { makeEcdsaModuleUserOp, makeMultiSignedUserOp, makeUnsignedUserOp } from "../utils/userOp";
 
 
-describe("Social Recovery Module: ", async () => {
+describe("Account Recovery Module: ", async () => {
 
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner, eve, fox, newOwner] = waffle.provider.getWallets();
 
@@ -43,11 +43,11 @@ describe("Social Recovery Module: ", async () => {
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
     // deploy Social Recovery Module
-    const socialRecoveryModule = await (await ethers.getContractFactory("SocialRecoveryModule")).deploy();
+    const accountRecoveryModule = await (await ethers.getContractFactory("AccountRecoveryModule")).deploy();
     
     const defaultSecurityDelay = 150;
     // enable and setup Social Recovery Module
-    let socialRecoverySetupData = socialRecoveryModule.interface.encodeFunctionData(
+    let socialRecoverySetupData = accountRecoveryModule.interface.encodeFunctionData(
       "initForSmartAccount",
       [
         [keccak256(alice.address), keccak256(bob.address), keccak256(charlie.address)],
@@ -60,7 +60,7 @@ describe("Social Recovery Module: ", async () => {
     const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
       "setupAndEnableModule",
       [
-        socialRecoveryModule.address,
+        accountRecoveryModule.address,
         socialRecoverySetupData
       ],
       userSA.address,
@@ -76,7 +76,7 @@ describe("Social Recovery Module: ", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      socialRecoveryModule: socialRecoveryModule,
+      accountRecoveryModule: accountRecoveryModule,
       verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       defaultSecurityDelay: defaultSecurityDelay,
     };
@@ -85,10 +85,10 @@ describe("Social Recovery Module: ", async () => {
   /**  
    * The delayed Social Recovery flow is the following:
    * 1. The recovery request with a proper number of signatures is submitted via 
-   * the userOp that calls the socialRecoveryModule.submitRecoveryRequest() function using the 
+   * the userOp that calls the accountRecoveryModule.submitRecoveryRequest() function using the 
    * executeCall() function of the userSA.
    * At this step social recovery module is used for both validation (check signatures) and 
-   * execution (SA.executeCall => SocialRecoveryModule.submitRecoveryRequest).
+   * execution (SA.executeCall => AccountRecoveryModule.submitRecoveryRequest).
    * 2. After the delay has passed, the recovery request can be executed by anyone via the
    * userOp that calls the validationModule.chavalidationModul method.
    * At this step, Social Recovery Module is only used for validation: check if the request 
@@ -103,12 +103,12 @@ describe("Social Recovery Module: ", async () => {
       entryPoint, 
       mockToken,
       userSA,
-      socialRecoveryModule,
+      accountRecoveryModule,
       ecdsaModule, 
       defaultSecurityDelay
     } = await setupTests();
 
-    console.log("social recovery module address: ", socialRecoveryModule.address);
+    console.log("social recovery module address: ", accountRecoveryModule.address);
     console.log("alice address: %s hash: %s", alice.address, keccak256(alice.address));
     console.log("bob address: %s hash: %s", bob.address, keccak256(bob.address));
     console.log("charlie address: %s hash1: %s", charlie.address, keccak256(charlie.address));
@@ -119,7 +119,7 @@ describe("Social Recovery Module: ", async () => {
     let arrayOfSigners = [alice, bob, charlie];
     arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
 
-    expect(await userSA.isModuleEnabled(socialRecoveryModule.address)).to.equal(true);
+    expect(await userSA.isModuleEnabled(accountRecoveryModule.address)).to.equal(true);
 
     const recoveryRequestCallData = userSA.interface.encodeFunctionData(
       "executeCall",
@@ -136,9 +136,9 @@ describe("Social Recovery Module: ", async () => {
     const userOp = await makeMultiSignedUserOp(
       "executeCall",
       [
-        socialRecoveryModule.address,
+        accountRecoveryModule.address,
         ethers.utils.parseEther("0"),
-        socialRecoveryModule.interface.encodeFunctionData(
+        accountRecoveryModule.interface.encodeFunctionData(
           "submitRecoveryRequest",
           [
             recoveryRequestCallData
@@ -148,13 +148,13 @@ describe("Social Recovery Module: ", async () => {
       userSA.address,
       [charlie, alice, bob], // order is important
       entryPoint,
-      socialRecoveryModule.address
+      accountRecoveryModule.address
     );
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000});
     await handleOpsTxn.wait();
 
-    const recoveryRequest = await socialRecoveryModule.getRecoverRequest(userSA.address);
+    const recoveryRequest = await accountRecoveryModule.getRecoverRequest(userSA.address);
     expect(recoveryRequest.callDataHash).to.equal(ethers.utils.keccak256(recoveryRequestCallData));
     expect(await ecdsaModule.getOwner(userSA.address)).to.equal(smartAccountOwner.address);
 
@@ -171,7 +171,7 @@ describe("Social Recovery Module: ", async () => {
       ],
       userSA.address,
       entryPoint,
-      socialRecoveryModule.address
+      accountRecoveryModule.address
     );
     await expect(
       entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {gasLimit: 10000000})
@@ -273,14 +273,14 @@ describe("Social Recovery Module: ", async () => {
       const { 
         entryPoint, 
         userSA,
-        socialRecoveryModule,
+        accountRecoveryModule,
         ecdsaModule
       } = await setupTests();
 
       const newGuardian = ethers.utils.keccak256(eve.address);
-      const guardiansBefore = (await socialRecoveryModule.getSmartAccountSettings(userSA.address)).guardiansCount;
+      const guardiansBefore = (await accountRecoveryModule.getSmartAccountSettings(userSA.address)).guardiansCount;
 
-      const addGuardianData = socialRecoveryModule.interface.encodeFunctionData(
+      const addGuardianData = accountRecoveryModule.interface.encodeFunctionData(
         "addGuardian",
         [
           newGuardian,
@@ -292,7 +292,7 @@ describe("Social Recovery Module: ", async () => {
       const addGuardianUserOp = await makeEcdsaModuleUserOp(
         "executeCall",
         [
-          socialRecoveryModule.address,
+          accountRecoveryModule.address,
           ethers.utils.parseEther("0"),
           addGuardianData,
         ],
@@ -305,10 +305,10 @@ describe("Social Recovery Module: ", async () => {
       const receipt = await handleOpsTxn.wait();
       const receiptTimestamp = (await ethers.provider.getBlock(receipt.blockNumber)).timestamp;
 
-      const userSASettings = await socialRecoveryModule.getSmartAccountSettings(userSA.address);
+      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(userSA.address);
       const guardiansAfter = userSASettings.guardiansCount;
 
-      const eveTimeFrame = await socialRecoveryModule.getGuardianDetails(newGuardian, userSA.address);
+      const eveTimeFrame = await accountRecoveryModule.getGuardianDetails(newGuardian, userSA.address);
       expect(eveTimeFrame.validUntil).to.equal(16741936496);
       expect(eveTimeFrame.validAfter).to.equal(receiptTimestamp + userSASettings.securityDelay);
       expect(guardiansAfter).to.equal(guardiansBefore + 1);

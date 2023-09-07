@@ -4,10 +4,8 @@ pragma solidity 0.8.17;
 import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import "hardhat/console.sol";
-
 /**
- * @title Social Recovery module for Biconomy Smart Accounts.
+ * @title Account Recovery module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
  *         - It allows to _______________
  *         - ECDSA guardians only
@@ -18,8 +16,8 @@ import "hardhat/console.sol";
  * based on https://vitalik.ca/general/2021/01/11/recovery.html by Vitalik Buterin
  */
 
-contract SocialRecoveryModule is BaseAuthorizationModule {
-    string public constant NAME = "Social Recovery Module";
+contract AccountRecoveryModule is BaseAuthorizationModule {
+    string public constant NAME = "Account Recovery Module";
     string public constant VERSION = "0.1.0";
 
     // TODO
@@ -122,7 +120,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         return address(this);
     }
 
-    // recoveryCallData is something like executeCall(module, 0, encode(transferOwnership(newOwner)))
+    // recoveryCallData is something like execute(module, 0, encode(transferOwnership(newOwner)))
     function submitRecoveryRequest(bytes calldata recoveryCallData) public {
         _smartAccountRequests[msg.sender] = recoveryRequest(
             keccak256(recoveryCallData),
@@ -228,7 +226,7 @@ contract SocialRecoveryModule is BaseAuthorizationModule {
         // anything except adding a new request to this module is allowed only if securityDelay is 0
         // which means user explicitly allowed to execute an operation immediately
         // userOp.callData expected to be the calldata of the default execution function
-        // in this case executeCall(address dest, uint256 value, bytes calldata data);
+        // in this case execute(address dest, uint256 value, bytes calldata data);
         // where `data` is the submitRecoveryRequest() method calldata
         (address dest, uint256 callValue, bytes memory innerCallData) = abi
             .decode(
