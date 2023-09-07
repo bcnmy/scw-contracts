@@ -44,9 +44,9 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
         bytes32 userOpHash
     ) external virtual returns (uint256) {
         // check this is a proper method call
+        bytes4 selector = bytes4(userOp.callData[0:4]);
         require(
-            bytes4(userOp.callData[0:4]) == EXECUTE_BATCH_OPTIMIZED_SELECTOR ||
-                bytes4(userOp.callData[0:4]) == EXECUTE_BATCH_SELECTOR,
+            selector == EXECUTE_BATCH_OPTIMIZED_SELECTOR || selector == EXECUTE_BATCH_SELECTOR,
             "SR Invalid Selector"
         );
 
@@ -109,7 +109,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
             // compare if userOp was signed with the proper session key
             if (recovered != sessionKey) return SIG_VALIDATION_FAILED;
 
-            //intersect validUntils and validAfters
+            // intersect validUntils and validAfters
             if (
                 sessionData[i].validUntil != 0 &&
                 sessionData[i].validUntil < earliestValidUntil
