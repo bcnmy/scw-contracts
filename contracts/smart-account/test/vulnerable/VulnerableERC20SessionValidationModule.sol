@@ -72,4 +72,15 @@ contract VulnerableERC20SessionValidationModule is ISessionValidationModule {
                 _sessionKeySignature
             ) == sessionKey;
     }
+
+    function validateSessionParams(
+        address,
+        uint256 callValue,
+        bytes calldata,
+        bytes calldata,
+        bytes calldata
+    ) external pure override returns (address){
+        callValue;
+        return address(0);
+    }
 }
