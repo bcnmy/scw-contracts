@@ -293,7 +293,7 @@ async function deployPasskeyModule(deployerInstance: Deployer) {
 async function deploySessionKeyManagerModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
-    DEPLOYMENT_SALTS.SESSION_KEY_MANAGER_MODULE,
+    DEPLOYMENT_SALTS.SESSION_KEY_MANAGER_MODULE_V2,
     `${SessionKeyManager__factory.bytecode}`,
     "SessionKeyManagerModule",
     []

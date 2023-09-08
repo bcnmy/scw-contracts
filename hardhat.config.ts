@@ -63,9 +63,9 @@ const config: HardhatUserConfig = {
       ...(shouldRunInForkMode
         ? {
             // Forking Config for Deployment Testing
-            chainId: 421613,
+            chainId: 80001,
             forking: {
-              url: "https://goerli-rollup.arbitrum.io/rpc",
+              url: process.env.POLYGON_MUMBAI_URL!,
             },
             accounts: [
               {
