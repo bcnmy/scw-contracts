@@ -160,7 +160,7 @@ describe("MultichainValidator Module", async () => {
       },
       smartAccountOwner,
       entryPoint,
-      "getNonce",
+      "nonce",
       true
     );
 
@@ -452,7 +452,7 @@ describe("MultichainValidator Module", async () => {
         },
         smartAccountOwner,
         entryPoint,
-        "getNonce",
+        "nonce",
         true
       );
 
@@ -546,7 +546,7 @@ describe("MultichainValidator Module", async () => {
         },
         smartAccountOwner,
         entryPoint,
-        "getNonce",
+        "nonce",
         true
       );
 

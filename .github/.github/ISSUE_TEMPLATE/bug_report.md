@@ -1,22 +1,31 @@
----
-name: Bug Report
-about: Report a bug to help us improve
-title: ""
-labels: bug, needs-review
-assignees: ""
----
+## SDK Version
 
-Thank you for reporting this bug. Please provide as much detail as you can.
+<!-- Please specify the version of the SDK you are using. -->
 
-### Required Environment Info
+## Description
+<!-- Briefly describe the bug you are facing. -->
 
-- Browser Version:
-- SDK Version:
-- Package:
+## Steps to Reproduce
 
-### Required Problem Description
+1. 
+2. 
+3. 
+<!-- Add any other context or screenshots about the feature request here. -->
 
-#### Steps to Reproduce:
+## Expected Behavior
+<!-- Describe what you expected to happen. -->
 
-#### Code or Error Messages:
+## Actual Behavior
+<!-- Describe what actually happened. Include any error tracebacks if possible. -->
 
+## Possible Fix (optional)
+<!-- If you have an idea on how to fix this, please share! -->
+
+## Environment Details
+
+- **Browser Version**:
+- **Node.js Version**:
+- **NPM/Yarn Version**:
+
+## Additional Context
+<!-- Add any other details or context about the bug here. -->

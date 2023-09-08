@@ -109,6 +109,8 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
   );
 
   it("Can send an ERC20 Transfer and native transfer userOps using 2D nonce", async () => {
+    const userOp1NonceKey = 5; // Nonce keys are used for 2D nonces and otherwise 0
+    const userOp2NonceKey = 10; // Nonce keys are used for 2D nonces and otherwise 0
     const { entryPoint, mockToken, userSA, ecdsaModule } = await setupTests();
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(
@@ -130,7 +132,7 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
       {
         preVerificationGas: 50000,
       },
-      5 // nonceKey
+      userOp1NonceKey
     );
     console.log("userOp1.nonce", userOp1.nonce.toString());
 
@@ -147,7 +149,7 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
       {
         preVerificationGas: 50000,
       },
-      10 // nonceKey
+      userOp2NonceKey
     );
     console.log("userOp2.nonce", userOp1.nonce.toString());
 

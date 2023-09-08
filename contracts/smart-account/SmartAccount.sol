@@ -36,12 +36,12 @@ contract SmartAccount is
     string public constant VERSION = "2.0.0";
 
     // Owner storage. Deprecated. Left for storage layout compatibility
-    address public owner_deprecated;
+    address public ownerDeprecated;
 
     // changed to 2D nonce below
     // @notice there is no _nonce
     // Deprecated. Left for storage layout compatibility
-    mapping(uint256 => uint256) public nonces_deprecated;
+    mapping(uint256 => uint256) public noncesDeprecated;
 
     // AA immutable storage
     IEntryPoint private immutable _entryPoint;
@@ -139,8 +139,8 @@ contract SmartAccount is
     /**
      * @dev Initialize the Smart Account with required states
      * @param handler Default fallback handler provided in Smart Account
-     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts
+     * @param moduleSetupContract Contract, that setups initial auth module for this smart account.
+     * It can be a module factory or a registry module that serves several smart accounts
      * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
      * @notice devs need to make sure it is only callable once by initializer or state check restrictions
      * @notice any further implementations that introduces a new state must have a reinit method

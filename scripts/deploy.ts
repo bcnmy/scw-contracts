@@ -10,6 +10,7 @@ import {
   paymasterStakeConfig,
 } from "./utils";
 import {
+  BatchedSessionRouter__factory,
   Deployer,
   Deployer__factory,
   ERC20SessionValidationModule__factory,
@@ -299,6 +300,16 @@ async function deploySessionKeyManagerModule(deployerInstance: Deployer) {
   );
 }
 
+async function deployBatchedSessionRouterModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.BATCHED_SESSION_ROUTER_MODULE,
+    `${BatchedSessionRouter__factory.bytecode}`,
+    "BatchedSessionRouterModule",
+    []
+  );
+}
+
 async function deployErc20SessionValidationModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
@@ -400,6 +411,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   await deployPasskeyModule(deployerInstance);
   console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
+  console.log("=========================================");
+  await deployBatchedSessionRouterModule(deployerInstance);
   console.log("=========================================");
   await deployErc20SessionValidationModule(deployerInstance);
   console.log("=========================================");

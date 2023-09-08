@@ -135,7 +135,7 @@ export const DefaultsForUserOp: UserOperation = {
   initCode: "0x",
   callData: "0x",
   callGasLimit: 0,
-  verificationGasLimit: 150000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
+  verificationGasLimit: 250000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
   preVerificationGas: 21000, // should also cover calldata cost.
   maxFeePerGas: 0,
   maxPriorityFeePerGas: 1e9,
@@ -200,7 +200,7 @@ export function fillUserOpDefaults(
 export async function fillUserOp(
   op: Partial<UserOperation>,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce",
+  getNonceFunction = "nonce",
   useNonceKey = true,
   nonceKey = 0
 ): Promise<UserOperation> {
@@ -310,7 +310,7 @@ export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce",
+  getNonceFunction = "nonce",
   useNonceKey = true,
   nonceKey = 0,
   extraPreVerificationGas = 0
@@ -362,7 +362,7 @@ export async function makeEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0
@@ -409,7 +409,7 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0
@@ -436,7 +436,7 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0
@@ -481,7 +481,7 @@ export async function makeSARegistryModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0
@@ -532,7 +532,7 @@ export async function makeMultichainEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    "getNonce",
+    "nonce",
     true,
     nonceKey,
     0

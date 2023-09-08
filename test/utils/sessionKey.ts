@@ -12,6 +12,69 @@ export interface SessionKeyParams {
   leafData: string;
 }
 
+export async function makeEcdsaSessionKeySignedBatchUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  sessionKey: Signer,
+  entryPoint: EntryPoint,
+  sessionKeyManagerAddress: string,
+  sessionData: any[],
+  sessionRouterAddress: string,
+  options?: {
+    preVerificationGas?: number;
+  }
+): Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      ...options,
+    },
+    sessionKey,
+    entryPoint,
+    "nonce"
+  );
+
+  const userOpHash = await entryPoint.getUserOpHash(userOp);
+  const userOpHashAndModuleAddress = ethers.utils.hexConcat([
+    ethers.utils.hexZeroPad(userOpHash, 32),
+    ethers.utils.hexZeroPad(sessionKeyManagerAddress, 20),
+  ]);
+  const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
+  const signatureOverUserOpHashAndModuleAddress = await sessionKey.signMessage(
+    ethers.utils.arrayify(resultingHash)
+  );
+
+  const paddedSig = defaultAbiCoder.encode(
+    [
+      "address",
+      "tuple(uint48,uint48,address,bytes,bytes32[],bytes)[]",
+      "bytes",
+    ],
+    [
+      sessionKeyManagerAddress,
+      sessionData,
+      signatureOverUserOpHashAndModuleAddress,
+    ]
+  );
+
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [paddedSig, sessionRouterAddress]
+  );
+  userOp.signature = signatureWithModuleAddress;
+
+  return userOp;
+}
+
 export async function makeEcdsaSessionKeySignedUserOp(
   functionName: string,
   functionParams: any,
@@ -43,7 +106,7 @@ export async function makeEcdsaSessionKeySignedUserOp(
     },
     sessionKey,
     entryPoint,
-    "getNonce",
+    "nonce",
     true
   );
 
@@ -78,7 +141,7 @@ export async function enableNewTreeForSmartAccountViaEcdsa(
   ecdsaModuleAddress: string
 ): Promise<MerkleTree> {
   const merkleTree = new MerkleTree(leaves, keccak256, {
-    sortPairs: false,
+    sortPairs: true,
     hashLeaves: false,
   });
   const addMerkleRootUserOp = await makeEcdsaModuleUserOp(
