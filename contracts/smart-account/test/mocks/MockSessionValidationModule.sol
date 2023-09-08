@@ -18,4 +18,15 @@ contract MockSessionValidationModule is ISessionValidationModule {
             ECDSA.recover(ECDSA.toEthSignedMessageHash(_userOpHash), _sig) ==
             sessionKey;
     }
+
+    function validateSessionParams(
+        address destinationContract,
+        uint256 callValue,
+        bytes calldata funcCallData,
+        bytes calldata sessionKeyData,
+        bytes calldata callSpecificData
+    ) external pure override returns (address) {
+        address sessionKey = address(bytes20(sessionKeyData[0:20]));
+        return sessionKey;
+    }
 }

@@ -5,6 +5,7 @@ import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./Bas
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "./SessionValidationModules/ISessionValidationModule.sol";
+import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 
 struct SessionStorage {
     bytes32 merkleRoot;
@@ -22,7 +23,7 @@ struct SessionStorage {
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SessionKeyManager is BaseAuthorizationModule {
+contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
     /**
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
@@ -76,20 +77,15 @@ contract SessionKeyManager is BaseAuthorizationModule {
                 (uint48, uint48, address, bytes, bytes32[], bytes)
             );
 
-        bytes32 leaf = keccak256(
-            abi.encodePacked(
-                validUntil,
-                validAfter,
-                sessionValidationModule,
-                sessionKeyData
-            )
+        validateSessionKey(
+            userOp.sender,
+            validUntil,
+            validAfter,
+            sessionValidationModule,
+            sessionKeyData,
+            merkleProof
         );
 
-        if (
-            !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
-        ) {
-            revert("SessionNotApproved");
-        }
         return
             _packValidationData(
                 //_packValidationData expects true if sig validation has failed, false otherwise
@@ -103,6 +99,44 @@ contract SessionKeyManager is BaseAuthorizationModule {
                 validUntil,
                 validAfter
             );
+    }
+
+    /**
+     * @dev validates that Session Key + parameters are enabled
+     * by being included into the merkle tree
+     * @param smartAccount smartAccount for which session key is being validated
+     * @param validUntil timestamp when the session key expires
+     * @param validAfter timestamp when the session key becomes valid
+     * @param sessionValidationModule address of the Session Validation Module
+     * @param sessionKeyData session parameters (limitations/permissions)
+     * @param merkleProof merkle proof for the leaf which represents this session key + params
+     * @dev if doesn't revert, session key is considered valid
+     */
+
+    function validateSessionKey(
+        address smartAccount,
+        uint48 validUntil,
+        uint48 validAfter,
+        address sessionValidationModule,
+        bytes memory sessionKeyData,
+        bytes32[] memory merkleProof
+    ) public virtual override {
+        SessionStorage storage sessionKeyStorage = _getSessionData(
+            smartAccount
+        );
+        bytes32 leaf = keccak256(
+            abi.encodePacked(
+                validUntil,
+                validAfter,
+                sessionValidationModule,
+                sessionKeyData
+            )
+        );
+        if (
+            !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
+        ) {
+            revert("SessionNotApproved");
+        }
     }
 
     /**
