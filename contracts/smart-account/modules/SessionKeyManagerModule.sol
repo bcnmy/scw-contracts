@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "./SessionValidationModules/ISessionValidationModule.sol";
@@ -31,16 +31,6 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
     mapping(address => SessionStorage) internal _userSessions;
 
     /**
-     * @dev returns the SessionStorage object for a given smartAccount
-     * @param smartAccount Smart Account address
-     */
-    function getSessionKeys(
-        address smartAccount
-    ) external view returns (SessionStorage memory) {
-        return _userSessions[smartAccount];
-    }
-
-    /**
      * @dev sets the merkle root of a tree containing session keys for msg.sender
      * should be called by Smart Account
      * @param _merkleRoot Merkle Root of a tree that contains session keys with their permissions and parameters
@@ -60,7 +50,6 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256) {
-        SessionStorage storage sessionKeyStorage = _getSessionData(msg.sender);
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -99,6 +88,16 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
                 validUntil,
                 validAfter
             );
+    }
+
+    /**
+     * @dev returns the SessionStorage object for a given smartAccount
+     * @param smartAccount Smart Account address
+     */
+    function getSessionKeys(
+        address smartAccount
+    ) external view returns (SessionStorage memory) {
+        return _userSessions[smartAccount];
     }
 
     /**

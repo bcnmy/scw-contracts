@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
 import {ISessionValidationModule} from "./SessionValidationModules/ISessionValidationModule.sol";
 import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -143,6 +143,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
         bytes32 _dataHash,
         bytes memory _signature
     ) public view override returns (bytes4) {
+        (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }
 }

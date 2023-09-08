@@ -142,7 +142,7 @@ contract SmartAccountErrors is BaseSmartAccountErrors, ModuleManagerErrors {
     );
 
     /**
-     * @notice Throws when isValidSignature for the conrtact signature and data hash return differs from EIP1271 Magic Value
+     * @notice Throws if isValidSignature for the conrtact signature and data hash differs from EIP1271 Magic Value
      * @param contractSignature the contract signature that has been verified
      */
     error WrongContractSignature(bytes contractSignature);

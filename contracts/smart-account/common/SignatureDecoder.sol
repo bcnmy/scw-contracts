@@ -5,7 +5,7 @@ pragma solidity 0.8.17;
 abstract contract SignatureDecoder {
     /// @dev divides bytes signature into `uint8 v, bytes32 r, bytes32 s`.
     /// @param signature concatenated rsv signatures
-    function signatureSplit(
+    function _signatureSplit(
         bytes memory signature
     ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
         // The signature format is a compact form of:

@@ -5,7 +5,7 @@ import "../../common/Enum.sol";
 import "../../common/SelfAuthorized.sol";
 import "../../base/Executor.sol";
 
-/// @title Module Manager - A contract that manages _modules that can execute transactions via this contract
+/// @title Module Manager - A contract that manages modules that can execute transactions via this contract
 contract ModuleManagerNew is SelfAuthorized, Executor {
     // Events
     event EnabledModule(address module);
@@ -73,7 +73,7 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         Enum.Operation operation
     ) public virtual returns (bool success) {
         require(_isActive == true, "disabled");
-        // Only whitelisted _modules are allowed.
+        // Only whitelisted modules are allowed.
         require(
             msg.sender != SENTINEL_MODULES &&
                 _modules[msg.sender] != address(0),
@@ -119,10 +119,10 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         return SENTINEL_MODULES != module && _modules[module] != address(0);
     }
 
-    /// @dev Returns array of _modules. Useful for a widget
+    /// @dev Returns array of modules. Useful for a widget
     /// @param start Start of the page.
-    /// @param pageSize Maximum number of _modules that should be returned.
-    /// @return array Array of _modules.
+    /// @param pageSize Maximum number of modules that should be returned.
+    /// @return array Array of modules.
     /// @return next Start of the next page.
     function getModulesPaginated(
         address start,

@@ -20,8 +20,8 @@ import {IModule} from "./IModuleV1.sol";
  * @dev This contract is the base for the Smart Account functionality.
  *         - It provides the functionality to execute both gnosis-style txns and AA (EIP-4337) userOps
  *         - It allows to receive and manage assets.
- *         - It is responsible for managing the _modules and fallbacks.
- *         - The Smart Account can be extended with _modules, such as Social Recovery, Session Key and others.
+ *         - It is responsible for managing the modules and fallbacks.
+ *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
 contract SmartAccountV1 is
@@ -132,7 +132,7 @@ contract SmartAccountV1 is
     }
 
     /**
-     * @dev Allows to change the owner of the smart account by current owner or self-call (_modules)
+     * @dev Allows to change the owner of the smart account by current owner or self-call (modules)
      * @param _newOwner Address of the new signatory
      */
     function setOwner(address _newOwner) public mixedAuth {
@@ -350,7 +350,7 @@ contract SmartAccountV1 is
             payment =
                 ((gasUsed + baseGas) * (gasPrice)) /
                 (tokenGasPriceFactor);
-            if (!transferToken(gasToken, receiver, payment))
+            if (!_transferToken(gasToken, receiver, payment))
                 revert TokenTransferFailed(gasToken, receiver, payment);
         }
     }
@@ -395,7 +395,7 @@ contract SmartAccountV1 is
         } else {
             uint256 payment = ((gasUsed + baseGas) * (gasPrice)) /
                 (tokenGasPriceFactor);
-            if (!transferToken(gasToken, receiver, payment))
+            if (!_transferToken(gasToken, receiver, payment))
                 revert TokenTransferFailed(gasToken, receiver, payment);
         }
         unchecked {
@@ -418,7 +418,7 @@ contract SmartAccountV1 is
         bytes32 r;
         bytes32 s;
         address _signer;
-        (v, r, s) = signatureSplit(signatures);
+        (v, r, s) = _signatureSplit(signatures);
         if (v == 0) {
             // If v is 0 then it is a contract signature
             // When handling contract signatures the address of the signer contract is encoded into r
@@ -607,7 +607,7 @@ contract SmartAccountV1 is
         uint256 amount
     ) external onlyOwner {
         if (dest == address(0)) revert TransferToZeroAddressAttempt();
-        if (!transferToken(token, dest, amount))
+        if (!_transferToken(token, dest, amount))
             revert TokenTransferFailed(token, dest, amount);
     }
 

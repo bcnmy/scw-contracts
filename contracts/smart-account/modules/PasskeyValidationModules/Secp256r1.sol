@@ -126,6 +126,71 @@ library Secp256r1 {
         return (x, y);
     }
 
+    /* affineFromJacobian
+     * @desription returns affine coordinates from a jacobian input follows
+     * golang elliptic/crypto library
+     */
+    function affineFromJacobian(
+        uint256 x,
+        uint256 y,
+        uint256 z
+    ) internal view returns (uint256 ax, uint256 ay) {
+        if (z == 0) {
+            return (0, 0);
+        }
+
+        uint256 zinv = primemod(z, pp);
+        uint256 zinvsq = mulmod(zinv, zinv, pp);
+
+        ax = mulmod(x, zinvsq, pp);
+        ay = mulmod(y, mulmod(zinvsq, zinv, pp), pp);
+    }
+
+    // Fermats little theorem https://en.wikipedia.org/wiki/Fermat%27s_little_theorem
+    // a^(p-1) = 1 mod p
+    // a^(-1) ≅ a^(p-2) (mod p)
+    // we then use the precompile bigModExp to compute a^(-1)
+    function primemod(
+        uint256 value,
+        uint256 p
+    ) internal view returns (uint256 ret) {
+        ret = modexp(value, p - 2, p);
+        return ret;
+    }
+
+    // Wrapper for built-in BigNumber_modexp (contract 0x5) as described here. https://github.com/ethereum/EIPs/pull/198
+    function modexp(
+        uint256 _base,
+        uint256 _exp,
+        uint256 _mod
+    ) internal view returns (uint256 ret) {
+        // bigModExp(_base, _exp, _mod);
+        assembly {
+            if gt(_base, _mod) {
+                _base := mod(_base, _mod)
+            }
+            // Free memory pointer is always stored at 0x40
+            let freemem := mload(0x40)
+
+            mstore(freemem, 0x20)
+            mstore(add(freemem, 0x20), 0x20)
+            mstore(add(freemem, 0x40), 0x20)
+
+            mstore(add(freemem, 0x60), _base)
+            mstore(add(freemem, 0x80), _exp)
+            mstore(add(freemem, 0xa0), _mod)
+
+            let success := staticcall(1500, 0x5, freemem, 0xc0, freemem, 0x20)
+            switch success
+            case 0 {
+                revert(0x0, 0x0)
+            }
+            default {
+                ret := mload(freemem)
+            }
+        }
+    }
+
     function preComputeJacobianPoints(
         PassKeyId memory passKey
     ) internal pure returns (JPoint[16] memory points) {
@@ -178,26 +243,6 @@ library Secp256r1 {
         uint256 z;
         (x, y, z) = modifiedJacobianDouble(p.x, p.y, p.z);
         return JPoint(x, y, z);
-    }
-
-    /* affineFromJacobian
-     * @desription returns affine coordinates from a jacobian input follows
-     * golang elliptic/crypto library
-     */
-    function affineFromJacobian(
-        uint256 x,
-        uint256 y,
-        uint256 z
-    ) internal view returns (uint256 ax, uint256 ay) {
-        if (z == 0) {
-            return (0, 0);
-        }
-
-        uint256 zinv = primemod(z, pp);
-        uint256 zinvsq = mulmod(zinv, zinv, pp);
-
-        ax = mulmod(x, zinvsq, pp);
-        ay = mulmod(y, mulmod(zinvsq, zinv, pp), pp);
     }
 
     /*
@@ -324,51 +369,6 @@ library Secp256r1 {
             }
             y3 := sub(y3, u)
             z3 := mulmod(0x02, mulmod(y, z, pd), pd)
-        }
-    }
-
-    // Fermats little theorem https://en.wikipedia.org/wiki/Fermat%27s_little_theorem
-    // a^(p-1) = 1 mod p
-    // a^(-1) ≅ a^(p-2) (mod p)
-    // we then use the precompile bigModExp to compute a^(-1)
-    function primemod(
-        uint256 value,
-        uint256 p
-    ) internal view returns (uint256 ret) {
-        ret = modexp(value, p - 2, p);
-        return ret;
-    }
-
-    // Wrapper for built-in BigNumber_modexp (contract 0x5) as described here. https://github.com/ethereum/EIPs/pull/198
-    function modexp(
-        uint256 _base,
-        uint256 _exp,
-        uint256 _mod
-    ) internal view returns (uint256 ret) {
-        // bigModExp(_base, _exp, _mod);
-        assembly {
-            if gt(_base, _mod) {
-                _base := mod(_base, _mod)
-            }
-            // Free memory pointer is always stored at 0x40
-            let freemem := mload(0x40)
-
-            mstore(freemem, 0x20)
-            mstore(add(freemem, 0x20), 0x20)
-            mstore(add(freemem, 0x40), 0x20)
-
-            mstore(add(freemem, 0x60), _base)
-            mstore(add(freemem, 0x80), _exp)
-            mstore(add(freemem, 0xa0), _mod)
-
-            let success := staticcall(1500, 0x5, freemem, 0xc0, freemem, 0x20)
-            switch success
-            case 0 {
-                revert(0x0, 0x0)
-            }
-            default {
-                ret := mload(freemem)
-            }
         }
     }
 }

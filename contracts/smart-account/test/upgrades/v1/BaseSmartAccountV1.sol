@@ -53,7 +53,7 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrorsV1 {
         if (msg.sender != address(entryPoint()))
             revert CallerIsNotAnEntryPoint(msg.sender);
         validationData = _validateSignature(userOp, userOpHash);
-        _validateNonce(userOp.nonce);
+        // _validateNonce(userOp.nonce);
         _payPrefund(missingAccountFunds);
     }
 
@@ -146,7 +146,5 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrorsV1 {
      *
      * solhint-disable-next-line no-empty-blocks
      */
-    function _validateNonce(uint256 nonce) internal view virtual {
-        (nonce);
-    }
+    // function _validateNonce(uint256 nonce) internal view virtual;
 }

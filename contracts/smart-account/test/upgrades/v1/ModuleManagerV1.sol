@@ -6,7 +6,7 @@ import {Executor, Enum} from "../../../base/Executor.sol";
 import {ModuleManagerErrorsV1} from "./ErrorsV1.sol";
 
 /**
- * @title Module Manager - A contract that manages _modules that can execute transactions
+ * @title Module Manager - A contract that manages modules that can execute transactions
  *        on behalf of the Smart Account via this contract.
  */
 contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
@@ -28,10 +28,10 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
     );
 
     /**
-     * @dev Returns array of _modules. Useful for a widget
+     * @dev Returns array of modules. Useful for a widget
      * @param start Start of the page.
-     * @param pageSize Maximum number of _modules that should be returned.
-     * @return array Array of _modules.
+     * @param pageSize Maximum number of modules that should be returned.
+     * @return array Array of modules.
      * @return next Start of the next page.
      */
     function getModulesPaginated(
@@ -116,7 +116,7 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
         bytes memory data,
         Enum.Operation operation
     ) public virtual returns (bool success) {
-        // Only whitelisted _modules are allowed.
+        // Only whitelisted modules are allowed.
         if (
             msg.sender == SENTINEL_MODULES || _modules[msg.sender] == address(0)
         ) revert ModuleNotEnabled(msg.sender);
@@ -168,7 +168,7 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
 
     /**
      * @notice Setup function sets the initial storage of the contract.
-     *         Optionally executes a delegate call to another contract to setup the _modules.
+     *         Optionally executes a delegate call to another contract to setup the modules.
      * @param to Optional destination address of call to execute.
      * @param data Optional data of call to execute.
      */

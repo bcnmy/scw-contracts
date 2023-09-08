@@ -15,8 +15,8 @@ abstract contract ModuleManager is
     ModuleManagerErrors
 {
     address internal constant SENTINEL_MODULES = address(0x1);
-
     mapping(address => address) internal _modules;
+    uint256[24] private __gap;
 
     // Events
     event EnabledModule(address module);
@@ -30,6 +30,21 @@ abstract contract ModuleManager is
         bytes data,
         Enum.Operation operation
     );
+
+    /**
+     * @dev Adds a module to the allowlist.
+     * @notice This SHOULD only be done via userOp or a selfcall.
+     */
+    function enableModule(address module) external virtual;
+
+    /**
+     * @dev Setups module for this Smart Account and enables it.
+     * @notice This SHOULD only be done via userOp or a selfcall.
+     */
+    function setupAndEnableModule(
+        address setupContract,
+        bytes memory setupData
+    ) external virtual returns (address);
 
     /**
      * @dev Returns array of modules. Useful for a widget
@@ -64,80 +79,6 @@ abstract contract ModuleManager is
             mstore(array, moduleCount)
         }
     }
-
-    /**
-     * @dev Adds a module to the allowlist.
-     * @notice This SHOULD only be done via userOp or a selfcall.
-     */
-    function enableModule(address module) external virtual;
-
-    /**
-     * @dev Adds a module to the allowlist.
-     * @notice This can only be done via a userOp or a selfcall.
-     * @notice Enables the module `module` for the wallet.
-     * @param module Module to be allow-listed.
-     */
-    function _enableModule(address module) internal virtual {
-        // Module address cannot be null or sentinel.
-        if (module == address(0) || module == SENTINEL_MODULES)
-            revert ModuleCannotBeZeroOrSentinel(module);
-        // Module cannot be added twice.
-        if (_modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
-
-        _modules[module] = _modules[SENTINEL_MODULES];
-        _modules[SENTINEL_MODULES] = module;
-
-        emit EnabledModule(module);
-    }
-
-    /**
-     * @dev Setups module for this Smart Account and enables it.
-     * @notice This SHOULD only be done via userOp or a selfcall.
-     */
-    function setupAndEnableModule(
-        address setupContract,
-        bytes memory setupData
-    ) external virtual returns (address);
-
-    /**
-     * @dev Setups module for this Smart Account and enables it.
-     * @notice This can only be done via userOp or a selfcall.
-     */
-    function _setupAndEnableModule(
-        address setupContract,
-        bytes memory setupData
-    ) internal virtual returns (address) {
-        address module = _setupModule(setupContract, setupData);
-        _enableModule(module);
-        return module;
-    }
-
-    /**
-     * @dev Removes a module from the allowlist.
-     * @notice This can only be done via a wallet transaction.
-     * @notice Disables the module `module` for the wallet.
-     * @param prevModule Module that pointed to the module to be removed in the linked list
-     * @param module Module to be removed.
-     */
-    function _disableModule(
-        address prevModule,
-        address module
-    ) internal virtual {
-        // Validate module address and check that it corresponds to module index.
-        if (module == address(0) || module == SENTINEL_MODULES)
-            revert ModuleCannotBeZeroOrSentinel(module);
-        if (_modules[prevModule] != module)
-            revert ModuleAndPrevModuleMismatch(
-                module,
-                _modules[prevModule],
-                prevModule
-            );
-        _modules[prevModule] = _modules[module];
-        delete _modules[module];
-        emit DisabledModule(module);
-    }
-
-    // TODO: can use not executor.execute, but SmartAccount._call for the unification
 
     /**
      * @dev Allows a Module to execute a Smart Account transaction without any further confirmations.
@@ -252,6 +193,73 @@ abstract contract ModuleManager is
         }
     }
 
+    /**
+     * @dev Returns if a module is enabled
+     * @return True if the module is enabled
+     */
+    function isModuleEnabled(address module) public view returns (bool) {
+        return SENTINEL_MODULES != module && _modules[module] != address(0);
+    }
+
+    /**
+     * @dev Adds a module to the allowlist.
+     * @notice This can only be done via a userOp or a selfcall.
+     * @notice Enables the module `module` for the wallet.
+     * @param module Module to be allow-listed.
+     */
+    function _enableModule(address module) internal virtual {
+        // Module address cannot be null or sentinel.
+        if (module == address(0) || module == SENTINEL_MODULES)
+            revert ModuleCannotBeZeroOrSentinel(module);
+        // Module cannot be added twice.
+        if (_modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
+
+        _modules[module] = _modules[SENTINEL_MODULES];
+        _modules[SENTINEL_MODULES] = module;
+
+        emit EnabledModule(module);
+    }
+
+    /**
+     * @dev Setups module for this Smart Account and enables it.
+     * @notice This can only be done via userOp or a selfcall.
+     */
+    function _setupAndEnableModule(
+        address setupContract,
+        bytes memory setupData
+    ) internal virtual returns (address) {
+        address module = _setupModule(setupContract, setupData);
+        _enableModule(module);
+        return module;
+    }
+
+    /**
+     * @dev Removes a module from the allowlist.
+     * @notice This can only be done via a wallet transaction.
+     * @notice Disables the module `module` for the wallet.
+     * @param prevModule Module that pointed to the module to be removed in the linked list
+     * @param module Module to be removed.
+     */
+    function _disableModule(
+        address prevModule,
+        address module
+    ) internal virtual {
+        // Validate module address and check that it corresponds to module index.
+        if (module == address(0) || module == SENTINEL_MODULES)
+            revert ModuleCannotBeZeroOrSentinel(module);
+        if (_modules[prevModule] != module)
+            revert ModuleAndPrevModuleMismatch(
+                module,
+                _modules[prevModule],
+                prevModule
+            );
+        _modules[prevModule] = _modules[module];
+        delete _modules[module];
+        emit DisabledModule(module);
+    }
+
+    // TODO: can use not executor.execute, but SmartAccount._call for the unification
+
     function _executeFromModule(
         address to,
         uint256 value,
@@ -263,14 +271,6 @@ abstract contract ModuleManager is
             emit ModuleTransaction(msg.sender, to, value, data, operation);
             emit ExecutionFromModuleSuccess(msg.sender);
         } else emit ExecutionFromModuleFailure(msg.sender);
-    }
-
-    /**
-     * @dev Returns if a module is enabled
-     * @return True if the module is enabled
-     */
-    function isModuleEnabled(address module) public view returns (bool) {
-        return SENTINEL_MODULES != module && _modules[module] != address(0);
     }
 
     /**
@@ -322,6 +322,4 @@ abstract contract ModuleManager is
             module := mload(ptr)
         }
     }
-
-    uint256[24] private __gap;
 }

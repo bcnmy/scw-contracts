@@ -7,10 +7,10 @@ pragma solidity 0.8.17;
 /// @author Stefan George - <stefan@gnosis.io>
 /// @author Richard Meissner - <richard@gnosis.io>
 contract MultiSend {
-    address private immutable multisendSingleton;
+    address private immutable _multisendSingleton;
 
     constructor() {
-        multisendSingleton = address(this);
+        _multisendSingleton = address(this);
     }
 
     /// @dev Sends multiple transactions and reverts all if one fails.
@@ -25,8 +25,8 @@ contract MultiSend {
     ///         If the calling method (e.g. execTransaction) received ETH this would revert otherwise
     function multiSend(bytes memory transactions) external {
         require(
-            address(this) != multisendSingleton,
-            "MultiSend should only be called via delegatecall"
+            address(this) != _multisendSingleton,
+            "should be called via delegatecall"
         );
         // solhint-disable-next-line no-inline-assembly
         assembly {

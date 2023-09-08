@@ -44,7 +44,7 @@ contract SmartAccountFactoryV1 {
         uint256 _index
     ) public returns (address proxy) {
         // create initializer data based on init method, _owner and minimalHandler
-        bytes memory initializer = getInitializer(_owner);
+        bytes memory initializer = _getInitializer(_owner);
 
         bytes32 salt = keccak256(
             abi.encodePacked(keccak256(initializer), _index)
@@ -118,7 +118,7 @@ contract SmartAccountFactoryV1 {
         }
         require(address(proxy) != address(0), "Create call failed");
 
-        bytes memory initializer = getInitializer(_owner);
+        bytes memory initializer = _getInitializer(_owner);
 
         // calldata for init method
         if (initializer.length > 0) {
@@ -148,7 +148,7 @@ contract SmartAccountFactoryV1 {
      * @param _owner EOA signatory for the account to be deployed
      * @return initializer bytes for init method
      */
-    function getInitializer(
+    function _getInitializer(
         address _owner
     ) internal view returns (bytes memory) {
         return
@@ -168,7 +168,7 @@ contract SmartAccountFactoryV1 {
         uint256 _index
     ) external view returns (address _account) {
         // create initializer data based on init method, _owner and minimalHandler
-        bytes memory initializer = getInitializer(_owner);
+        bytes memory initializer = _getInitializer(_owner);
         bytes memory code = abi.encodePacked(
             type(Proxy).creationCode,
             uint256(uint160(basicImplementation))

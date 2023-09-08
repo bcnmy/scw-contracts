@@ -41,17 +41,6 @@ library Create3 {
     error TargetAlreadyExists();
 
     /**
-    @notice Returns the size of the code on a given address
-    @param _addr Address that may or may not contain code
-    @return size of the code on the given `_addr`
-  */
-    function codeSize(address _addr) internal view returns (uint256 size) {
-        assembly {
-            size := extcodesize(_addr)
-        }
-    }
-
-    /**
     @notice Creates a new contract with given `_creationCode` and `_salt`
     @param _salt Salt of the contract creation, resulting address will be derivated from this value only
     @param _creationCode Creation code (constructor) of the contract to be deployed, this value doesn't affect the resulting address
@@ -135,5 +124,16 @@ library Create3 {
                     )
                 )
             );
+    }
+
+    /**
+    @notice Returns the size of the code on a given address
+    @param _addr Address that may or may not contain code
+    @return size of the code on the given `_addr`
+  */
+    function codeSize(address _addr) internal view returns (uint256 size) {
+        assembly {
+            size := extcodesize(_addr)
+        }
     }
 }

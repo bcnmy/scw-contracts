@@ -24,19 +24,18 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
     /**
-     * @return nonce the account nonce.
-     * @dev This method returns the next sequential nonce.
-     * @notice Provides 2D nonce functionality by allowing to use a nonce of a specific key.
+     * @dev Initialize the Smart Account with required states
+     * @param handler Default fallback handler provided in Smart Account
+     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
+     *                            a registry module that serves several smart accounts.
+     * @param moduleSetupData data containing address of the Setup Contract and a setup data
+     * @notice devs need to make sure it is only callable once (use initializer modifier or state check restrictions)
      */
-    function nonce(uint192 _key) public view virtual returns (uint256) {
-        return entryPoint().getNonce(address(this), _key);
-    }
-
-    /**
-     * return the entryPoint used by this account.
-     * subclass should return the current entryPoint used by this account.
-     */
-    function entryPoint() public view virtual returns (IEntryPoint);
+    function init(
+        address handler,
+        address moduleSetupContract,
+        bytes calldata moduleSetupData
+    ) external virtual returns (address);
 
     /**
      * Validates the userOp.
@@ -59,6 +58,21 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     ) external virtual override returns (uint256);
 
     /**
+     * @return nonce the account nonce.
+     * @dev This method returns the next sequential nonce.
+     * @notice Provides 2D nonce functionality by allowing to use a nonce of a specific key.
+     */
+    function nonce(uint192 _key) public view virtual returns (uint256) {
+        return entryPoint().getNonce(address(this), _key);
+    }
+
+    /**
+     * return the entryPoint used by this account.
+     * subclass should return the current entryPoint used by this account.
+     */
+    function entryPoint() public view virtual returns (IEntryPoint);
+
+    /**
      * Validate the nonce of the UserOperation.
      * This method may validate the nonce requirement of this account.
      * e.g.
@@ -74,9 +88,7 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      *
      * solhint-disable-next-line no-empty-blocks
      */
-    function _validateNonce(uint256 _nonce) internal view virtual {
-        (_nonce);
-    }
+    // function _validateNonce(uint256 _nonce) internal view virtual;
 
     /**
      * sends to the entrypoint (msg.sender) the missing funds for this transaction.
@@ -95,18 +107,4 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
             //ignore failure (its EntryPoint's job to verify, not account.)
         }
     }
-
-    /**
-     * @dev Initialize the Smart Account with required states
-     * @param handler Default fallback handler provided in Smart Account
-     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts.
-     * @param moduleSetupData data containing address of the Setup Contract and a setup data
-     * @notice devs need to make sure it is only callable once (use initializer modifier or state check restrictions)
-     */
-    function init(
-        address handler,
-        address moduleSetupContract,
-        bytes calldata moduleSetupData
-    ) external virtual returns (address);
 }

@@ -19,17 +19,16 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract EcdsaWithEthSignSupportOwnershipRegistryModule is
     BaseAuthorizationModule
 {
+    using ECDSA for bytes32;
+
     string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "0.1.0";
+    mapping(address => address) public smartAccountOwners;
 
     error NoOwnerRegisteredForSmartAccount(address smartAccount);
     error AlreadyInitedForSmartAccount(address smartAccount);
     error WrongSignatureLength();
     error NotEOA(address account);
-
-    using ECDSA for bytes32;
-
-    mapping(address => address) public smartAccountOwners;
 
     /**
      * @dev Initializes the module for a Smart Account.
@@ -52,18 +51,6 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
     function setOwner(address owner) external {
         if (_isSmartAccount(owner)) revert NotEOA(owner);
         smartAccountOwners[msg.sender] = owner;
-    }
-
-    /**
-     * @dev Checks if the address provided is a smart contract.
-     * @param account Address to be checked.
-     */
-    function _isSmartAccount(address account) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
     }
 
     /**
@@ -158,6 +145,18 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
         } else {
             return expectedSigner == dataHash.recover(signature);
         }
+    }
+
+    /**
+     * @dev Checks if the address provided is a smart contract.
+     * @param account Address to be checked.
+     */
+    function _isSmartAccount(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 
     function _signatureSplit(
