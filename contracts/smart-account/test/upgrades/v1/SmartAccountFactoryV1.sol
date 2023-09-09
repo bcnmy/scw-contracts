@@ -55,7 +55,6 @@ contract SmartAccountFactoryV1 {
             uint256(uint160(basicImplementation))
         );
 
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create2(
                 0x0,
@@ -68,7 +67,6 @@ contract SmartAccountFactoryV1 {
 
         // calldata for init method
         if (initializer.length > 0) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 if eq(
                     call(
@@ -108,7 +106,6 @@ contract SmartAccountFactoryV1 {
             uint256(uint160(basicImplementation))
         );
 
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create(
                 0x0,
@@ -122,7 +119,6 @@ contract SmartAccountFactoryV1 {
 
         // calldata for init method
         if (initializer.length > 0) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 if eq(
                     call(

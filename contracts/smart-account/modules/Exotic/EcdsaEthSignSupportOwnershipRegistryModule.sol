@@ -165,7 +165,7 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             r := mload(add(signature, 0x20))
             s := mload(add(signature, 0x40))

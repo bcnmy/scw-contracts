@@ -52,7 +52,6 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
         if (msg.sender != address(entryPoint()))
             revert CallerIsNotAnEntryPoint(msg.sender);
         validationData = _validateSignature(userOp, userOpHash);
-        // _validateNonce(userOp.nonce);
         _payPrefund(missingAccountFunds);
     }
 
@@ -126,22 +125,4 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
             "account: not from EntryPoint"
         );
     }
-
-    /**
-     * Validate the nonce of the UserOperation.
-     * This method may validate the nonce requirement of this account.
-     * e.g.
-     * To limit the nonce to use sequenced UserOps only (no "out of order" UserOps):
-     *      `require(nonce < type(uint64).max)`
-     * For a hypothetical account that *requires* the nonce to be out-of-order:
-     *      `require(nonce & type(uint64).max == 0)`
-     *
-     * The actual nonce uniqueness is managed by the EntryPoint, and thus no other
-     * action is needed by the account itself.
-     *
-     * @param nonce to validate
-     *
-     * solhint-disable-next-line no-empty-blocks
-     */
-    // function _validateNonce(uint256 nonce) internal view virtual;
 }

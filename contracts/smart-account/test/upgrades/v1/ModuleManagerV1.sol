@@ -55,7 +55,7 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
         }
         next = currentModule;
         // Set correct size of returned array
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             mstore(array, moduleCount)
         }
@@ -142,7 +142,7 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
         Enum.Operation operation
     ) public returns (bool success, bytes memory returnData) {
         success = execTransactionFromModule(to, value, data, operation);
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             // Load free memory location
             let ptr := mload(0x40)

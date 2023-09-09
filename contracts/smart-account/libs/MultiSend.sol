@@ -28,7 +28,7 @@ contract MultiSend {
             address(this) != _multisendSingleton,
             "should be called via delegatecall"
         );
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             let length := mload(transactions)
             let i := 0x20

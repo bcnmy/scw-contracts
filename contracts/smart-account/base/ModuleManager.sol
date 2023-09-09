@@ -74,7 +74,7 @@ abstract contract ModuleManager is
         }
         next = currentModule;
         // Set correct size of returned array
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             mstore(array, moduleCount)
         }
@@ -132,7 +132,7 @@ abstract contract ModuleManager is
         Enum.Operation operation
     ) public returns (bool success, bytes memory returnData) {
         success = execTransactionFromModule(to, value, data, operation);
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             // Load free memory location
             let ptr := mload(0x40)

@@ -70,7 +70,6 @@ contract SmartAccountFactory is Stakeable {
             uint256(uint160(basicImplementation))
         );
 
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create2(
                 0x0,
@@ -84,7 +83,6 @@ contract SmartAccountFactory is Stakeable {
         address initialAuthorizationModule;
 
         if (initializer.length > 0) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 let success := call(
                     gas(),
@@ -120,7 +118,6 @@ contract SmartAccountFactory is Stakeable {
             uint256(uint160(basicImplementation))
         );
 
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create(
                 0x0,
@@ -137,7 +134,6 @@ contract SmartAccountFactory is Stakeable {
         address initialAuthorizationModule;
 
         if (initializer.length > 0) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 let success := call(
                     gas(),

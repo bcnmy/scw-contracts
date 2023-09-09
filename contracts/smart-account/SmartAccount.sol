@@ -198,7 +198,6 @@ contract SmartAccount is
         view
         returns (address _implementation)
     {
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             _implementation := sload(address())
         }
@@ -226,7 +225,7 @@ contract SmartAccount is
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
         address oldImplementation;
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             oldImplementation := sload(address())
             sstore(address(), _implementation)

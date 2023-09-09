@@ -20,7 +20,7 @@ abstract contract SecuredTokenTransfer {
             receiver,
             amount
         );
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             // We write the return value to scratch space.
             // See https://docs.soliditylang.org/en/v0.8.17/internals/layout_in_memory.html#layout-in-memory

@@ -125,7 +125,6 @@ contract SmartAccountV1 is
         view
         returns (address _implementation)
     {
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             _implementation := sload(address())
         }
@@ -158,7 +157,7 @@ contract SmartAccountV1 is
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
         address oldImplementation;
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             oldImplementation := sload(address())
             sstore(address(), _implementation)
@@ -431,7 +430,7 @@ contract SmartAccountV1 is
 
             // Check if the contract signature is in bounds: start of data is s + 32 and end is start + signature length
             uint256 contractSignatureLen;
-            // solhint-disable-next-line no-inline-assembly
+
             assembly {
                 contractSignatureLen := mload(add(add(signatures, s), 0x20))
             }
@@ -444,7 +443,7 @@ contract SmartAccountV1 is
 
             // Check signature
             bytes memory contractSignature;
-            // solhint-disable-next-line no-inline-assembly
+
             assembly {
                 // The signature data for contract signatures is appended to the concatenated signatures and the offset is stored in s
                 contractSignature := add(add(signatures, s), 0x20)
