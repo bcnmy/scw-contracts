@@ -79,22 +79,35 @@ describe("Smart Account Factory", async () => {
         expect(depositInfo.stake).to.equal(stakeAmount);
       });
 
-      it("reverts when unstake delay is not specified", async()=>{
-
+      it("reverts when unstake delay not specified", async()=>{
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        const invalidUnstakeDelay = 0;
+        await expect(smartAccountFactory.addStake(entryPoint.address, invalidUnstakeDelay, { value: stakeAmount })).to.be.revertedWith("must specify unstake delay");
       });
 
       it("reverts when trying to decrease unstake time", async()=>{
-
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        const validUnstakeDelay = 600;
+        const invalidUnstakeDelay = validUnstakeDelay - 2;
+        // add stake
+        await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });      
+        const depositInfo = await entryPoint.getDepositInfo(smartAccountFactory.address);
+        await expect(smartAccountFactory.addStake(entryPoint.address, invalidUnstakeDelay, { value: stakeAmount })).to.be.revertedWith("cannot decrease unstake time");
       });
 
       it("reverts when stake value not specified", async()=>{
-
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        const invalidStakeAmount = ethers.utils.parseEther("0");
+        await expect(smartAccountFactory.addStake(entryPoint.address, 600, { value: invalidStakeAmount })).to.be.revertedWith("no stake specified");
       });
 
       it("reverts when typecasted stake overflows", async()=>{
-
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        const overflowedStakeAmount = ethers.utils.parseEther("5192296858534827.628530496329220095");
+        await expect(smartAccountFactory.addStake(entryPoint.address, 600, { value: overflowedStakeAmount })).to.be.revertedWith("stake overflow");
       });
-
     });
 
     describe("unlockStake(): ", async()=>{
@@ -131,23 +144,59 @@ describe("Smart Account Factory", async () => {
     describe("withdrawStake(): ", async()=>{
       it("can withdraw Stake", async()=>{
         const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
-        const prevBalance = alice.getBalance;  
-
         // staking first
         const stakeAmount = ethers.utils.parseEther("1.234256");
-        await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });
+        await smartAccountFactory.addStake(entryPoint.address, 1, { value: stakeAmount });
+        // waiting for additional blocks
+        const blocksToWait = 10;
+        const currentBlockNumber = await ethers.provider.getBlockNumber();
+        const targetBlockNumber = currentBlockNumber + blocksToWait;
+        while ((await ethers.provider.getBlockNumber()) < targetBlockNumber) {
+          await ethers.provider.send("evm_mine", []);
+        };
+        // withdrawing
+        await smartAccountFactory.unlockStake(entryPoint.address);
+        const tx = await smartAccountFactory.withdrawStake(entryPoint.address,alice.address);
+        await expect(tx).to.emit(entryPoint,"StakeWithdrawn");
       });
 
       it("reverts on empty stake withdraw", async()=>{
-
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        // withdrawing
+        await expect(smartAccountFactory.withdrawStake(entryPoint.address,alice.address)).to.be.revertedWith("No stake to withdraw");
       });
 
       it("reverts when not calling unlockWithdraw() first", async()=>{
-
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        // staking first
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        await smartAccountFactory.addStake(entryPoint.address, 1, { value: stakeAmount });
+        // waiting for additional blocks
+        const blocksToWait = 10;
+        const currentBlockNumber = await ethers.provider.getBlockNumber();
+        const targetBlockNumber = currentBlockNumber + blocksToWait;
+        while ((await ethers.provider.getBlockNumber()) < targetBlockNumber) {
+          await ethers.provider.send("evm_mine", []);
+        };
+        // withdrawing
+        await expect(smartAccountFactory.withdrawStake(entryPoint.address,alice.address)).to.be.revertedWith("must call unlockStake() first");                  
       });
 
       it("reverts when calling before stake withdrawal", async()=>{
-
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } = await setupTests();
+        // staking first
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        await smartAccountFactory.addStake(entryPoint.address, 600, { value: stakeAmount });
+        // waiting for additional blocks
+        const blocksToWait = 10;
+        const currentBlockNumber = await ethers.provider.getBlockNumber();
+        const targetBlockNumber = currentBlockNumber + blocksToWait;
+        while ((await ethers.provider.getBlockNumber()) < targetBlockNumber) {
+          await ethers.provider.send("evm_mine", []);
+        };
+        // withdrawing
+        await smartAccountFactory.unlockStake(entryPoint.address);
+        await expect(smartAccountFactory.withdrawStake(entryPoint.address,alice.address)).to.be.revertedWith("Stake withdrawal is not due");
       });
     });
 
