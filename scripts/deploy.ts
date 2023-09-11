@@ -27,7 +27,7 @@ import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
 
 // Deployment Configuration
-const DEPLOYMENT_MODE: "DEV" | "PROD" = "DEV";
+const DEPLOYMENT_MODE: "DEV" | "PROD" = "PROD";
 
 const smartAccountFactoryOwnerAddress =
   process.env[`SMART_ACCOUNT_FACTORY_OWNER_ADDRESS_${DEPLOYMENT_MODE}`]!;

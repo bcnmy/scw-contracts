@@ -63,9 +63,9 @@ const config: HardhatUserConfig = {
       ...(shouldRunInForkMode
         ? {
             // Forking Config for Deployment Testing
-            chainId: 80001,
+            chainId: 43114,
             forking: {
-              url: process.env.POLYGON_MUMBAI_URL!,
+              url: process.env.AVAX_MAINNET_URL!,
             },
             accounts: [
               {
