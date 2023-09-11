@@ -3,7 +3,7 @@ import { getContractAddress } from "ethers/lib/utils";
 import { Deployer__factory } from "../typechain";
 import { BigNumber } from "ethers";
 
-async function main() {
+export async function mainDeployDeployer() {
   try {
     const deploymentGasPrice = getDeploymentGasPrice();
     console.log(
@@ -187,7 +187,9 @@ function getDeploymentGasPrice(): number {
   }
 }
 
-main().catch((error) => {
-  console.error(error);
-  process.exitCode = 1;
-});
+if (require.main === module) {
+  mainDeployDeployer().catch((error) => {
+    console.error(error);
+    process.exitCode = 1;
+  });
+}

@@ -28,6 +28,11 @@ task("accounts", "Prints the list of accounts", async (taskArgs, hre) => {
   }
 });
 
+const hardhatAccounts =
+  process.env.PRIVATE_KEY !== undefined
+    ? [process.env.PRIVATE_KEY]
+    : walletUtils.makeKeyList();
+
 // You need to export an object to set up your config
 // Go to https://hardhat.org/config/ to learn more
 
@@ -56,12 +61,11 @@ const config: HardhatUserConfig = {
   networks: {
     hardhat: {
       ...(shouldRunInForkMode
-        ? // Normal Config
-          {
+        ? {
             // Forking Config for Deployment Testing
-            chainId: 10,
+            chainId: 5000,
             forking: {
-              url: "https://mainnet.optimism.io",
+              url: process.env.MANTLE_MAINNET_URL,
             },
             accounts: [
               {
@@ -73,6 +77,7 @@ const config: HardhatUserConfig = {
             ],
           }
         : {
+            // Normal Config
             accounts: {
               accountsBalance: "10000000000000000000000000",
               //   mnemonic: MNEMONIC,
@@ -104,206 +109,162 @@ const config: HardhatUserConfig = {
     eth_mainnet: {
       url: process.env.ETH_MAINNET_URL || "",
       chainId: 1,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
     },
     goerli: {
       url: process.env.GOERLI_URL || "",
       chainId: 5,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
     },
     polygon_mainnet: {
       url: process.env.POLYGON_URL || "",
       chainId: 137,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       // : 200e9,
     },
     polygon_mumbai: {
       url: process.env.POLYGON_MUMBAI_URL || "",
       chainId: 80001,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
     },
     bnb_mainnet: {
       url: "https://bsc-dataseed2.binance.org",
       chainId: 56,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
     },
     bnb_testnet: {
       url:
         process.env.BSC_TESTNET_URL ||
         "https://wandering-broken-tree.bsc-testnet.quiknode.pro/7992da20f9e4f97c2a117bea9af37c1c266f63ec/",
       chainId: 97,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       gasPrice: 50e9,
     },
     avalancheMain: {
       url: "https://api.avax.network/ext/bc/C/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 43114,
     },
     avalancheTest: {
       url: "https://api.avax-test.network/ext/bc/C/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 43113,
     },
     arbitrumMain: {
       url: "https://arb1.arbitrum.io/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 42161,
     },
     arbitrumGoerli: {
       url: "https://goerli-rollup.arbitrum.io/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 421613,
       // gasPrice: 2e9, //2 gwei
     },
     arbitrumTest: {
       url: "https://rinkeby.arbitrum.io/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 421611,
     },
     arbitrumNova: {
       url: "https://nova.arbitrum.io/rpc",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 42170,
     },
     zkevm_mainnet: {
       url: process.env.ZKEVM_MAINNET_URL || "https://zkevm-rpc.com",
       chainId: 1101,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
     },
     zkevm_testnet: {
       url: process.env.ZKEVM_TESTNET_URL || "https://rpc.public.zkevm-test.net",
       chainId: 1442,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       // gasPrice: 50e9,
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 420,
     },
     optimismMainnet: {
       url: `https://mainnet.optimism.io`,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 10,
     },
     moonbeam_mainnet: {
       url: "https://rpc.api.moonbeam.network",
       chainId: 1284,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
     },
     moonbeamTest: {
       url: "https://rpc.api.moonbase.moonbeam.network",
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 1287,
     },
     celoTestnet: {
       url: `https://alfajores-forno.celo-testnet.org`,
       accounts: walletUtils.makeKeyList(),
       chainId: 44787,
-      // gasPrice: 6400000
     },
     celoMainnet: {
       url: `https://forno.celo.org`,
       accounts: walletUtils.makeKeyList(),
       chainId: 42220,
-      // gasPrice: 6400000
     },
     neonDevnet: {
       url: `https://proxy.devnet.neonlabs.org/solana`,
       accounts: walletUtils.makeKeyList(),
       chainId: 245022926,
-      // gasPrice: 6400000
     },
     baseGoerli: {
       url:
         process.env.BASE_TESTNET_URL ||
         `https://base-goerli.blockpi.network/v1/rpc/public`,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 84531,
     },
     lineaGoerli: {
       url: process.env.LINEA_TESTNET_URL || `https://rpc.goerli.linea.build`,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 59140,
     },
     lineaMainnet: {
       url: process.env.LINEA_MAINNET_URL || ``,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 59144,
     },
     baseMainnet: {
       url:
         process.env.BASE_MAINNET_URL ||
         `https://developer-access-mainnet.base.org`,
-      accounts:
-        process.env.PRIVATE_KEY !== undefined
-          ? [process.env.PRIVATE_KEY]
-          : walletUtils.makeKeyList(),
+      accounts: hardhatAccounts,
       chainId: 8453,
+    },
+    opBNBMainnet: {
+      url: process.env.OP_BNB_MAINNET_URL,
+      accounts: hardhatAccounts,
+      chainId: 204,
+    },
+    opBNBTestnet: {
+      url: process.env.OP_BNB_TESTNET_URL,
+      accounts: hardhatAccounts,
+      chainId: 5611,
+    },
+    mantleMainnet: {
+      url: process.env.MANTLE_MAINNET_URL,
+      accounts: hardhatAccounts,
+      chainId: 5000,
+    },
+    mantleTestnet: {
+      url: process.env.MANTLE_TESTNET_URL,
+      accounts: hardhatAccounts,
+      chainId: 5001,
+    },
+    comboTestnet: {
+      url: process.env.COMBO_TESTNET_URL,
+      accounts: hardhatAccounts,
+      chainId: 91715,
     },
   },
 
@@ -338,6 +299,11 @@ const config: HardhatUserConfig = {
       baseMainnet: process.env.BASE_API_KEY || "",
       zkEVMMainnet: process.env.ZKEVM_API_KEY || "",
       zkEVMGoerli: process.env.ZKEVM_API_KEY || "",
+      opBNBTestnet: process.env.OP_BNB_API_KEY || "",
+      opBNBMainnet: process.env.OP_BNB_API_KEY || "",
+      mantleTestnet: "PLACEHOLDER_STRING",
+      mantleMainnet: "PLACEHOLDER_STRING",
+      comboTestnet: process.env.COMBO_API_KEY || "",
     },
     customChains: [
       {
@@ -352,7 +318,7 @@ const config: HardhatUserConfig = {
         network: "lineaMainnet",
         chainId: 59144,
         urls: {
-          apiURL: "http://explorer.linea.build/api",
+          apiURL: "https://explorer.linea.build/api",
           browserURL: "https://explorer.lineascan.build",
         },
       },
@@ -386,6 +352,46 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-testnet-zkevm.polygonscan.com/api",
           browserURL: "https://testnet-zkevm.polygonscan.com",
+        },
+      },
+      {
+        network: "opBNBMainnet",
+        chainId: 204,
+        urls: {
+          apiURL: `https://open-platform.nodereal.io/${process.env.OP_BNB_API_KEY}/op-bnb-mainnet/contract/`,
+          browserURL: "https://mainnet.opbnbscan.com/",
+        },
+      },
+      {
+        network: "opBNBTestnet",
+        chainId: 5611,
+        urls: {
+          apiURL: `https://open-platform.nodereal.io/${process.env.OP_BNB_API_KEY}/op-bnb-testnet/contract/`,
+          browserURL: "https://opbscan.com",
+        },
+      },
+      {
+        network: "mantleMainnet",
+        chainId: 5000,
+        urls: {
+          apiURL: "https://explorer.mantle.xyz/api",
+          browserURL: "https://explorer.mantle.xyz",
+        },
+      },
+      {
+        network: "mantleTestnet",
+        chainId: 5001,
+        urls: {
+          apiURL: "https://explorer.testnet.mantle.xyz/api",
+          browserURL: "https://explorer.testnet.mantle.xyz",
+        },
+      },
+      {
+        network: "comboTestnet",
+        chainId: 91715,
+        urls: {
+          apiURL: `https://open-platform.nodereal.io/${process.env.COMBO_API_KEY}/combotrace-testnet/contract/`,
+          browserURL: "https://combotrace-testnet.nodereal.io",
         },
       },
     ],

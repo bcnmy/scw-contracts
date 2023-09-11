@@ -3,6 +3,9 @@ import { mainDeploy } from "../scripts/deploy";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { hexValue } from "ethers/lib/utils";
+import { mainDeployDeployer } from "../scripts/deployer-contract.deploy";
+
+const useDeployedBalanceFromNetwork = false;
 
 describe("Deployment", async function () {
   this.timeout(1000000);
@@ -26,17 +29,20 @@ describe("Deployment", async function () {
     const networkProvider = new ethers.providers.JsonRpcProvider(
       config.networks.hardhat.forking.url
     );
-    const realBalance = await networkProvider.getBalance(
-      deployerWallet.address
-    );
-    if (realBalance === BigNumber.from(0)) {
-      throw new Error("Deployer balance is zero");
-    }
 
-    await network.provider.send("hardhat_setBalance", [
-      deployerWallet.address,
-      hexValue(realBalance),
-    ]);
+    if (useDeployedBalanceFromNetwork) {
+      const realBalance = await networkProvider.getBalance(
+        deployerWallet.address
+      );
+      if (realBalance === BigNumber.from(0)) {
+        throw new Error("Deployer balance is zero");
+      }
+
+      await network.provider.send("hardhat_setBalance", [
+        deployerWallet.address,
+        hexValue(realBalance),
+      ]);
+    }
 
     const realChainId = await networkProvider
       .getNetwork()
@@ -51,6 +57,7 @@ describe("Deployment", async function () {
   });
 
   it("Should deploy all the contracts", async () => {
+    await mainDeployDeployer();
     await mainDeploy();
   });
 });
