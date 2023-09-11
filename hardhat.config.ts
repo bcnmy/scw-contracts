@@ -63,9 +63,9 @@ const config: HardhatUserConfig = {
       ...(shouldRunInForkMode
         ? {
             // Forking Config for Deployment Testing
-            chainId: 43114,
+            chainId: 5000,
             forking: {
-              url: process.env.AVAX_MAINNET_URL!,
+              url: process.env.MANTLE_MAINNET_URL,
             },
             accounts: [
               {
@@ -318,7 +318,7 @@ const config: HardhatUserConfig = {
         network: "lineaMainnet",
         chainId: 59144,
         urls: {
-          apiURL: "http://explorer.linea.build/api",
+          apiURL: "https://explorer.linea.build/api",
           browserURL: "https://explorer.lineascan.build",
         },
       },

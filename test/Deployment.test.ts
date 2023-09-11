@@ -3,6 +3,7 @@ import { mainDeploy } from "../scripts/deploy";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BigNumber } from "ethers";
 import { hexValue } from "ethers/lib/utils";
+import { mainDeployDeployer } from "../scripts/deployer-contract.deploy";
 
 const useDeployedBalanceFromNetwork = false;
 
@@ -56,6 +57,7 @@ describe("Deployment", async function () {
   });
 
   it("Should deploy all the contracts", async () => {
+    await mainDeployDeployer();
     await mainDeploy();
   });
 });

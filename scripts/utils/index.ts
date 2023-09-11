@@ -97,9 +97,6 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   421613: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
-  42170: {
-    gasPrice: parseUnits("0.1", "gwei"),
-  },
   420: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
@@ -130,13 +127,17 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   56: { maxPriorityFeePerGas: parseUnits("10", "gwei") },
   1: { maxPriorityFeePerGas: parseUnits("30", "gwei") },
   42161: { gasPrice: parseUnits("1", "gwei") },
+  42170: {
+    gasPrice: parseUnits("1", "gwei"),
+  },
   10: { gasPrice: parseUnits("1", "gwei") },
   43114: { gasPrice: parseUnits("30", "gwei") },
   1101: { gasPrice: parseUnits("1", "gwei") },
   59144: { gasPrice: parseUnits("2", "gwei") },
   8453: { gasPrice: parseUnits("1.5", "gwei") },
   204: { gasPrice: parseUnits("0.1", "gwei") },
-  5000: { gasPrice: parseUnits("0.05", "gwei") },
+  5000: { gasPrice: parseUnits("1", "gwei") },
+  1284: { gasPrice: parseUnits("200", "gwei") },
 };
 
 export type StakingConfig = {
@@ -161,10 +162,6 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
   421613: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.01"),
-  },
-  42170: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
   },
   420: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -247,6 +244,10 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
   5000: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("226"), // 1 MNT = $0.444
+  },
+  1284: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("556"), // 1 GLMR = $0.18
   },
 };
 
@@ -326,6 +327,10 @@ export const paymasterStakeConfig: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("9.337"), // 1 AVAX = $10.71
   },
+  42170: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
   1101: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
@@ -345,6 +350,10 @@ export const paymasterStakeConfig: Record<number, StakingConfig> = {
   5000: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("226"), // 1 MNT = $0.444
+  },
+  1284: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("556"), // 1 GLMR = $0.18
   },
 };
 
