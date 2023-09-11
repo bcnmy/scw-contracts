@@ -12,7 +12,7 @@ import {ModuleManagerErrorsV1} from "./ErrorsV1.sol";
 contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
     address internal constant SENTINEL_MODULES = address(0x1);
 
-    mapping(address => address) internal modules;
+    mapping(address => address) internal _modules;
 
     // Events
     event EnabledModule(address module);
@@ -43,19 +43,19 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
 
         // Populate return array
         uint256 moduleCount;
-        address currentModule = modules[start];
+        address currentModule = _modules[start];
         while (
             currentModule != address(0x0) &&
             currentModule != SENTINEL_MODULES &&
             moduleCount < pageSize
         ) {
             array[moduleCount] = currentModule;
-            currentModule = modules[currentModule];
+            currentModule = _modules[currentModule];
             moduleCount++;
         }
         next = currentModule;
         // Set correct size of returned array
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             mstore(array, moduleCount)
         }
@@ -72,9 +72,9 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
         if (module == address(0) || module == SENTINEL_MODULES)
             revert ModuleCannotBeZeroOrSentinel(module);
         // Module cannot be added twice.
-        if (modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
-        modules[module] = modules[SENTINEL_MODULES];
-        modules[SENTINEL_MODULES] = module;
+        if (_modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
+        _modules[module] = _modules[SENTINEL_MODULES];
+        _modules[SENTINEL_MODULES] = module;
         emit EnabledModule(module);
     }
 
@@ -92,14 +92,14 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
         // Validate module address and check that it corresponds to module index.
         if (module == address(0) || module == SENTINEL_MODULES)
             revert ModuleCannotBeZeroOrSentinel(module);
-        if (modules[prevModule] != module)
+        if (_modules[prevModule] != module)
             revert ModuleAndPrevModuleMismatch(
                 module,
-                modules[prevModule],
+                _modules[prevModule],
                 prevModule
             );
-        modules[prevModule] = modules[module];
-        delete modules[module];
+        _modules[prevModule] = _modules[module];
+        delete _modules[module];
         emit DisabledModule(module);
     }
 
@@ -117,8 +117,9 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
         Enum.Operation operation
     ) public virtual returns (bool success) {
         // Only whitelisted modules are allowed.
-        if (msg.sender == SENTINEL_MODULES || modules[msg.sender] == address(0))
-            revert ModuleNotEnabled(msg.sender);
+        if (
+            msg.sender == SENTINEL_MODULES || _modules[msg.sender] == address(0)
+        ) revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
         success = execute(to, value, data, operation, gasleft());
         if (success) {
@@ -141,7 +142,7 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
         Enum.Operation operation
     ) public returns (bool success, bytes memory returnData) {
         success = execTransactionFromModule(to, value, data, operation);
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             // Load free memory location
             let ptr := mload(0x40)
@@ -162,7 +163,7 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
      * @return True if the module is enabled
      */
     function isModuleEnabled(address module) public view returns (bool) {
-        return SENTINEL_MODULES != module && modules[module] != address(0);
+        return SENTINEL_MODULES != module && _modules[module] != address(0);
     }
 
     /**
@@ -172,9 +173,9 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
      * @param data Optional data of call to execute.
      */
     function _setupModules(address to, bytes memory data) internal {
-        if (modules[SENTINEL_MODULES] != address(0))
+        if (_modules[SENTINEL_MODULES] != address(0))
             revert ModulesAlreadyInitialized();
-        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
+        _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         if (to != address(0))
             if (!execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()))
                 // Setup has to complete successfully or transaction fails.

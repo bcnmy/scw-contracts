@@ -22,7 +22,7 @@ abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     // solhint-disable-next-line payable-fallback,no-complex-fallback
     fallback() external {
         bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             let handler := sload(slot)
             if iszero(handler) {
@@ -51,7 +51,6 @@ abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     }
 
     function getFallbackHandler() public view returns (address _handler) {
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             _handler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
         }
@@ -65,12 +64,12 @@ abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     function _setFallbackHandler(address handler) internal {
         if (handler == address(0)) revert HandlerCannotBeZero();
         address previousHandler;
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             previousHandler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
             //}
             //bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
-            // solhint-disable-next-line no-inline-assembly
+
             //assembly {
             sstore(FALLBACK_HANDLER_STORAGE_SLOT, handler)
         }

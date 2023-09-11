@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
 import {ISessionValidationModule} from "./SessionValidationModules/ISessionValidationModule.sol";
 import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
@@ -46,7 +46,8 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
         // check this is a proper method call
         bytes4 selector = bytes4(userOp.callData[0:4]);
         require(
-            selector == EXECUTE_BATCH_OPTIMIZED_SELECTOR || selector == EXECUTE_BATCH_SELECTOR,
+            selector == EXECUTE_BATCH_OPTIMIZED_SELECTOR ||
+                selector == EXECUTE_BATCH_SELECTOR,
             "SR Invalid Selector"
         );
 
@@ -76,10 +77,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
             address[] memory destinations,
             uint256[] memory callValues,
             bytes[] memory operationCalldatas
-        ) = abi.decode(
-                userOp.callData[4:],
-                (address[], uint256[], bytes[])
-            );
+        ) = abi.decode(userOp.callData[4:], (address[], uint256[], bytes[]));
 
         uint256 length = sessionData.length;
         // iterate over batched operations
@@ -97,8 +95,9 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
 
             // validate sessionKey permissions
             // sessionValidationModule reverts if something wrong
-            address sessionKey = ISessionValidationModule(sessionData[i].sessionValidationModule)
-                .validateSessionParams(
+            address sessionKey = ISessionValidationModule(
+                sessionData[i].sessionValidationModule
+            ).validateSessionParams(
                     destinations[i],
                     callValues[i],
                     operationCalldatas[i],
@@ -144,6 +143,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
         bytes32 _dataHash,
         bytes memory _signature
     ) public view override returns (bytes4) {
+        (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }
 }

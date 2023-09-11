@@ -31,7 +31,7 @@ contract VerifyingSingletonPaymaster is
     using PaymasterHelpers for PaymasterData;
 
     // Gas used in EntryPoint._handlePostOp() method (including this#postOp() call)
-    uint256 private unaccountedEPGasOverhead;
+    uint256 private _unaccountedEPGasOverhead;
     mapping(address => uint256) public paymasterIdBalances;
 
     address public verifyingSigner;
@@ -68,7 +68,7 @@ contract VerifyingSingletonPaymaster is
         assembly {
             sstore(verifyingSigner.slot, _verifyingSigner)
         }
-        unaccountedEPGasOverhead = 9600;
+        _unaccountedEPGasOverhead = 9600;
     }
 
     /**
@@ -83,6 +83,29 @@ contract VerifyingSingletonPaymaster is
             msg.value;
         entryPoint.depositTo{value: msg.value}(address(this));
         emit GasDeposited(paymasterId, msg.value);
+    }
+
+    /**
+     * @dev Set a new verifying signer address.
+     * Can only be called by the owner of the contract.
+     * @param _newVerifyingSigner The new address to be set as the verifying signer.
+     * @notice If _newVerifyingSigner is set to zero address, it will revert with an error.
+     * After setting the new signer address, it will emit an event VerifyingSignerChanged.
+     */
+    function setSigner(address _newVerifyingSigner) external payable onlyOwner {
+        if (_newVerifyingSigner == address(0))
+            revert VerifyingSignerCannotBeZero();
+        address oldSigner = verifyingSigner;
+        assembly {
+            sstore(verifyingSigner.slot, _newVerifyingSigner)
+        }
+        emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
+    }
+
+    function setUnaccountedEPGasOverhead(uint256 value) external onlyOwner {
+        uint256 oldValue = _unaccountedEPGasOverhead;
+        _unaccountedEPGasOverhead = value;
+        emit EPGasOverheadChanged(oldValue, value);
     }
 
     /**
@@ -123,29 +146,6 @@ contract VerifyingSingletonPaymaster is
     }
 
     /**
-     * @dev Set a new verifying signer address.
-     * Can only be called by the owner of the contract.
-     * @param _newVerifyingSigner The new address to be set as the verifying signer.
-     * @notice If _newVerifyingSigner is set to zero address, it will revert with an error.
-     * After setting the new signer address, it will emit an event VerifyingSignerChanged.
-     */
-    function setSigner(address _newVerifyingSigner) external payable onlyOwner {
-        if (_newVerifyingSigner == address(0))
-            revert VerifyingSignerCannotBeZero();
-        address oldSigner = verifyingSigner;
-        assembly {
-            sstore(verifyingSigner.slot, _newVerifyingSigner)
-        }
-        emit VerifyingSignerChanged(oldSigner, _newVerifyingSigner, msg.sender);
-    }
-
-    function setUnaccountedEPGasOverhead(uint256 value) external onlyOwner {
-        uint256 oldValue = unaccountedEPGasOverhead;
-        unaccountedEPGasOverhead = value;
-        emit EPGasOverheadChanged(oldValue, value);
-    }
-
-    /**
      * @dev This method is called by the off-chain service, to sign the request.
      * It is called on-chain from the validatePaymasterUserOp, to validate the signature.
      * @notice That this signature covers all fields of the UserOperation, except the "paymasterAndData",
@@ -182,6 +182,29 @@ contract VerifyingSingletonPaymaster is
     }
 
     /**
+     * @dev Executes the paymaster's payment conditions
+     * @param mode tells whether the op succeeded, reverted, or if the op succeeded but cause the postOp to revert
+     * @param context payment conditions signed by the paymaster in `validatePaymasterUserOp`
+     * @param actualGasCost amount to be paid to the entry point in wei
+     */
+    function _postOp(
+        PostOpMode mode,
+        bytes calldata context,
+        uint256 actualGasCost
+    ) internal virtual override {
+        (mode);
+        PaymasterContext memory data = context.decodePaymasterContext();
+        address extractedPaymasterId = data.paymasterId;
+        uint256 balToDeduct = actualGasCost +
+            _unaccountedEPGasOverhead *
+            tx.gasprice;
+        paymasterIdBalances[extractedPaymasterId] =
+            paymasterIdBalances[extractedPaymasterId] -
+            balToDeduct;
+        emit GasBalanceDeducted(extractedPaymasterId, balToDeduct);
+    }
+
+    /**
      * @dev Verify that an external signer signed the paymaster data of a user operation.
      * The paymaster data is expected to be the paymaster and a signature over the entire request parameters.
      * @param userOp The UserOperation struct that represents the current user operation.
@@ -200,7 +223,7 @@ contract VerifyingSingletonPaymaster is
         override
         returns (bytes memory context, uint256 validationData)
     {
-        PaymasterData memory paymasterData = userOp._decodePaymasterData();
+        PaymasterData memory paymasterData = userOp.decodePaymasterData();
         bytes32 hash = getHash(
             userOp,
             paymasterData.paymasterId,
@@ -238,27 +261,5 @@ contract VerifyingSingletonPaymaster is
                 paymasterData.validAfter
             )
         );
-    }
-
-    /**
-     * @dev Executes the paymaster's payment conditions
-     * @param mode tells whether the op succeeded, reverted, or if the op succeeded but cause the postOp to revert
-     * @param context payment conditions signed by the paymaster in `validatePaymasterUserOp`
-     * @param actualGasCost amount to be paid to the entry point in wei
-     */
-    function _postOp(
-        PostOpMode mode,
-        bytes calldata context,
-        uint256 actualGasCost
-    ) internal virtual override {
-        PaymasterContext memory data = context._decodePaymasterContext();
-        address extractedPaymasterId = data.paymasterId;
-        uint256 balToDeduct = actualGasCost +
-            unaccountedEPGasOverhead *
-            tx.gasprice;
-        paymasterIdBalances[extractedPaymasterId] =
-            paymasterIdBalances[extractedPaymasterId] -
-            balToDeduct;
-        emit GasBalanceDeducted(extractedPaymasterId, balToDeduct);
     }
 }

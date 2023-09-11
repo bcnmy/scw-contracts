@@ -450,7 +450,7 @@ describe("Forward Flow Module", async () => {
     safeTx.gasToken = "0x0000000000000000000000000000000000000000";
     safeTx.gasPrice = 10000000000;
     safeTx.targetTxGas = gasEstimation.toNumber();
-    safeTx.baseGas = 21000 + +15000 + 21000 + 25000; // base + cost of execTransactionFromModule + eth transfer  + ~cost of handlePayment itself
+    safeTx.baseGas = 21000 + +15000 + 21000 + 25000; // base + cost of execTransactionFromModule + eth transfer  + ~cost of _handlePayment itself
 
     const { data } = await safeSignTypedData(
       smartAccountOwner,
@@ -535,7 +535,7 @@ describe("Forward Flow Module", async () => {
     });
 
     safeTx.targetTxGas = gasEstimation1.toNumber(); // gas spent to target txn itself
-    safeTx.baseGas = 21000 + (gasEstimation2.toNumber() - 21000 + 55000); // additional gas: (base) + (refund erc20 token transfer - base) + ~(handlePayment cost)
+    safeTx.baseGas = 21000 + (gasEstimation2.toNumber() - 21000 + 55000); // additional gas: (base) + (refund erc20 token transfer - base) + ~(_handlePayment cost)
 
     const { data } = await safeSignTypedData(
       smartAccountOwner,

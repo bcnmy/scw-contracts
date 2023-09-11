@@ -17,8 +17,11 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  */
 
 contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
+    using ECDSA for bytes32;
+
     string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "0.2.0";
+    mapping(address => address) internal _smartAccountOwners;
 
     event OwnershipTransferred(
         address indexed smartAccount,
@@ -32,20 +35,16 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     error NotEOA(address account);
     error ZeroAddressNotAllowedAsOwner();
 
-    using ECDSA for bytes32;
-
-    mapping(address => address) internal smartAccountOwners;
-
     /**
      * @dev Initializes the module for a Smart Account.
      * Should be used at a time of first enabling the module for a Smart Account.
      * @param eoaOwner The owner of the Smart Account. Should be EOA!
      */
     function initForSmartAccount(address eoaOwner) external returns (address) {
-        if (smartAccountOwners[msg.sender] != address(0))
+        if (_smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
         if (eoaOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
-        smartAccountOwners[msg.sender] = eoaOwner;
+        _smartAccountOwners[msg.sender] = eoaOwner;
         return address(this);
     }
 
@@ -74,35 +73,10 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
      * @return owner The owner of the Smart Account.
      */
     function getOwner(address smartAccount) external view returns (address) {
-        address owner = smartAccountOwners[smartAccount];
+        address owner = _smartAccountOwners[smartAccount];
         if (owner == address(0))
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
         return owner;
-    }
-
-    /**
-     * @dev Transfers ownership for smartAccount and emits an event
-     * @param newOwner Smart Account address.
-     */
-    function _transferOwnership(
-        address smartAccount,
-        address newOwner
-    ) internal {
-        address _oldOwner = smartAccountOwners[smartAccount];
-        smartAccountOwners[smartAccount] = newOwner;
-        emit OwnershipTransferred(smartAccount, _oldOwner, newOwner);
-    }
-
-    /**
-     * @dev Checks if the address provided is a smart contract.
-     * @param account Address to be checked.
-     */
-    function _isSmartContract(address account) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
     }
 
     /**
@@ -160,6 +134,19 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     }
 
     /**
+     * @dev Transfers ownership for smartAccount and emits an event
+     * @param newOwner Smart Account address.
+     */
+    function _transferOwnership(
+        address smartAccount,
+        address newOwner
+    ) internal {
+        address _oldOwner = _smartAccountOwners[smartAccount];
+        _smartAccountOwners[smartAccount] = newOwner;
+        emit OwnershipTransferred(smartAccount, _oldOwner, newOwner);
+    }
+
+    /**
      * @dev Validates a signature for a message.
      * @dev Check if signature was made over dataHash.toEthSignedMessageHash() or just dataHash
      * The former is for personal_sign, the latter for the typed_data sign
@@ -175,7 +162,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         bytes memory signature,
         address smartAccount
     ) internal view returns (bool) {
-        address expectedSigner = smartAccountOwners[smartAccount];
+        address expectedSigner = _smartAccountOwners[smartAccount];
         if (expectedSigner == address(0))
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
         if (signature.length < 65) revert WrongSignatureLength();
@@ -190,5 +177,17 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
             return true;
         }
         return false;
+    }
+
+    /**
+     * @dev Checks if the address provided is a smart contract.
+     * @param account Address to be checked.
+     */
+    function _isSmartContract(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 }

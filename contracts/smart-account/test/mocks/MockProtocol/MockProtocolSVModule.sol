@@ -67,10 +67,12 @@ contract MockProtocolSVM is ISessionValidationModule {
         bytes calldata _sessionKeyData,
         bytes calldata /*callSpecificData*/
     ) external virtual override returns (address) {
-        (address sessionKey, address protocol, address token, uint256 maxAmount) = abi.decode(
-            _sessionKeyData,
-            (address, address, address, uint256)
-        );
+        (
+            address sessionKey,
+            address protocol,
+            address token,
+            uint256 maxAmount
+        ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
 
         require(
             destinationContract == protocol,

@@ -4,7 +4,6 @@ pragma solidity 0.8.17;
 import "../Proxy.sol";
 import "../BaseSmartAccount.sol";
 import {DefaultCallbackHandler} from "../handler/DefaultCallbackHandler.sol";
-import {SmartAccountFactoryErrors} from "../common/Errors.sol";
 import {Stakeable} from "../common/Stakeable.sol";
 
 /**
@@ -58,7 +57,7 @@ contract SmartAccountFactory is Stakeable {
         uint256 index
     ) public returns (address proxy) {
         // create initializer data based on init method and parameters
-        bytes memory initializer = getInitializer(
+        bytes memory initializer = _getInitializer(
             moduleSetupContract,
             moduleSetupData
         );
@@ -71,7 +70,6 @@ contract SmartAccountFactory is Stakeable {
             uint256(uint160(basicImplementation))
         );
 
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create2(
                 0x0,
@@ -85,7 +83,6 @@ contract SmartAccountFactory is Stakeable {
         address initialAuthorizationModule;
 
         if (initializer.length > 0) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 let success := call(
                     gas(),
@@ -121,7 +118,6 @@ contract SmartAccountFactory is Stakeable {
             uint256(uint160(basicImplementation))
         );
 
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create(
                 0x0,
@@ -131,14 +127,13 @@ contract SmartAccountFactory is Stakeable {
         }
         require(address(proxy) != address(0), "Create call failed");
 
-        bytes memory initializer = getInitializer(
+        bytes memory initializer = _getInitializer(
             moduleSetupContract,
             moduleSetupData
         );
         address initialAuthorizationModule;
 
         if (initializer.length > 0) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 let success := call(
                     gas(),
@@ -167,7 +162,7 @@ contract SmartAccountFactory is Stakeable {
      * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
      * @return initializer bytes for init method
      */
-    function getInitializer(
+    function _getInitializer(
         address moduleSetupContract,
         bytes calldata moduleSetupData
     ) internal view returns (bytes memory) {
@@ -188,7 +183,7 @@ contract SmartAccountFactory is Stakeable {
         uint256 index
     ) external view returns (address _account) {
         // create initializer data based on init method, _owner and minimalHandler
-        bytes memory initializer = getInitializer(
+        bytes memory initializer = _getInitializer(
             moduleSetupContract,
             moduleSetupData
         );

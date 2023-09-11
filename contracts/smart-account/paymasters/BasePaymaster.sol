@@ -6,7 +6,7 @@ pragma solidity 0.8.17;
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPaymaster} from "@account-abstraction/contracts/interfaces/IPaymaster.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {BaseSmartAccountErrors} from "../common/Errors.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 
@@ -24,21 +24,10 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
         _transferOwnership(_owner);
     }
 
-    /// @inheritdoc IPaymaster
-    function validatePaymasterUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 maxCost
-    ) external override returns (bytes memory context, uint256 validationData) {
-        _requireFromEntryPoint();
-        return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
-    }
-
-    function _validatePaymasterUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 maxCost
-    ) internal virtual returns (bytes memory context, uint256 validationData);
+    /**
+     * add a deposit for this paymaster, used for paying for transaction fees
+     */
+    function deposit() external payable virtual;
 
     /// @inheritdoc IPaymaster
     function postOp(
@@ -50,32 +39,15 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
         _postOp(mode, context, actualGasCost);
     }
 
-    /**
-     * post-operation handler.
-     * (verified to be called only through the entryPoint)
-     * @dev if subclass returns a non-empty context from validatePaymasterUserOp, it must also implement this method.
-     * @param mode enum with the following options:
-     *      opSucceeded - user operation succeeded.
-     *      opReverted  - user op reverted. still has to pay for gas.
-     *      postOpReverted - user op succeeded, but caused postOp (in mode=opSucceeded) to revert.
-     *                       Now this is the 2nd call, after user's op was deliberately reverted.
-     * @param context - the context value returned by validatePaymasterUserOp
-     * @param actualGasCost - actual gas used so far (without this postOp call).
-     */
-    function _postOp(
-        PostOpMode mode,
-        bytes calldata context,
-        uint256 actualGasCost
-    ) internal virtual {
-        (mode, context, actualGasCost); // unused params
-        // subclass must override this method if validatePaymasterUserOp returns a context
-        revert("must override");
+    /// @inheritdoc IPaymaster
+    function validatePaymasterUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 maxCost
+    ) external override returns (bytes memory context, uint256 validationData) {
+        _requireFromEntryPoint();
+        return _validatePaymasterUserOp(userOp, userOpHash, maxCost);
     }
-
-    /**
-     * add a deposit for this paymaster, used for paying for transaction fees
-     */
-    function deposit() external payable virtual;
 
     /**
      * withdraw value from the deposit
@@ -97,13 +69,6 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
     }
 
     /**
-     * return current paymaster's deposit on the entryPoint.
-     */
-    function getDeposit() public view returns (uint256) {
-        return entryPoint.balanceOf(address(this));
-    }
-
-    /**
      * unlock the stake, in order to withdraw it.
      * The paymaster can't serve requests once unlocked, until it calls addStake again
      */
@@ -118,6 +83,41 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      */
     function withdrawStake(address payable withdrawAddress) external onlyOwner {
         entryPoint.withdrawStake(withdrawAddress);
+    }
+
+    /**
+     * return current paymaster's deposit on the entryPoint.
+     */
+    function getDeposit() public view returns (uint256) {
+        return entryPoint.balanceOf(address(this));
+    }
+
+    function _validatePaymasterUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 maxCost
+    ) internal virtual returns (bytes memory context, uint256 validationData);
+
+    /**
+     * post-operation handler.
+     * (verified to be called only through the entryPoint)
+     * @dev if subclass returns a non-empty context from validatePaymasterUserOp, it must also implement this method.
+     * @param mode enum with the following options:
+     *      opSucceeded - user operation succeeded.
+     *      opReverted  - user op reverted. still has to pay for gas.
+     *      postOpReverted - user op succeeded, but caused postOp (in mode=opSucceeded) to revert.
+     *                       Now this is the 2nd call, after user's op was deliberately reverted.
+     * @param context - the context value returned by validatePaymasterUserOp
+     * @param actualGasCost - actual gas used so far (without this postOp call).
+     */
+    function _postOp(
+        PostOpMode mode,
+        bytes calldata context,
+        uint256 actualGasCost
+    ) internal virtual {
+        (mode, context, actualGasCost); // unused params
+        // subclass must override this method if validatePaymasterUserOp returns a context
+        revert("must override");
     }
 
     /// validate the call is made from a valid entrypoint

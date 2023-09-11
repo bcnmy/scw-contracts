@@ -30,7 +30,7 @@ abstract contract ISessionValidationModule {
      * complies with the Session Key permissions represented by sessionKeyData
      * @param destinationContract address of the contract to be called
      * @param callValue value to be sent with the call
-     * @param funcCallData the data for the call. 
+     * @param funcCallData the data for the call.
      * is parsed inside the Session Validation Module (SVM)
      * @param sessionKeyData SessionKey data, that describes sessionKey permissions
      */
