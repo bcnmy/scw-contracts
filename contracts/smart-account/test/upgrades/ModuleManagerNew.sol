@@ -25,7 +25,7 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         if (to != address(0))
             // Setup has to complete successfully or transaction fails.
             require(
-                execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()),
+                _execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()),
                 "BSA000"
             );
     }
@@ -80,7 +80,7 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
             "BSA104"
         );
         // Execute transaction without further confirmations.
-        success = execute(to, value, data, operation, gasleft());
+        success = _execute(to, value, data, operation, gasleft());
         if (success) emit ExecutionFromModuleSuccess(msg.sender);
         else emit ExecutionFromModuleFailure(msg.sender);
     }

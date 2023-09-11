@@ -21,7 +21,7 @@ abstract contract Executor {
         uint256 txGas
     );
 
-    function execute(
+    function _execute(
         address to,
         uint256 value,
         bytes memory data,
