@@ -12,7 +12,7 @@
     "func-name-mixedcase": "error",
     "func-param-name-mixedcase": "error",
     "modifier-name-mixedcase": "error",
-    "private-vars-leading-underscore": ["error", { "strict": false }],
+    "private-vars-leading-underscore": ["off", { "strict": true }],
     "use-forbidden-name": "error",
     "var-name-mixedcase": "error",
     "imports-on-top": "error",
@@ -24,13 +24,18 @@
     "max-states-count": ["error", 15],
     "no-empty-blocks": "error",
     "no-unused-vars": "error",
-    "payable-fallback": "error",
+    "payable-fallback": "off",
     "constructor-syntax": "error",
     "explicit-types": "error",
     "no-unused-import": "error",
-    "one-contract-per-file": "error",
+    "one-contract-per-file": "warn",
     "not-rely-on-time": "off",
-    "reason-string": "error"
+    "reason-string": "error",
+    "no-inline-assembly": "off",
+    "avoid-low-level-calls": "off",
+    "custom-errors": "off",
+    "no-complex-fallback": "off",
+    "no-global-import": "off"
   },
   "plugins": ["prettier"]
 }
