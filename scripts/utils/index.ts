@@ -97,6 +97,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   421613: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
+  42170: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
   420: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
@@ -159,6 +162,10 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.01"),
   },
+  42170: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
   420: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.01"),
@@ -206,6 +213,10 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
   },
   42161: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+  },
+  42170: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
   },
