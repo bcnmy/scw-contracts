@@ -2,7 +2,7 @@ import { ethers } from "hardhat";
 import {
   deployContract,
   encodeParam,
-  DEPLOYMENT_SALTS,
+  DEPLOYMENT_SALTS_DEV,
   getDeployerInstance,
   isContract,
 } from "../utils";
