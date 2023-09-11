@@ -122,7 +122,6 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
 
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
-        // require(msg.sender == address(entryPoint), "Sender not EntryPoint"); // won't need BaseSmartAccountErrors import
         if (msg.sender != address(entryPoint))
             revert CallerIsNotAnEntryPoint(msg.sender);
     }

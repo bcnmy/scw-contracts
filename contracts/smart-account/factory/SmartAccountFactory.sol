@@ -157,8 +157,7 @@ contract SmartAccountFactory is Stakeable {
 
     /**
      * @dev Allows to retrieve the initializer data for the account.
-     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts
+     * @param moduleSetupContract Initializes the auth module; can be a factory or registry for multiple accounts.
      * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
      * @return initializer bytes for init method
      */

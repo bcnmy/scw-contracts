@@ -275,8 +275,7 @@ abstract contract ModuleManager is
 
     /**
      * @notice Setup function sets the initial storage of the contract.
-     * @param setupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts
+     * @param setupContract initializing the auth module; can be a module factory or a registry for multiple accounts.
      * @param setupData modules setup data (a standard calldata for the module setup contract)
      */
     function _initialSetupModules(

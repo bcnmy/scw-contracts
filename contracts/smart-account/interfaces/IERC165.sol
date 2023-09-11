@@ -1,7 +1,15 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.17;
 
-/// @notice More details at https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/utils/introspection/IERC165.sol
+/**
+ * @dev Interface of the ERC165 standard, as defined in the
+ * https://eips.ethereum.org/EIPS/eip-165[EIP].
+ *
+ * Implementers can declare support of contract interfaces, which can then be
+ * queried by others ({ERC165Checker}).
+ *
+ * For an implementation, see {ERC165}.
+ */
 interface IERC165 {
     /**
      * @dev Returns true if this contract implements the interface defined by

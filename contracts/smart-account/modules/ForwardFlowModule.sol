@@ -85,9 +85,8 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
         0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
-    // keccak256(
-    //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
-    // );
+    // solhint-disable-next-line
+    // keccak256("AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)");
     bytes32 internal constant ACCOUNT_TX_TYPEHASH =
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
@@ -103,7 +102,7 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
 
     /**
      * @dev Allows to estimate a transaction.
-     * @notice This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
+     * @notice This method is for estimation only, it will always revert and encode the result in the revert data.
      * @notice Call this method to get an estimate of the handlePayment costs that are deducted with `execTransaction`
      * @param gasUsed Gas used by the transaction.
      * @param baseGas Gas costs that are independent of the transaction execution
@@ -171,8 +170,8 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
 
     /**
      * @dev Allows to estimate a transaction.
-     *      This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
-     *      Since the `estimateGas` function includes refunds, call this method to get an estimated of the costs that are deducted from the wallet with `execTransaction`
+     * This method is for estimation only, it will always revert and encode the result in the revert data.
+     * Call this method to get an estimate of the handlePayment costs that are deducted with `execTransaction`
      * @param to Destination address of the transaction.
      * @param value Ether value of transaction.
      * @param data Data payload of transaction.
@@ -204,7 +203,7 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
 
     /**
      * @dev Safe (ex-Gnosis) style transaction with optional repay in native tokens or ERC20
-     * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
+     * @dev Execute a transaction confirmed by required signature/s and then pays the account that submitted it.
      * @dev Function name optimized to have hash started with zeros to make this function calls cheaper
      * @notice The fees are always transferred, even if the user transaction fails.
      * @param _tx Smart Account transaction
@@ -270,15 +269,17 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
                 _tx.operation,
                 _tx.targetTxGas
             );
-            // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
-            // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
+
+            // If targetTxGas and gasPrice are both 0, the internal tx must succeed.
+            // Enables safe use of `estimateGas` by finding the minimum gas where the transaction doesn't revert
             if (!success && _tx.targetTxGas == 0 && refundInfo.gasPrice == 0)
                 revert CanNotEstimateGas(
                     _tx.targetTxGas,
                     refundInfo.gasPrice,
                     success
                 );
-            // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
+
+            // Transfer transaction costs to tx.origin to avoid intermediate contract payments.
             uint256 payment;
             if (refundInfo.gasPrice != 0) {
                 payment = _handlePayment(

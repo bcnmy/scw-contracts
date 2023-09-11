@@ -45,14 +45,13 @@ contract SmartAccountNoAuth is
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
         0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
-    // keccak256(
-    //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
-    // );
+    // solhint-disable-next-line
+    // keccak256("AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)");
     bytes32 internal constant ACCOUNT_TX_TYPEHASH =
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
-    // Owner storage. Deprecated. Left for storage layout compatibility
-    address public owner_deprecated;
+    // /!\ Owner storage. Deprecated. Left for storage layout compatibility /!\
+    address public ownerDeprecated;
 
     // changed to 2D nonce below
     // @notice there is no _nonce
@@ -187,8 +186,7 @@ contract SmartAccountNoAuth is
     /**
      * @dev Initialize the Smart Account with required states
      * @param handler Default fallback handler provided in Smart Account
-     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts
+     * @param moduleSetupContract Initializes the auth module; can be a factory or registry for multiple accounts.
      * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
      * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
      * @notice any further implementations that introduces a new state must have a reinit method

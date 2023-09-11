@@ -24,12 +24,11 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
     /**
-     * @dev Initialize the Smart Account with required states
-     * @param handler Default fallback handler provided in Smart Account
-     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts.
-     * @param moduleSetupData data containing address of the Setup Contract and a setup data
-     * @notice devs need to make sure it is only callable once (use initializer modifier or state check restrictions)
+     * @dev Initialize the Smart Account with required states.
+     * @param handler Default fallback handler for the Smart Account.
+     * @param moduleSetupContract Initializes the auth module; can be a factory or registry for multiple accounts.
+     * @param moduleSetupData Contains address of the Setup Contract and setup data.
+     * @notice Ensure this is callable only once (use initializer modifier or state checks).
      */
     function init(
         address handler,
@@ -48,7 +47,7 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      *         otherwise, an address of an "authorizer" contract.
      *      <6-byte> validUntil - last timestamp this operation is valid. 0 for "indefinite"
      *      <6-byte> validAfter - first timestamp this operation is valid
-     *      If the account doesn't use time-range, it is enough to return SIG_VALIDATION_FAILED value (1) for signature failure.
+     *      If no time-range in account, return SIG_VALIDATION_FAILED (1) for signature failure.
      *      Note that the validation code cannot use block.timestamp (or block.number) directly.
      */
     function validateUserOp(
