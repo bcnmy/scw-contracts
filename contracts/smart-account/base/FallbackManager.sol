@@ -14,7 +14,6 @@ abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT =
         0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d4;
 
-
     uint256[24] private __gap;
 
     event ChangedFallbackHandler(
@@ -52,14 +51,12 @@ abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
         }
     }
 
-
-
     /// @dev Allows to add a contract to handle fallback calls.
     ///      Only fallback calls without value and with data will be forwarded
     /// @param handler contract to handle fallback calls.
     function setFallbackHandler(address handler) external virtual;
 
-        function getFallbackHandler() public view returns (address _handler) {
+    function getFallbackHandler() public view returns (address _handler) {
         assembly {
             _handler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
         }
@@ -79,5 +76,4 @@ abstract contract FallbackManager is SelfAuthorized, FallbackManagerErrors {
         }
         emit ChangedFallbackHandler(previousHandler, handler);
     }
-
 }

@@ -15,12 +15,11 @@ contract GasEstimatorSmartAccount {
         bytes calldata _data // execTransaction data // counterFactual wallet should have assets if required
     ) external returns (bool success, bytes memory result, uint256 gas) {
         uint256 initialGas = gasleft();
-        SmartAccountFactory(_factory)
-            .deployCounterFactualAccount(
-                _moduleSetupContract,
-                _moduleSetupData,
-                _index
-            );
+        SmartAccountFactory(_factory).deployCounterFactualAccount(
+            _moduleSetupContract,
+            _moduleSetupData,
+            _index
+        );
         (success, result) = _actualWallet.call(_data);
         gas = initialGas - gasleft();
     }

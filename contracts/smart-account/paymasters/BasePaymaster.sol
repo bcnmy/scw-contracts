@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.17;
 
-/* solhint-disable reason-string */
-
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPaymaster} from "@account-abstraction/contracts/interfaces/IPaymaster.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -14,8 +12,8 @@ import "@account-abstraction/contracts/core/Helpers.sol";
  * Helper class for creating a paymaster.
  * provides helper methods for staking.
  * validates that the postOp is called only by the entryPoint
+ @notice Could have Ownable2Step
  */
-// @notice Could have Ownable2Step
 abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
     IEntryPoint public immutable entryPoint;
 

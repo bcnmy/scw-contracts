@@ -233,7 +233,7 @@ contract SmartAccount is
         emit ImplementationUpdated(oldImplementation, _implementation);
     }
 
-/* solhint-disable func-name-mixedcase */
+    /* solhint-disable func-name-mixedcase */
 
     /**
      * @dev Execute a transaction (called by entryPoint)
@@ -263,7 +263,6 @@ contract SmartAccount is
         uint256[] calldata value,
         bytes[] calldata func
     ) public {
-    
         _requireFromEntryPoint();
         if (
             dest.length == 0 ||
@@ -278,7 +277,7 @@ contract SmartAccount is
         }
     }
 
-/* solhint-enable func-name-mixedcase */
+    /* solhint-enable func-name-mixedcase */
 
     /**
      * @dev Deposit more funds for this account in the entryPoint
