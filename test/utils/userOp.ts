@@ -1,21 +1,30 @@
 import {
   arrayify,
   defaultAbiCoder,
-  getCreate2Address,
   hexConcat,
   hexDataSlice,
+  hexValue,
   keccak256,
+  hexZeroPad,
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
-import { AddressZero, callDataCost, HashZero, rethrow } from "../smart-wallet/testUtils";
+import { ethers } from "hardhat";
+import {
+  AddressZero,
+  callDataCost,
+  HashZero,
+  rethrow,
+} from "../utils/testUtils";
 import {
   ecsign,
   toRpcSig,
-  keccak256 as keccak256_buffer,
+  keccak256 as keccak256Buffer,
 } from "ethereumjs-util";
 import { EntryPoint } from "../../typechain";
-import { UserOperation } from "./UserOperation";
+import { UserOperation } from "./userOperation";
 import { Create2Factory } from "../../src/Create2Factory";
+import { MerkleTree } from "merkletreejs";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 export function packUserOp(op: UserOperation, forSignature = true): string {
   if (forSignature) {
@@ -126,7 +135,7 @@ export const DefaultsForUserOp: UserOperation = {
   initCode: "0x",
   callData: "0x",
   callGasLimit: 0,
-  verificationGasLimit: 150000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
+  verificationGasLimit: 250000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
   preVerificationGas: 21000, // should also cover calldata cost.
   maxFeePerGas: 0,
   maxPriorityFeePerGas: 1e9,
@@ -147,7 +156,7 @@ export function signUserOp(
   ]);
 
   const sig = ecsign(
-    keccak256_buffer(msg1),
+    keccak256Buffer(msg1),
     Buffer.from(arrayify(signer.privateKey))
   );
   // that's equivalent of:  await signer.signMessage(message);
@@ -191,7 +200,9 @@ export function fillUserOpDefaults(
 export async function fillUserOp(
   op: Partial<UserOperation>,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce"
+  getNonceFunction = "nonce",
+  useNonceKey = true,
+  nonceKey = 0
 ): Promise<UserOperation> {
   const op1 = { ...op };
   const provider = entryPoint?.provider;
@@ -217,12 +228,17 @@ export async function fillUserOp(
     }
     if (op1.verificationGasLimit == null) {
       if (provider == null) throw new Error("no entrypoint/provider");
-      const initEstimate = await provider.estimateGas({
-        from: entryPoint?.address,
-        to: initAddr,
-        data: initCallData,
-        gasLimit: 10e6,
-      });
+      let initEstimate;
+      try {
+        initEstimate = await provider.estimateGas({
+          from: entryPoint?.address,
+          to: initAddr,
+          data: initCallData,
+          gasLimit: 10e6,
+        });
+      } catch (error) {
+        initEstimate = 1_000_000;
+      }
       op1.verificationGasLimit = BigNumber.from(
         DefaultsForUserOp.verificationGasLimit
       ).add(initEstimate);
@@ -231,25 +247,42 @@ export async function fillUserOp(
   if (op1.nonce == null) {
     if (provider == null)
       throw new Error("must have entryPoint to autofill nonce");
-    const c = new Contract(
-      op.sender!,
-      [`function ${getNonceFunction}() view returns(uint256)`],
-      provider
-    );
-    op1.nonce = await c[getNonceFunction]().catch(rethrow());
+    // Review/TODO: if someone passes 'nonce' as nonceFunction. or change the default
+
+    if (useNonceKey) {
+      const c = new Contract(
+        op.sender!,
+        [`function nonce(uint192) view returns(uint256)`],
+        provider
+      );
+      op1.nonce = await c.nonce(nonceKey).catch(rethrow());
+    } else {
+      const c = new Contract(
+        op.sender!,
+        [`function ${getNonceFunction}() view returns(uint256)`],
+        provider
+      );
+      op1.nonce = await c[getNonceFunction]().catch(rethrow());
+    }
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
       throw new Error("must have entryPoint for callGasLimit estimate");
-    const gasEtimated = await provider.estimateGas({
-      from: entryPoint?.address,
-      to: op1.sender,
-      data: op1.callData,
-    });
+    let gasEstimated;
+    try {
+      gasEstimated = await provider.estimateGas({
+        from: entryPoint?.address,
+        to: op1.sender,
+        data: op1.callData,
+      });
+    } catch (error) {
+      // to handle the case when we need to build an userOp that is expected to fail
+      gasEstimated = 3_000_000;
+    }
 
-    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEtimated)
+    // console.log('estim', op1.sender,'len=', op1.callData!.length, 'res=', gasEstimated)
     // estimateGas assumes direct call from entryPoint. add wrapper cost.
-    op1.callGasLimit = gasEtimated; // .add(55000)
+    op1.callGasLimit = gasEstimated; // .add(55000)
   }
   if (op1.maxFeePerGas == null) {
     if (provider == null)
@@ -277,11 +310,19 @@ export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce",
-  extraPreVerificationGas: number = 0
+  getNonceFunction = "nonce",
+  useNonceKey = true,
+  nonceKey = 0,
+  extraPreVerificationGas = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
-  const op2 = await fillUserOp(op, entryPoint, getNonceFunction);
+  const op2 = await fillUserOp(
+    op,
+    entryPoint,
+    getNonceFunction,
+    useNonceKey,
+    nonceKey
+  );
   op2.preVerificationGas =
     Number(op2.preVerificationGas) + extraPreVerificationGas;
 
@@ -291,5 +332,268 @@ export async function fillAndSign(
   return {
     ...op2,
     signature: await signer.signMessage(message),
+  };
+}
+
+export async function makeEcdsaModuleUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+  options?: {
+    preVerificationGas?: number;
+  },
+  nonceKey = 0
+): Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      ...options,
+    },
+    userOpSigner,
+    entryPoint,
+    "nonce",
+    true,
+    nonceKey,
+    0
+  );
+
+  // add validator module address to the signature
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [userOp.signature, moduleAddress]
+  );
+
+  userOp.signature = signatureWithModuleAddress;
+  return userOp;
+}
+
+export async function makeEcdsaModuleUserOpWithPaymaster(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+  paymaster: Contract,
+  verifiedSigner: Wallet | SignerWithAddress,
+  validUntil: number,
+  validAfter: number,
+  options?: {
+    preVerificationGas?: number;
+  },
+  nonceKey = 0
+): Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      ...options,
+    },
+    userOpSigner,
+    entryPoint,
+    "nonce",
+    true,
+    nonceKey,
+    0
+  );
+
+  const hash = await paymaster.getHash(
+    userOp,
+    verifiedSigner.address,
+    validUntil,
+    validAfter
+  );
+  const paymasterSig = await verifiedSigner.signMessage(arrayify(hash));
+  const userOpWithPaymasterData = await fillAndSign(
+    {
+      // eslint-disable-next-line node/no-unsupported-features/es-syntax
+      ...userOp,
+      paymasterAndData: hexConcat([
+        paymaster.address,
+        ethers.utils.defaultAbiCoder.encode(
+          ["address", "uint48", "uint48", "bytes"],
+          [verifiedSigner.address, validUntil, validAfter, paymasterSig]
+        ),
+      ]),
+    },
+    userOpSigner,
+    entryPoint,
+    "nonce",
+    true,
+    nonceKey,
+    0
+  );
+
+  // add validator module address to the signature
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [userOpWithPaymasterData.signature, moduleAddress]
+  );
+
+  userOpWithPaymasterData.signature = signatureWithModuleAddress;
+
+  return userOpWithPaymasterData;
+}
+
+export async function makeSARegistryModuleUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  saRegistryModuleAddress: string,
+  ecdsaModuleAddress: string,
+  options?: {
+    preVerificationGas?: number;
+  },
+  nonceKey = 0
+): Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      ...options,
+    },
+    userOpSigner,
+    entryPoint,
+    "nonce",
+    true,
+    nonceKey,
+    0
+  );
+
+  const signatureForSAOwnershipRegistry = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [userOp.signature, ecdsaModuleAddress]
+  );
+
+  const signatureForECDSAOwnershipRegistry =
+    ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [signatureForSAOwnershipRegistry, saRegistryModuleAddress]
+    );
+
+  userOp.signature = signatureForECDSAOwnershipRegistry;
+  return userOp;
+}
+
+export async function makeMultichainEcdsaModuleUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+  leaves: string[],
+  options?: {
+    preVerificationGas?: number;
+  },
+  validUntil = 0,
+  validAfter = 0,
+  nonceKey = 0
+): Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      ...options,
+    },
+    userOpSigner,
+    entryPoint,
+    "nonce",
+    true,
+    nonceKey,
+    0
+  );
+
+  const leafOfThisUserOp = hexConcat([
+    hexZeroPad(ethers.utils.hexlify(validUntil), 6),
+    hexZeroPad(ethers.utils.hexlify(validAfter), 6),
+    hexZeroPad(await entryPoint.getUserOpHash(userOp), 32),
+  ]);
+
+  leaves.push(leafOfThisUserOp);
+  leaves = leaves.map((x) => ethers.utils.keccak256(x));
+
+  const chainMerkleTree = new MerkleTree(leaves, keccak256, {
+    sortPairs: true,
+  });
+
+  // user only signs once
+  const multichainSignature = await userOpSigner.signMessage(
+    ethers.utils.arrayify(chainMerkleTree.getHexRoot())
+  );
+
+  // but still required to pad the signature with the required data (unsigned) for every chain
+  // this is done by dapp automatically
+  const merkleProof = chainMerkleTree.getHexProof(leaves[leaves.length - 1]);
+  const moduleSignature = defaultAbiCoder.encode(
+    ["uint48", "uint48", "bytes32", "bytes32[]", "bytes"],
+    [
+      validUntil,
+      validAfter,
+      chainMerkleTree.getHexRoot(),
+      merkleProof,
+      multichainSignature,
+    ]
+  );
+
+  // add validator module address to the signature
+  const signatureWithModuleAddress = defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [moduleSignature, moduleAddress]
+  );
+
+  // =================== put signature into userOp and execute ===================
+  userOp.signature = signatureWithModuleAddress;
+
+  return userOp;
+}
+
+export function serializeUserOp(op: UserOperation) {
+  return {
+    sender: op.sender,
+    nonce: hexValue(op.nonce),
+    initCode: op.initCode,
+    callData: op.callData,
+    callGasLimit: hexValue(op.callGasLimit),
+    verificationGasLimit: hexValue(op.verificationGasLimit),
+    preVerificationGas: hexValue(op.preVerificationGas),
+    maxFeePerGas: hexValue(op.maxFeePerGas),
+    maxPriorityFeePerGas: hexValue(op.maxPriorityFeePerGas),
+    paymasterAndData: op.paymasterAndData,
+    signature: op.signature,
   };
 }

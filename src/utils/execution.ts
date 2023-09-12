@@ -7,12 +7,13 @@ import {
   BigNumberish,
   Signer,
   PopulatedTransaction,
+  BytesLike,
 } from "ethers";
 import { TypedDataSigner } from "@ethersproject/abstract-signer";
 import { AddressZero } from "@ethersproject/constants";
 
 export const ACCOUNT_ABSTRACTION_FLOW = 0;
-export const EOA_CONTROLLED_FLOW = 1;
+export const FORWARD_FLOW = 1;
 
 export const EIP_DOMAIN = {
   EIP712Domain: [
@@ -86,6 +87,12 @@ export interface WalletTransaction {
 export interface SafeSignature {
   signer: string;
   data: string;
+}
+
+export interface SmartAccountSignedForwardTransaction {
+  transaction: Transaction;
+  feeRefund: FeeRefund;
+  signature: string;
 }
 
 export const calculateSafeDomainSeparator = (
@@ -169,7 +176,7 @@ export const safeSignTypedData = async (
 ): Promise<SafeSignature> => {
   if (!chainId && !signer.provider)
     throw Error("Provider required to retrieve chainId");
-  const cid = chainId || (await signer.provider!!.getNetwork()).chainId;
+  const cid = chainId || (await signer.provider!.getNetwork()).chainId;
   const signerAddress = await signer.getAddress();
   return {
     signer: signerAddress,
@@ -201,7 +208,7 @@ export const safeSignMessage = async (
   safeTx: SafeTransaction,
   chainId?: BigNumberish
 ): Promise<SafeSignature> => {
-  const cid = chainId || (await signer.provider!!.getNetwork()).chainId;
+  const cid = chainId || (await signer.provider!.getNetwork()).chainId;
   return signHash(signer, calculateSafeTransactionHash(safe, safeTx, cid));
 };
 
@@ -216,13 +223,16 @@ export const buildSignatureBytes = (signatures: SafeSignature[]): string => {
   return signatureBytes;
 };
 
-export const buildContractSignature = (signer: string, data: string): string => {
+export const buildContractSignature = (
+  signer: string,
+  data: string
+): string => {
   const SIGNATURE_LENGTH_BYTES = 65;
 
   let signatureBytes = "0x";
   let dynamicBytes = "";
-  
-          /* 
+
+  /* 
               A contract signature has a static part of 65 bytes and the dynamic part that needs to be appended at the end of 
               end signature bytes.
               The signature format is
@@ -232,15 +242,20 @@ export const buildContractSignature = (signer: string, data: string): string => 
               Dynamic part (solidity bytes): 32 bytes + signature data length
               {32-bytes signature length}{bytes signature data}
           */
-          const dynamicPartPosition = (SIGNATURE_LENGTH_BYTES)
-              .toString(16)
-              .padStart(64, "0");
-          const dynamicPartLength = (data.slice(2).length / 2).toString(16).padStart(64, "0");
-          const staticSignature = `${signer.slice(2).padStart(64, "0")}${dynamicPartPosition}00`;
-          const dynamicPartWithLength = `${dynamicPartLength}${data.slice(2)}`;
+  const dynamicPartPosition = SIGNATURE_LENGTH_BYTES.toString(16).padStart(
+    64,
+    "0"
+  );
+  const dynamicPartLength = (data.slice(2).length / 2)
+    .toString(16)
+    .padStart(64, "0");
+  const staticSignature = `${signer
+    .slice(2)
+    .padStart(64, "0")}${dynamicPartPosition}00`;
+  const dynamicPartWithLength = `${dynamicPartLength}${data.slice(2)}`;
 
-          signatureBytes += staticSignature;
-          dynamicBytes += dynamicPartWithLength;
+  signatureBytes += staticSignature;
+  dynamicBytes += dynamicPartWithLength;
 
   return signatureBytes + dynamicBytes;
 };
@@ -367,7 +382,7 @@ export const executeContractCallWithSigners = async (
     contract,
     method,
     params,
-    await safe.getNonce(EOA_CONTROLLED_FLOW),
+    await safe.getNonce(FORWARD_FLOW),
     delegateCall,
     overrides
   );
@@ -401,3 +416,76 @@ export const buildSafeTransaction = (template: {
     nonce: template.nonce,
   };
 };
+
+export async function buildEcdsaModuleAuthorizedForwardTx(
+  destinationContract: string,
+  callData: string,
+  smartAccount: Contract,
+  smartAccountOwner: Signer & TypedDataSigner,
+  validationModuleAddress: string,
+  forwardFlowModule: Contract,
+  value: number | string = 0
+): Promise<SmartAccountSignedForwardTransaction> {
+  const safeTx: SafeTransaction = buildSafeTransaction({
+    to: destinationContract,
+    value: value,
+    data: callData,
+    nonce: await forwardFlowModule.getNonce(FORWARD_FLOW),
+  });
+
+  const { signer, data } = await safeSignTypedData(
+    smartAccountOwner,
+    smartAccount,
+    safeTx,
+    await forwardFlowModule.getChainId()
+  );
+
+  const transaction: Transaction = {
+    to: safeTx.to,
+    value: safeTx.value,
+    data: safeTx.data,
+    operation: safeTx.operation,
+    targetTxGas: safeTx.targetTxGas,
+  };
+  const refundInfo: FeeRefund = {
+    baseGas: safeTx.baseGas,
+    gasPrice: safeTx.gasPrice,
+    tokenGasPriceFactor: safeTx.tokenGasPriceFactor,
+    gasToken: safeTx.gasToken,
+    refundReceiver: safeTx.refundReceiver,
+  };
+
+  let signature = "0x";
+  signature += data.slice(2);
+  // add validator module address to the signature
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [signature, validationModuleAddress]
+  );
+
+  return {
+    transaction: transaction,
+    feeRefund: refundInfo,
+    signature: signatureWithModuleAddress,
+  };
+}
+
+export function getTransactionAndRefundInfoFromSafeTransactionObject(
+  SafeTx: SafeTransaction
+): { transaction: Transaction; refundInfo: FeeRefund } {
+  const transaction: Transaction = {
+    to: SafeTx.to,
+    value: SafeTx.value,
+    data: SafeTx.data,
+    operation: SafeTx.operation,
+    targetTxGas: SafeTx.targetTxGas,
+  };
+  const refundInfo: FeeRefund = {
+    baseGas: SafeTx.baseGas,
+    gasPrice: SafeTx.gasPrice,
+    tokenGasPriceFactor: SafeTx.tokenGasPriceFactor,
+    gasToken: SafeTx.gasToken,
+    refundReceiver: SafeTx.refundReceiver,
+  };
+  return { transaction, refundInfo };
+}

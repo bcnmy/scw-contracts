@@ -1,115 +1,192 @@
+![Solidity](https://img.shields.io/badge/Solidity-0.8.17-blue.svg) ![Hardhat](https://img.shields.io/badge/Framework-Hardhat-brightgreen.svg) ![Foundry](https://img.shields.io/badge/Framework-Foundry-orange.svg) ![Test Coverage](https://img.shields.io/badge/Coverage-45%25-red.svg)
 
-# Biconomy Smart Account (Smart Contract Wallet) Overview
+# Biconomy Smart Account: Leading Implementation of Account Abstraction 🌐
 
-Biconomy Smart Account is a smart contract wallet that builds on core concepts of Gnosis / Argent safes and implements an interface to support calls from [account abstraction](https://eips.ethereum.org/EIPS/eip-4337) Entry Point contract. We took all the good parts of existing smart contract wallets. 
+Biconomy Smart Account is a smart contract wallet focused on implementing Account Abstraction. It builds on the core concepts of Gnosis and Argent safes and is compliant with [ERC-4337](https://eips.ethereum.org/EIPS/eip-4337) and [ERC-6900](https://eips.ethereum.org/EIPS/eip-6900).
 
-These smart wallets have a single owner (1/1 Multisig) and are designed in such a way that it is
+<p align="center"><img src="./assets/readme/biconomy-account-abstraction.png" width="550" alt="Biconomy Account Abstraction Banner"></p>
 
-- Cheap to deploy copies of a base wallet
-- Wallet addresses are counterfactual in nature (you can know the address in advance and users will have the same address across all EVM chains)
-- Deployment cost can be sponsored (gasless transactions by a relayer)
-- Modules can be used to extend the functionality of the smart contract wallet. Concepts like multi-sig, session keys, etc also can be implemented using the MultiSig Module, SessionKey Module & so on.
+## 📜 Smart Contracts
 
-## Smart Contracts
+- **BaseSmartAccount.sol**: An abstract contract implementing the EIP4337 IWallet interface.
+- **Proxy.sol**: A lightweight proxy upgradeable through the UUPS pattern.
+- **SmartAccountFactory.sol**: This factory contract manages the deployment of Smart Account (Account Abstraction).
+- **SmartAccount.sol**: The primary implementation contract for a Smart Account (Account Abstraction).
+- **EntryPoint.sol**: Implements the EIP4337 Entry Point contract.
+- **StakeManager.sol**: A stake manager for wallet and paymaster deposits/stakes.
+- **Executor.sol**: A helper contract facilitating calls and delegate calls to dapp contracts.
+- **FallbackManager.sol**: Manages a fallback handler for delegate calls.
+- **ModuleManager.sol**: Adopts the Gnosis Safe module manager pattern.
+- **DefaultCallbackHandler.sol**: Handles hooks to respond to token receipts.
+- **MultiSend.sol & MultiSendCallOnly.sol**: Facilitates batching multiple transactions into one.
+- **VerifyingSingletonPaymaster.sol**: A paymaster that uses an external service for transaction validation.
+- **PaymasterHelpers.sol**: A library essential for decoding paymaster data and context.
 
-#### BaseSmartAccount.sol (51 sloc)
-Abstract contract that implements the EIP4337 IWallet interface 
-defines set of methods (compatible with EIP and Biconomy SDK) that all Smart Wallets must implement
+## 🛠️ Prerequisites
 
-#### Proxy.sol (26 sloc)
-lightweight Proxy which can be upgraded using UUPS pattern
+- Node.js
+- Yarn or npm
+- Hardhat
 
-#### SmartAccountFactory.sol (38 sloc)
-Factory Contract is the one responsible for deploying smart wallets aka accounts using create2 and create
-Has a method to compute counter factual address of the wallet before deploying
+## 🚀 How to Run the Project
 
-function deployCounterFactualAccount(address _implementation, bytes memory initializer, uint256 _index) public returns(address proxy)
+Before diving in, place a mnemonic in a `.secret` file at the root.
+**Remember**: Never commit this file or share it publicly.
 
-salt consists of _owner and _index. _entryPoint and _handler are required to init the wallet. 
+## Setup
 
-#### SmartAccount.sol (332 sloc)
-Base implementation contract for a smart wallet
-reference 1: https://docs.gnosis-safe.io/contracts
-reference 2: https://github.com/eth-infinitism/account-abstraction/blob/master/contracts/samples/SimpleAccount.sol
-notes: 
-1) reverting methods are used for gas estimations
-2) transactions happen via EOA signature by calling execTransaction or validateUserOp and executeCall / executeBatchCall via entry point
-3) currently 1-1 multi-sig
-4) ECDSA used for signature verification. contract signatures are supported using EIP1271 (not extensively tested on protocols!)
+**Setup**: Clone the repository and install dependencies.
 
-#### EntryPoint.sol (344 sloc)
-EIP4337 Entry Point contract (https://blog.openzeppelin.com/eip-4337-ethereum-account-abstraction-incremental-audit/)
+   ```shell
+   git clone https://github.com/bcnmy/scw-contracts.git
+   cd scw-contracts
+   npm install
+   ```
 
-#### StakeManager.sol (76 sloc)
-Stake Manager for wallet and paymaster deposits/stakes
-https://blog.openzeppelin.com/eip-4337-ethereum-account-abstraction-incremental-audit/
+**Configuration**: Create a `.secret` file at the root to store your mnemonic.
+   **Note**: Never commit this file.
+   `shell
+    echo "your mnemonic here" > .secret
+    `
 
-#### Executor.sol (25 sloc)
-helper contract to make calls and delegatecalls to dapp contracts
-#### FallbackManager.sol (34 sloc)
-Fallback manager manages a fallback handler to fallback to (delegate call) when a method is not found in the wallet implementation contract
-#### ModuleManager.sol (75 sloc)
-Gnosis Safe module manager
-#### DefaultCallbackHandler.sol (50 sloc)
-Manages hooks to react to receiving tokens
+### 🛠️ Development Commands
 
-#### MultiSend.sol (35 sloc)
-Allows to batch multiple transactions into one. Relayer -> Smart Wallet - > MultiSend -> Dapp contract / contracts
+Below are the commands you can use for various tasks:
 
-#### MultiSendCallOnly.sol (30 sloc)
-MultiSend functionality but reverts if a transaction tries to do delegatecall
+### 🧪 Testing
 
-#### VerifyingSingletonPaymaster.sol (74 sloc)
- A paymaster uses an external service to decide whether to pay for the UserOp. The paymaster trusts an external signer to sign the transaction. The calling user must pass the UserOp to that external signer first, which performs whatever off-chain verification before signing the UserOp. Singleton Paymaster is biconomy Paymaster which can be used by all the Dapps and manages gas accounting for their corresponding paymasterId. 
+Run regular tests:
 
- #### PaymasterHelpers.sol ()
- Library useful for decoding paymaster data and context
+```shell
+npx hardhat test
+```
 
-# How to run the project
+For Bundler Integration Tests, first install `realpath`:
 
-This project demonstrates an advanced Hardhat use case, integrating other tools commonly used alongside Hardhat in the ecosystem.
+```shell
+brew install coreutils
+```
 
-#### You're going to need to place a mnemonic in a .secret file in the root. ####
+Then, run the Bundler Integration Tests:
 
-The project comes with a sample contract, a test for that contract, a sample script that deploys that contract, and an example of a task implementation, which simply lists the available accounts. It also comes with a variety of other tools, preconfigured to work with the project code.
+```shell
+yarn bundler-test
+```
 
-Try running some of the following tasks:
+### 📦 Compilation & Deployment
+
+Compile contracts:
+
+```shell
+npx hardhat compile
+```
+
+Clean the environment:
+
+```shell
+npx hardhat clean
+```
+
+Start a local Ethereum node:
+
+```shell
+npx hardhat node
+```
+
+Deploy contracts:
+
+```shell
+npx hardhat run scripts/deploy.ts
+TS_NODE_FILES=true npx ts-node scripts/deploy.ts
+```
+
+### 📈 Analysis & Reporting
+
+Display available accounts:
 
 ```shell
 npx hardhat accounts
-npx hardhat compile
-npx hardhat clean
-npx hardhat test
-npx hardhat node
+```
+
+Get help on Hardhat commands:
+
+```shell
 npx hardhat help
+```
+
+Test with gas report:
+
+```shell
 REPORT_GAS=true npx hardhat test
+```
+
+Generate code coverage report:
+
+```shell
 npx hardhat coverage
-npx hardhat run scripts/deploy.ts
-TS_NODE_FILES=true npx ts-node scripts/deploy.ts
+```
+
+### 🧹 Code Quality & Formatting
+
+Lint JavaScript and TypeScript files:
+
+```shell
 npx eslint '**/*.{js,ts}'
+```
+
+Automatically fix linting issues:
+
+```shell
 npx eslint '**/*.{js,ts}' --fix
+```
+
+Check formatting for JSON, Solidity, and Markdown files:
+
+```shell
 npx prettier '**/*.{json,sol,md}' --check
+```
+
+Automatically format files:
+
+```shell
 npx prettier '**/*.{json,sol,md}' --write
+```
+
+Lint Solidity contracts:
+
+```shell
 npx solhint 'contracts/**/*.sol'
+```
+
+Automatically fix issues in Solidity contracts:
+
+```shell
 npx solhint 'contracts/**/*.sol' --fix
 ```
 
-# Etherscan verification
+---
 
-To try out Etherscan verification, you first need to deploy a contract to an Ethereum network that's supported by Etherscan, such as Ropsten.
+This format separates the description from the command, making it clearer and more readable.
 
-In this project, copy the .env.example file to a file named .env, and then edit it to fill in the details. Enter your Etherscan API key, your Ropsten node URL (eg from Alchemy), and the private key of the account which will send the deployment transaction. With a valid .env file in place, first deploy your contract:
+## 🔍 Etherscan Verification
 
-```shell
-hardhat run --network ropsten scripts/deploy.ts
-```
-
-Then, copy the deployment address and paste it in to replace `DEPLOYED_CONTRACT_ADDRESS` in this command:
+To verify on Etherscan, deploy a contract to an Ethereum network supported by Etherscan, like Ropsten. Set up your `.env` file, deploy your contract, and then verify:
 
 ```shell
-npx hardhat verify --network ropsten DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
+hardhat run --network goerli scripts/deploy.ts
+npx hardhat verify --network goerli DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
 ```
 
-# Performance optimizations
+## ⚡ Performance Optimizations
 
-For faster runs of your tests and scripts, consider skipping ts-node's type checking by setting the environment variable `TS_NODE_TRANSPILE_ONLY` to `1` in hardhat's environment. For more details see [the documentation](https://hardhat.org/guides/typescript.html#performance-optimizations).
+Boost your tests and scripts' speed by setting the `TS_NODE_TRANSPILE_ONLY` environment variable to `1` in Hardhat's environment. More details are available in the [documentation](https://hardhat.org/guides/typescript.html#performance-optimizations).
+
+---
+
+## 🤝 Contributing
+
+Biconomy Smart Account is an open-source project. Contributions are welcome. If you're interested in contributing, please check our [contribution guidelines](./CONTRIBUTING.md) and feel free to submit pull requests or raise issues.
+
+## 📜 License
+
+This project is licensed under the MIT License. See the [LICENSE.md](./LICENSE.md) file for details.
