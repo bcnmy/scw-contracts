@@ -416,8 +416,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deployMultichainValidatorModule(deployerInstance);
   console.log("=========================================");
-  // await deployPasskeyModule(deployerInstance);
-  // console.log("=========================================");
+  await deployPasskeyModule(deployerInstance);
+  console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
   console.log("=========================================");
   await deployBatchedSessionRouterModule(deployerInstance);
