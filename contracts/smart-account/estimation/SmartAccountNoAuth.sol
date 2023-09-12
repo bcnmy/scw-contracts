@@ -239,6 +239,8 @@ contract SmartAccountNoAuth is
         emit ImplementationUpdated(oldImplementation, _implementation);
     }
 
+    /* solhint-disable func-name-mixedcase */
+
     /**
      * @dev Execute a transaction (called directly from owner, or by entryPoint)
      * @notice Name is optimized for this method to be cheaper to be called
@@ -280,6 +282,8 @@ contract SmartAccountNoAuth is
             }
         }
     }
+
+    /* solhint-enable func-name-mixedcase */
 
     /**
      * @dev Deposit more funds for this account in the entryPoint

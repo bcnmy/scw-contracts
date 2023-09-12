@@ -6,6 +6,22 @@ import {Enum} from "../common/Enum.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {Math} from "../libs/Math.sol";
 
+struct Transaction {
+    address to;
+    Enum.Operation operation;
+    uint256 value;
+    bytes data;
+    uint256 targetTxGas;
+}
+
+struct FeeRefund {
+    uint256 baseGas;
+    uint256 gasPrice; //gasPrice or tokenGasPrice
+    uint256 tokenGasPriceFactor;
+    address gasToken;
+    address payable refundReceiver;
+}
+
 /**
  * @notice Throws when the address that signed the data (restored from signature)
  * differs from the address we expected to sign the data (i.e. some authorized address)
@@ -64,22 +80,6 @@ interface IExecFromModule {
     ) external returns (bool success);
 }
 
-struct Transaction {
-    address to;
-    Enum.Operation operation;
-    uint256 value;
-    bytes data;
-    uint256 targetTxGas;
-}
-
-struct FeeRefund {
-    uint256 baseGas;
-    uint256 gasPrice; //gasPrice or tokenGasPrice
-    uint256 tokenGasPriceFactor;
-    address gasToken;
-    address payable refundReceiver;
-}
-
 contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
@@ -90,14 +90,14 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
     bytes32 internal constant ACCOUNT_TX_TYPEHASH =
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
-    uint256 private immutable _chainId;
+    uint256 private immutable CHAIN_ID;
 
     mapping(uint256 => uint256) public nonces;
 
     event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
 
     constructor() {
-        _chainId = block.chainid;
+        CHAIN_ID = block.chainid;
     }
 
     /**
@@ -370,16 +370,16 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
     ) public view returns (bytes32) {
         return
             keccak256(
-                abi.encode(DOMAIN_SEPARATOR_TYPEHASH, _chainId, smartAccount)
+                abi.encode(DOMAIN_SEPARATOR_TYPEHASH, CHAIN_ID, smartAccount)
             );
     }
 
     /**
      * @notice Returns the ID of the chain the contract is currently deployed on.
-     * @return _chainId The ID of the current chain as a uint256.
+     * @return CHAIN_ID The ID of the current chain as a uint256.
      */
     function getChainId() public view returns (uint256) {
-        return _chainId;
+        return CHAIN_ID;
     }
 
     /**

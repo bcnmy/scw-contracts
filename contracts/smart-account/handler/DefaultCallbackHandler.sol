@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.17;
 
+/* solhint-disable no-empty-blocks */
+
 import {IERC1155TokenReceiver} from "../interfaces/IERC1155TokenReceiver.sol";
 import {IERC721TokenReceiver} from "../interfaces/IERC721TokenReceiver.sol";
 import {IERC777TokensRecipient} from "../interfaces/IERC777TokensRecipient.sol";

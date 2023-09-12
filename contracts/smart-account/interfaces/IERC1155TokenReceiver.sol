@@ -40,7 +40,7 @@ interface IERC1155TokenReceiver {
      * @param _operator The address which initiated the batch transfer (i.e. msg.sender)
      * @param _from The address which previously owned the token
      * @param _ids An array containing ids of each token being transferred (order and length must match values array)
-     * @param _values An array containing amounts of each token being transferred (order and length must match ids array)
+     * @param _values An array containing amounts of each token transferred (order and length must match ids array)
      * @param _data Additional data with no specified format
      * @return `bytes4(keccak256("onERC1155BatchReceived(address,address,uint256[],uint256[],bytes)"))` if allowed
      */
