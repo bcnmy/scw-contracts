@@ -17,10 +17,10 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - name: Install dependencies
-        run: yarn install --frozen-lockfile
+        run: yarn install --frozen-lockfile && yarn build
       - name: Lint sources
         run:
-          yarn run lint
+          yarn run lint 
 
   unit_test:
     name: Unit tests
@@ -38,9 +38,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile && yarn build
       - name: Create a fake .secret file
         run: echo "do not deploy this banana wallet onto serious prod trees" > .secret
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile && yarn build
       - name: Run tests
         run: yarn test
