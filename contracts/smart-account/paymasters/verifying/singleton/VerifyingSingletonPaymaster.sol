@@ -79,7 +79,7 @@ contract VerifyingSingletonPaymaster is
         paymasterIdBalances[paymasterId] =
             paymasterIdBalances[paymasterId] +
             msg.value;
-        entryPoint.depositTo{value: msg.value}(address(this));
+        ENTRY_POINT.depositTo{value: msg.value}(address(this));
         emit GasDeposited(paymasterId, msg.value);
     }
 
@@ -139,7 +139,7 @@ contract VerifyingSingletonPaymaster is
         paymasterIdBalances[msg.sender] =
             paymasterIdBalances[msg.sender] -
             amount;
-        entryPoint.withdrawTo(withdrawAddress, amount);
+        ENTRY_POINT.withdrawTo(withdrawAddress, amount);
         emit GasWithdrawn(msg.sender, withdrawAddress, amount);
     }
 
@@ -251,7 +251,7 @@ contract VerifyingSingletonPaymaster is
                 paymasterIdBalances[paymasterData.paymasterId]
             );
         return (
-            userOp.paymasterContext(paymasterData),
+            PaymasterHelpers.paymasterContext(paymasterData),
             _packValidationData(
                 false,
                 paymasterData.validUntil,

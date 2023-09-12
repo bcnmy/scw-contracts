@@ -3,11 +3,12 @@ pragma solidity 0.8.17;
 
 /* solhint-disable function-max-lines */
 
-import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {ISessionValidationModule} from "./SessionValidationModules/ISessionValidationModule.sol";
 import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 /**
  * @title Batched Session Router

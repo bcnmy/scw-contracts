@@ -1,10 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.17;
 
-/* solhint-disable avoid-low-level-calls */
-/* solhint-disable no-inline-assembly */
-/* solhint-disable reason-string */
-
 import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
@@ -19,7 +15,7 @@ import "@account-abstraction/contracts/core/Helpers.sol";
 abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
     using UserOperationLib for UserOperation;
 
-    //return value in case of signature failure, with no time-range.
+    // Return value in case of signature failure, with no time-range.
     // equivalent to _packValidationData(true,0,0);
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
