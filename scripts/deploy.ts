@@ -70,18 +70,20 @@ export async function deployGeneric(
         bytecode,
         deployerInstance
       );
-      try {
-        await run("verify:verify", {
-          address: computedAddress,
-          constructorArguments,
-        });
-      } catch (err) {
-        console.log(err);
-      }
     } else {
       console.log(
         `${contractName} is Already deployed with address ${computedAddress}`
       );
+    }
+
+    try {
+      console.log(`Attempting to verify ${contractName}...`);
+      await run("verify:verify", {
+        address: computedAddress,
+        constructorArguments,
+      });
+    } catch (err) {
+      console.log("Error while verifying: ", err);
     }
 
     contractsDeployed[contractName] = computedAddress;
@@ -152,7 +154,7 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
   console.log("Checking if Factory is staked...");
   const { unstakeDelayInSec, stakeInWei } = factoryStakeConfig[chainId];
   const entrypoint = EntryPoint__factory.connect(entryPointAddress, signer);
-  const stake = await entrypoint.getDepositInfo(smartAccountFactoryAddress);
+  let stake = await entrypoint.getDepositInfo(smartAccountFactoryAddress);
   console.log("Current Factory Stake: ", JSON.stringify(stake, null, 2));
   if (stake.staked) {
     console.log("Factory already staked");
@@ -181,6 +183,9 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
   } else {
     console.log("Factory is not owned by signer, skipping staking...");
   }
+
+  stake = await entrypoint.getDepositInfo(smartAccountFactoryAddress);
+  console.log("Updated Factory Stake: ", JSON.stringify(stake, null, 2));
 
   if (contractOwner !== smartAccountFactoryOwnerAddress) {
     console.log("Transferring Ownership of SmartAccountFactory...");
@@ -215,14 +220,14 @@ async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
     DEPLOYMENT_SALTS.SINGELTON_PAYMASTER,
     bytecode,
     "VerifyingPaymaster",
-    [paymasterOwnerAddress, entryPointAddress, verifyingSigner]
+    [signer.address, entryPointAddress, verifyingSigner]
   );
 
   console.log("Checking if VerifyingPaymaster is staked...");
   const { unstakeDelayInSec, stakeInWei } = paymasterStakeConfig[chainId];
   const entrypoint = EntryPoint__factory.connect(entryPointAddress, signer);
-  const stake = await entrypoint.getDepositInfo(paymasterAddress);
-  console.log("Current Paymster Stake: ", JSON.stringify(stake, null, 2));
+  let stake = await entrypoint.getDepositInfo(paymasterAddress);
+  console.log("Current Paymaster Stake: ", JSON.stringify(stake, null, 2));
   if (stake.staked) {
     console.log("Paymaster already staked");
     return;
@@ -247,8 +252,11 @@ async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
     console.log("Paymaster is not owned by signer, skipping staking...");
   }
 
+  stake = await entrypoint.getDepositInfo(paymasterAddress);
+  console.log("Updated Paymaster Stake: ", JSON.stringify(stake, null, 2));
+
   if (contractOwner !== paymasterOwnerAddress) {
-    console.log("Transferring Ownership of SmartAccountFactory...");
+    console.log("Transferring Ownership of VerifyingPaymaster...");
     const { hash, wait } = await paymaster.transferOwnership(
       paymasterOwnerAddress,
       {
@@ -408,8 +416,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deployMultichainValidatorModule(deployerInstance);
   console.log("=========================================");
-  await deployPasskeyModule(deployerInstance);
-  console.log("=========================================");
+  // await deployPasskeyModule(deployerInstance);
+  // console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
   console.log("=========================================");
   await deployBatchedSessionRouterModule(deployerInstance);
@@ -426,7 +434,7 @@ export async function mainDeploy(): Promise<Record<string, string>> {
 
   const deployerBalanceAfter = await deployer.getBalance();
   console.log(
-    `Deployer ${deployer.address} initial balance: ${formatEther(
+    `Deployer ${deployer.address} final balance: ${formatEther(
       deployerBalanceAfter
     )}`
   );
