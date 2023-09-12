@@ -40,5 +40,7 @@ jobs:
 
       - name: Install dependencies
         run: yarn install --frozen-lockfile && yarn build
+      - name: Create a fake .secret file
+        run: echo "do not deploy this banana wallet onto serious prod trees" > .secret
       - name: Run tests
         run: yarn test
