@@ -7,7 +7,7 @@ import {
   addLeavesForSmartAccountViaEcdsa,
 } from "../utils/sessionKey";
 import { encodeTransfer } from "../utils/testUtils";
-import { hexZeroPad, hexConcat } from "ethers/lib/utils";
+import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -79,7 +79,10 @@ describe("SessionKey: SessionKey Manager Module", async () => {
 
     const validUntil = 0;
     const validAfter = 0;
-    const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+    const sessionKeyData = defaultAbiCoder.encode(
+      ["address"],
+      [sessionKey.address]
+    );
     const leafData = hexConcat([
       hexZeroPad(ethers.utils.hexlify(validUntil), 6),
       hexZeroPad(ethers.utils.hexlify(validAfter), 6),
@@ -138,7 +141,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         hexZeroPad("0x00", 6),
         hexZeroPad("0x00", 6),
         hexZeroPad(mockSessionValidationModule.address, 20),
-        hexZeroPad(sessionKey.address, 20),
+        defaultAbiCoder.encode(["address"], [sessionKey.address]),
       ]);
 
       const merkleTree1 = await enableNewTreeForSmartAccountViaEcdsa(
@@ -157,7 +160,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         hexZeroPad("0x00", 6),
         hexZeroPad("0x00", 6),
         hexZeroPad(mockSessionValidationModule.address, 20),
-        hexZeroPad(sessionKey2.address, 20),
+        defaultAbiCoder.encode(["address"], [sessionKey2.address]),
       ]);
 
       const merkleTree2 = await addLeavesForSmartAccountViaEcdsa(
@@ -175,7 +178,10 @@ describe("SessionKey: SessionKey Manager Module", async () => {
 
       // now check the new session key can sign userOps
       const tokenAmountToTransfer = ethers.utils.parseEther("0.7734");
-      const sessionKeyData2 = hexZeroPad(sessionKey2.address, 20);
+      const sessionKeyData2 = defaultAbiCoder.encode(
+        ["address"],
+        [sessionKey2.address]
+      );
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
         "execute_ncC",
         [
@@ -378,7 +384,10 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
 
-      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+      const sessionKeyData = defaultAbiCoder.encode(
+        ["address"],
+        [sessionKey.address]
+      );
       const currentTimestamp = (await ethers.provider.getBlock("latest"))
         .timestamp;
       const validAfter = currentTimestamp + 1000;
@@ -442,7 +451,10 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
 
-      const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+      const sessionKeyData = defaultAbiCoder.encode(
+        ["address"],
+        [sessionKey.address]
+      );
       const currentTimestamp = (await ethers.provider.getBlock("latest"))
         .timestamp;
       const validUntil = currentTimestamp - 1000;
@@ -557,7 +569,10 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       } = await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
 
-      const wrongSessionKeyData = hexZeroPad(sessionKey2.address, 20);
+      const wrongSessionKeyData = defaultAbiCoder.encode(
+        ["address"],
+        [sessionKey2.address]
+      );
 
       const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
         "execute_ncC",

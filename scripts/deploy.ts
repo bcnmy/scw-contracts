@@ -15,6 +15,7 @@ import {
   Deployer__factory,
   ERC20SessionValidationModule__factory,
   EcdsaOwnershipRegistryModule__factory,
+  MockSessionValidationModule__factory,
   MultichainECDSAValidator__factory,
   PasskeyRegistryModule__factory,
   SessionKeyManager__factory,
@@ -320,6 +321,16 @@ async function deployErc20SessionValidationModule(deployerInstance: Deployer) {
   );
 }
 
+async function deployMockSessionValidationModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.MOCK_SESSION_VALIDATION_MODULE,
+    `${MockSessionValidationModule__factory.bytecode}`,
+    "MockSessionValidationModule",
+    []
+  );
+}
+
 async function deploySmartContractOwnershipRegistryModule(
   deployerInstance: Deployer
 ) {
@@ -416,6 +427,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deployErc20SessionValidationModule(deployerInstance);
   console.log("=========================================");
+  // await deployMockSessionValidationModule(deployerInstance);
+  // console.log("=========================================");
   await deploySmartContractOwnershipRegistryModule(deployerInstance);
   console.log("=========================================");
 

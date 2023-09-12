@@ -103,7 +103,10 @@ describe("SessionKey: SessionKey Manager Module (with Bundler)", async () => {
 
     const validUntil = 0;
     const validAfter = 0;
-    const sessionKeyData = hexZeroPad(sessionKey.address, 20);
+    const sessionKeyData = defaultAbiCoder.encode(
+      ["address"],
+      [sessionKey.address]
+    );
     const leafData = hexConcat([
       hexZeroPad(ethers.utils.hexlify(validUntil), 6),
       hexZeroPad(ethers.utils.hexlify(validAfter), 6),
