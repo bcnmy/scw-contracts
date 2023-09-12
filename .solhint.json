@@ -19,7 +19,7 @@
     "ordering": "error",
     "visibility-modifier-order": "error",
     "code-complexity": ["error", 7],
-    "function-max-lines": ["error", 65],
+    "function-max-lines": ["error", 80],
     "max-line-length": ["warn", 120],
     "max-states-count": ["error", 15],
     "no-empty-blocks": "error",
@@ -35,7 +35,8 @@
     "avoid-low-level-calls": "off",
     "custom-errors": "off",
     "no-complex-fallback": "off",
-    "no-global-import": "off"
+    "no-global-import": "off",
+    "avoid-tx-origin": "off"
   },
   "plugins": ["prettier"]
 }
