@@ -11,11 +11,12 @@ jobs:
     steps:
       - name: Checkout
         uses: 'actions/checkout@master'
-
       - name: Set Node.js
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Create a fake .secret file
+        run: echo "pistol kiwi squirrel general approve avoid doll employ abandon banana" > .secret
       - name: Install dependencies
         run: yarn install --frozen-lockfile && yarn build
       - name: Lint sources
@@ -39,7 +40,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
 
       - name: Create a fake .secret file
-        run: echo "do not deploy this banana wallet onto serious prod trees" > .secret
+        run: echo "pistol kiwi squirrel general approve avoid doll employ abandon banana" > .secret
       - name: Install dependencies
         run: yarn install --frozen-lockfile && yarn build
       - name: Run tests
