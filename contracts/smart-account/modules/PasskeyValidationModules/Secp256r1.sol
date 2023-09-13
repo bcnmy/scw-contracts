@@ -158,7 +158,7 @@ library Secp256r1 {
         return ret;
     }
 
-    // WraPPer for built-in BigNumber_modexp (contract 0x5) as described here. https://github.com/ethereum/EIPs/pull/198
+    // Wrapper for built-in BigNumber_modexp (contract 0x5) as described here. https://github.com/ethereum/EIPs/pull/198
     function modexp(
         uint256 _base,
         uint256 _exp,
