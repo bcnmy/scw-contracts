@@ -268,7 +268,7 @@ contract SmartAccountV1 is
         {
             // If the gasPrice is 0 we assume that nearly all available gas can be used (it is always more than targetTxGas)
             // We only substract 2500 (compared to the 3000 before) to ensure that the amount passed is still higher than targetTxGas
-            success = execute(
+            success = _execute(
                 _tx.to,
                 _tx.value,
                 _tx.data,
@@ -486,7 +486,7 @@ contract SmartAccountV1 is
     ) external returns (uint256) {
         uint256 startGas = gasleft();
         // We don't provide an error message here, as we use it to return the estimate
-        if (!execute(to, value, data, operation, gasleft()))
+        if (!_execute(to, value, data, operation, gasleft()))
             revert ExecutionFailed();
         // Convert response to string and return via error message
         unchecked {

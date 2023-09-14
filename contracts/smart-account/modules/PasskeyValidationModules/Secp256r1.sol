@@ -21,20 +21,20 @@ struct JPoint {
 }
 
 library Secp256r1 {
-    uint256 constant gx =
+    uint256 private constant GX =
         0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296;
-    uint256 constant gy =
+    uint256 private constant GY =
         0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5;
-    uint256 public constant pp =
+    uint256 private constant PP =
         0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF;
 
-    uint256 public constant nn =
+    uint256 private constant NN =
         0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551;
-    uint256 constant a =
+    uint256 private constant A =
         0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC;
-    uint256 constant b =
+    uint256 private constant B =
         0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B;
-    uint256 constant MOST_SIGNIFICANT =
+    uint256 private constant MOST_SIGNIFICANT =
         0xc000000000000000000000000000000000000000000000000000000000000000;
 
     /*
@@ -52,7 +52,7 @@ library Secp256r1 {
         uint256 s,
         uint256 e
     ) internal view returns (bool) {
-        if (r >= nn || s >= nn) {
+        if (r >= NN || s >= NN) {
             return false;
         }
 
@@ -66,14 +66,14 @@ library Secp256r1 {
         uint256 s,
         uint256 e
     ) internal view returns (bool) {
-        if (r >= nn || s >= nn) {
+        if (r >= NN || s >= NN) {
             return false;
         }
 
-        uint256 w = primemod(s, nn);
+        uint256 w = primemod(s, NN);
 
-        uint256 u1 = mulmod(e, w, nn);
-        uint256 u2 = mulmod(r, w, nn);
+        uint256 u1 = mulmod(e, w, NN);
+        uint256 u2 = mulmod(r, w, NN);
 
         uint256 x;
         uint256 y;
@@ -139,11 +139,11 @@ library Secp256r1 {
             return (0, 0);
         }
 
-        uint256 zinv = primemod(z, pp);
-        uint256 zinvsq = mulmod(zinv, zinv, pp);
+        uint256 zinv = primemod(z, PP);
+        uint256 zinvsq = mulmod(zinv, zinv, PP);
 
-        ax = mulmod(x, zinvsq, pp);
-        ay = mulmod(y, mulmod(zinvsq, zinv, pp), pp);
+        ax = mulmod(x, zinvsq, PP);
+        ay = mulmod(y, mulmod(zinvsq, zinv, PP), PP);
     }
 
     // Fermats little theorem https://en.wikipedia.org/wiki/Fermat%27s_little_theorem
@@ -196,7 +196,7 @@ library Secp256r1 {
     ) internal pure returns (JPoint[16] memory points) {
         // JPoint[] memory u1Points = new JPoint[](4);
         // u1Points[0] = JPoint(0, 0, 0);
-        // u1Points[1] = JPoint(gx, gy, 1); // u1
+        // u1Points[1] = JPoint(GX, GY, 1); // u1
         // u1Points[2] = jPointDouble(u1Points[1]);
         // u1Points[3] = jPointAdd(u1Points[1], u1Points[2]);
         // avoiding this intermediate step by using it in a single array below
@@ -208,7 +208,7 @@ library Secp256r1 {
         points[2] = jPointDouble(points[1]);
         points[3] = jPointAdd(points[1], points[2]);
 
-        points[4] = JPoint(gx, gy, 1); // u1Points[1]
+        points[4] = JPoint(GX, GY, 1); // u1Points[1]
         points[5] = jPointAdd(points[4], points[1]);
         points[6] = jPointAdd(points[4], points[2]);
         points[7] = jPointAdd(points[4], points[3]);

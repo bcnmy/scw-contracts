@@ -1,6 +1,5 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
-import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 interface ISessionKeyManager {
     /**

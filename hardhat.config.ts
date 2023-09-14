@@ -242,27 +242,27 @@ const config: HardhatUserConfig = {
       chainId: 8453,
     },
     opBNBMainnet: {
-      url: process.env.OP_BNB_MAINNET_URL,
+      url: process.env.OP_BNB_MAINNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 204,
     },
     opBNBTestnet: {
-      url: process.env.OP_BNB_TESTNET_URL,
+      url: process.env.OP_BNB_TESTNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 5611,
     },
     mantleMainnet: {
-      url: process.env.MANTLE_MAINNET_URL,
+      url: process.env.MANTLE_MAINNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 5000,
     },
     mantleTestnet: {
-      url: process.env.MANTLE_TESTNET_URL,
+      url: process.env.MANTLE_TESTNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 5001,
     },
     comboTestnet: {
-      url: process.env.COMBO_TESTNET_URL,
+      url: process.env.COMBO_TESTNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 91715,
     },

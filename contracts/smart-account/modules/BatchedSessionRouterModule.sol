@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
+/* solhint-disable function-max-lines */
+
+import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {ISessionValidationModule} from "./SessionValidationModules/ISessionValidationModule.sol";
 import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 /**
  * @title Batched Session Router
@@ -81,7 +84,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
 
         uint256 length = sessionData.length;
         // iterate over batched operations
-        for (uint i; i < length; ) {
+        for (uint256 i; i < length; ) {
             // validate the sessionKey
             // sessionKeyManager reverts if something wrong
             ISessionKeyManager(sessionKeyManager).validateSessionKey(

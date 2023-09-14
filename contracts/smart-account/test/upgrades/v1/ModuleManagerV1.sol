@@ -121,7 +121,7 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
             msg.sender == SENTINEL_MODULES || _modules[msg.sender] == address(0)
         ) revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
-        success = execute(to, value, data, operation, gasleft());
+        success = _execute(to, value, data, operation, gasleft());
         if (success) {
             emit ModuleTransaction(msg.sender, to, value, data, operation);
             emit ExecutionFromModuleSuccess(msg.sender);
@@ -177,7 +177,7 @@ contract ModuleManagerV1 is SelfAuthorized, Executor, ModuleManagerErrorsV1 {
             revert ModulesAlreadyInitialized();
         _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         if (to != address(0))
-            if (!execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()))
+            if (!_execute(to, 0, data, Enum.Operation.DelegateCall, gasleft()))
                 // Setup has to complete successfully or transaction fails.
                 revert ModulesSetupExecutionFailed();
     }

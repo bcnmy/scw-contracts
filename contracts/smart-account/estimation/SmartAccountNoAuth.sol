@@ -8,7 +8,6 @@ import {SignatureDecoder} from "../common/SignatureDecoder.sol";
 import {SecuredTokenTransfer} from "../common/SecuredTokenTransfer.sol";
 import {LibAddress} from "../libs/LibAddress.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
-import {Math} from "../libs/Math.sol";
 import {IERC165} from "../interfaces/IERC165.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {SmartAccountErrors} from "../common/Errors.sol";
@@ -45,23 +44,22 @@ contract SmartAccountNoAuth is
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
         0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
-    // keccak256(
-    //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
-    // );
+    // solhint-disable-next-line
+    // keccak256("AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)");
     bytes32 internal constant ACCOUNT_TX_TYPEHASH =
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
-    // Owner storage. Deprecated. Left for storage layout compatibility
-    address public owner_deprecated;
+    // /!\ Owner storage. Deprecated. Left for storage layout compatibility /!\
+    address public ownerDeprecated;
 
     // changed to 2D nonce below
     // @notice there is no _nonce
     mapping(uint256 => uint256) public nonces;
 
     // AA immutable storage
-    IEntryPoint private immutable _entryPoint;
-    uint256 private immutable _chainId;
-    address private immutable _self;
+    IEntryPoint private immutable ENTRY_POINT;
+    uint256 private immutable CHAIN_ID;
+    address private immutable SELF;
 
     // Events
 
@@ -82,31 +80,144 @@ contract SmartAccountNoAuth is
      */
     constructor(IEntryPoint anEntryPoint) {
         _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
-        _self = address(this);
+        SELF = address(this);
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
-        _entryPoint = anEntryPoint;
-        _chainId = block.chainid;
+        ENTRY_POINT = anEntryPoint;
+        CHAIN_ID = block.chainid;
     }
 
     /**
-     * @dev This function allows the owner or entry point to execute certain actions.
-     * If the caller is not authorized, the function will revert with an error message.
-     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     * @dev This function is a special fallback function that is triggered when the contract receives Ether.
+     * It logs an event indicating the amount of Ether received and the sender's address.
+     * @notice This function is marked as external and payable, meaning it can be called from external
+     * sources and accepts Ether as payment.
      */
-    function _requireFromEntryPointOrSelf() internal view {
-        if (msg.sender != address(entryPoint()) && msg.sender != address(this))
-            revert CallerIsNotEntryPointOrSelf(msg.sender);
+    receive() external payable {
+        if (address(this) == SELF) revert DelegateCallsOnly();
+        emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
 
     /**
-     * @dev This function allows the owner or entry point to execute certain actions.
-     * If the caller is not authorized, the function will revert with an error message.
-     * @notice This modifier is marked as internal and can only be called within the contract itself.
+     * @dev Initialize the Smart Account with required states
+     * @param handler Default fallback handler provided in Smart Account
+     * @param moduleSetupContract Initializes the auth module; can be a factory or registry for multiple accounts.
+     * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
+     * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
+     * @notice any further implementations that introduces a new state must have a reinit method
+     * @notice reinit is not possible, as _initialSetupModules reverts if the account is already initialized
+     *         which is when there is at least one enabled module
      */
-    function _requireFromEntryPoint() internal view {
+    function init(
+        address handler,
+        address moduleSetupContract,
+        bytes calldata moduleSetupData
+    ) external virtual override returns (address) {
+        _setFallbackHandler(handler);
+        return _initialSetupModules(moduleSetupContract, moduleSetupData);
+    }
+
+    /**
+     * @dev Interface function with the standard name for execute_ncC
+     * @param dest Address of the contract to call
+     * @param value Amount of native tokens to send along with the transaction
+     * @param func Data of the transaction
+     */
+    function execute(
+        address dest,
+        uint256 value,
+        bytes calldata func
+    ) external {
+        execute_ncC(dest, value, func);
+    }
+
+    /**
+     * @dev Interface function with the standard name for executeBatch_y6U
+     * @param dest Addresses of the contracts to call
+     * @param value Amounts of native tokens to send along with the transactions
+     * @param func Data of the transactions
+     */
+    function executeBatch(
+        address[] calldata dest,
+        uint256[] calldata value,
+        bytes[] calldata func
+    ) external {
+        executeBatch_y6U(dest, value, func);
+    }
+
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external virtual override returns (uint256 validationData) {
         if (msg.sender != address(entryPoint()))
-            revert CallerIsNotEntryPoint(msg.sender);
+            revert CallerIsNotAnEntryPoint(msg.sender);
+
+        (, address validationModule) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        if (address(_modules[validationModule]) != address(0)) {
+            validationData = IAuthorizationModule(validationModule)
+                .validateUserOp(userOp, userOpHash);
+        } else {
+            revert WrongValidationModule(validationModule);
+        }
+        _payPrefund(missingAccountFunds);
+    }
+
+    /**
+     * @dev Adds a module to the allowlist.
+     * @notice This can only be done via a userOp or a selfcall.
+     * @notice Enables the module `module` for the wallet.
+     * @param module Module to be allow-listed.
+     */
+    function enableModule(address module) external virtual override {
+        _requireFromEntryPointOrSelf();
+        _enableModule(module);
+    }
+
+    /**
+     * @dev Setups module for this Smart Account and enables it.
+     * @notice This can only be done via userOp or a selfcall.
+     * @notice Enables the module `module` for the wallet.
+     */
+    function setupAndEnableModule(
+        address setupContract,
+        bytes memory setupData
+    ) external virtual override returns (address) {
+        _requireFromEntryPointOrSelf();
+        return _setupAndEnableModule(setupContract, setupData);
+    }
+
+    function setFallbackHandler(address handler) external virtual override {
+        _requireFromEntryPoint();
+        _setFallbackHandler(handler);
+    }
+
+    /**
+     * @notice Query if a contract implements an interface
+     * @param _interfaceId The interface identifier, as specified in ERC165
+     * @return `true` if the contract implements `_interfaceID`
+     */
+    function supportsInterface(
+        bytes4 _interfaceId
+    ) external view virtual override returns (bool) {
+        return _interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
+    }
+
+    /**
+     * @dev Returns the address of the implementation contract associated with this contract.
+     * @notice The implementation address is stored in the contract's storage slot with index 0.
+     */
+    function getImplementation()
+        external
+        view
+        returns (address _implementation)
+    {
+        assembly {
+            _implementation := sload(address())
+        }
     }
 
     /**
@@ -128,81 +239,7 @@ contract SmartAccountNoAuth is
         emit ImplementationUpdated(oldImplementation, _implementation);
     }
 
-    /// Getters
-    /**
-     * @dev Returns the address of the implementation contract associated with this contract.
-     * @notice The implementation address is stored in the contract's storage slot with index 0.
-     */
-    function getImplementation()
-        external
-        view
-        returns (address _implementation)
-    {
-        assembly {
-            _implementation := sload(address())
-        }
-    }
-
-    /**
-     * @dev Returns the domain separator for this contract, as defined in the EIP-712 standard.
-     * @return bytes32 The domain separator hash.
-     */
-    function domainSeparator() public view returns (bytes32) {
-        return
-            keccak256(
-                abi.encode(
-                    DOMAIN_SEPARATOR_TYPEHASH,
-                    block.chainid,
-                    address(this)
-                )
-            );
-    }
-
-    /**
-     * @notice Returns the ID of the chain the contract is currently deployed on.
-     * @return _chainId The ID of the current chain as a uint256.
-     */
-    function getChainId() public view returns (uint256) {
-        return _chainId;
-    }
-
-    /**
-     * @dev returns a value from the nonces 2d mapping
-     * @param batchId : the key of the user's batch being queried
-     * @return nonce : the number of transactions made within said batch
-     */
-    function getNonce(uint256 batchId) public view virtual returns (uint256) {
-        return nonces[batchId];
-    }
-
-    /**
-     * @dev Returns the current entry point used by this account.
-     * @return EntryPoint as an `IEntryPoint` interface.
-     * @dev This function should be implemented by the subclass to return the current entry point used by this account.
-     */
-    function entryPoint() public view virtual override returns (IEntryPoint) {
-        return _entryPoint;
-    }
-
-    /**
-     * @dev Initialize the Smart Account with required states
-     * @param handler Default fallback handler provided in Smart Account
-     * @param moduleSetupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts
-     * @param moduleSetupData modules setup data (a standard calldata for the module setup contract)
-     * @notice devs need to make sure it is only callble once by initiazer or state check restrictions
-     * @notice any further implementations that introduces a new state must have a reinit method
-     * @notice reinit is not possible, as _initialSetupModules reverts if the account is already initialized
-     *         which is when there is at least one enabled module
-     */
-    function init(
-        address handler,
-        address moduleSetupContract,
-        bytes calldata moduleSetupData
-    ) external virtual override returns (address) {
-        _setFallbackHandler(handler);
-        return _initialSetupModules(moduleSetupContract, moduleSetupData);
-    }
+    /* solhint-disable func-name-mixedcase */
 
     /**
      * @dev Execute a transaction (called directly from owner, or by entryPoint)
@@ -218,20 +255,6 @@ contract SmartAccountNoAuth is
     ) public {
         _requireFromEntryPoint();
         _call(dest, value, func);
-    }
-
-    /**
-     * @dev Interface function with the standard name for execute_ncC
-     * @param dest Address of the contract to call
-     * @param value Amount of native tokens to send along with the transaction
-     * @param func Data of the transaction
-     */
-    function execute(
-        address dest,
-        uint256 value,
-        bytes calldata func
-    ) external {
-        execute_ncC(dest, value, func);
     }
 
     /**
@@ -260,65 +283,79 @@ contract SmartAccountNoAuth is
         }
     }
 
+    /* solhint-enable func-name-mixedcase */
+
     /**
-     * @dev Interface function with the standard name for executeBatch_y6U
-     * @param dest Addresses of the contracts to call
-     * @param value Amounts of native tokens to send along with the transactions
-     * @param func Data of the transactions
+     * @dev Deposit more funds for this account in the entryPoint
      */
-    function executeBatch(
-        address[] calldata dest,
-        uint256[] calldata value,
-        bytes[] calldata func
-    ) external {
-        executeBatch_y6U(dest, value, func);
+    function addDeposit() public payable {
+        entryPoint().depositTo{value: msg.value}(address(this));
     }
 
     /**
-     * @dev internal method that fecilitates the extenral calls from SmartAccount
-     * @dev similar to execute() of Executor.sol
-     * @param target destination address contract/non-contract
-     * @param value amount of native tokens
-     * @param data function singature of destination
+     * @dev Withdraw value from the account's deposit
+     * @param withdrawAddress target to send to
+     * @param amount to withdraw
      */
-    function _call(address target, uint256 value, bytes memory data) internal {
-        assembly {
-            let success := call(
-                gas(),
-                target,
-                value,
-                add(data, 0x20),
-                mload(data),
-                0,
-                0
-            )
-            let ptr := mload(0x40)
-            returndatacopy(ptr, 0, returndatasize())
-            if iszero(success) {
-                revert(ptr, returndatasize())
-            }
-        }
+    function withdrawDepositTo(
+        address payable withdrawAddress,
+        uint256 amount
+    ) public payable {
+        _requireFromEntryPointOrSelf();
+        entryPoint().withdrawTo(withdrawAddress, amount);
     }
 
-    function validateUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 missingAccountFunds
-    ) external virtual override returns (uint256 validationData) {
-        if (msg.sender != address(entryPoint()))
-            revert CallerIsNotAnEntryPoint(msg.sender);
+    /**
+     * @dev Removes a module from the allowlist.
+     * @notice This can only be done via a wallet transaction.
+     * @notice Disables the module `module` for the wallet.
+     * @param prevModule Module that pointed to the module to be removed in the linked list
+     * @param module Module to be removed.
+     */
+    function disableModule(address prevModule, address module) public virtual {
+        _requireFromEntryPointOrSelf();
+        _disableModule(prevModule, module);
+    }
 
-        (, address validationModule) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
-        if (address(_modules[validationModule]) != address(0)) {
-            validationData = IAuthorizationModule(validationModule)
-                .validateUserOp(userOp, userOpHash);
-        } else {
-            revert WrongValidationModule(validationModule);
-        }
-        _payPrefund(missingAccountFunds);
+    /**
+     * @dev Returns the current entry point used by this account.
+     * @return EntryPoint as an `IEntryPoint` interface.
+     * @dev This function should be implemented by the subclass to return the current entry point used by this account.
+     */
+    function entryPoint() public view virtual override returns (IEntryPoint) {
+        return ENTRY_POINT;
+    }
+
+    /**
+     * @dev Returns the domain separator for this contract, as defined in the EIP-712 standard.
+     * @return bytes32 The domain separator hash.
+     */
+    function domainSeparator() public view returns (bytes32) {
+        return
+            keccak256(
+                abi.encode(
+                    DOMAIN_SEPARATOR_TYPEHASH,
+                    block.chainid,
+                    address(this)
+                )
+            );
+    }
+
+    /**
+     * @notice Returns the ID of the chain the contract is currently deployed on.
+     * @return CHAIN_ID The ID of the current chain as a uint256.
+     */
+    function getChainId() public view returns (uint256) {
+        return CHAIN_ID;
+    }
+
+    /**
+     * @dev returns a value from the nonces 2d mapping
+     * @param batchId : the key of the user's batch being queried
+     * @return nonce : the number of transactions made within said batch
+     */
+    function getNonce(uint256 batchId) public view virtual returns (uint256) {
+        return nonces[batchId];
     }
 
     /**
@@ -359,85 +396,48 @@ contract SmartAccountNoAuth is
     }
 
     /**
-     * @dev Deposit more funds for this account in the entryPoint
+     * @dev internal method that fecilitates the extenral calls from SmartAccount
+     * @dev similar to execute() of Executor.sol
+     * @param target destination address contract/non-contract
+     * @param value amount of native tokens
+     * @param data function singature of destination
      */
-    function addDeposit() public payable {
-        entryPoint().depositTo{value: msg.value}(address(this));
+    function _call(address target, uint256 value, bytes memory data) internal {
+        assembly {
+            let success := call(
+                gas(),
+                target,
+                value,
+                add(data, 0x20),
+                mload(data),
+                0,
+                0
+            )
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
+            }
+        }
     }
 
     /**
-     * @dev Withdraw value from the account's deposit
-     * @param withdrawAddress target to send to
-     * @param amount to withdraw
+     * @dev This function allows the owner or entry point to execute certain actions.
+     * If the caller is not authorized, the function will revert with an error message.
+     * @notice This modifier is marked as internal and can only be called within the contract itself.
      */
-    function withdrawDepositTo(
-        address payable withdrawAddress,
-        uint256 amount
-    ) public payable {
-        _requireFromEntryPointOrSelf();
-        entryPoint().withdrawTo(withdrawAddress, amount);
+    function _requireFromEntryPointOrSelf() internal view {
+        if (msg.sender != address(entryPoint()) && msg.sender != address(this))
+            revert CallerIsNotEntryPointOrSelf(msg.sender);
     }
 
     /**
-     * @dev Adds a module to the allowlist.
-     * @notice This can only be done via a userOp or a selfcall.
-     * @notice Enables the module `module` for the wallet.
-     * @param module Module to be allow-listed.
+     * @dev This function allows the owner or entry point to execute certain actions.
+     * If the caller is not authorized, the function will revert with an error message.
+     * @notice This modifier is marked as internal and can only be called within the contract itself.
      */
-    function enableModule(address module) external virtual override {
-        _requireFromEntryPointOrSelf();
-        _enableModule(module);
-    }
-
-    /**
-     * @dev Setups module for this Smart Account and enables it.
-     * @notice This can only be done via userOp or a selfcall.
-     * @notice Enables the module `module` for the wallet.
-     */
-    function setupAndEnableModule(
-        address setupContract,
-        bytes memory setupData
-    ) external virtual override returns (address) {
-        _requireFromEntryPointOrSelf();
-        return _setupAndEnableModule(setupContract, setupData);
-    }
-
-    /**
-     * @dev Removes a module from the allowlist.
-     * @notice This can only be done via a wallet transaction.
-     * @notice Disables the module `module` for the wallet.
-     * @param prevModule Module that pointed to the module to be removed in the linked list
-     * @param module Module to be removed.
-     */
-    function disableModule(address prevModule, address module) public virtual {
-        _requireFromEntryPointOrSelf();
-        _disableModule(prevModule, module);
-    }
-
-    function setFallbackHandler(address handler) external virtual override {
-        _requireFromEntryPoint();
-        _setFallbackHandler(handler);
-    }
-
-    /**
-     * @notice Query if a contract implements an interface
-     * @param _interfaceId The interface identifier, as specified in ERC165
-     * @return `true` if the contract implements `_interfaceID`
-     */
-    function supportsInterface(
-        bytes4 _interfaceId
-    ) external view virtual override returns (bool) {
-        return _interfaceId == type(IERC165).interfaceId; // 0x01ffc9a7
-    }
-
-    /**
-     * @dev This function is a special fallback function that is triggered when the contract receives Ether.
-     * It logs an event indicating the amount of Ether received and the sender's address.
-     * @notice This function is marked as external and payable, meaning it can be called from external
-     * sources and accepts Ether as payment.
-     */
-    receive() external payable {
-        if (address(this) == _self) revert DelegateCallsOnly();
-        emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
+    function _requireFromEntryPoint() internal view {
+        if (msg.sender != address(entryPoint()))
+            revert CallerIsNotEntryPoint(msg.sender);
     }
 }
