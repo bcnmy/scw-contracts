@@ -291,12 +291,13 @@ const config: HardhatUserConfig = {
       arbitrumGoerli: process.env.ARBITRUM_API_KEY || "",
       arbitrumTestnet: process.env.ARBITRUM_API_KEY || "",
       arbitrumOne: process.env.ARBITRUM_API_KEY || "",
+      arbitrumNova: process.env.ARBITRUM_NOVA_API_KEY || "",
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
-      lineaGoerli: "PLACEHOLDER_STRING",
-      lineaMainnet: "PLACEHOLDER_STRING",
-      baseGoerli: process.env.BASE_API_KEY || "",
-      baseMainnet: process.env.BASE_API_KEY || "",
+      lineaGoerli: process.env.LINEA_API_KEY || "",
+      lineaMainnet: process.env.LINEA_API_KEY || "",
+      baseGoerli: process.env.BASE_GOERI_API_KEY || "",
+      baseMainnet: process.env.BASE_MAINNET_API_KEY || "",
       zkEVMMainnet: process.env.ZKEVM_API_KEY || "",
       zkEVMGoerli: process.env.ZKEVM_API_KEY || "",
       opBNBTestnet: process.env.OP_BNB_API_KEY || "",
@@ -306,6 +307,14 @@ const config: HardhatUserConfig = {
       comboTestnet: process.env.COMBO_API_KEY || "",
     },
     customChains: [
+      {
+        network: "arbitrumNova",
+        chainId: 42170,
+        urls: {
+          apiURL: "https://api-nova.arbiscan.io/api",
+          browserURL: "https://nova.arbiscan.io/",
+        },
+      },
       {
         network: "lineaGoerli",
         chainId: 59140,
@@ -318,8 +327,8 @@ const config: HardhatUserConfig = {
         network: "lineaMainnet",
         chainId: 59144,
         urls: {
-          apiURL: "https://explorer.linea.build/api",
-          browserURL: "https://explorer.lineascan.build",
+          apiURL: "https://api.lineascan.build/api",
+          browserURL: "https://lineascan.build",
         },
       },
       {
