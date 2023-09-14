@@ -1,4 +1,4 @@
-import hre, { ethers } from "hardhat";
+import { ethers } from "hardhat";
 async function main() {
   const SignMessageLib = await ethers.getContractFactory("SignMessageLib");
   const messageLib = await SignMessageLib.deploy();

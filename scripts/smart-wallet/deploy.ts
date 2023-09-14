@@ -1,4 +1,4 @@
-import hre, { ethers } from "hardhat";
+import { ethers } from "hardhat";
 async function main() {
   const owner = "0x7306aC7A32eb690232De81a9FFB44Bb346026faB";
   const entryPointAddress =

@@ -11,10 +11,22 @@ contract MockSessionValidationModule is ISessionValidationModule {
         bytes32 _userOpHash,
         bytes calldata _data,
         bytes calldata _sig
-    ) external view returns (bool) {
+    ) external view override returns (bool) {
+        (_op);
         address sessionKey = address(bytes20(_data[0:20]));
         return
             ECDSA.recover(ECDSA.toEthSignedMessageHash(_userOpHash), _sig) ==
             sessionKey;
+    }
+
+    function validateSessionParams(
+        address destinationContract,
+        uint256 callValue,
+        bytes calldata funcCallData,
+        bytes calldata sessionKeyData,
+        bytes calldata callSpecificData
+    ) external pure override returns (address) {
+        address sessionKey = address(bytes20(sessionKeyData[0:20]));
+        return sessionKey;
     }
 }

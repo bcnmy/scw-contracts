@@ -21,7 +21,7 @@ import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
  *         - It provides the functionality to execute both gnosis-style txns and AA (EIP-4337) userOps
  *         - It allows to receive and manage assets.
  *         - It is responsible for managing the modules and fallbacks.
- *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
+ *         - The Smart Account can be extended with smodules, such as Social Recovery, Session Key and others.
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
 contract SmartAccountNoAuth is
@@ -77,11 +77,11 @@ contract SmartAccountNoAuth is
 
     /**
      * @dev Constructor that sets the owner of the contract and the entry point contract.
-     *      modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
+     *      _modules[SENTINEL_MODULES] = SENTINEL_MODULES protects implementation from initialization
      * @param anEntryPoint The address of the entry point contract.
      */
     constructor(IEntryPoint anEntryPoint) {
-        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
+        _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         _self = address(this);
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
@@ -120,7 +120,7 @@ contract SmartAccountNoAuth is
         if (!_implementation.isContract())
             revert InvalidImplementation(_implementation);
         address oldImplementation;
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             oldImplementation := sload(address())
             sstore(address(), _implementation)
@@ -138,7 +138,6 @@ contract SmartAccountNoAuth is
         view
         returns (address _implementation)
     {
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             _implementation := sload(address())
         }
@@ -313,13 +312,12 @@ contract SmartAccountNoAuth is
             userOp.signature,
             (bytes, address)
         );
-        if (address(modules[validationModule]) != address(0)) {
+        if (address(_modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
         } else {
             revert WrongValidationModule(validationModule);
         }
-        _validateNonce(userOp.nonce);
         _payPrefund(missingAccountFunds);
     }
 
@@ -342,7 +340,7 @@ contract SmartAccountNoAuth is
             signature,
             (bytes, address)
         );
-        if (address(modules[validationModule]) != address(0)) {
+        if (address(_modules[validationModule]) != address(0)) {
             return
                 ISignatureValidator(validationModule).isValidSignature(
                     ethSignedDataHash,

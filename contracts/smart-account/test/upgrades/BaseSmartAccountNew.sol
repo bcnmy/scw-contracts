@@ -41,6 +41,30 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
     uint256 internal constant SIG_VALIDATION_FAILED = 1;
 
     /**
+     * Validate user's signature and nonce.
+     * subclass doesn't need to override this method. Instead, it should override the specific internal validation methods.
+     */
+    function validateUserOp(
+        UserOperation calldata userOp,
+        bytes32 userOpHash,
+        uint256 missingAccountFunds
+    ) external virtual override returns (uint256 validationData) {
+        if (msg.sender != address(entryPoint()))
+            revert CallerIsNotAnEntryPoint(msg.sender);
+        validationData = _validateSignature(userOp, userOpHash);
+        _payPrefund(missingAccountFunds);
+    }
+
+    function execTransaction(
+        Transaction memory _tx,
+        uint256 _batchId,
+        FeeRefund memory refundInfo,
+        bytes memory signatures
+    ) external payable virtual returns (bool success);
+
+    function init(address _owner, address _handler) external virtual;
+
+    /**
      * @return nonce the account nonce.
      * @dev This method returns the next sequential nonce.
      * @notice For a nonce of a specific key, use `entrypoint.getNonce(account, key)`
@@ -54,32 +78,6 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
      * subclass should return the current entryPoint used by this account.
      */
     function entryPoint() public view virtual returns (IEntryPoint);
-
-    /**
-     * Validate user's signature and nonce.
-     * subclass doesn't need to override this method. Instead, it should override the specific internal validation methods.
-     */
-    function validateUserOp(
-        UserOperation calldata userOp,
-        bytes32 userOpHash,
-        uint256 missingAccountFunds
-    ) external virtual override returns (uint256 validationData) {
-        if (msg.sender != address(entryPoint()))
-            revert CallerIsNotAnEntryPoint(msg.sender);
-        validationData = _validateSignature(userOp, userOpHash);
-        _validateNonce(userOp.nonce);
-        _payPrefund(missingAccountFunds);
-    }
-
-    /**
-     * ensure the request comes from the known entrypoint.
-     */
-    function _requireFromEntryPoint() internal view virtual {
-        require(
-            msg.sender == address(entryPoint()),
-            "account: not from EntryPoint"
-        );
-    }
 
     /**
      * validate the signature is valid for this message.
@@ -100,24 +98,6 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
     ) internal virtual returns (uint256 validationData);
 
     /**
-     * Validate the nonce of the UserOperation.
-     * This method may validate the nonce requirement of this account.
-     * e.g.
-     * To limit the nonce to use sequenced UserOps only (no "out of order" UserOps):
-     *      `require(nonce < type(uint64).max)`
-     * For a hypothetical account that *requires* the nonce to be out-of-order:
-     *      `require(nonce & type(uint64).max == 0)`
-     *
-     * The actual nonce uniqueness is managed by the EntryPoint, and thus no other
-     * action is needed by the account itself.
-     *
-     * @param nonce to validate
-     *
-     * solhint-disable-next-line no-empty-blocks
-     */
-    function _validateNonce(uint256 nonce) internal view virtual {}
-
-    /**
      * sends to the entrypoint (msg.sender) the missing funds for this transaction.
      * subclass MAY override this method for better funds management
      * (e.g. send to the entryPoint more than the minimum required, so that in future transactions
@@ -136,12 +116,13 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
         }
     }
 
-    function init(address _owner, address _handler) external virtual;
-
-    function execTransaction(
-        Transaction memory _tx,
-        uint256 _batchId,
-        FeeRefund memory refundInfo,
-        bytes memory signatures
-    ) external payable virtual returns (bool success);
+    /**
+     * ensure the request comes from the known entrypoint.
+     */
+    function _requireFromEntryPoint() internal view virtual {
+        require(
+            msg.sender == address(entryPoint()),
+            "account: not from EntryPoint"
+        );
+    }
 }

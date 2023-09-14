@@ -1,4 +1,4 @@
-FROM ethereum/client-go:release-1.12
+FROM ethereum/client-go:latest
 ENTRYPOINT geth \
       --http.vhosts '*,localhost,host.docker.internal' \
       --http \

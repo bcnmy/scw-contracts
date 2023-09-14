@@ -46,92 +46,84 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless) (with Bundler)", async () =
     ]);
   });
 
-  const setupTests = deployments.createFixture(
-    async ({ deployments, getNamedAccounts }) => {
-      await deployments.fixture();
+  const setupTests = deployments.createFixture(async ({ deployments }) => {
+    await deployments.fixture();
 
-      const entryPoint = await getEntryPoint();
+    const entryPoint = await getEntryPoint();
 
-      const mockToken = await getMockToken();
+    const mockToken = await getMockToken();
 
-      const BaseImplementationV1 = await ethers.getContractFactory(
-        "SmartAccountV1"
-      );
-      const baseImplV1 = await BaseImplementationV1.deploy(entryPoint.address);
-      await baseImplV1.deployed();
+    const BaseImplementationV1 = await ethers.getContractFactory(
+      "SmartAccountV1"
+    );
+    const baseImplV1 = await BaseImplementationV1.deploy(entryPoint.address);
+    await baseImplV1.deployed();
 
-      const WalletFactoryV1 = await ethers.getContractFactory(
-        "SmartAccountFactoryV1"
-      );
-      const walletFactoryV1 = await WalletFactoryV1.deploy(baseImplV1.address);
-      await walletFactoryV1.deployed();
+    const WalletFactoryV1 = await ethers.getContractFactory(
+      "SmartAccountFactoryV1"
+    );
+    const walletFactoryV1 = await WalletFactoryV1.deploy(baseImplV1.address);
+    await walletFactoryV1.deployed();
 
-      const expectedSmartAccountAddress =
-        await walletFactoryV1.getAddressForCounterFactualAccount(
-          smartAccountOwner.address,
-          0
-        );
-
-      await walletFactoryV1.deployCounterFactualAccount(
+    const expectedSmartAccountAddress =
+      await walletFactoryV1.getAddressForCounterFactualAccount(
         smartAccountOwner.address,
         0
       );
 
-      const userSAV1 = await ethers.getContractAt(
-        "contracts/smart-account/test/upgrades/v1/SmartAccountV1.sol:SmartAccountV1",
-        expectedSmartAccountAddress
+    await walletFactoryV1.deployCounterFactualAccount(
+      smartAccountOwner.address,
+      0
+    );
+
+    const userSAV1 = await ethers.getContractAt(
+      "contracts/smart-account/test/upgrades/v1/SmartAccountV1.sol:SmartAccountV1",
+      expectedSmartAccountAddress
+    );
+
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
+    );
+
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
       );
 
-      const ecdsaModule = await getEcdsaOwnershipRegistryModule();
-      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
-        "EcdsaOwnershipRegistryModule"
-      );
+    const smartAccountDeploymentIndex = 0;
 
-      const ecdsaOwnershipSetupData =
-        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-          "initForSmartAccount",
-          [await smartAccountOwner.getAddress()]
-        );
+    const userSA = await getSmartAccountWithModule(
+      ecdsaModule.address,
+      ecdsaOwnershipSetupData,
+      smartAccountDeploymentIndex
+    );
 
-      const smartAccountDeploymentIndex = 0;
+    await deployer.sendTransaction({
+      to: userSAV1.address,
+      value: ethers.utils.parseEther("10"),
+    });
 
-      const userSA = await getSmartAccountWithModule(
-        ecdsaModule.address,
-        ecdsaOwnershipSetupData,
-        smartAccountDeploymentIndex
-      );
+    await deployer.sendTransaction({
+      to: userSA.address,
+      value: ethers.utils.parseEther("10"),
+    });
 
-      await deployer.sendTransaction({
-        to: userSAV1.address,
-        value: ethers.utils.parseEther("10"),
-      });
+    await mockToken.mint(userSAV1.address, ethers.utils.parseEther("1000000"));
+    await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      await deployer.sendTransaction({
-        to: userSA.address,
-        value: ethers.utils.parseEther("10"),
-      });
-
-      await mockToken.mint(
-        userSAV1.address,
-        ethers.utils.parseEther("1000000")
-      );
-      await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
-
-      return {
-        entryPoint: entryPoint,
-        smartAccountImplementation: await getSmartAccountImplementation(),
-        smartAccountFactory: await getSmartAccountFactory(),
-        mockToken: mockToken,
-        ecdsaModule: ecdsaModule,
-        userSA: userSA,
-        userSAV1: userSAV1,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
-      };
-    }
-  );
+    return {
+      entryPoint: entryPoint,
+      smartAccountImplementation: await getSmartAccountImplementation(),
+      smartAccountFactory: await getSmartAccountFactory(),
+      mockToken: mockToken,
+      ecdsaModule: ecdsaModule,
+      userSA: userSA,
+      userSAV1: userSAV1,
+      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
+    };
+  });
 
   const setupTestsAndUpgrade = async () => {
     const {
@@ -189,7 +181,8 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless) (with Bundler)", async () =
       },
       smartAccountOwner,
       entryPoint,
-      "nonce"
+      "nonce",
+      false
     );
 
     await environment.sendUserOperation(userOp, entryPoint.address);
@@ -230,7 +223,8 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless) (with Bundler)", async () =
       },
       smartAccountOwner,
       entryPoint,
-      "nonce"
+      "nonce",
+      false
     );
 
     await environment.sendUserOperation(userOp, entryPoint.address);

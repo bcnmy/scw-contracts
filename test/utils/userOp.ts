@@ -1,8 +1,6 @@
 import {
   arrayify,
-  BytesLike,
   defaultAbiCoder,
-  getCreate2Address,
   hexConcat,
   hexDataSlice,
   hexValue,
@@ -11,13 +9,18 @@ import {
 } from "ethers/lib/utils";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
 import { ethers } from "hardhat";
-import { AddressZero, callDataCost, HashZero, rethrow } from "../utils/testUtils";
+import {
+  AddressZero,
+  callDataCost,
+  HashZero,
+  rethrow,
+} from "../utils/testUtils";
 import {
   ecsign,
   toRpcSig,
-  keccak256 as keccak256_buffer,
+  keccak256 as keccak256Buffer,
 } from "ethereumjs-util";
-import { EntryPoint, VerifyingSingletonPaymaster } from "../../typechain";
+import { EntryPoint } from "../../typechain";
 import { UserOperation } from "./userOperation";
 import { Create2Factory } from "../../src/Create2Factory";
 import { MerkleTree } from "merkletreejs";
@@ -132,7 +135,7 @@ export const DefaultsForUserOp: UserOperation = {
   initCode: "0x",
   callData: "0x",
   callGasLimit: 0,
-  verificationGasLimit: 150000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
+  verificationGasLimit: 250000, // default verification gas. will add create2 cost (3200+200*length) if initCode exists
   preVerificationGas: 21000, // should also cover calldata cost.
   maxFeePerGas: 0,
   maxPriorityFeePerGas: 1e9,
@@ -153,7 +156,7 @@ export function signUserOp(
   ]);
 
   const sig = ecsign(
-    keccak256_buffer(msg1),
+    keccak256Buffer(msg1),
     Buffer.from(arrayify(signer.privateKey))
   );
   // that's equivalent of:  await signer.signMessage(message);
@@ -197,7 +200,9 @@ export function fillUserOpDefaults(
 export async function fillUserOp(
   op: Partial<UserOperation>,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce"
+  getNonceFunction = "nonce",
+  useNonceKey = true,
+  nonceKey = 0
 ): Promise<UserOperation> {
   const op1 = { ...op };
   const provider = entryPoint?.provider;
@@ -230,10 +235,10 @@ export async function fillUserOp(
           to: initAddr,
           data: initCallData,
           gasLimit: 10e6,
-        })
+        });
       } catch (error) {
         initEstimate = 1_000_000;
-      };
+      }
       op1.verificationGasLimit = BigNumber.from(
         DefaultsForUserOp.verificationGasLimit
       ).add(initEstimate);
@@ -242,25 +247,36 @@ export async function fillUserOp(
   if (op1.nonce == null) {
     if (provider == null)
       throw new Error("must have entryPoint to autofill nonce");
-    const c = new Contract(
-      op.sender!,
-      [`function ${getNonceFunction}() view returns(uint256)`],
-      provider
-    );
-    op1.nonce = await c[getNonceFunction]().catch(rethrow());
+    // Review/TODO: if someone passes 'nonce' as nonceFunction. or change the default
+
+    if (useNonceKey) {
+      const c = new Contract(
+        op.sender!,
+        [`function nonce(uint192) view returns(uint256)`],
+        provider
+      );
+      op1.nonce = await c.nonce(nonceKey).catch(rethrow());
+    } else {
+      const c = new Contract(
+        op.sender!,
+        [`function ${getNonceFunction}() view returns(uint256)`],
+        provider
+      );
+      op1.nonce = await c[getNonceFunction]().catch(rethrow());
+    }
   }
   if (op1.callGasLimit == null && op.callData != null) {
     if (provider == null)
       throw new Error("must have entryPoint for callGasLimit estimate");
     let gasEstimated;
-    try { 
+    try {
       gasEstimated = await provider.estimateGas({
         from: entryPoint?.address,
         to: op1.sender,
         data: op1.callData,
-      })
-    } catch(error) {
-      //to handle the case when we need to build an userOp that is expected to fail
+      });
+    } catch (error) {
+      // to handle the case when we need to build an userOp that is expected to fail
       gasEstimated = 3_000_000;
     }
 
@@ -294,11 +310,19 @@ export async function fillAndSign(
   op: Partial<UserOperation>,
   signer: Wallet | Signer,
   entryPoint?: EntryPoint,
-  getNonceFunction = "getNonce",
-  extraPreVerificationGas: number = 0
+  getNonceFunction = "nonce",
+  useNonceKey = true,
+  nonceKey = 0,
+  extraPreVerificationGas = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
-  const op2 = await fillUserOp(op, entryPoint, getNonceFunction);
+  const op2 = await fillUserOp(
+    op,
+    entryPoint,
+    getNonceFunction,
+    useNonceKey,
+    nonceKey
+  );
   op2.preVerificationGas =
     Number(op2.preVerificationGas) + extraPreVerificationGas;
 
@@ -320,15 +344,16 @@ export async function makeEcdsaModuleUserOp(
   moduleAddress: string,
   options?: {
     preVerificationGas?: number;
-  }
-) : Promise<UserOperation> {
+  },
+  nonceKey = 0
+): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
-  
+
   const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
     functionName,
     functionParams
   );
-  
+
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
@@ -337,12 +362,15 @@ export async function makeEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    'nonce'
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
   // add validator module address to the signature
-  let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"], 
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
     [userOp.signature, moduleAddress]
   );
 
@@ -359,17 +387,20 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
   moduleAddress: string,
   paymaster: Contract,
   verifiedSigner: Wallet | SignerWithAddress,
+  validUntil: number,
+  validAfter: number,
   options?: {
     preVerificationGas?: number;
-  }
-) : Promise<UserOperation> {
+  },
+  nonceKey = 0
+): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
-  
+
   const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
     functionName,
     functionParams
   );
-    
+
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
@@ -378,12 +409,17 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
     },
     userOpSigner,
     entryPoint,
-    'nonce'
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
   const hash = await paymaster.getHash(
     userOp,
-    verifiedSigner.address
+    verifiedSigner.address,
+    validUntil,
+    validAfter
   );
   const paymasterSig = await verifiedSigner.signMessage(arrayify(hash));
   const userOpWithPaymasterData = await fillAndSign(
@@ -393,19 +429,22 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
       paymasterAndData: hexConcat([
         paymaster.address,
         ethers.utils.defaultAbiCoder.encode(
-          ["address", "bytes"],
-          [verifiedSigner.address, paymasterSig]
+          ["address", "uint48", "uint48", "bytes"],
+          [verifiedSigner.address, validUntil, validAfter, paymasterSig]
         ),
       ]),
     },
     userOpSigner,
     entryPoint,
-    'nonce'
-  );  
+    "nonce",
+    true,
+    nonceKey,
+    0
+  );
 
   // add validator module address to the signature
-  let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"], 
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
     [userOpWithPaymasterData.signature, moduleAddress]
   );
 
@@ -413,7 +452,6 @@ export async function makeEcdsaModuleUserOpWithPaymaster(
 
   return userOpWithPaymasterData;
 }
-
 
 export async function makeSARegistryModuleUserOp(
   functionName: string,
@@ -425,8 +463,9 @@ export async function makeSARegistryModuleUserOp(
   ecdsaModuleAddress: string,
   options?: {
     preVerificationGas?: number;
-  }
-) : Promise<UserOperation> {
+  },
+  nonceKey = 0
+): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
   const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
@@ -442,18 +481,22 @@ export async function makeSARegistryModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    'nonce'
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
-  let signatureForSAOwnershipRegistry = ethers.utils.defaultAbiCoder.encode(
-    ["bytes","address"],
-    [userOp.signature,ecdsaModuleAddress]
+  const signatureForSAOwnershipRegistry = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [userOp.signature, ecdsaModuleAddress]
   );
 
-  let signatureForECDSAOwnershipRegistry = ethers.utils.defaultAbiCoder.encode(
-    ["bytes","address"],
-    [signatureForSAOwnershipRegistry, saRegistryModuleAddress]
-  );
+  const signatureForECDSAOwnershipRegistry =
+    ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [signatureForSAOwnershipRegistry, saRegistryModuleAddress]
+    );
 
   userOp.signature = signatureForECDSAOwnershipRegistry;
   return userOp;
@@ -470,16 +513,17 @@ export async function makeMultichainEcdsaModuleUserOp(
   options?: {
     preVerificationGas?: number;
   },
-  validUntil: number = 0,
-  validAfter: number = 0,
-) : Promise<UserOperation> {
+  validUntil = 0,
+  validAfter = 0,
+  nonceKey = 0
+): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
-  
+
   const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
     functionName,
     functionParams
   );
-  
+
   const userOp = await fillAndSign(
     {
       sender: userOpSender,
@@ -488,27 +532,30 @@ export async function makeMultichainEcdsaModuleUserOp(
     },
     userOpSigner,
     entryPoint,
-    'nonce'
-  );
-  
-  const leafOfThisUserOp = hexConcat([
-    hexZeroPad(ethers.utils.hexlify(validUntil),6),
-    hexZeroPad(ethers.utils.hexlify(validAfter),6),
-    hexZeroPad(await entryPoint.getUserOpHash(userOp),32),
-  ]);  
-  
-  leaves.push(leafOfThisUserOp);
-  leaves = leaves.map(x => ethers.utils.keccak256(x));
-  
-  const chainMerkleTree = new MerkleTree(
-    leaves,
-    keccak256,
-    { sortPairs: true }
+    "nonce",
+    true,
+    nonceKey,
+    0
   );
 
+  const leafOfThisUserOp = hexConcat([
+    hexZeroPad(ethers.utils.hexlify(validUntil), 6),
+    hexZeroPad(ethers.utils.hexlify(validAfter), 6),
+    hexZeroPad(await entryPoint.getUserOpHash(userOp), 32),
+  ]);
+
+  leaves.push(leafOfThisUserOp);
+  leaves = leaves.map((x) => ethers.utils.keccak256(x));
+
+  const chainMerkleTree = new MerkleTree(leaves, keccak256, {
+    sortPairs: true,
+  });
+
   // user only signs once
-  const multichainSignature = await userOpSigner.signMessage(ethers.utils.arrayify(chainMerkleTree.getHexRoot()));
-  
+  const multichainSignature = await userOpSigner.signMessage(
+    ethers.utils.arrayify(chainMerkleTree.getHexRoot())
+  );
+
   // but still required to pad the signature with the required data (unsigned) for every chain
   // this is done by dapp automatically
   const merkleProof = chainMerkleTree.getHexProof(leaves[leaves.length - 1]);
@@ -528,7 +575,7 @@ export async function makeMultichainEcdsaModuleUserOp(
     ["bytes", "address"],
     [moduleSignature, moduleAddress]
   );
-  
+
   // =================== put signature into userOp and execute ===================
   userOp.signature = signatureWithModuleAddress;
 

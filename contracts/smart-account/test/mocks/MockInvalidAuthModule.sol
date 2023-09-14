@@ -2,10 +2,10 @@
 pragma solidity 0.8.17;
 
 contract MockInvalidAuthModule {
-    mapping(address => bytes) internal setupData;
+    mapping(address => bytes) internal _setupData;
 
     function init(bytes calldata setupData_) external returns (address) {
-        setupData[msg.sender] = setupData_;
+        _setupData[msg.sender] = setupData_;
         return address(this);
     }
 

@@ -50,50 +50,45 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
     ]);
   });
 
-  const setupTests = deployments.createFixture(
-    async ({ deployments, getNamedAccounts }) => {
-      await deployments.fixture();
+  const setupTests = deployments.createFixture(async ({ deployments }) => {
+    await deployments.fixture();
 
-      const mockToken = await getMockToken();
+    const mockToken = await getMockToken();
 
-      const ecdsaModule = await getEcdsaOwnershipRegistryModule();
-      const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
-        "EcdsaOwnershipRegistryModule"
+    const ecdsaModule = await getEcdsaOwnershipRegistryModule();
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
+    );
+
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
       );
+    const smartAccountDeploymentIndex = 0;
+    const userSA = await getSmartAccountWithModule(
+      ecdsaModule.address,
+      ecdsaOwnershipSetupData,
+      smartAccountDeploymentIndex
+    );
 
-      const ecdsaOwnershipSetupData =
-        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-          "initForSmartAccount",
-          [await smartAccountOwner.getAddress()]
-        );
-      const smartAccountDeploymentIndex = 0;
-      const userSA = await getSmartAccountWithModule(
-        ecdsaModule.address,
-        ecdsaOwnershipSetupData,
-        smartAccountDeploymentIndex
-      );
+    await deployer.sendTransaction({
+      to: userSA.address,
+      value: ethers.utils.parseEther("10"),
+    });
 
-      await deployer.sendTransaction({
-        to: userSA.address,
-        value: ethers.utils.parseEther("10"),
-      });
+    await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
-
-      return {
-        entryPoint: await getEntryPoint(),
-        smartAccountImplementation: await getSmartAccountImplementation(),
-        smartAccountFactory: await getSmartAccountFactory(),
-        mockToken: mockToken,
-        ecdsaModule: ecdsaModule,
-        userSA: userSA,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
-      };
-    }
-  );
+    return {
+      entryPoint: await getEntryPoint(),
+      smartAccountImplementation: await getSmartAccountImplementation(),
+      smartAccountFactory: await getSmartAccountFactory(),
+      mockToken: mockToken,
+      ecdsaModule: ecdsaModule,
+      userSA: userSA,
+      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
+    };
+  });
 
   it("Can send an ERC20 Transfer userOp", async () => {
     const { entryPoint, mockToken, userSA, ecdsaModule } = await setupTests();
@@ -160,6 +155,10 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
     );
     const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
 
+    const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
+    const validUntil = blockTimestamp + 1000;
+    const validAfter = blockTimestamp;
+
     const userOp = await makeEcdsaModuleUserOpWithPaymaster(
       "execute_ncC",
       [
@@ -173,6 +172,8 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
       ecdsaModule.address,
       verifyingPaymaster,
       verifiedSigner,
+      validUntil,
+      validAfter,
       {
         preVerificationGas: 50000,
       }

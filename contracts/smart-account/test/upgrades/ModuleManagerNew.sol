@@ -14,14 +14,14 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
     event ExecutionFromModuleFailure(address indexed module);
 
     address internal constant SENTINEL_MODULES = address(0x1);
-    bytes32 internal constant version = "1.0.1";
+    bytes32 internal constant VERSION = "1.0.1";
 
-    mapping(address => address) internal modules;
-    bool internal isActive = true;
+    mapping(address => address) internal _modules;
+    bool internal _isActive = true;
 
     function _setupModules(address to, bytes memory data) internal {
-        require(modules[SENTINEL_MODULES] == address(0), "BSA100");
-        modules[SENTINEL_MODULES] = SENTINEL_MODULES;
+        require(_modules[SENTINEL_MODULES] == address(0), "BSA100");
+        _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
         if (to != address(0))
             // Setup has to complete successfully or transaction fails.
             require(
@@ -38,9 +38,9 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         // Module address cannot be null or sentinel.
         require(module != address(0) && module != SENTINEL_MODULES, "BSA101");
         // Module cannot be added twice.
-        require(modules[module] == address(0), "BSA102");
-        modules[module] = modules[SENTINEL_MODULES];
-        modules[SENTINEL_MODULES] = module;
+        require(_modules[module] == address(0), "BSA102");
+        _modules[module] = _modules[SENTINEL_MODULES];
+        _modules[SENTINEL_MODULES] = module;
         emit EnabledModule(module);
     }
 
@@ -55,9 +55,9 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
     ) public authorized {
         // Validate module address and check that it corresponds to module index.
         require(module != address(0) && module != SENTINEL_MODULES, "BSA101");
-        require(modules[prevModule] == module, "BSA103");
-        modules[prevModule] = modules[module];
-        delete modules[module];
+        require(_modules[prevModule] == module, "BSA103");
+        _modules[prevModule] = _modules[module];
+        delete _modules[module];
         emit DisabledModule(module);
     }
 
@@ -72,10 +72,11 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         bytes memory data,
         Enum.Operation operation
     ) public virtual returns (bool success) {
-        require(isActive == true, "disabled");
+        require(_isActive == true, "disabled");
         // Only whitelisted modules are allowed.
         require(
-            msg.sender != SENTINEL_MODULES && modules[msg.sender] != address(0),
+            msg.sender != SENTINEL_MODULES &&
+                _modules[msg.sender] != address(0),
             "BSA104"
         );
         // Execute transaction without further confirmations.
@@ -96,7 +97,7 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
         Enum.Operation operation
     ) public returns (bool success, bytes memory returnData) {
         success = execTransactionFromModule(to, value, data, operation);
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             // Load free memory location
             let ptr := mload(0x40)
@@ -115,7 +116,7 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
     /// @dev Returns if an module is enabled
     /// @return True if the module is enabled
     function isModuleEnabled(address module) public view returns (bool) {
-        return SENTINEL_MODULES != module && modules[module] != address(0);
+        return SENTINEL_MODULES != module && _modules[module] != address(0);
     }
 
     /// @dev Returns array of modules. Useful for a widget
@@ -132,19 +133,19 @@ contract ModuleManagerNew is SelfAuthorized, Executor {
 
         // Populate return array
         uint256 moduleCount;
-        address currentModule = modules[start];
+        address currentModule = _modules[start];
         while (
             currentModule != address(0x0) &&
             currentModule != SENTINEL_MODULES &&
             moduleCount < pageSize
         ) {
             array[moduleCount] = currentModule;
-            currentModule = modules[currentModule];
+            currentModule = _modules[currentModule];
             moduleCount++;
         }
         next = currentModule;
         // Set correct size of returned array
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             mstore(array, moduleCount)
         }

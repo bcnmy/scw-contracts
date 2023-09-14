@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
 import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 import "./SessionValidationModules/ISessionValidationModule.sol";
+import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 
 struct SessionStorage {
     bytes32 merkleRoot;
@@ -22,22 +23,12 @@ struct SessionStorage {
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SessionKeyManager is BaseAuthorizationModule {
+contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
     /**
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
      */
-    mapping(address => SessionStorage) internal userSessions;
-
-    /**
-     * @dev returns the SessionStorage object for a given smartAccount
-     * @param smartAccount Smart Account address
-     */
-    function getSessionKeys(
-        address smartAccount
-    ) external view returns (SessionStorage memory) {
-        return userSessions[smartAccount];
-    }
+    mapping(address => SessionStorage) internal _userSessions;
 
     /**
      * @dev sets the merkle root of a tree containing session keys for msg.sender
@@ -45,7 +36,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
      * @param _merkleRoot Merkle Root of a tree that contains session keys with their permissions and parameters
      */
     function setMerkleRoot(bytes32 _merkleRoot) external {
-        userSessions[msg.sender].merkleRoot = _merkleRoot;
+        _userSessions[msg.sender].merkleRoot = _merkleRoot;
         // TODO:should we add an event here? which emits the new merkle root
     }
 
@@ -58,8 +49,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view virtual returns (uint256) {
-        SessionStorage storage sessionKeyStorage = _getSessionData(msg.sender);
+    ) external virtual returns (uint256) {
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -76,19 +66,15 @@ contract SessionKeyManager is BaseAuthorizationModule {
                 (uint48, uint48, address, bytes, bytes32[], bytes)
             );
 
-        bytes32 leaf = keccak256(
-            abi.encodePacked(
-                validUntil,
-                validAfter,
-                sessionValidationModule,
-                sessionKeyData
-            )
+        validateSessionKey(
+            userOp.sender,
+            validUntil,
+            validAfter,
+            sessionValidationModule,
+            sessionKeyData,
+            merkleProof
         );
-        if (
-            !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
-        ) {
-            revert("SessionNotApproved");
-        }
+
         return
             _packValidationData(
                 //_packValidationData expects true if sig validation has failed, false otherwise
@@ -105,6 +91,54 @@ contract SessionKeyManager is BaseAuthorizationModule {
     }
 
     /**
+     * @dev returns the SessionStorage object for a given smartAccount
+     * @param smartAccount Smart Account address
+     */
+    function getSessionKeys(
+        address smartAccount
+    ) external view returns (SessionStorage memory) {
+        return _userSessions[smartAccount];
+    }
+
+    /**
+     * @dev validates that Session Key + parameters are enabled
+     * by being included into the merkle tree
+     * @param smartAccount smartAccount for which session key is being validated
+     * @param validUntil timestamp when the session key expires
+     * @param validAfter timestamp when the session key becomes valid
+     * @param sessionValidationModule address of the Session Validation Module
+     * @param sessionKeyData session parameters (limitations/permissions)
+     * @param merkleProof merkle proof for the leaf which represents this session key + params
+     * @dev if doesn't revert, session key is considered valid
+     */
+
+    function validateSessionKey(
+        address smartAccount,
+        uint48 validUntil,
+        uint48 validAfter,
+        address sessionValidationModule,
+        bytes memory sessionKeyData,
+        bytes32[] memory merkleProof
+    ) public virtual override {
+        SessionStorage storage sessionKeyStorage = _getSessionData(
+            smartAccount
+        );
+        bytes32 leaf = keccak256(
+            abi.encodePacked(
+                validUntil,
+                validAfter,
+                sessionValidationModule,
+                sessionKeyData
+            )
+        );
+        if (
+            !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
+        ) {
+            revert("SessionNotApproved");
+        }
+    }
+
+    /**
      * @dev isValidSignature according to BaseAuthorizationModule
      * @param _dataHash Hash of the data to be validated.
      * @param _signature Signature over the the _dataHash.
@@ -114,6 +148,7 @@ contract SessionKeyManager is BaseAuthorizationModule {
         bytes32 _dataHash,
         bytes memory _signature
     ) public view override returns (bytes4) {
+        (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }
 
@@ -125,6 +160,6 @@ contract SessionKeyManager is BaseAuthorizationModule {
     function _getSessionData(
         address _account
     ) internal view returns (SessionStorage storage sessionKeyStorage) {
-        sessionKeyStorage = userSessions[_account];
+        sessionKeyStorage = _userSessions[_account];
     }
 }

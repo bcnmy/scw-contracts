@@ -5,13 +5,13 @@ import {SelfAuthorizedErrors} from "../common/Errors.sol";
 
 /// @title SelfAuthorized - authorizes current contract to perform actions
 contract SelfAuthorized is SelfAuthorizedErrors {
-    function requireSelfCall() private view {
-        if (msg.sender != address(this)) revert CallerIsNotSelf(msg.sender);
-    }
-
     modifier authorized() {
         // This is a function call as it minimized the bytecode size
-        requireSelfCall();
+        _requireSelfCall();
         _;
+    }
+
+    function _requireSelfCall() private view {
+        if (msg.sender != address(this)) revert CallerIsNotSelf(msg.sender);
     }
 }
