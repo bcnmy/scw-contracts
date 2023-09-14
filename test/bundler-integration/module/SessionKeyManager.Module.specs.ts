@@ -6,7 +6,7 @@ import {
   enableNewTreeForSmartAccountViaEcdsa,
 } from "../../utils/sessionKey";
 import { encodeTransfer } from "../../utils/testUtils";
-import { hexZeroPad, hexConcat } from "ethers/lib/utils";
+import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
