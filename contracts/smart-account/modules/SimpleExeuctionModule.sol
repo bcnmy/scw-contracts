@@ -5,7 +5,6 @@ import {Enum} from "../common/Enum.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {Math} from "../libs/Math.sol";
 
-
 /**
  * @notice Throws when the transaction execution fails
  */
@@ -36,15 +35,9 @@ struct Transaction {
 }
 
 contract SimpleExecutionModule is ReentrancyGuard {
-    uint256 private immutable _chainId;
-
-    constructor() {
-        _chainId = block.chainid;
-    }
-
     /**
      * @dev Safe (ex-Gnosis) style transaction
-     * @dev Allows to execute a transaction on SA.execute() internal method which opens up ability to do delegate calls 
+     * @dev Allows to execute a transaction on SA.execute() internal method which opens up ability to do delegate calls
      * @dev required to be called by a Smart Account
      * @param _tx Smart Account transaction
      */
@@ -52,14 +45,14 @@ contract SimpleExecutionModule is ReentrancyGuard {
     function execTransaction(
         Transaction memory _tx
     ) public payable virtual nonReentrant returns (bool success) {
-      success = IExecFromModule(msg.sender).execTransactionFromModule(
-                _tx.to,
-                _tx.value,
-                _tx.data,
-                _tx.operation
-            );
-     if(!success) {
-        revert ExecutionFailed();
-     }
+        success = IExecFromModule(msg.sender).execTransactionFromModule(
+            _tx.to,
+            _tx.value,
+            _tx.data,
+            _tx.operation
+        );
+        if (!success) {
+            revert ExecutionFailed();
+        }
     }
 }
