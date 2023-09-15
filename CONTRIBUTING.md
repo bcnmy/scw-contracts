@@ -54,7 +54,7 @@ Welcome! We're thrilled to have you. If you're unsure where to start, look for i
 
 ### Improving Documentation 📚
 
-Good documentation is key! If you spot areas for improvement or errors in our documentation, we'd love your input.
+Good documentation is key! If you spot areas for improvement or errors in our documentation, we'd love your input. If you wish to suggest changes, feel free to raise a PR on our [documentation repository](https://github.com/bcnmy/docs).
 
 ## Style Guides 🎨
 
