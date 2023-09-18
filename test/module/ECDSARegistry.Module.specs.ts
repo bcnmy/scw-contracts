@@ -311,10 +311,11 @@ describe("ECDSA Registry Module: ", async () => {
         await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("7.934");
 
-      const txnData = mockToken.interface.encodeFunctionData("transfer", [
+      const txnData = encodeTransfer(
         bob.address,
-        tokenAmountToTransfer.toString(),
-      ]);
+        tokenAmountToTransfer.toString()
+      );
+
       const userOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
         [mockToken.address, 0, txnData],
@@ -342,10 +343,11 @@ describe("ECDSA Registry Module: ", async () => {
         await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.23436");
 
-      const txnData = mockToken.interface.encodeFunctionData("transfer", [
+      const txnData = encodeTransfer(
         bob.address,
-        tokenAmountToTransfer.toString(),
-      ]);
+        tokenAmountToTransfer.toString()
+      );
+
       const userOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
         [mockToken.address, 0, txnData],
@@ -374,10 +376,10 @@ describe("ECDSA Registry Module: ", async () => {
       const bobBalanceBefore = await mockToken.balanceOf(bob.address);
       const tokenAmountToTransfer = ethers.utils.parseEther("1.3425");
 
-      const txnData = mockToken.interface.encodeFunctionData("transfer", [
+      const txnData = encodeTransfer(
         bob.address,
-        tokenAmountToTransfer.toString(),
-      ]);
+        tokenAmountToTransfer.toString()
+      );
 
       const notSmartAccountOwner = charlie;
       const userOp = await makeEcdsaModuleUserOp(
@@ -473,13 +475,14 @@ describe("ECDSA Registry Module: ", async () => {
         ecdsaRegistryModule.getOwner(unregisteredSA.address)
       ).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
 
+      const txnData2 = encodeTransfer(
+        bob.address,
+        tokenAmountToTransfer.toString()
+      );
+
       const sendTokenUserOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
-        [
-          mockToken.address,
-          0,
-          encodeTransfer(bob.address, tokenAmountToTransfer.toString()),
-        ],
+        [mockToken.address, 0, txnData2],
         unregisteredSmartAccountAddress,
         smartAccountOwner,
         entryPoint,
@@ -516,10 +519,10 @@ describe("ECDSA Registry Module: ", async () => {
       const bobBalanceBefore = await mockToken.balanceOf(bob.address);
       const tokenAmountToTransfer = ethers.utils.parseEther("3.632");
 
-      const txnData = await mockToken.interface.encodeFunctionData("transfer", [
+      const txnData = encodeTransfer(
         bob.address,
-        tokenAmountToTransfer.toString(),
-      ]);
+        tokenAmountToTransfer.toString()
+      );
 
       const userOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
