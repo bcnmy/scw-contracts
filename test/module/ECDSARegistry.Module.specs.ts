@@ -447,17 +447,16 @@ describe("ECDSA Registry Module: ", async () => {
         value: ethers.utils.parseEther("60"),
       });
 
+      const txnData1 =
+        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+          "renounceOwnership",
+          []
+        );
+
       // renounce ownership
       const renounceOwnershipUserOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
-        [
-          ecdsaRegistryModule.address,
-          0,
-          EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-            "renounceOwnership",
-            []
-          ),
-        ],
+        [ecdsaRegistryModule.address, 0, txnData1],
         unregisteredSmartAccountAddress,
         smartAccountOwner,
         entryPoint,
