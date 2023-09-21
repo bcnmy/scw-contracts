@@ -1,4 +1,4 @@
-import { expect, use } from "chai";
+import { expect } from "chai";
 import {
   enableNewTreeForSmartAccountViaEcdsa,
   getERC20SessionKeyParams,
@@ -458,10 +458,7 @@ describe("SessionKey: Batched Session Router", async () => {
       merkleTree,
       sessionRouter,
       mockProtocol,
-      mockProtocolSVM,
       mockToken,
-      sessionKeyData2,
-      leafData2,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
@@ -801,7 +798,6 @@ describe("SessionKey: Batched Session Router", async () => {
       entryPoint,
       userSA,
       sessionKeyManager,
-      erc20SessionModule,
       sessionKeyData,
       leafData,
       merkleTree,
@@ -811,7 +807,6 @@ describe("SessionKey: Batched Session Router", async () => {
       mockToken,
       sessionKeyData2,
       leafData2,
-      validUntilForMockProtocol,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
@@ -876,7 +871,6 @@ describe("SessionKey: Batched Session Router", async () => {
       userSA,
       sessionKeyManager,
       erc20SessionModule,
-      sessionKeyData,
       leafData,
       merkleTree,
       sessionRouter,
@@ -885,7 +879,6 @@ describe("SessionKey: Batched Session Router", async () => {
       mockToken,
       sessionKeyData2,
       leafData2,
-      validUntilForMockProtocol,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 

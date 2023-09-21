@@ -85,9 +85,6 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
         uint256 length = sessionData.length;
         require(length == destinations.length, "Lengths mismatch");
 
-        // TODO: since we do not sign SessionDatas[] , can it somehow be messed with?
-        // like provide it in the wrong order. => should not work as it will be verified along with the calldata
-
         // iterate over batched operations
         for (uint256 i; i < length; ) {
             // validate the sessionKey
