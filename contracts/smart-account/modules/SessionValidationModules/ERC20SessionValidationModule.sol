@@ -21,6 +21,8 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
      * @param callValue value to be sent with the call
      * @param _funcCallData the data for the call. is parsed inside the SVM
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
+     * param _callSpecificData additional data, for example some proofs if the SVM utilizes merkle trees itself
+     * for example to store a list of allowed tokens or receivers
      */
     function validateSessionParams(
         address destinationContract,
@@ -70,7 +72,6 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
                 bytes4(_op.callData[0:4]) == EXECUTE_SELECTOR,
             "ERC20SV Invalid Selector"
         );
-
         (
             address sessionKey,
             address token,
@@ -94,7 +95,9 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         // working with userOp.callData
         // check if the call is to the allowed recepient and amount is not more than allowed
         bytes calldata data;
+
         {
+            //offset represents where does the inner bytes array start
             uint256 offset = uint256(bytes32(_op.callData[4 + 64:4 + 96]));
             uint256 length = uint256(
                 bytes32(_op.callData[4 + offset:4 + offset + 32])
@@ -102,12 +105,19 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
             //we expect data to be the `IERC20.transfer(address, uint256)` calldata
             data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
         }
-        if (address(bytes20(data[16:36])) != recipient) {
+
+        (address recipientCalled, uint256 amount) = abi.decode(
+            data[4:],
+            (address, uint256)
+        );
+
+        if (recipientCalled != recipient) {
             revert("ERC20SV Wrong Recipient");
         }
-        if (uint256(bytes32(data[36:68])) > maxAmount) {
+        if (amount > maxAmount) {
             revert("ERC20SV Max Amount Exceeded");
         }
+        
         return
             ECDSA.recover(
                 ECDSA.toEthSignedMessageHash(_userOpHash),

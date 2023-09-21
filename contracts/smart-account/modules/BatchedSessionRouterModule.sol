@@ -83,6 +83,8 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
         ) = abi.decode(userOp.callData[4:], (address[], uint256[], bytes[]));
 
         uint256 length = sessionData.length;
+        require(length == destinations.length, "Lengths mismatch");
+
         // iterate over batched operations
         for (uint256 i; i < length; ) {
             // validate the sessionKey
