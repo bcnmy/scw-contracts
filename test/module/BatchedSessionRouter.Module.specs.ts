@@ -433,10 +433,10 @@ describe("SessionKey: Batched Session Router", async () => {
         [approveCallData, interactCallData],
       ],
       userSA.address,
-      sessionKey, 
+      sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [], //empty session data array
+      [], // empty session data array
       sessionRouter.address
     );
 

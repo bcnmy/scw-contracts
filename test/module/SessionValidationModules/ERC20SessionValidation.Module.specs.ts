@@ -505,21 +505,23 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       merkleTree.getHexProof(ethers.utils.keccak256(leafData))
     );
 
-    const callDataString = transferUserOp.callData.toString().slice(2,);
+    const callDataString = transferUserOp.callData.toString().slice(2);
 
-    const offset = 
-    parseInt(
-      (callDataString.slice(68*2, 100*2)),
-      16
-    );      
+    const offset = parseInt(callDataString.slice(68 * 2, 100 * 2), 16);
     const length = parseInt(
-      (callDataString.slice((4+offset)*2, (4+offset+32)*2)),
+      callDataString.slice((4 + offset) * 2, (4 + offset + 32) * 2),
       16
     );
-  
-    const newLength = ethers.utils.hexZeroPad(ethers.utils.hexlify(length+1), 32);
-    transferUserOp.callData = transferUserOp.callData.toString().slice(0, (4+offset)*2) + newLength.slice(2,) + transferUserOp.callData.toString().slice((4 + offset + 32)*2);
-    
+
+    const newLength = ethers.utils.hexZeroPad(
+      ethers.utils.hexlify(length + 1),
+      32
+    );
+    transferUserOp.callData =
+      transferUserOp.callData.toString().slice(0, (4 + offset) * 2) +
+      newLength.slice(2) +
+      transferUserOp.callData.toString().slice((4 + offset + 32) * 2);
+
     await expect(
       entryPoint.handleOps([transferUserOp], alice.address, {
         gasLimit: 10000000,
