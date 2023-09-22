@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.17;
 
-/* solhint-disable reason-string */
-
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {IPaymaster} from "@account-abstraction/contracts/interfaces/IPaymaster.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
@@ -13,14 +11,14 @@ import "@account-abstraction/contracts/core/Helpers.sol";
 /**
  * Helper class for creating a paymaster.
  * provides helper methods for staking.
- * validates that the postOp is called only by the entryPoint
+ * validates that the postOp is called only by the ENTRY_POINT
+ @notice Could have Ownable2Step
  */
-// @notice Could have Ownable2Step
 abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
-    IEntryPoint public immutable entryPoint;
+    IEntryPoint public immutable ENTRY_POINT;
 
     constructor(address _owner, IEntryPoint _entryPoint) {
-        entryPoint = _entryPoint;
+        ENTRY_POINT = _entryPoint;
         _transferOwnership(_owner);
     }
 
@@ -65,7 +63,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      * @param unstakeDelaySec - the unstake delay for this paymaster. Can only be increased.
      */
     function addStake(uint32 unstakeDelaySec) external payable onlyOwner {
-        entryPoint.addStake{value: msg.value}(unstakeDelaySec);
+        ENTRY_POINT.addStake{value: msg.value}(unstakeDelaySec);
     }
 
     /**
@@ -73,7 +71,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      * The paymaster can't serve requests once unlocked, until it calls addStake again
      */
     function unlockStake() external onlyOwner {
-        entryPoint.unlockStake();
+        ENTRY_POINT.unlockStake();
     }
 
     /**
@@ -82,14 +80,14 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
      * @param withdrawAddress the address to send withdrawn value.
      */
     function withdrawStake(address payable withdrawAddress) external onlyOwner {
-        entryPoint.withdrawStake(withdrawAddress);
+        ENTRY_POINT.withdrawStake(withdrawAddress);
     }
 
     /**
-     * return current paymaster's deposit on the entryPoint.
+     * return current paymaster's deposit on the ENTRY_POINT.
      */
     function getDeposit() public view returns (uint256) {
-        return entryPoint.balanceOf(address(this));
+        return ENTRY_POINT.balanceOf(address(this));
     }
 
     function _validatePaymasterUserOp(
@@ -100,7 +98,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
 
     /**
      * post-operation handler.
-     * (verified to be called only through the entryPoint)
+     * (verified to be called only through the ENTRY_POINT)
      * @dev if subclass returns a non-empty context from validatePaymasterUserOp, it must also implement this method.
      * @param mode enum with the following options:
      *      opSucceeded - user operation succeeded.
@@ -122,8 +120,7 @@ abstract contract BasePaymaster is IPaymaster, Ownable, BaseSmartAccountErrors {
 
     /// validate the call is made from a valid entrypoint
     function _requireFromEntryPoint() internal virtual {
-        // require(msg.sender == address(entryPoint), "Sender not EntryPoint"); // won't need BaseSmartAccountErrors import
-        if (msg.sender != address(entryPoint))
+        if (msg.sender != address(ENTRY_POINT))
             revert CallerIsNotAnEntryPoint(msg.sender);
     }
 }

@@ -44,8 +44,8 @@ contract SmartAccount is
     mapping(uint256 => uint256) public noncesDeprecated;
 
     // AA immutable storage
-    IEntryPoint private immutable _entryPoint;
-    address private immutable _self;
+    IEntryPoint private immutable ENTRY_POINT;
+    address private immutable SELF;
 
     // Events
     event ImplementationUpdated(
@@ -63,10 +63,10 @@ contract SmartAccount is
      * @param anEntryPoint The address of the entry point contract.
      */
     constructor(IEntryPoint anEntryPoint) {
-        _self = address(this);
+        SELF = address(this);
         if (address(anEntryPoint) == address(0))
             revert EntryPointCannotBeZero();
-        _entryPoint = anEntryPoint;
+        ENTRY_POINT = anEntryPoint;
         _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
     }
 
@@ -77,7 +77,7 @@ contract SmartAccount is
      * sources and accepts Ether as payment.
      */
     receive() external payable {
-        if (address(this) == _self) revert DelegateCallsOnly();
+        if (address(this) == SELF) revert DelegateCallsOnly();
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
 
@@ -233,6 +233,8 @@ contract SmartAccount is
         emit ImplementationUpdated(oldImplementation, _implementation);
     }
 
+    /* solhint-disable func-name-mixedcase */
+
     /**
      * @dev Execute a transaction (called by entryPoint)
      * @notice Name is optimized for this method to be cheaper to be called
@@ -275,6 +277,8 @@ contract SmartAccount is
         }
     }
 
+    /* solhint-enable func-name-mixedcase */
+
     /**
      * @dev Deposit more funds for this account in the entryPoint
      */
@@ -313,7 +317,7 @@ contract SmartAccount is
      * @dev This function should be implemented by the subclass to return the current entry point used by this account.
      */
     function entryPoint() public view virtual override returns (IEntryPoint) {
-        return _entryPoint;
+        return ENTRY_POINT;
     }
 
     /**

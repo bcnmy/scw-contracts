@@ -8,8 +8,8 @@ pragma solidity 0.8.17;
 library Create3 {
     /**
     @notice The bytecode for a contract that proxies the creation of another contract
-    @dev If this code is deployed using CREATE2 it can be used to decouple `creationCode` from the child contract address
-
+    @dev If deployed via CREATE2, decouple creationCode from child contract address.
+  
   0x67363d3d37363d34f03d5260086018f3:
       0x00  0x67  0x67XXXXXXXXXXXXXXXX  PUSH8 bytecode  0x363d3d37363d34f0
       0x01  0x3d  0x3d                  RETURNDATASIZE  0 0x363d3d37363d34f0
@@ -43,7 +43,7 @@ library Create3 {
     /**
     @notice Creates a new contract with given `_creationCode` and `_salt`
     @param _salt Salt of the contract creation, resulting address will be derivated from this value only
-    @param _creationCode Creation code (constructor) of the contract to be deployed, this value doesn't affect the resulting address
+@param _creationCode Constructor code for contract to be deployed; it doesn't affect the resulting address.
     @return addr of the deployed contract, reverts on error
   */
     function create3(
@@ -56,7 +56,7 @@ library Create3 {
     /**
     @notice Creates a new contract with given `_creationCode` and `_salt`
     @param _salt Salt of the contract creation, resulting address will be derivated from this value only
-    @param _creationCode Creation code (constructor) of the contract to be deployed, this value doesn't affect the resulting address
+    @param _creationCode Constructor code for contract to be deployed; it doesn't affect the resulting address.
     @param _value In WEI of ETH to be forwarded to child contract
     @return addr of the deployed contract, reverts on error
   */
@@ -108,12 +108,14 @@ library Create3 {
     }
 
     /**
-    @notice Computes the resulting address of a contract deployed using address(this) and the given `_salt`
-    @param _salt Salt of the contract creation, resulting address will be derivated from this value only
-    @return addr of the deployed contract, reverts on error
-
-    @dev The address creation formula is: keccak256(rlp([keccak256(0xff ++ address(this) ++ _salt ++ keccak256(childBytecode))[12:], 0x01]))
-  */
+     * @notice Computes the resulting address of a contract deployed using address(this) and the given `_salt`
+     *
+     * @dev Address creation formula:
+     * keccak256(rlp([keccak256(0xff+address(this)+_salt+keccak256(childBytecode))[12:],0x01]))
+     *
+     * @param _salt Salt of the contract creation, resulting address will be derived from this value only
+     * @return addr of the deployed contract, reverts on error
+     */
     function addressOf(bytes32 _salt) internal view returns (address) {
         address proxy = addressOfProxy(_salt);
         return
