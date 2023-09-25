@@ -4,7 +4,6 @@ pragma solidity 0.8.17;
 import "./Proxy.sol";
 import "./BaseSmartAccountV1.sol";
 import {DefaultCallbackHandler} from "../../../handler/DefaultCallbackHandler.sol";
-import {SmartAccountFactoryErrorsV1} from "./ErrorsV1.sol";
 
 /**
  * @title Smart Account Factory - factory responsible for deploying Smart Accounts using CREATE2 and CREATE
@@ -36,14 +35,6 @@ contract SmartAccountFactoryV1 {
     }
 
     /**
-     * @dev Allows to retrieve the creation code used for the Proxy deployment.
-     * @return The creation code for the Proxy.
-     */
-    function accountCreationCode() public pure returns (bytes memory) {
-        return type(Proxy).creationCode;
-    }
-
-    /**
      * @notice Deploys account using create2 and points it to basicImplementation
      * @param _owner EOA signatory for the account to be deployed
      * @param _index extra salt that allows to deploy more account if needed for same EOA (default 0)
@@ -53,7 +44,7 @@ contract SmartAccountFactoryV1 {
         uint256 _index
     ) public returns (address proxy) {
         // create initializer data based on init method, _owner and minimalHandler
-        bytes memory initializer = getInitializer(_owner);
+        bytes memory initializer = _getInitializer(_owner);
 
         bytes32 salt = keccak256(
             abi.encodePacked(keccak256(initializer), _index)
@@ -64,7 +55,6 @@ contract SmartAccountFactoryV1 {
             uint256(uint160(basicImplementation))
         );
 
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create2(
                 0x0,
@@ -77,7 +67,6 @@ contract SmartAccountFactoryV1 {
 
         // calldata for init method
         if (initializer.length > 0) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 if eq(
                     call(
@@ -99,6 +88,14 @@ contract SmartAccountFactoryV1 {
     }
 
     /**
+     * @dev Allows to retrieve the creation code used for the Proxy deployment.
+     * @return The creation code for the Proxy.
+     */
+    function accountCreationCode() public pure returns (bytes memory) {
+        return type(Proxy).creationCode;
+    }
+
+    /**
      * @notice Deploys account using create and points it to _implementation
      * @param _owner EOA signatory for the account to be deployed
      * @return proxy address of the deployed account
@@ -109,7 +106,6 @@ contract SmartAccountFactoryV1 {
             uint256(uint160(basicImplementation))
         );
 
-        // solhint-disable-next-line no-inline-assembly
         assembly {
             proxy := create(
                 0x0,
@@ -119,11 +115,10 @@ contract SmartAccountFactoryV1 {
         }
         require(address(proxy) != address(0), "Create call failed");
 
-        bytes memory initializer = getInitializer(_owner);
+        bytes memory initializer = _getInitializer(_owner);
 
         // calldata for init method
         if (initializer.length > 0) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 if eq(
                     call(
@@ -149,7 +144,7 @@ contract SmartAccountFactoryV1 {
      * @param _owner EOA signatory for the account to be deployed
      * @return initializer bytes for init method
      */
-    function getInitializer(
+    function _getInitializer(
         address _owner
     ) internal view returns (bytes memory) {
         return
@@ -169,7 +164,7 @@ contract SmartAccountFactoryV1 {
         uint256 _index
     ) external view returns (address _account) {
         // create initializer data based on init method, _owner and minimalHandler
-        bytes memory initializer = getInitializer(_owner);
+        bytes memory initializer = _getInitializer(_owner);
         bytes memory code = abi.encodePacked(
             type(Proxy).creationCode,
             uint256(uint160(basicImplementation))

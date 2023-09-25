@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation} from "../BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule} from "../BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 /**
  * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
@@ -19,17 +20,16 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 contract EcdsaWithEthSignSupportOwnershipRegistryModule is
     BaseAuthorizationModule
 {
+    using ECDSA for bytes32;
+
     string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "0.1.0";
+    mapping(address => address) public smartAccountOwners;
 
     error NoOwnerRegisteredForSmartAccount(address smartAccount);
     error AlreadyInitedForSmartAccount(address smartAccount);
     error WrongSignatureLength();
     error NotEOA(address account);
-
-    using ECDSA for bytes32;
-
-    mapping(address => address) public smartAccountOwners;
 
     /**
      * @dev Initializes the module for a Smart Account.
@@ -37,7 +37,7 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
      * @param owner The owner of the Smart Account.
      */
     function initForSmartAccount(address owner) external returns (address) {
-        if (isSmartAccount(owner)) revert NotEOA(owner);
+        if (_isSmartAccount(owner)) revert NotEOA(owner);
         if (smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
         smartAccountOwners[msg.sender] = owner;
@@ -50,20 +50,8 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
      * @param owner The owner of the Smart Account.
      */
     function setOwner(address owner) external {
-        if (isSmartAccount(owner)) revert NotEOA(owner);
+        if (_isSmartAccount(owner)) revert NotEOA(owner);
         smartAccountOwners[msg.sender] = owner;
-    }
-
-    /**
-     * @dev Checks if the address provided is a smart contract.
-     * @param account Address to be checked.
-     */
-    function isSmartAccount(address account) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
     }
 
     /**
@@ -160,13 +148,25 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
         }
     }
 
+    /**
+     * @dev Checks if the address provided is a smart contract.
+     * @param account Address to be checked.
+     */
+    function _isSmartAccount(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
+    }
+
     function _signatureSplit(
         bytes memory signature
     ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             r := mload(add(signature, 0x20))
             s := mload(add(signature, 0x40))

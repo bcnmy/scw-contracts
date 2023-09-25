@@ -12,7 +12,7 @@ contract Proxy {
             _implementation != address(0),
             "Invalid implementation address"
         );
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             sstore(address(), _implementation)
         }
@@ -20,7 +20,7 @@ contract Proxy {
 
     fallback() external payable {
         address target;
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             target := sload(address())
             calldatacopy(0, 0, calldatasize())

@@ -5,13 +5,13 @@ pragma solidity 0.8.17;
 abstract contract SignatureDecoder {
     /// @dev divides bytes signature into `uint8 v, bytes32 r, bytes32 s`.
     /// @param signature concatenated rsv signatures
-    function signatureSplit(
+    function _signatureSplit(
         bytes memory signature
     ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             r := mload(add(signature, 0x20))
             s := mload(add(signature, 0x40))
