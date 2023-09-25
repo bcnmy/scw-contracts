@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 import "./ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import "hardhat/console.sol";
+// import "hardhat/console.sol";
 
 contract ERC721ApprovalSessionValidationModule {
     /**
