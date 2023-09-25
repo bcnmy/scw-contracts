@@ -16,6 +16,7 @@ import {
 } from "../../utils/setupHelper";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
+import { hexZeroPad, hexConcat } from "ethers/lib/utils";
 
 describe("SessionKey: Session Router (via Bundler)", async () => {
   let [deployer, smartAccountOwner, charlie, verifiedSigner, sessionKey] =
@@ -79,7 +80,6 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
       });
       await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      // deploy forward flow module and enable it in the smart account
       const sessionKeyManager = await (
         await ethers.getContractFactory("SessionKeyManager")
       ).deploy();
@@ -121,6 +121,13 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
         await ethers.getContractFactory("MockProtocolSVM")
       ).deploy();
 
+      const mockNFT = await (
+        await ethers.getContractFactory("MockNFT")
+      ).deploy();
+      const erc721ApprovalSVM = await (
+        await ethers.getContractFactory("ERC721ApprovalSessionValidationModule")
+      ).deploy();
+
       const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
         sessionKey.address,
         mockToken.address,
@@ -142,12 +149,27 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
           0,
           mockProtocolSVModule.address
         );
+  
+      const sessionKeyData3 = hexConcat([
+        hexZeroPad(sessionKey.address, 20),
+        hexZeroPad(mockNFT.address, 20),
+      ]);
+
+      const leafData3 = hexConcat([
+        hexZeroPad(ethers.utils.hexlify(0), 6),
+        hexZeroPad(ethers.utils.hexlify(0), 6),
+        hexZeroPad(erc721ApprovalSVM.address, 20),
+        sessionKeyData3,
+      ]);
 
       // build a big tree
       const leaves = [ethers.utils.keccak256(leafData)];
-      for (let i = 0; i < 9999; i++) {
+      for (let i = 0; i < 9998; i++) {
         if (i === 4988) {
           leaves.push(ethers.utils.keccak256(leafData2));
+        }
+        if (i === 2517) {
+          leaves.push(ethers.utils.keccak256(leafData3));
         }
         leaves.push(ethers.utils.keccak256(ethers.utils.randomBytes(32)));
       }
@@ -178,10 +200,14 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
         leafData: leafData,
         sessionKeyData2: sessionKeyData2,
         leafData2: leafData2,
+        sessionKeyData3: sessionKeyData3,
+        leafData3: leafData3,
         merkleTree: merkleTree,
         sessionRouter: sessionRouter,
         mockProtocol: mockProtocol,
         mockProtocolSVM: mockProtocolSVModule,
+        mockNFT: mockNFT,
+        erc721ApprovalSVM: erc721ApprovalSVM,
       };
     }
   );
@@ -201,12 +227,17 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
       mockToken,
       sessionKeyData2,
       leafData2,
+      sessionKeyData3,
+      leafData3,
+      mockNFT,
+      erc721ApprovalSVM
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("5.7534");
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
     const SmartAccount = await ethers.getContractFactory("SmartAccount");
+    const Erc721 = await ethers.getContractFactory("MockNFT");
 
     const approveCallData = IERC20.interface.encodeFunctionData("approve", [
       mockProtocol.address,
@@ -216,12 +247,18 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
       "interact",
       [mockToken.address, tokenAmountToTransfer]
     );
+
+    const approveNFTCalldata = Erc721.interface.encodeFunctionData(
+      "setApprovalForAll", 
+      [charlie.address, true]
+    );
+
     const executeBatchData = SmartAccount.interface.encodeFunctionData(
       "executeBatch_y6U",
       [
-        [mockToken.address, mockProtocol.address],
-        [0, 0],
-        [approveCallData, interactCallData],
+        [mockToken.address, mockProtocol.address, mockNFT.address],
+        [0, 0, 0],
+        [approveCallData, interactCallData, approveNFTCalldata],
       ]
     );
 
@@ -229,7 +266,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
       {
         sender: userSA.address,
         callData: executeBatchData,
-        preVerificationGas: 75000,
+        preVerificationGas: 85000,
       },
       sessionKey,
       entryPoint,
@@ -271,6 +308,14 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
             merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
             "0x",
           ],
+          [
+            0,
+            0,
+            erc721ApprovalSVM.address,
+            sessionKeyData3,
+            merkleTree.getHexProof(ethers.utils.keccak256(leafData3)),
+            "0x",
+          ],
         ],
         signatureOverUserOpHashAndModuleAddress,
       ]
@@ -287,5 +332,6 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
     expect(await mockToken.balanceOf(mockProtocol.address)).to.equal(
       tokenAmountToTransfer
     );
+    expect(await mockNFT.isApprovedForAll(userSA.address, charlie.address)).to.equal(true);
   });
 });

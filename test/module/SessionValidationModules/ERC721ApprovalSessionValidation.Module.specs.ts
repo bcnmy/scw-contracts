@@ -14,7 +14,7 @@ import {
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../../utils/setupHelper";
-import { hexZeroPad, hexConcat} from "ethers/lib/utils";
+import { hexZeroPad, hexConcat } from "ethers/lib/utils";
 
 describe("SessionKey: ERC721 Approval Session Validation Module", async () => {
   const [
