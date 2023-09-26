@@ -149,7 +149,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
           0,
           mockProtocolSVModule.address
         );
-  
+
       const sessionKeyData3 = hexConcat([
         hexZeroPad(sessionKey.address, 20),
         hexZeroPad(mockNFT.address, 20),
@@ -230,7 +230,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
       sessionKeyData3,
       leafData3,
       mockNFT,
-      erc721ApprovalSVM
+      erc721ApprovalSVM,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("5.7534");
 
@@ -249,7 +249,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
     );
 
     const approveNFTCalldata = Erc721.interface.encodeFunctionData(
-      "setApprovalForAll", 
+      "setApprovalForAll",
       [charlie.address, true]
     );
 
@@ -332,6 +332,8 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
     expect(await mockToken.balanceOf(mockProtocol.address)).to.equal(
       tokenAmountToTransfer
     );
-    expect(await mockNFT.isApprovedForAll(userSA.address, charlie.address)).to.equal(true);
+    expect(
+      await mockNFT.isApprovedForAll(userSA.address, charlie.address)
+    ).to.equal(true);
   });
 });

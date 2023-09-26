@@ -60,7 +60,6 @@ contract ERC721ApprovalSessionValidationModule is ISessionValidationModule {
         bytes calldata _sessionKeyData,
         bytes calldata /*_callSpecificData*/
     ) external view virtual override returns (address) {
-
         //alternative way of decoding data
         address sessionKey = address(bytes20(_sessionKeyData[0:20]));
         address nftContract = address(bytes20(_sessionKeyData[20:40]));
