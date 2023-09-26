@@ -114,9 +114,9 @@ describe("Account Recovery Module: ", async () => {
    * The delayed Social Recovery flow is the following:
    * 1. The recovery request with a proper number of signatures is submitted via
    * the userOp that calls the accountRecoveryModule.submitRecoveryRequest() function using the
-   * executeCall() function of the userSA.
+   * execute() function of the userSA.
    * At this step social recovery module is used for both validation (check signatures) and
-   * execution (SA.executeCall => AccountRecoveryModule.submitRecoveryRequest).
+   * execution (SA.execute => AccountRecoveryModule.submitRecoveryRequest).
    * 2. After the delay has passed, the recovery request can be executed by anyone via the
    * userOp that calls the validationModule.chavalidationModul method.
    * At this step, Social Recovery Module is only used for validation: check if the request
@@ -169,7 +169,7 @@ describe("Account Recovery Module: ", async () => {
     ).to.equal(true);
 
     const recoveryRequestCallData = userSA.interface.encodeFunctionData(
-      "executeCall",
+      "execute",
       [
         ecdsaModule.address,
         ethers.utils.parseEther("0"),
@@ -180,7 +180,7 @@ describe("Account Recovery Module: ", async () => {
     );
 
     const userOp = await makeMultiSignedUserOp(
-      "executeCall",
+      "execute",
       [
         accountRecoveryModule.address,
         ethers.utils.parseEther("0"),
@@ -212,7 +212,7 @@ describe("Account Recovery Module: ", async () => {
 
     // can be non signed at all, just needs to be executed after the delay
     const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
-      "executeCall",
+      "execute",
       [
         ecdsaModule.address,
         ethers.utils.parseEther("0"),
@@ -307,7 +307,7 @@ describe("Account Recovery Module: ", async () => {
         ]);
 
       const addGuardianUserOp = await makeEcdsaModuleUserOp(
-        "executeCall",
+        "execute",
         [
           accountRecoveryModule.address,
           ethers.utils.parseEther("0"),

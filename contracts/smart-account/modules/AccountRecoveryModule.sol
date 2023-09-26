@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
@@ -17,8 +18,39 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  */
 
 contract AccountRecoveryModule is BaseAuthorizationModule {
+    using ECDSA for bytes32;
+
+    struct TimeFrame {
+        uint48 validUntil;
+        uint48 validAfter;
+    }
+
+    struct SaSettings {
+        uint8 guardiansCount;
+        uint8 recoveryThreshold;
+        uint48 securityDelay;
+    }
+
+    struct RecoveryRequest {
+        bytes32 callDataHash;
+        uint48 requestTimestamp;
+    }
+
     string public constant NAME = "Account Recovery Module";
     string public constant VERSION = "0.1.0";
+
+    bytes32 private constant ADDRESS_ZERO_HASH =
+        keccak256(abi.encodePacked(address(0)));
+
+    // guardian (hash of the address) => (smartAccount => TimeFrame)
+    // complies with associated storage rules
+    // see https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
+    // see https://docs.soliditylang.org/en/v0.8.15/internals/layout_in_storage.html#mappings-and-dynamic-arrays
+    mapping(bytes32 => mapping(address => TimeFrame)) internal _guardians;
+
+    mapping(address => SaSettings) internal _smartAccountSettings;
+
+    mapping(address => RecoveryRequest) internal _smartAccountRequests;
 
     // TODO
     // EVENTS
@@ -44,37 +76,6 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     error NotEnoughGuardiansProvided(uint256 guardiansProvided);
     error InvalidAmountOfGuardianParams();
 
-    using ECDSA for bytes32;
-
-    struct timeFrame {
-        uint48 validUntil;
-        uint48 validAfter;
-    }
-
-    struct settings {
-        uint8 guardiansCount;
-        uint8 recoveryThreshold;
-        uint48 securityDelay;
-    }
-
-    struct recoveryRequest {
-        bytes32 callDataHash;
-        uint48 requestTimestamp;
-    }
-
-    bytes32 constant ADDRESS_ZERO_HASH =
-        keccak256(abi.encodePacked(address(0)));
-
-    // guardian (hash of the address) => (smartAccount => timeFrame)
-    // complies with associated storage rules
-    // see https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
-    // see https://docs.soliditylang.org/en/v0.8.15/internals/layout_in_storage.html#mappings-and-dynamic-arrays
-    mapping(bytes32 => mapping(address => timeFrame)) internal _guardians;
-
-    mapping(address => settings) internal _smartAccountSettings;
-
-    mapping(address => recoveryRequest) internal _smartAccountRequests;
-
     /**
      * @dev Initializes the module for a Smart Account.
      * Can only be used at a time of first enabling the module for a Smart Account.
@@ -95,7 +96,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             validUntil.length != validAfter.length ||
             guardians.length == 0
         ) revert InvalidAmountOfGuardianParams();
-        _smartAccountSettings[msg.sender] = settings(
+        _smartAccountSettings[msg.sender] = SaSettings(
             uint8(guardians.length),
             recoveryThreshold,
             securityDelay
@@ -112,21 +113,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             if (validUntil[i] != 0 && validUntil[i] < block.timestamp)
                 revert ExpiredValidUntil(validUntil[i]);
 
-            _guardians[guardians[i]][msg.sender] = timeFrame(
+            _guardians[guardians[i]][msg.sender] = TimeFrame(
                 validUntil[i],
                 validAfter[i]
             );
         }
         return address(this);
-    }
-
-    // recoveryCallData is something like execute(module, 0, encode(transferOwnership(newOwner)))
-    function submitRecoveryRequest(bytes calldata recoveryCallData) public {
-        _smartAccountRequests[msg.sender] = recoveryRequest(
-            keccak256(recoveryCallData),
-            uint48(block.timestamp)
-        );
-        emit RecoveryRequestSubmitted(msg.sender, recoveryCallData);
     }
 
     // natspec
@@ -287,7 +279,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
 
         // TODO:
         // make a test case that it fails if validAfter + securityDelay together overflow uint48
-        _guardians[guardian][msg.sender] = timeFrame(validUntil, validAfter);
+        _guardians[guardian][msg.sender] = TimeFrame(validUntil, validAfter);
         _smartAccountSettings[msg.sender].guardiansCount++;
     }
 
@@ -316,7 +308,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         if (validUntil < block.timestamp) revert ExpiredValidUntil(validUntil);
 
         // make the new one valid
-        _guardians[newGuardian][msg.sender] = timeFrame(
+        _guardians[newGuardian][msg.sender] = TimeFrame(
             validUntil == 0 ? type(uint48).max : validUntil,
             validAfter
         );
@@ -339,20 +331,29 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     function getGuardianDetails(
         bytes32 guardian,
         address smartAccount
-    ) external view returns (timeFrame memory) {
+    ) external view returns (TimeFrame memory) {
         return _guardians[guardian][smartAccount];
     }
 
     function getSmartAccountSettings(
         address smartAccount
-    ) external view returns (settings memory) {
+    ) external view returns (SaSettings memory) {
         return _smartAccountSettings[smartAccount];
     }
 
     function getRecoveryRequest(
         address smartAccount
-    ) external view returns (recoveryRequest memory) {
+    ) external view returns (RecoveryRequest memory) {
         return _smartAccountRequests[smartAccount];
+    }
+
+    // recoveryCallData is something like execute(module, 0, encode(transferOwnership(newOwner)))
+    function submitRecoveryRequest(bytes calldata recoveryCallData) public {
+        _smartAccountRequests[msg.sender] = RecoveryRequest(
+            keccak256(recoveryCallData),
+            uint48(block.timestamp)
+        );
+        emit RecoveryRequestSubmitted(msg.sender, recoveryCallData);
     }
 
     /**
