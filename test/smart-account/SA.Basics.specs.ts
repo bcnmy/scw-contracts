@@ -1,36 +1,40 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { buildEcdsaModuleAuthorizedForwardTx } from "../../src/utils/execution";
-import { encodeTransfer } from "../utils/testUtils";
-import { 
-  getEntryPoint, 
-  getSmartAccountImplementation, 
-  getSmartAccountFactory, 
-  getMockToken, 
+import {
+  getEntryPoint,
+  getSmartAccountImplementation,
+  getSmartAccountFactory,
+  getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
   getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { makeEcdsaModuleUserOp, makeEcdsaModuleUserOpWithPaymaster } from "../utils/userOp";
 
-describe("Ownerless Smart Account Basics: ", async () => {
+describe("Modular Smart Account Basics: ", async () => {
+  const [deployer, smartAccountOwner, verifiedSigner] =
+    waffle.provider.getWallets();
 
-  const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] = waffle.provider.getWallets();
-
-  const setupTests = deployments.createFixture(async ({ deployments, getNamedAccounts }) => {
+  const setupTests = deployments.createFixture(async ({ deployments }) => {
     await deployments.fixture();
 
     const mockToken = await getMockToken();
-    
+
     const ecdsaModule = await getEcdsaOwnershipRegistryModule();
-    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory("EcdsaOwnershipRegistryModule");
-      
-    let ecdsaOwnershipSetupData = EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-      "initForSmartAccount",
-      [await smartAccountOwner.getAddress()]
+    const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
+      "EcdsaOwnershipRegistryModule"
     );
+
+    const ecdsaOwnershipSetupData =
+      EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [await smartAccountOwner.getAddress()]
+      );
     const smartAccountDeploymentIndex = 0;
-    const userSA = await getSmartAccountWithModule(ecdsaModule.address, ecdsaOwnershipSetupData, smartAccountDeploymentIndex);
+    const userSA = await getSmartAccountWithModule(
+      ecdsaModule.address,
+      ecdsaOwnershipSetupData,
+      smartAccountDeploymentIndex
+    );
 
     await deployer.sendTransaction({
       to: userSA.address,
@@ -38,7 +42,7 @@ describe("Ownerless Smart Account Basics: ", async () => {
     });
 
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
-    
+
     return {
       entryPoint: await getEntryPoint(),
       smartAccountImplementation: await getSmartAccountImplementation(),
@@ -50,129 +54,48 @@ describe("Ownerless Smart Account Basics: ", async () => {
     };
   });
 
-  it ("Can deploy SA with default module", async () => {
-    const { 
-      mockToken,
-      ecdsaModule,
-      userSA
-    } = await setupTests();
+  it("Can deploy SA with default module", async () => {
+    const { mockToken, ecdsaModule, userSA } = await setupTests();
 
     expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(true);
-    expect(await ecdsaModule.getOwner(userSA.address)).to.equal(smartAccountOwner.address);
-
-    expect(await ethers.provider.getBalance(userSA.address)).to.equal(ethers.utils.parseEther("10"));
-    expect(await mockToken.balanceOf(userSA.address)).to.equal(ethers.utils.parseEther("1000000"));
-  });
-
-  it ("Can send an ERC20 Transfer userOp", async () => {
-    const { 
-      entryPoint, 
-      mockToken,
-      userSA,
-      ecdsaModule
-    } = await setupTests();
-
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
-
-    const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
-      [
-        mockToken.address,
-        ethers.utils.parseEther("0"),
-        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      ],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address
-    )
-
-    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
-    await handleOpsTxn.wait();
-
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
-  });
-
-  it ("Can send a Native Token Transfer userOp", async () => {
-    const { 
-      entryPoint, 
-      userSA,
-      ecdsaModule
-    } = await setupTests();
-
-    const charlieBalanceBefore = await charlie.getBalance();
-    const amountToTransfer = ethers.utils.parseEther("0.5345");
-
-    const userOp = await makeEcdsaModuleUserOp(
-      "executeCall",
-      [
-        charlie.address,
-        amountToTransfer,
-        "0x",
-      ],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address
+    expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
+      smartAccountOwner.address
     );
 
-    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address);
-    await handleOpsTxn.wait();
-    expect(await charlie.getBalance()).to.equal(charlieBalanceBefore.add(amountToTransfer));
-  });
-
-  it ("Can send a userOp with Paymaster payment", async () => {
-    const { 
-      entryPoint, 
-      mockToken,
-      userSA,
-      ecdsaModule,
-      verifyingPaymaster
-    } = await setupTests();
-
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
-
-    const userOp = await makeEcdsaModuleUserOpWithPaymaster(
-      "executeCall",
-      [
-        mockToken.address,
-        ethers.utils.parseEther("0"),
-        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      ],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address,
-      verifyingPaymaster,
-      verifiedSigner,
+    expect(await ethers.provider.getBalance(userSA.address)).to.equal(
+      ethers.utils.parseEther("10")
     );
-
-    const handleOpsTxn = await entryPoint.handleOps([userOp], verifiedSigner.address);
-    await handleOpsTxn.wait();
-
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(charlieTokenBalanceBefore.add(tokenAmountToTransfer));
+    expect(await mockToken.balanceOf(userSA.address)).to.equal(
+      ethers.utils.parseEther("1000000")
+    );
   });
 
-  it ("Can verify a signature through isValidSignature", async () => {    
-    const { 
-      userSA,
-      ecdsaModule
-    } = await setupTests();
+  /**
+   * To test that SA and Modules work properly in the wild, the most important tests
+   * such as "Send userOp" and "Send userOp with Paymaster" need to be tested in a
+   * bundler-enabled environment. Thus such test has been moved into the /bundler-integration
+   * suite.
+   *
+   * See test/bundler-integration/smart-account/SA.Basics.specs.ts for more Basic SA tests
+   */
+
+  it("Can verify a signature through isValidSignature", async () => {
+    const { userSA, ecdsaModule } = await setupTests();
 
     const eip1271MagicValue = "0x1626ba7e";
     const message = "Some message from dApp";
     const messageHash = ethers.utils.hashMessage(message);
 
     const signature = await smartAccountOwner.signMessage(message);
-    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-      ["bytes", "address"], 
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"],
       [signature, ecdsaModule.address]
     );
 
-    const returnedValue = await userSA.isValidSignature(messageHash, signatureWithModuleAddress);
+    const returnedValue = await userSA.isValidSignature(
+      messageHash,
+      signatureWithModuleAddress
+    );
     expect(returnedValue).to.be.equal(eip1271MagicValue);
   });
-
 });

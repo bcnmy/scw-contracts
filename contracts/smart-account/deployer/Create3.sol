@@ -6,14 +6,10 @@ pragma solidity 0.8.17;
   @author Agustin Aguilar <aa@horizon.io>
 */
 library Create3 {
-    error ErrorCreatingProxy();
-    error ErrorCreatingContract();
-    error TargetAlreadyExists();
-
     /**
     @notice The bytecode for a contract that proxies the creation of another contract
-    @dev If this code is deployed using CREATE2 it can be used to decouple `creationCode` from the child contract address
-
+    @dev If deployed via CREATE2, decouple creationCode from child contract address.
+  
   0x67363d3d37363d34f03d5260086018f3:
       0x00  0x67  0x67XXXXXXXXXXXXXXXX  PUSH8 bytecode  0x363d3d37363d34f0
       0x01  0x3d  0x3d                  RETURNDATASIZE  0 0x363d3d37363d34f0
@@ -40,21 +36,14 @@ library Create3 {
     bytes32 internal constant KECCAK256_PROXY_CHILD_BYTECODE =
         0x21c35dbe1b344a2488cf3321d6ce542f8e9f305544ff09e4993a62319a497c1f;
 
-    /**
-    @notice Returns the size of the code on a given address
-    @param _addr Address that may or may not contain code
-    @return size of the code on the given `_addr`
-  */
-    function codeSize(address _addr) internal view returns (uint256 size) {
-        assembly {
-            size := extcodesize(_addr)
-        }
-    }
+    error ErrorCreatingProxy();
+    error ErrorCreatingContract();
+    error TargetAlreadyExists();
 
     /**
     @notice Creates a new contract with given `_creationCode` and `_salt`
     @param _salt Salt of the contract creation, resulting address will be derivated from this value only
-    @param _creationCode Creation code (constructor) of the contract to be deployed, this value doesn't affect the resulting address
+@param _creationCode Constructor code for contract to be deployed; it doesn't affect the resulting address.
     @return addr of the deployed contract, reverts on error
   */
     function create3(
@@ -67,7 +56,7 @@ library Create3 {
     /**
     @notice Creates a new contract with given `_creationCode` and `_salt`
     @param _salt Salt of the contract creation, resulting address will be derivated from this value only
-    @param _creationCode Creation code (constructor) of the contract to be deployed, this value doesn't affect the resulting address
+    @param _creationCode Constructor code for contract to be deployed; it doesn't affect the resulting address.
     @param _value In WEI of ETH to be forwarded to child contract
     @return addr of the deployed contract, reverts on error
   */
@@ -119,12 +108,14 @@ library Create3 {
     }
 
     /**
-    @notice Computes the resulting address of a contract deployed using address(this) and the given `_salt`
-    @param _salt Salt of the contract creation, resulting address will be derivated from this value only
-    @return addr of the deployed contract, reverts on error
-
-    @dev The address creation formula is: keccak256(rlp([keccak256(0xff ++ address(this) ++ _salt ++ keccak256(childBytecode))[12:], 0x01]))
-  */
+     * @notice Computes the resulting address of a contract deployed using address(this) and the given `_salt`
+     *
+     * @dev Address creation formula:
+     * keccak256(rlp([keccak256(0xff+address(this)+_salt+keccak256(childBytecode))[12:],0x01]))
+     *
+     * @param _salt Salt of the contract creation, resulting address will be derived from this value only
+     * @return addr of the deployed contract, reverts on error
+     */
     function addressOf(bytes32 _salt) internal view returns (address) {
         address proxy = addressOfProxy(_salt);
         return
@@ -135,5 +126,16 @@ library Create3 {
                     )
                 )
             );
+    }
+
+    /**
+    @notice Returns the size of the code on a given address
+    @param _addr Address that may or may not contain code
+    @return size of the code on the given `_addr`
+  */
+    function codeSize(address _addr) internal view returns (uint256 size) {
+        assembly {
+            size := extcodesize(_addr)
+        }
     }
 }

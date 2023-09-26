@@ -49,7 +49,7 @@ export class AbstractContract {
   public static async fromBuildArtifact(
     buildArtifact: BuildArtifact,
     links?: { [name: string]: Promise<AbstractContract> },
-    artifactName: string = "UntitledContract"
+    artifactName = "UntitledContract"
   ): Promise<AbstractContract> {
     return new AbstractContract(
       buildArtifact.abi,
@@ -77,7 +77,9 @@ export class AbstractContract {
     readonly networks: NetworkMapping,
     readonly links?: { [contractName: string]: Promise<AbstractContract> },
     readonly contractName?: string
-  ) {}
+  ) {
+    console.log("AbstractContract constructor");
+  }
 
   /**
    * Get the deployed singleton instance of this abstract contract, if it exists

@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule, ISignatureValidator} from "./BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 /**
  * @title Smart Contract Ownership Authorization module for Biconomy Smart Accounts.
@@ -10,14 +11,23 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  *         - It allows to validate user operations signed by other smart contracts via EIP-1271.
  *         - EIP-1271 compatible (ensures Smart Account can validate signed messages).
  *         - One owner per Smart Account.
- * !!!!!!! No EOA owners supported
+ * @dev No EOA owners supported
  *         For EOA Owners check EcdsaOwnership module instead
+ * @notice !!! This module doesn't follow the Storage Access Rules set by ERC-4337 !!!
+ * https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
+ * Thus it will not be compatible with the standard bundlers.
+ * You can still use it in private environments or with custom bundlers which have
+ * less restrictions than ones participating in the unified userOps mempool.
+ *
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
 contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
+    using ECDSA for bytes32;
+
     string public constant NAME = "Smart Contract Ownership Registry Module";
     string public constant VERSION = "0.1.0";
+    mapping(address => address) internal _smartAccountOwners;
 
     event OwnershipTransferred(
         address indexed smartAccount,
@@ -30,10 +40,6 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
     error WrongSignatureLength();
     error NotSmartContract(address account);
 
-    using ECDSA for bytes32;
-
-    mapping(address => address) internal smartAccountOwners;
-
     /**
      * @dev Initializes the module for a Smart Account.
      * @dev no need to check for address(0) as it is not a Smart Contract
@@ -41,10 +47,10 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
      * @param owner The owner of the Smart Account.
      */
     function initForSmartAccount(address owner) external returns (address) {
-        if (smartAccountOwners[msg.sender] != address(0))
+        if (_smartAccountOwners[msg.sender] != address(0))
             revert AlreadyInitedForSmartAccount(msg.sender);
         if (!_isSmartContract(owner)) revert NotSmartContract(owner);
-        smartAccountOwners[msg.sender] = owner;
+        _smartAccountOwners[msg.sender] = owner;
         return address(this);
     }
 
@@ -73,35 +79,10 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
      * @return owner The owner of the Smart Account.
      */
     function getOwner(address smartAccount) external view returns (address) {
-        address owner = smartAccountOwners[smartAccount];
+        address owner = _smartAccountOwners[smartAccount];
         if (owner == address(0))
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
         return owner;
-    }
-
-    /**
-     * @dev Transfers ownership for smartAccount and emits an event
-     * @param newOwner Smart Account address.
-     */
-    function _transferOwnership(
-        address smartAccount,
-        address newOwner
-    ) internal {
-        address _oldOwner = smartAccountOwners[smartAccount];
-        smartAccountOwners[smartAccount] = newOwner;
-        emit OwnershipTransferred(smartAccount, _oldOwner, newOwner);
-    }
-
-    /**
-     * @dev Checks if the address provided is a smart contract.
-     * @param account Address to be checked.
-     */
-    function _isSmartContract(address account) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
     }
 
     /**
@@ -163,6 +144,19 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
     }
 
     /**
+     * @dev Transfers ownership for smartAccount and emits an event
+     * @param newOwner Smart Account address.
+     */
+    function _transferOwnership(
+        address smartAccount,
+        address newOwner
+    ) internal {
+        address _oldOwner = _smartAccountOwners[smartAccount];
+        _smartAccountOwners[smartAccount] = newOwner;
+        emit OwnershipTransferred(smartAccount, _oldOwner, newOwner);
+    }
+
+    /**
      * @dev Validates a signature for a message.
      * Only Smart Account Owners, no EOA owners supported
      * For Smart Contrac Owners check SmartContractOwnership module instead
@@ -176,7 +170,7 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
         bytes memory signature,
         address smartAccount
     ) internal view returns (bool) {
-        address expectedContractSigner = smartAccountOwners[smartAccount];
+        address expectedContractSigner = _smartAccountOwners[smartAccount];
         if (expectedContractSigner == address(0))
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
         return
@@ -186,5 +180,17 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
             ) == EIP1271_MAGIC_VALUE
                 ? true
                 : false;
+    }
+
+    /**
+     * @dev Checks if the address provided is a smart contract.
+     * @param account Address to be checked.
+     */
+    function _isSmartContract(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 }

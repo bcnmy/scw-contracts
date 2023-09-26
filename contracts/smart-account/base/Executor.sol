@@ -21,7 +21,7 @@ abstract contract Executor {
         uint256 txGas
     );
 
-    function execute(
+    function _execute(
         address to,
         uint256 value,
         bytes memory data,
@@ -29,7 +29,6 @@ abstract contract Executor {
         uint256 txGas
     ) internal returns (bool success) {
         if (operation == Enum.Operation.DelegateCall) {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 success := delegatecall(
                     txGas,
@@ -41,7 +40,6 @@ abstract contract Executor {
                 )
             }
         } else {
-            // solhint-disable-next-line no-inline-assembly
             assembly {
                 success := call(
                     txGas,

@@ -171,7 +171,7 @@ export const safeSignTypedData2D = async (
 ): Promise<SafeSignature> => {
   if (!chainId && !signer.provider)
     throw Error("Provider required to retrieve chainId");
-  const cid = chainId || (await signer.provider!!.getNetwork()).chainId;
+  const cid = chainId || (await signer.provider!.getNetwork()).chainId;
   const signerAddress = await signer.getAddress();
   return {
     signer: signerAddress,
@@ -203,7 +203,7 @@ export const safeSignMessage = async (
   safeTx: SafeTransaction2D,
   chainId?: BigNumberish
 ): Promise<SafeSignature> => {
-  const cid = chainId || (await signer.provider!!.getNetwork()).chainId;
+  const cid = chainId || (await signer.provider!.getNetwork()).chainId;
   return signHash(signer, calculateSafeTransactionHash(safe, safeTx, cid));
 };
 

@@ -3,10 +3,56 @@ pragma solidity 0.8.17;
 import "./ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-contract ERC20SessionValidationModule {
+/**
+ * @title ERC20 Session Validation Module for Biconomy Smart Accounts.
+ * @dev Validates userOps for ERC20 transfers and approvals using a session key signature.
+ *         - Recommended to use with standard ERC20 tokens only
+ *         - Can be used with any method of any contract which implement
+ *           method(address, uint256) interface
+ *
+ * @author Fil Makarov - <filipp.makarov@biconomy.io>
+ */
+
+contract ERC20SessionValidationModule is ISessionValidationModule {
+    /**
+     * @dev validates that the call (destinationContract, callValue, funcCallData)
+     * complies with the Session Key permissions represented by sessionKeyData
+     * @param destinationContract address of the contract to be called
+     * @param callValue value to be sent with the call
+     * @param _funcCallData the data for the call. is parsed inside the SVM
+     * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
+     */
+    function validateSessionParams(
+        address destinationContract,
+        uint256 callValue,
+        bytes calldata _funcCallData,
+        bytes calldata _sessionKeyData,
+        bytes calldata /*_callSpecificData*/
+    ) external virtual override returns (address) {
+        (
+            address sessionKey,
+            address token,
+            address recipient,
+            uint256 maxAmount
+        ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
+
+        require(destinationContract == token, "ERC20SV Invalid Token");
+        require(callValue == 0, "ERC20SV Non Zero Value");
+
+        (address recipientCalled, uint256 amount) = abi.decode(
+            _funcCallData[4:],
+            (address, uint256)
+        );
+
+        require(recipient == recipientCalled, "ERC20SV Wrong Recipient");
+        require(amount <= maxAmount, "ERC20SV Max Amount Exceeded");
+        return sessionKey;
+    }
+
     /**
      * @dev validates if the _op (UserOperation) matches the SessionKey permissions
      * and that _op has been signed by this SessionKey
+     * Please mind the decimals of your exact token when setting maxAmount
      * @param _op User Operation to be validated.
      * @param _userOpHash Hash of the User Operation to be validated.
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
@@ -18,15 +64,22 @@ contract ERC20SessionValidationModule {
         bytes32 _userOpHash,
         bytes calldata _sessionKeyData,
         bytes calldata _sessionKeySignature
-    ) external view returns (bool) {
-        address sessionKey = address(bytes20(_sessionKeyData[0:20]));
-        // 20:40 is token address
-        address recipient = address(bytes20(_sessionKeyData[40:60]));
-        uint256 maxAmount = abi.decode(_sessionKeyData[60:92], (uint256));
-        {
-            address token = address(bytes20(_sessionKeyData[20:40]));
+    ) external pure override returns (bool) {
+        require(
+            bytes4(_op.callData[0:4]) == EXECUTE_OPTIMIZED_SELECTOR ||
+                bytes4(_op.callData[0:4]) == EXECUTE_SELECTOR,
+            "ERC20SV Invalid Selector"
+        );
 
-            // we expect _op.callData to be `SmartAccount.executeCall(to, value, calldata)` calldata
+        (
+            address sessionKey,
+            address token,
+            address recipient,
+            uint256 maxAmount
+        ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
+
+        {
+            // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
             (address tokenAddr, uint256 callValue, ) = abi.decode(
                 _op.callData[4:], // skip selector
                 (address, uint256, bytes)
@@ -34,7 +87,7 @@ contract ERC20SessionValidationModule {
             if (tokenAddr != token) {
                 revert("ERC20SV Wrong Token");
             }
-            if (callValue > 0) {
+            if (callValue != 0) {
                 revert("ERC20SV Non Zero Value");
             }
         }
@@ -46,7 +99,7 @@ contract ERC20SessionValidationModule {
             uint256 length = uint256(
                 bytes32(_op.callData[4 + offset:4 + offset + 32])
             );
-            //we expect data to be the `IERC20.transfer` calldata
+            //we expect data to be the `IERC20.transfer(address, uint256)` calldata
             data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
         }
         if (address(bytes20(data[16:36])) != recipient) {
