@@ -42,7 +42,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     bytes32 public constant CONTROL_HASH =
         keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"));
 
-    // guardian (hash of the address) => (smartAccount => TimeFrame)
+    // guardian (signature over CONTROL_HASH) => (smartAccount => TimeFrame)
     // complies with associated storage rules
     // see https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
     // see https://docs.soliditylang.org/en/v0.8.15/internals/layout_in_storage.html#mappings-and-dynamic-arrays
