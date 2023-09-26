@@ -39,14 +39,14 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     string public constant NAME = "Account Recovery Module";
     string public constant VERSION = "0.1.0";
 
-    bytes32 private constant ADDRESS_ZERO_HASH =
-        keccak256(abi.encodePacked(address(0)));
+    bytes32 private constant CONTROL_HASH =
+        keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"));
 
     // guardian (hash of the address) => (smartAccount => TimeFrame)
     // complies with associated storage rules
     // see https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
     // see https://docs.soliditylang.org/en/v0.8.15/internals/layout_in_storage.html#mappings-and-dynamic-arrays
-    mapping(bytes32 => mapping(address => TimeFrame)) internal _guardians;
+    mapping(bytes => mapping(address => TimeFrame)) internal _guardians;
 
     mapping(address => SaSettings) internal _smartAccountSettings;
 
@@ -68,7 +68,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         address currentGuardian
     );
 
-    error ZeroAddressNotAllowedAsGuardian();
+    error ZeroGuradianLength();
     error InvalidTimeFrame(uint48 validUntil, uint48 validAfter);
     error ExpiredValidUntil(uint48 validUntil);
     error GuardianAlreadySet(bytes32 guardian, address smartAccount);
@@ -81,7 +81,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * Can only be used at a time of first enabling the module for a Smart Account.
      */
     function initForSmartAccount(
-        bytes32[] memory guardians,
+        bytes[] memory guardians,
         uint48[] memory validUntil,
         uint48[] memory validAfter,
         uint8 recoveryThreshold,
@@ -102,8 +102,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             securityDelay
         );
         for (uint256 i; i < guardians.length; i++) {
-            if (guardians[i] == ADDRESS_ZERO_HASH)
-                revert ZeroAddressNotAllowedAsGuardian();
+            if (guardians[i].length == 0)
+                revert ZeroGuradianLength();
             if (_guardians[guardians[i]][msg.sender].validUntil != 0)
                 revert GuardianAlreadySet(guardians[i], msg.sender);
 
@@ -175,13 +175,21 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         uint48 earliestValidUntil = type(uint48).max;
 
         for (uint256 i; i < requiredSignatures; ) {
-            currentGuardianAddress = userOpHash
+            address currentUserOpSignerAddress = userOpHash
                 .toEthSignedMessageHash()
-                .recover(userOp.signature[96 + i * 65:96 + (i + 1) * 65]);
+                .recover(userOp.signature[96 + 2 * i * 65:96 + (2 * i + 1) * 65]);
+            
+            currentGuardian = userOp.signature[96 + (2 * i + 1) * 65:96 + (2 * i + 2) * 65];
 
-            currentGuardian = keccak256(
-                abi.encodePacked(currentGuardianAddress)
+            currentGuardianAddress = CONTROL_HASH
+                .toEthSignedMessageHash()
+                .recover(currentGuardian);
+
+            require(
+                currentUserOpSignerAddress == currentGuardianAddress,
+                "Signers do not match"
             );
+
             validAfter = _guardians[currentGuardian][userOp.sender].validAfter;
             validUntil = _guardians[currentGuardian][userOp.sender].validUntil;
 
@@ -257,12 +265,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     // as for security reasons new guardian is only active after securityDelay
 
     function addGuardian(
-        bytes32 guardian,
+        bytes guardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian == ADDRESS_ZERO_HASH)
-            revert ZeroAddressNotAllowedAsGuardian();
+        if (guardian.length == 0)
+            revert ZeroGuradianLength();
         if (_guardians[guardian][msg.sender].validUntil != 0)
             revert GuardianAlreadySet(guardian, msg.sender);
 
@@ -291,10 +299,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian == ADDRESS_ZERO_HASH)
-            revert ZeroAddressNotAllowedAsGuardian();
-        if (newGuardian == ADDRESS_ZERO_HASH)
-            revert ZeroAddressNotAllowedAsGuardian();
+        if (guardian.length == 0)
+            revert ZeroGuradianLength();
+        if (newGuardian.length == 0)
+            revert ZeroGuradianLength();
 
         if (validUntil == 0) validUntil = type(uint48).max;
         uint48 minimalSecureValidAfter = uint48(
