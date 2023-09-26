@@ -13,7 +13,7 @@ import {
 } from "../utils/setupHelper";
 import {
   makeEcdsaModuleUserOp,
-  makeMultiSignedUserOp,
+  makeMultiSignedUserOpWithGuardiansList,
   makeUnsignedUserOp,
 } from "../utils/userOp";
 
@@ -32,6 +32,8 @@ describe("Account Recovery Module: ", async () => {
 
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
+      const controlMessage = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
+
       await deployments.fixture();
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -55,7 +57,7 @@ describe("Account Recovery Module: ", async () => {
         smartAccountDeploymentIndex
       );
 
-      // fill acct balance
+      // top up acct balance
       await deployer.sendTransaction({
         to: userSA.address,
         value: ethers.utils.parseEther("10"),
@@ -68,16 +70,23 @@ describe("Account Recovery Module: ", async () => {
       ).deploy();
 
       const defaultSecurityDelay = 150;
+
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+
+      const guardians = await Promise.all(
+        [alice, bob, charlie].map(
+          async (guardian): Promise<string> =>
+            await guardian.signMessage(messageHashBytes)
+        )
+      );
+
       // enable and setup Social Recovery Module
       const socialRecoverySetupData =
         accountRecoveryModule.interface.encodeFunctionData(
           "initForSmartAccount",
           [
-            [
-              keccak256(alice.address),
-              keccak256(bob.address),
-              keccak256(charlie.address),
-            ],
+            guardians,
             [16741936496, 16741936496, 16741936496],
             [0, 0, 0],
             3,
@@ -106,6 +115,7 @@ describe("Account Recovery Module: ", async () => {
           verifiedSigner
         ),
         defaultSecurityDelay: defaultSecurityDelay,
+        controlMessage: controlMessage,
       };
     }
   );
@@ -134,27 +144,8 @@ describe("Account Recovery Module: ", async () => {
       accountRecoveryModule,
       ecdsaModule,
       defaultSecurityDelay,
+      controlMessage,
     } = await setupTests();
-
-    console.log(
-      "social recovery module address: ",
-      accountRecoveryModule.address
-    );
-    console.log(
-      "alice address: %s hash: %s",
-      alice.address,
-      keccak256(alice.address)
-    );
-    console.log(
-      "bob address: %s hash: %s",
-      bob.address,
-      keccak256(bob.address)
-    );
-    console.log(
-      "charlie address: %s hash1: %s",
-      charlie.address,
-      keccak256(charlie.address)
-    );
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(
       charlie.address
@@ -179,7 +170,7 @@ describe("Account Recovery Module: ", async () => {
       ]
     );
 
-    const userOp = await makeMultiSignedUserOp(
+    const userOp = await makeMultiSignedUserOpWithGuardiansList(
       "execute",
       [
         accountRecoveryModule.address,
@@ -191,6 +182,7 @@ describe("Account Recovery Module: ", async () => {
       ],
       userSA.address,
       [charlie, alice, bob], // order is important
+      controlMessage,
       entryPoint,
       accountRecoveryModule.address
     );
@@ -295,6 +287,7 @@ describe("Account Recovery Module: ", async () => {
         await setupTests();
 
       const newGuardian = ethers.utils.keccak256(eve.address);
+
       const guardiansBefore = (
         await accountRecoveryModule.getSmartAccountSettings(userSA.address)
       ).guardiansCount;

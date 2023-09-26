@@ -39,7 +39,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     string public constant NAME = "Account Recovery Module";
     string public constant VERSION = "0.1.0";
 
-    bytes32 private constant CONTROL_HASH =
+    bytes32 public constant CONTROL_HASH =
         keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"));
 
     // guardian (hash of the address) => (smartAccount => TimeFrame)
@@ -71,7 +71,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     error ZeroGuradianLength();
     error InvalidTimeFrame(uint48 validUntil, uint48 validAfter);
     error ExpiredValidUntil(uint48 validUntil);
-    error GuardianAlreadySet(bytes32 guardian, address smartAccount);
+    error GuardianAlreadySet(bytes guardian, address smartAccount);
 
     error NotEnoughGuardiansProvided(uint256 guardiansProvided);
     error InvalidAmountOfGuardianParams();
@@ -102,8 +102,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             securityDelay
         );
         for (uint256 i; i < guardians.length; i++) {
-            if (guardians[i].length == 0)
-                revert ZeroGuradianLength();
+            if (guardians[i].length == 0) revert ZeroGuradianLength();
             if (_guardians[guardians[i]][msg.sender].validUntil != 0)
                 revert GuardianAlreadySet(guardians[i], msg.sender);
 
@@ -168,7 +167,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
 
         address lastGuardianAddress;
         address currentGuardianAddress;
-        bytes32 currentGuardian;
+        bytes memory currentGuardian;
         uint48 validAfter;
         uint48 validUntil;
         uint48 latestValidAfter;
@@ -177,9 +176,13 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         for (uint256 i; i < requiredSignatures; ) {
             address currentUserOpSignerAddress = userOpHash
                 .toEthSignedMessageHash()
-                .recover(userOp.signature[96 + 2 * i * 65:96 + (2 * i + 1) * 65]);
-            
-            currentGuardian = userOp.signature[96 + (2 * i + 1) * 65:96 + (2 * i + 2) * 65];
+                .recover(
+                    userOp.signature[96 + 2 * i * 65:96 + (2 * i + 1) * 65]
+                );
+
+            currentGuardian = userOp.signature[96 + (2 * i + 1) * 65:96 +
+                (2 * i + 2) *
+                65];
 
             currentGuardianAddress = CONTROL_HASH
                 .toEthSignedMessageHash()
@@ -265,12 +268,11 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     // as for security reasons new guardian is only active after securityDelay
 
     function addGuardian(
-        bytes guardian,
+        bytes calldata guardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian.length == 0)
-            revert ZeroGuradianLength();
+        if (guardian.length == 0) revert ZeroGuradianLength();
         if (_guardians[guardian][msg.sender].validUntil != 0)
             revert GuardianAlreadySet(guardian, msg.sender);
 
@@ -294,15 +296,13 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     // natspec
     // same as adding guardian, but also makes the old one active only until the new one is active
     function changeGuardian(
-        bytes32 guardian,
-        bytes32 newGuardian,
+        bytes calldata guardian,
+        bytes calldata newGuardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian.length == 0)
-            revert ZeroGuradianLength();
-        if (newGuardian.length == 0)
-            revert ZeroGuradianLength();
+        if (guardian.length == 0) revert ZeroGuradianLength();
+        if (newGuardian.length == 0) revert ZeroGuradianLength();
 
         if (validUntil == 0) validUntil = type(uint48).max;
         uint48 minimalSecureValidAfter = uint48(
@@ -326,7 +326,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     }
 
     // natspec
-    function removeGuardian(bytes32 guardian) external {
+    function removeGuardian(bytes calldata guardian) external {
         delete _guardians[guardian][msg.sender];
         if (
             _smartAccountSettings[msg.sender].guardiansCount <
@@ -337,7 +337,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     }
 
     function getGuardianDetails(
-        bytes32 guardian,
+        bytes calldata guardian,
         address smartAccount
     ) external view returns (TimeFrame memory) {
         return _guardians[guardian][smartAccount];
