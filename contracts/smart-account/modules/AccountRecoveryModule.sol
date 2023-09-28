@@ -59,6 +59,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         bytes indexed requestCallData
     );
     event RecoveryRequestRenounced(address indexed smartAccount);
+    event GuardianAdded(address indexed smartAccount, bytes guardian, TimeFrame timeFrame);
+    event GuardianRemoved(address indexed smartAccount, bytes guardian);
+    event GuardianChanged(address indexed smartAccount, bytes guardian, TimeFrame timeFrame);
+    event ThresholdChanged(address indexed smartAccount, uint8 threshold);
 
     error AlreadyInitedForSmartAccount(address smartAccount);
     error ThresholdNotSetForSmartAccount(address smartAccount);
@@ -68,59 +72,67 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         address currentGuardian
     );
 
-    error ZeroGuradianLength();
+    error ZeroGuardianLength();
     error InvalidTimeFrame(uint48 validUntil, uint48 validAfter);
     error ExpiredValidUntil(uint48 validUntil);
     error GuardianAlreadySet(bytes guardian, address smartAccount);
 
-    error NotEnoughGuardiansProvided(uint256 guardiansProvided);
+    error ThresholdTooHigh(uint8 threshold, uint256 guardiansExist);
     error InvalidAmountOfGuardianParams();
+    error GuardiansAreIdentical();
 
     /**
      * @dev Initializes the module for a Smart Account.
      * Can only be used at a time of first enabling the module for a Smart Account.
+     * @param guardians the list of guardians
+     * @param timeFrames validity timeframes for guardians
+     * @param recoveryThreshold how many guardians' signatures are required to authorize recovery request
+     * @param securityDelay amount of time required to pass between the submission of the recovery request
+     * and its execution
      */
     function initForSmartAccount(
         bytes[] memory guardians,
-        uint48[] memory validUntil,
-        uint48[] memory validAfter,
+        TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
         uint48 securityDelay
     ) external returns (address) {
+        uint256 length = guardians.length;
         if (_smartAccountSettings[msg.sender].recoveryThreshold > 0)
             revert AlreadyInitedForSmartAccount(msg.sender);
-        if (recoveryThreshold > guardians.length)
-            revert NotEnoughGuardiansProvided(guardians.length);
+        if (recoveryThreshold > length)
+            revert ThresholdTooHigh(recoveryThreshold, length);
         if (
-            guardians.length != validUntil.length ||
-            validUntil.length != validAfter.length ||
-            guardians.length == 0
+            length != timeFrames.length ||
+            length == 0
         ) revert InvalidAmountOfGuardianParams();
         _smartAccountSettings[msg.sender] = SaSettings(
-            uint8(guardians.length),
+            uint8(length),
             recoveryThreshold,
             securityDelay
         );
-        for (uint256 i; i < guardians.length; i++) {
-            if (guardians[i].length == 0) revert ZeroGuradianLength();
+        for (uint256 i; i < length; ) {
+            if (guardians[i].length == 0) revert ZeroGuardianLength();
             if (_guardians[guardians[i]][msg.sender].validUntil != 0)
                 revert GuardianAlreadySet(guardians[i], msg.sender);
 
-            if (validUntil[i] == 0) validUntil[i] = type(uint48).max;
-            if (validUntil[i] < validAfter[i])
-                revert InvalidTimeFrame(validUntil[i], validAfter[i]);
-            if (validUntil[i] != 0 && validUntil[i] < block.timestamp)
-                revert ExpiredValidUntil(validUntil[i]);
+            if (timeFrames[i].validUntil == 0) timeFrames[i].validUntil = type(uint48).max;
+            if (timeFrames[i].validUntil < timeFrames[i].validAfter)
+                revert InvalidTimeFrame(timeFrames[i].validUntil, timeFrames[i].validAfter);
+            if (timeFrames[i].validUntil != 0 && timeFrames[i].validUntil< block.timestamp)
+                revert ExpiredValidUntil(timeFrames[i].validUntil);
 
-            _guardians[guardians[i]][msg.sender] = TimeFrame(
-                validUntil[i],
-                validAfter[i]
-            );
+            _guardians[guardians[i]][msg.sender] = timeFrames[i];
+            emit GuardianAdded(msg.sender, guardians[i], timeFrames[i]);
+            unchecked {
+                ++i;
+            }
         }
         return address(this);
     }
 
-    // natspec
+    /**
+     * @dev renounces existing recovery request. Can be used during the security delay
+     */
     function renounceRecoveryRequest() external {
         delete _smartAccountRequests[msg.sender];
         emit RecoveryRequestRenounced(msg.sender);
@@ -240,16 +252,16 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         assembly {
             innerSelector := mload(add(innerCallData, 0x20))
         }
-        bool isValidAddingRequestUserOp = innerSelector ==
-            this.submitRecoveryRequest.selector &&
-            dest == address(this) &&
+        bool isValidAddingRequestUserOp = (innerSelector ==
+            this.submitRecoveryRequest.selector) &&
+            (dest == address(this)) &&
             callValue == 0;
         if (
-            isValidAddingRequestUserOp ||
-            _smartAccountSettings[msg.sender].securityDelay == 0
+            isValidAddingRequestUserOp || //this a userOp to submit Recovery Request
+            _smartAccountSettings[msg.sender].securityDelay == 0 //or securityDelay is 0, 
         ) {
             return
-                VALIDATION_SUCCESS |
+                VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
                 (uint256(earliestValidUntil) << 160) |
                 (uint256(latestValidAfter) << (160 + 48));
         }
@@ -272,7 +284,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian.length == 0) revert ZeroGuradianLength();
+        if (guardian.length == 0) revert ZeroGuardianLength();
         if (_guardians[guardian][msg.sender].validUntil != 0)
             revert GuardianAlreadySet(guardian, msg.sender);
 
@@ -290,19 +302,21 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         // TODO:
         // make a test case that it fails if validAfter + securityDelay together overflow uint48
         _guardians[guardian][msg.sender] = TimeFrame(validUntil, validAfter);
-        _smartAccountSettings[msg.sender].guardiansCount++;
+        ++_smartAccountSettings[msg.sender].guardiansCount;
+        emit GuardianAdded(msg.sender, guardian, TimeFrame(validUntil, validAfter));
     }
 
     // natspec
     // same as adding guardian, but also makes the old one active only until the new one is active
-    function changeGuardian(
+    function replaceGuardian(
         bytes calldata guardian,
         bytes calldata newGuardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian.length == 0) revert ZeroGuradianLength();
-        if (newGuardian.length == 0) revert ZeroGuradianLength();
+        if (keccak256(guardian) == keccak256(newGuardian)) revert GuardiansAreIdentical();
+        if (guardian.length == 0) revert ZeroGuardianLength();
+        if (newGuardian.length == 0) revert ZeroGuardianLength();
 
         if (validUntil == 0) validUntil = type(uint48).max;
         uint48 minimalSecureValidAfter = uint48(
@@ -320,23 +334,54 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             validUntil == 0 ? type(uint48).max : validUntil,
             validAfter
         );
+        ++_smartAccountSettings[msg.sender].guardiansCount;
+        emit GuardianAdded(msg.sender, newGuardian, TimeFrame(
+                validUntil == 0 ? type(uint48).max : validUntil,
+                validAfter
+            )
+        );
 
-        // make the previous stay valid for period of securityDelay from now only
-        _guardians[guardian][msg.sender].validUntil = minimalSecureValidAfter;
+        // make the previous stay valid until the new one becomes valid
+        // if the new one becomes valid earlier, than old one validUntil, change the validUntil for the old one
+        // to the validAfter of the new one. So two are never valid at the same time
+        uint48 oldGuardianValidUntil = _guardians[guardian][msg.sender].validUntil;
+        _guardians[guardian][msg.sender].validUntil = (oldGuardianValidUntil < validAfter) ? oldGuardianValidUntil : validAfter;
     }
 
     // natspec
     function removeGuardian(bytes calldata guardian) external {
         delete _guardians[guardian][msg.sender];
+        --_smartAccountSettings[msg.sender].guardiansCount;
+        emit GuardianRemoved(msg.sender, guardian);
+        // if number of guardians became less than threshold, lower the threshold
         if (
             _smartAccountSettings[msg.sender].guardiansCount <
             _smartAccountSettings[msg.sender].recoveryThreshold
         ) {
             _smartAccountSettings[msg.sender].recoveryThreshold--;
+            emit ThresholdChanged(msg.sender, _smartAccountSettings[msg.sender].recoveryThreshold);
         }
     }
 
-    function getGuardianDetails(
+    // change timeframe
+    function changeGuardianParams(bytes calldata guardian, TimeFrame memory newTimeFrame) external {
+        if (newTimeFrame.validUntil == 0) newTimeFrame.validUntil = type(uint48).max;
+        if (newTimeFrame.validUntil < newTimeFrame.validAfter)
+            revert InvalidTimeFrame(newTimeFrame.validUntil, newTimeFrame.validAfter);
+        if (newTimeFrame.validUntil != 0 && newTimeFrame.validUntil< block.timestamp)
+            revert ExpiredValidUntil(newTimeFrame.validUntil);
+        _guardians[guardian][msg.sender] = newTimeFrame;
+        emit GuardianChanged(msg.sender, guardian, newTimeFrame);
+    }
+
+    // set the threshold
+    function setThreshold(uint8 newThreshold) external {
+        if(newThreshold > _smartAccountSettings[msg.sender].guardiansCount) 
+            revert ThresholdTooHigh(newThreshold, _smartAccountSettings[msg.sender].guardiansCount);
+        _smartAccountSettings[msg.sender].recoveryThreshold = newThreshold;
+    }
+
+    function getGuardianParams(
         bytes calldata guardian,
         address smartAccount
     ) external view returns (TimeFrame memory) {

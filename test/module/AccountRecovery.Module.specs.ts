@@ -87,8 +87,7 @@ describe("Account Recovery Module: ", async () => {
           "initForSmartAccount",
           [
             guardians,
-            [16741936496, 16741936496, 16741936496],
-            [0, 0, 0],
+            [[16741936496, 0], [16741936496, 0], [16741936496, 0]],
             3,
             defaultSecurityDelay,
           ]
@@ -254,7 +253,10 @@ describe("Account Recovery Module: ", async () => {
     it("can change from ecdsa to passkeys when making recovery", async () => {});
   });
 
-  describe("submitRecoveryRequest", async () => {});
+  describe("submitRecoveryRequest", async () => {
+    // what if zero calldata is provided
+
+  });
 
   describe("renounceRecoveryRequest", async () => {});
 
@@ -325,7 +327,7 @@ describe("Account Recovery Module: ", async () => {
         await accountRecoveryModule.getSmartAccountSettings(userSA.address);
       const guardiansAfter = userSASettings.guardiansCount;
 
-      const eveTimeFrame = await accountRecoveryModule.getGuardianDetails(
+      const eveTimeFrame = await accountRecoveryModule.getGuardianParams(
         newGuardian,
         userSA.address
       );
