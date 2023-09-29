@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { keccak256 } from "ethers/lib/utils";
 import { encodeTransfer } from "../utils/testUtils";
 import {
   getEntryPoint,
@@ -15,7 +14,9 @@ import {
   makeEcdsaModuleUserOp,
   makeMultiSignedUserOpWithGuardiansList,
   makeUnsignedUserOp,
+  getUserOpHash
 } from "../utils/userOp";
+import { defaultAbiCoder, keccak256 } from "ethers/lib/utils";
 
 describe("Account Recovery Module: ", async () => {
   const [
@@ -28,17 +29,21 @@ describe("Account Recovery Module: ", async () => {
     eve,
     fox,
     newOwner,
+    refundReceiver,
   ] = waffle.provider.getWallets();
 
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
+
       const controlMessage = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
 
       await deployments.fixture();
-      const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
       const mockToken = await getMockToken();
       const entryPoint = await getEntryPoint();
+
+      const provider = entryPoint?.provider;
+      const chainId = await provider!.getNetwork().then((net) => net.chainId);
 
       const ecdsaModule = await getEcdsaOwnershipRegistryModule();
       const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
@@ -48,7 +53,7 @@ describe("Account Recovery Module: ", async () => {
       const ecdsaOwnershipSetupData =
         EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
           "initForSmartAccount",
-          [await smartAccountOwner.getAddress()]
+          [smartAccountOwner.address]
         );
       const smartAccountDeploymentIndex = 0;
       const userSA = await getSmartAccountWithModule(
@@ -64,7 +69,7 @@ describe("Account Recovery Module: ", async () => {
       });
       await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      // deploy Social Recovery Module
+      // deploy Account Recovery Module
       const accountRecoveryModule = await (
         await ethers.getContractFactory("AccountRecoveryModule")
       ).deploy();
@@ -87,7 +92,11 @@ describe("Account Recovery Module: ", async () => {
           "initForSmartAccount",
           [
             guardians,
-            [[16741936496, 0], [16741936496, 0], [16741936496, 0]],
+            [
+              [16741936496, 0],
+              [16741936496, 0],
+              [16741936496, 0],
+            ],
             3,
             defaultSecurityDelay,
           ]
@@ -100,7 +109,28 @@ describe("Account Recovery Module: ", async () => {
         entryPoint,
         ecdsaModule.address
       );
-      await entryPoint.handleOps([setupAndEnableUserOp], alice.address);
+      await entryPoint.handleOps([setupAndEnableUserOp], refundReceiver.address);
+
+      // create a new account which is not yet initialized
+      const ecdsaOwnershipSetupDataAlice =
+        ecdsaModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [alice.address]
+        );
+      
+      const aliceSA = await getSmartAccountWithModule(
+        ecdsaModule.address,
+        ecdsaOwnershipSetupDataAlice,
+        smartAccountDeploymentIndex
+      );
+
+      // top up acct balance
+      await deployer.sendTransaction({
+        to: aliceSA.address,
+        value: ethers.utils.parseEther("10"),
+      });
+      await mockToken.mint(aliceSA.address, ethers.utils.parseEther("1000000"));
+
       return {
         entryPoint: entryPoint,
         smartAccountImplementation: await getSmartAccountImplementation(),
@@ -108,6 +138,7 @@ describe("Account Recovery Module: ", async () => {
         mockToken: mockToken,
         ecdsaModule: ecdsaModule,
         userSA: userSA,
+        aliceSA: aliceSA,
         accountRecoveryModule: accountRecoveryModule,
         verifyingPaymaster: await getVerifyingPaymaster(
           deployer,
@@ -115,6 +146,7 @@ describe("Account Recovery Module: ", async () => {
         ),
         defaultSecurityDelay: defaultSecurityDelay,
         controlMessage: controlMessage,
+        chainId: chainId,
       };
     }
   );
@@ -135,7 +167,7 @@ describe("Account Recovery Module: ", async () => {
    * doesn't require any signature at all.
    */
 
-  it("Can submit a recovery request and execute it after a proper delay", async () => {
+  it("Can submit a recovery request and execute it only after a proper delay (no bundler)", async () => {
     const {
       entryPoint,
       mockToken,
@@ -215,6 +247,8 @@ describe("Account Recovery Module: ", async () => {
       entryPoint,
       accountRecoveryModule.address
     );
+
+    // can not execute request before the delay passes
     await expect(
       entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
         gasLimit: 10000000,
@@ -223,9 +257,11 @@ describe("Account Recovery Module: ", async () => {
       .to.be.revertedWith("FailedOp")
       .withArgs(0, "AA22 expired or not due");
 
+    // fast foprward
     await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
     await ethers.provider.send("evm_mine", []);
 
+    // now everything should work
     await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
       gasLimit: 10000000,
     });
@@ -236,13 +272,221 @@ describe("Account Recovery Module: ", async () => {
       smartAccountOwner.address
     );
   });
-  /*
+
+  
   describe("initForSmartAccount", async () => {
-    it("Successfully inits the Smart Account, by adding guardians and settings", async () => {});
 
-    it("reverts if the SA has already been initialized", async () => {});
+    it("Successfully inits the Smart Account, by adding guardians and settings", async () => {
+      const {
+        entryPoint,
+        aliceSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+      } = await setupTests();
 
-    it("reverts if the threshold provided is > then # of guardians", async () => {});
+      const userSASettingsBefore =
+        await accountRecoveryModule.getSmartAccountSettings(aliceSA.address);
+      const guardiansBefore = userSASettingsBefore.guardiansCount;
+      const thresholdBefore = userSASettingsBefore.recoveryThreshold;
+      const securityDelayBefore = userSASettingsBefore.securityDelay;
+      
+      const recoveryThreshold = 3;
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+
+      const guardians = await Promise.all(
+        [bob, eve, fox].map(
+          async (guardian): Promise<string> =>
+            await guardian.signMessage(messageHashBytes)
+        )
+      );
+
+      const bobTimeFrame = [16741936493, 1];
+      const eveTimeFrame = [16741936494, 2];
+      const foxTimeFrame = [16741936495, 3];
+
+      const timeFrames = [
+        bobTimeFrame,
+        eveTimeFrame,
+        foxTimeFrame,
+      ];
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [
+            guardians,
+            timeFrames,
+            recoveryThreshold,
+            defaultSecurityDelay,
+          ]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      await entryPoint.handleOps([setupAndEnableUserOp], refundReceiver.address);
+
+      const userSASettingsAfter =
+        await accountRecoveryModule.getSmartAccountSettings(aliceSA.address);
+      const guardiansAfter = userSASettingsAfter.guardiansCount;
+      const thresholdAfter = userSASettingsAfter.recoveryThreshold;
+      const securityDelayAfter = userSASettingsAfter.securityDelay;
+
+      expect(guardiansBefore).to.equal(0);
+      expect(guardiansAfter).to.equal(guardians.length);
+      expect(thresholdBefore).to.equal(0);
+      expect(thresholdAfter).to.equal(recoveryThreshold);
+      expect(securityDelayBefore).to.equal(0);
+      expect(securityDelayAfter).to.equal(defaultSecurityDelay);
+
+      expect(await accountRecoveryModule.getGuardianParams(guardians[0], aliceSA.address)).to.deep.equal(bobTimeFrame);
+      expect(await accountRecoveryModule.getGuardianParams(guardians[1], aliceSA.address)).to.deep.equal(eveTimeFrame);
+      expect(await accountRecoveryModule.getGuardianParams(guardians[2], aliceSA.address)).to.deep.equal(foxTimeFrame);
+
+    });
+
+    it("reverts if the SA has already been initialized", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+        chainId
+      } = await setupTests();
+
+      const recoveryThreshold = 2;
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+
+      const guardians = await Promise.all(
+        [bob, eve, fox].map(
+          async (guardian): Promise<string> =>
+            await guardian.signMessage(messageHashBytes)
+        )
+      );
+
+      const bobTimeFrame = [16741936493, 1];
+      const eveTimeFrame = [16741936494, 2];
+      const foxTimeFrame = [16741936495, 3];
+
+      const timeFrames = [
+        bobTimeFrame,
+        eveTimeFrame,
+        foxTimeFrame,
+      ];
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [
+            guardians,
+            timeFrames,
+            recoveryThreshold,
+            defaultSecurityDelay,
+          ]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const tx = await entryPoint.handleOps([setupAndEnableUserOp], refundReceiver.address, {
+        gasLimit: 10000000,
+      });
+
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("AlreadyInitedForSmartAccount(address)").slice(0,10),
+        ethers.utils.hexZeroPad(userSA.address, 32),
+      ]);
+
+      await expect(tx).to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+          setupAndEnableUserOp.sender,
+          setupAndEnableUserOp.nonce,
+          errorData
+        );
+    });
+
+    it("reverts if the threshold provided is > then # of guardians", async () => {
+      const {
+        entryPoint,
+        aliceSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+        chainId
+      } = await setupTests();
+      
+      const recoveryThreshold = 5;
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+
+      const guardians = await Promise.all(
+        [bob, eve, fox].map(
+          async (guardian): Promise<string> =>
+            await guardian.signMessage(messageHashBytes)
+        )
+      );
+
+      const bobTimeFrame = [16741936493, 1];
+      const eveTimeFrame = [16741936494, 2];
+      const foxTimeFrame = [16741936495, 3];
+
+      const timeFrames = [
+        bobTimeFrame,
+        eveTimeFrame,
+        foxTimeFrame,
+      ];
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [
+            guardians,
+            timeFrames,
+            recoveryThreshold,
+            defaultSecurityDelay,
+          ]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const tx = await entryPoint.handleOps([setupAndEnableUserOp], refundReceiver.address);
+      
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("ThresholdTooHigh(uint8,uint256)").slice(0,10),
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(recoveryThreshold), 32),
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(guardians.length), 32),
+      ]);
+
+      await expect(tx).to.emit(entryPoint, "UserOperationRevertReason")
+      .withArgs(
+        getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+        setupAndEnableUserOp.sender,
+        setupAndEnableUserOp.nonce,
+        errorData
+      );
+    });
 
     it("reverts if the wrong amount of parameters provided", async () => {});
 
@@ -252,6 +496,8 @@ describe("Account Recovery Module: ", async () => {
 
     it("can change from ecdsa to passkeys when making recovery", async () => {});
   });
+
+  /*
 
   describe("submitRecoveryRequest", async () => {
     // what if zero calldata is provided

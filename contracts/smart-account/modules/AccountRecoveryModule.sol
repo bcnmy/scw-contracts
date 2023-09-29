@@ -59,9 +59,17 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         bytes indexed requestCallData
     );
     event RecoveryRequestRenounced(address indexed smartAccount);
-    event GuardianAdded(address indexed smartAccount, bytes guardian, TimeFrame timeFrame);
+    event GuardianAdded(
+        address indexed smartAccount,
+        bytes guardian,
+        TimeFrame timeFrame
+    );
     event GuardianRemoved(address indexed smartAccount, bytes guardian);
-    event GuardianChanged(address indexed smartAccount, bytes guardian, TimeFrame timeFrame);
+    event GuardianChanged(
+        address indexed smartAccount,
+        bytes guardian,
+        TimeFrame timeFrame
+    );
     event ThresholdChanged(address indexed smartAccount, uint8 threshold);
 
     error AlreadyInitedForSmartAccount(address smartAccount);
@@ -101,10 +109,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             revert AlreadyInitedForSmartAccount(msg.sender);
         if (recoveryThreshold > length)
             revert ThresholdTooHigh(recoveryThreshold, length);
-        if (
-            length != timeFrames.length ||
-            length == 0
-        ) revert InvalidAmountOfGuardianParams();
+        if (length != timeFrames.length || length == 0)
+            revert InvalidAmountOfGuardianParams();
         _smartAccountSettings[msg.sender] = SaSettings(
             uint8(length),
             recoveryThreshold,
@@ -115,11 +121,17 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             if (_guardians[guardians[i]][msg.sender].validUntil != 0)
                 revert GuardianAlreadySet(guardians[i], msg.sender);
 
-            if (timeFrames[i].validUntil == 0) timeFrames[i].validUntil = type(uint48).max;
+            if (timeFrames[i].validUntil == 0)
+                timeFrames[i].validUntil = type(uint48).max;
             if (timeFrames[i].validUntil < timeFrames[i].validAfter)
-                revert InvalidTimeFrame(timeFrames[i].validUntil, timeFrames[i].validAfter);
-            if (timeFrames[i].validUntil != 0 && timeFrames[i].validUntil< block.timestamp)
-                revert ExpiredValidUntil(timeFrames[i].validUntil);
+                revert InvalidTimeFrame(
+                    timeFrames[i].validUntil,
+                    timeFrames[i].validAfter
+                );
+            if (
+                timeFrames[i].validUntil != 0 &&
+                timeFrames[i].validUntil < block.timestamp
+            ) revert ExpiredValidUntil(timeFrames[i].validUntil);
 
             _guardians[guardians[i]][msg.sender] = timeFrames[i];
             emit GuardianAdded(msg.sender, guardians[i], timeFrames[i]);
@@ -258,7 +270,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             callValue == 0;
         if (
             isValidAddingRequestUserOp || //this a userOp to submit Recovery Request
-            _smartAccountSettings[msg.sender].securityDelay == 0 //or securityDelay is 0, 
+            _smartAccountSettings[msg.sender].securityDelay == 0 //or securityDelay is 0,
         ) {
             return
                 VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
@@ -303,7 +315,11 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         // make a test case that it fails if validAfter + securityDelay together overflow uint48
         _guardians[guardian][msg.sender] = TimeFrame(validUntil, validAfter);
         ++_smartAccountSettings[msg.sender].guardiansCount;
-        emit GuardianAdded(msg.sender, guardian, TimeFrame(validUntil, validAfter));
+        emit GuardianAdded(
+            msg.sender,
+            guardian,
+            TimeFrame(validUntil, validAfter)
+        );
     }
 
     // natspec
@@ -314,7 +330,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (keccak256(guardian) == keccak256(newGuardian)) revert GuardiansAreIdentical();
+        if (keccak256(guardian) == keccak256(newGuardian))
+            revert GuardiansAreIdentical();
         if (guardian.length == 0) revert ZeroGuardianLength();
         if (newGuardian.length == 0) revert ZeroGuardianLength();
 
@@ -335,7 +352,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             validAfter
         );
         ++_smartAccountSettings[msg.sender].guardiansCount;
-        emit GuardianAdded(msg.sender, newGuardian, TimeFrame(
+        emit GuardianAdded(
+            msg.sender,
+            newGuardian,
+            TimeFrame(
                 validUntil == 0 ? type(uint48).max : validUntil,
                 validAfter
             )
@@ -344,8 +364,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         // make the previous stay valid until the new one becomes valid
         // if the new one becomes valid earlier, than old one validUntil, change the validUntil for the old one
         // to the validAfter of the new one. So two are never valid at the same time
-        uint48 oldGuardianValidUntil = _guardians[guardian][msg.sender].validUntil;
-        _guardians[guardian][msg.sender].validUntil = (oldGuardianValidUntil < validAfter) ? oldGuardianValidUntil : validAfter;
+        uint48 oldGuardianValidUntil = _guardians[guardian][msg.sender]
+            .validUntil;
+        _guardians[guardian][msg.sender].validUntil = (oldGuardianValidUntil <
+            validAfter)
+            ? oldGuardianValidUntil
+            : validAfter;
     }
 
     // natspec
@@ -359,25 +383,40 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             _smartAccountSettings[msg.sender].recoveryThreshold
         ) {
             _smartAccountSettings[msg.sender].recoveryThreshold--;
-            emit ThresholdChanged(msg.sender, _smartAccountSettings[msg.sender].recoveryThreshold);
+            emit ThresholdChanged(
+                msg.sender,
+                _smartAccountSettings[msg.sender].recoveryThreshold
+            );
         }
     }
 
     // change timeframe
-    function changeGuardianParams(bytes calldata guardian, TimeFrame memory newTimeFrame) external {
-        if (newTimeFrame.validUntil == 0) newTimeFrame.validUntil = type(uint48).max;
+    function changeGuardianParams(
+        bytes calldata guardian,
+        TimeFrame memory newTimeFrame
+    ) external {
+        if (newTimeFrame.validUntil == 0)
+            newTimeFrame.validUntil = type(uint48).max;
         if (newTimeFrame.validUntil < newTimeFrame.validAfter)
-            revert InvalidTimeFrame(newTimeFrame.validUntil, newTimeFrame.validAfter);
-        if (newTimeFrame.validUntil != 0 && newTimeFrame.validUntil< block.timestamp)
-            revert ExpiredValidUntil(newTimeFrame.validUntil);
+            revert InvalidTimeFrame(
+                newTimeFrame.validUntil,
+                newTimeFrame.validAfter
+            );
+        if (
+            newTimeFrame.validUntil != 0 &&
+            newTimeFrame.validUntil < block.timestamp
+        ) revert ExpiredValidUntil(newTimeFrame.validUntil);
         _guardians[guardian][msg.sender] = newTimeFrame;
         emit GuardianChanged(msg.sender, guardian, newTimeFrame);
     }
 
     // set the threshold
     function setThreshold(uint8 newThreshold) external {
-        if(newThreshold > _smartAccountSettings[msg.sender].guardiansCount) 
-            revert ThresholdTooHigh(newThreshold, _smartAccountSettings[msg.sender].guardiansCount);
+        if (newThreshold > _smartAccountSettings[msg.sender].guardiansCount)
+            revert ThresholdTooHigh(
+                newThreshold,
+                _smartAccountSettings[msg.sender].guardiansCount
+            );
         _smartAccountSettings[msg.sender].recoveryThreshold = newThreshold;
     }
 

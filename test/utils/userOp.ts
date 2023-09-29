@@ -406,7 +406,10 @@ export async function makeMultiSignedUserOpWithGuardiansList(
   userOpSigners: Signer[],
   controlMessage: string,
   entryPoint: EntryPoint,
-  moduleAddress: string
+  moduleAddress: string,
+  options?: {
+    preVerificationGas?: number;
+  },
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -420,6 +423,7 @@ export async function makeMultiSignedUserOpWithGuardiansList(
     {
       sender: userOpSender,
       callData: txnDataAA1,
+      ...options,
     },
     entryPoint,
     "nonce"
@@ -455,7 +459,10 @@ export async function makeUnsignedUserOp(
   functionParams: any,
   userOpSender: string,
   entryPoint: EntryPoint,
-  moduleAddress: string
+  moduleAddress: string,
+  options?: {
+    preVerificationGas?: number;
+  },
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -468,6 +475,7 @@ export async function makeUnsignedUserOp(
     {
       sender: userOpSender,
       callData: txnDataAA1,
+      ...options,
     },
     entryPoint,
     "nonce"
