@@ -14,7 +14,7 @@ import {
   makeEcdsaModuleUserOp,
   makeMultiSignedUserOpWithGuardiansList,
   makeUnsignedUserOp,
-  getUserOpHash
+  getUserOpHash,
 } from "../utils/userOp";
 import { defaultAbiCoder, keccak256 } from "ethers/lib/utils";
 
@@ -34,7 +34,6 @@ describe("Account Recovery Module: ", async () => {
 
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
-
       const controlMessage = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
 
       await deployments.fixture();
@@ -109,15 +108,17 @@ describe("Account Recovery Module: ", async () => {
         entryPoint,
         ecdsaModule.address
       );
-      await entryPoint.handleOps([setupAndEnableUserOp], refundReceiver.address);
+      await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
 
       // create a new account which is not yet initialized
       const ecdsaOwnershipSetupDataAlice =
-        ecdsaModule.interface.encodeFunctionData(
-          "initForSmartAccount",
-          [alice.address]
-        );
-      
+        ecdsaModule.interface.encodeFunctionData("initForSmartAccount", [
+          alice.address,
+        ]);
+
       const aliceSA = await getSmartAccountWithModule(
         ecdsaModule.address,
         ecdsaOwnershipSetupDataAlice,
@@ -273,9 +274,7 @@ describe("Account Recovery Module: ", async () => {
     );
   });
 
-  
   describe("initForSmartAccount", async () => {
-
     it("Successfully inits the Smart Account, by adding guardians and settings", async () => {
       const {
         entryPoint,
@@ -291,7 +290,7 @@ describe("Account Recovery Module: ", async () => {
       const guardiansBefore = userSASettingsBefore.guardiansCount;
       const thresholdBefore = userSASettingsBefore.recoveryThreshold;
       const securityDelayBefore = userSASettingsBefore.securityDelay;
-      
+
       const recoveryThreshold = 3;
       const messageHash = ethers.utils.id(controlMessage);
       const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
@@ -307,21 +306,12 @@ describe("Account Recovery Module: ", async () => {
       const eveTimeFrame = [16741936494, 2];
       const foxTimeFrame = [16741936495, 3];
 
-      const timeFrames = [
-        bobTimeFrame,
-        eveTimeFrame,
-        foxTimeFrame,
-      ];
+      const timeFrames = [bobTimeFrame, eveTimeFrame, foxTimeFrame];
 
       const accountRecoverySetupData =
         accountRecoveryModule.interface.encodeFunctionData(
           "initForSmartAccount",
-          [
-            guardians,
-            timeFrames,
-            recoveryThreshold,
-            defaultSecurityDelay,
-          ]
+          [guardians, timeFrames, recoveryThreshold, defaultSecurityDelay]
         );
       const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
         "setupAndEnableModule",
@@ -331,7 +321,20 @@ describe("Account Recovery Module: ", async () => {
         entryPoint,
         ecdsaModule.address
       );
-      await entryPoint.handleOps([setupAndEnableUserOp], refundReceiver.address);
+      
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
+
+      // proper events are emitted
+      for (let i = 0; i < guardians.length; i++) {
+        await expect(tx).to.emit(accountRecoveryModule, "GuardianAdded").withArgs(
+          aliceSA.address,
+          guardians[i],
+          timeFrames[i],
+        );
+      }
 
       const userSASettingsAfter =
         await accountRecoveryModule.getSmartAccountSettings(aliceSA.address);
@@ -346,10 +349,24 @@ describe("Account Recovery Module: ", async () => {
       expect(securityDelayBefore).to.equal(0);
       expect(securityDelayAfter).to.equal(defaultSecurityDelay);
 
-      expect(await accountRecoveryModule.getGuardianParams(guardians[0], aliceSA.address)).to.deep.equal(bobTimeFrame);
-      expect(await accountRecoveryModule.getGuardianParams(guardians[1], aliceSA.address)).to.deep.equal(eveTimeFrame);
-      expect(await accountRecoveryModule.getGuardianParams(guardians[2], aliceSA.address)).to.deep.equal(foxTimeFrame);
-
+      expect(
+        await accountRecoveryModule.getGuardianParams(
+          guardians[0],
+          aliceSA.address
+        )
+      ).to.deep.equal(bobTimeFrame);
+      expect(
+        await accountRecoveryModule.getGuardianParams(
+          guardians[1],
+          aliceSA.address
+        )
+      ).to.deep.equal(eveTimeFrame);
+      expect(
+        await accountRecoveryModule.getGuardianParams(
+          guardians[2],
+          aliceSA.address
+        )
+      ).to.deep.equal(foxTimeFrame);
     });
 
     it("reverts if the SA has already been initialized", async () => {
@@ -360,7 +377,7 @@ describe("Account Recovery Module: ", async () => {
         ecdsaModule,
         defaultSecurityDelay,
         controlMessage,
-        chainId
+        chainId,
       } = await setupTests();
 
       const recoveryThreshold = 2;
@@ -378,21 +395,12 @@ describe("Account Recovery Module: ", async () => {
       const eveTimeFrame = [16741936494, 2];
       const foxTimeFrame = [16741936495, 3];
 
-      const timeFrames = [
-        bobTimeFrame,
-        eveTimeFrame,
-        foxTimeFrame,
-      ];
+      const timeFrames = [bobTimeFrame, eveTimeFrame, foxTimeFrame];
 
       const accountRecoverySetupData =
         accountRecoveryModule.interface.encodeFunctionData(
           "initForSmartAccount",
-          [
-            guardians,
-            timeFrames,
-            recoveryThreshold,
-            defaultSecurityDelay,
-          ]
+          [guardians, timeFrames, recoveryThreshold, defaultSecurityDelay]
         );
       const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
         "setupAndEnableModule",
@@ -403,16 +411,21 @@ describe("Account Recovery Module: ", async () => {
         ecdsaModule.address
       );
 
-      const tx = await entryPoint.handleOps([setupAndEnableUserOp], refundReceiver.address, {
-        gasLimit: 10000000,
-      });
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address,
+        {
+          gasLimit: 10000000,
+        }
+      );
 
       const errorData = ethers.utils.hexConcat([
-        ethers.utils.id("AlreadyInitedForSmartAccount(address)").slice(0,10),
+        ethers.utils.id("AlreadyInitedForSmartAccount(address)").slice(0, 10),
         ethers.utils.hexZeroPad(userSA.address, 32),
       ]);
 
-      await expect(tx).to.emit(entryPoint, "UserOperationRevertReason")
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
         .withArgs(
           getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
           setupAndEnableUserOp.sender,
@@ -429,9 +442,9 @@ describe("Account Recovery Module: ", async () => {
         ecdsaModule,
         defaultSecurityDelay,
         controlMessage,
-        chainId
+        chainId,
       } = await setupTests();
-      
+
       const recoveryThreshold = 5;
       const messageHash = ethers.utils.id(controlMessage);
       const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
@@ -447,21 +460,12 @@ describe("Account Recovery Module: ", async () => {
       const eveTimeFrame = [16741936494, 2];
       const foxTimeFrame = [16741936495, 3];
 
-      const timeFrames = [
-        bobTimeFrame,
-        eveTimeFrame,
-        foxTimeFrame,
-      ];
+      const timeFrames = [bobTimeFrame, eveTimeFrame, foxTimeFrame];
 
       const accountRecoverySetupData =
         accountRecoveryModule.interface.encodeFunctionData(
           "initForSmartAccount",
-          [
-            guardians,
-            timeFrames,
-            recoveryThreshold,
-            defaultSecurityDelay,
-          ]
+          [guardians, timeFrames, recoveryThreshold, defaultSecurityDelay]
         );
       const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
         "setupAndEnableModule",
@@ -471,45 +475,334 @@ describe("Account Recovery Module: ", async () => {
         entryPoint,
         ecdsaModule.address
       );
-      const tx = await entryPoint.handleOps([setupAndEnableUserOp], refundReceiver.address);
-      
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
+
       const errorData = ethers.utils.hexConcat([
-        ethers.utils.id("ThresholdTooHigh(uint8,uint256)").slice(0,10),
+        ethers.utils.id("ThresholdTooHigh(uint8,uint256)").slice(0, 10),
         ethers.utils.hexZeroPad(ethers.utils.hexlify(recoveryThreshold), 32),
         ethers.utils.hexZeroPad(ethers.utils.hexlify(guardians.length), 32),
       ]);
 
-      await expect(tx).to.emit(entryPoint, "UserOperationRevertReason")
-      .withArgs(
-        getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
-        setupAndEnableUserOp.sender,
-        setupAndEnableUserOp.nonce,
-        errorData
-      );
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+          setupAndEnableUserOp.sender,
+          setupAndEnableUserOp.nonce,
+          errorData
+        );
     });
 
-    it("reverts if the wrong amount of parameters provided", async () => {});
+    it("reverts if the wrong amount of parameters provided", async () => {
+      const {
+        entryPoint,
+        aliceSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+        chainId,
+      } = await setupTests();
 
-    it("reverts if 0 guardians provided", async () => {});
+      const recoveryThreshold = 3;
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
 
-    it("reverts if at least one guardian is a zero address", async () => {});
+      const guardians = await Promise.all(
+        [bob, eve, fox].map(
+          async (guardian): Promise<string> =>
+            await guardian.signMessage(messageHashBytes)
+        )
+      );
 
-    it("can change from ecdsa to passkeys when making recovery", async () => {});
+      const bobTimeFrame = [16741936493, 1];
+      const eveTimeFrame = [16741936494, 2];
+
+      const timeFrames = [bobTimeFrame, eveTimeFrame];
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [guardians, timeFrames, recoveryThreshold, defaultSecurityDelay]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
+
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+          setupAndEnableUserOp.sender,
+          setupAndEnableUserOp.nonce,
+          ethers.utils.id("InvalidAmountOfGuardianParams()").slice(0, 10)
+        );
+    });
+
+    it("reverts if 0 guardians and 0 threshold provided", async () => {
+      const {
+        entryPoint,
+        aliceSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        chainId,
+      } = await setupTests();
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [[], [], 0, defaultSecurityDelay]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
+
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+          setupAndEnableUserOp.sender,
+          setupAndEnableUserOp.nonce,
+          ethers.utils.id("ZeroThreshold()").slice(0, 10)
+        );
+    });
+
+    it("reverts if at least one guardian is a zero guardian", async () => {
+      const {
+        entryPoint,
+        aliceSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+        chainId,
+      } = await setupTests();
+
+      const recoveryThreshold = 3;
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+
+      const guardians = await Promise.all(
+        [bob, eve].map(
+          async (guardian): Promise<string> =>
+            await guardian.signMessage(messageHashBytes)
+        )
+      );
+
+      let emptyGuardian = "0x";
+      guardians.push(emptyGuardian);
+
+      const bobTimeFrame = [16741936493, 1];
+      const eveTimeFrame = [16741936494, 2];
+      const foxTimeFrame = [16741936495, 3];
+
+      const timeFrames = [bobTimeFrame, eveTimeFrame, foxTimeFrame];
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [guardians, timeFrames, recoveryThreshold, defaultSecurityDelay]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
+
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+          setupAndEnableUserOp.sender,
+          setupAndEnableUserOp.nonce,
+          ethers.utils.id("ZeroGuardian()").slice(0, 10)
+        );
+    });
+
+    it("Should revert if validUntil < validAfter in any of the timeframes", async () => {
+      const {
+        entryPoint,
+        aliceSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+        chainId,
+      } = await setupTests();
+
+      const recoveryThreshold = 3;
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+
+      const guardians = await Promise.all(
+        [bob, eve, fox].map(
+          async (guardian): Promise<string> =>
+            await guardian.signMessage(messageHashBytes)
+        )
+      );
+
+      const bobTimeFrame = [16741936493, 1];
+      const eveTimeFrame = [16741936494, 2];
+      const foxTimeFrame = [16741936495, 16741936495+1];
+
+      const timeFrames = [bobTimeFrame, eveTimeFrame, foxTimeFrame];
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [guardians, timeFrames, recoveryThreshold, defaultSecurityDelay]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
+
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("InvalidTimeFrame(uint48,uint48)").slice(0, 10),
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(16741936495), 32),
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(16741936495+1), 32),
+      ]);
+
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+          setupAndEnableUserOp.sender,
+          setupAndEnableUserOp.nonce,
+          errorData
+        );
+    });
+
+    it("Should revert if validUntil is expired for any of the timeFrames", async () => {
+      const {
+        entryPoint,
+        aliceSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+        chainId,
+      } = await setupTests();
+
+      const recoveryThreshold = 3;
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+
+      const guardians = await Promise.all(
+        [bob, eve, fox].map(
+          async (guardian): Promise<string> =>
+            await guardian.signMessage(messageHashBytes)
+        )
+      );
+
+      const provider = entryPoint?.provider;
+      const currentTimestamp = (
+        await provider!.getBlock("latest")
+      ).timestamp;
+
+      const bobTimeFrame = [16741936493, 1];
+      const eveTimeFrame = [16741936494, 2];
+      const foxTimeFrame = [currentTimestamp - 1, 3];
+
+      const timeFrames = [bobTimeFrame, eveTimeFrame, foxTimeFrame];
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [guardians, timeFrames, recoveryThreshold, defaultSecurityDelay]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
+
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("ExpiredValidUntil(uint48)").slice(0, 10),
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(foxTimeFrame[0]), 32),
+      ]);
+
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+          setupAndEnableUserOp.sender,
+          setupAndEnableUserOp.nonce,
+          errorData
+        );
+    });
+  });
+
+  
+
+  describe("submitRecoveryRequest", async () => {
+
+    //it("Should be able to submit the recovery request validated via other modules", async () => {});
+
+    //it("Should revert if such a request already exists", async () => {});
+
+    //it("Should revert if empty calldata provided", async () => {});
+
   });
 
   /*
-
-  describe("submitRecoveryRequest", async () => {
-    // what if zero calldata is provided
-
-  });
-
   describe("renounceRecoveryRequest", async () => {});
 
   describe("Validation Flow", async () => {
+
+    it("Should be able to submit the recovery request with the proper amount of guardians sigs", async () => {});
+
     it("Should immediately execute recovery request when delay is 0", async () => {});
 
-    it("Should revert userOp if the dalay is >0 and the calldata is not for submitting request", async () => {});
+    it("can change from one validation module to another (by enabling and setting it up) when making recovery", async () => {});
+
+    it("Should revert userOp if the delay is >0 and the calldata is not for submitting request", async () => {});
+
+    it("Should revert userOp if the delay is 0 and the calldata is for submitting request", async () => {});
 
     it("Should revert if execution calldata doesn't match the submitted request", async () => {});
 
@@ -528,6 +821,11 @@ describe("Account Recovery Module: ", async () => {
     it("Events are emitted properly", async () => {});
   });
   */
+
+  // Execution flow
+  // it("Should not be able to use same request twice", async () => {});
+  // it("Should revert if trying to execute the request with invalid calldata", async () => {});
+
 
   describe("addGuardian", async () => {
     it("Can add a guardian", async () => {

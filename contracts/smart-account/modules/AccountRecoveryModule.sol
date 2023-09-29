@@ -80,14 +80,19 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         address currentGuardian
     );
 
-    error ZeroGuardianLength();
+    error ZeroGuardian();
     error InvalidTimeFrame(uint48 validUntil, uint48 validAfter);
     error ExpiredValidUntil(uint48 validUntil);
     error GuardianAlreadySet(bytes guardian, address smartAccount);
 
     error ThresholdTooHigh(uint8 threshold, uint256 guardiansExist);
+    error ZeroThreshold();
     error InvalidAmountOfGuardianParams();
     error GuardiansAreIdentical();
+    error LastGuardianRemovalAttempt(bytes lastGuardian);
+
+    error EmptyRecoveryCallData();        
+    error RecoveryRequestAlreadyExists(address smartAccount, bytes32 requestCallDataHash);
 
     /**
      * @dev Initializes the module for a Smart Account.
@@ -97,6 +102,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * @param recoveryThreshold how many guardians' signatures are required to authorize recovery request
      * @param securityDelay amount of time required to pass between the submission of the recovery request
      * and its execution
+     * @dev no need for explicit check `length == 0` as it is covered by `recoveryThreshold > length` and 
+     * `recoveryThreshold == 0` cheks. So length can never be 0 while recoveryThreshold is not 0
      */
     function initForSmartAccount(
         bytes[] memory guardians,
@@ -105,11 +112,13 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         uint48 securityDelay
     ) external returns (address) {
         uint256 length = guardians.length;
-        if (_smartAccountSettings[msg.sender].recoveryThreshold > 0)
+        if (_smartAccountSettings[msg.sender].guardiansCount > 0)
             revert AlreadyInitedForSmartAccount(msg.sender);
         if (recoveryThreshold > length)
             revert ThresholdTooHigh(recoveryThreshold, length);
-        if (length != timeFrames.length || length == 0)
+        if (recoveryThreshold == 0) 
+            revert ZeroThreshold();
+        if (length != timeFrames.length)
             revert InvalidAmountOfGuardianParams();
         _smartAccountSettings[msg.sender] = SaSettings(
             uint8(length),
@@ -117,10 +126,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             securityDelay
         );
         for (uint256 i; i < length; ) {
-            if (guardians[i].length == 0) revert ZeroGuardianLength();
-            if (_guardians[guardians[i]][msg.sender].validUntil != 0)
-                revert GuardianAlreadySet(guardians[i], msg.sender);
-
+            if (guardians[i].length == 0) revert ZeroGuardian();
             if (timeFrames[i].validUntil == 0)
                 timeFrames[i].validUntil = type(uint48).max;
             if (timeFrames[i].validUntil < timeFrames[i].validAfter)
@@ -143,14 +149,6 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     }
 
     /**
-     * @dev renounces existing recovery request. Can be used during the security delay
-     */
-    function renounceRecoveryRequest() external {
-        delete _smartAccountRequests[msg.sender];
-        emit RecoveryRequestRenounced(msg.sender);
-    }
-
-    /**
      * @dev validates userOperation
      * @param userOp User Operation to be validated.
      * @param userOpHash Hash of the User Operation to be validated.
@@ -160,7 +158,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256) {
-        // if there is a request added, return validation success
+        // if there is already a request added for this userOp.callData, return validation success
+        // to procced with executing the request
         // with validAfter set to the timestamp of the request + securityDelay
         // so that the request execution userOp can be validated only after the delay
         if (
@@ -212,10 +211,9 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
                 .toEthSignedMessageHash()
                 .recover(currentGuardian);
 
-            require(
-                currentUserOpSignerAddress == currentGuardianAddress,
-                "Signers do not match"
-            );
+            if(currentUserOpSignerAddress != currentGuardianAddress) {
+                return SIG_VALIDATION_FAILED;
+            }
 
             validAfter = _guardians[currentGuardian][userOp.sender].validAfter;
             validUntil = _guardians[currentGuardian][userOp.sender].validUntil;
@@ -269,17 +267,21 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             (dest == address(this)) &&
             callValue == 0;
         if (
-            isValidAddingRequestUserOp || //this a userOp to submit Recovery Request
-            _smartAccountSettings[msg.sender].securityDelay == 0 //or securityDelay is 0,
+            isValidAddingRequestUserOp != //this a userOp to submit Recovery Request
+            (_smartAccountSettings[msg.sender].securityDelay == 0) //securityDelay is 0,
         ) {
             return
                 VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
                 (uint256(earliestValidUntil) << 160) |
                 (uint256(latestValidAfter) << (160 + 48));
+        } else {
+            // a) if both conditions are true, it makes no sense, as with the 0 delay, there's no need to submit a 
+            // request, as request can be immediately executed in the execution phase of userOp handling
+            // b) if non of the conditions are met, this means userOp is not for submitting a new request which is 
+            // only allowed with when the securityDelay is non 0
+            // not using custom error here because of how EntryPoint handles the revert data for the validation failure
+            revert("Acc Recovery: Wrong userOp");  
         }
-
-        // otherwise sig validation considered failed
-        return SIG_VALIDATION_FAILED;
     }
 
     // NOTE - if validUntil is 0, guardian is considered active forever
@@ -296,7 +298,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian.length == 0) revert ZeroGuardianLength();
+        if (guardian.length == 0) revert ZeroGuardian();
         if (_guardians[guardian][msg.sender].validUntil != 0)
             revert GuardianAlreadySet(guardian, msg.sender);
 
@@ -332,8 +334,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     ) external {
         if (keccak256(guardian) == keccak256(newGuardian))
             revert GuardiansAreIdentical();
-        if (guardian.length == 0) revert ZeroGuardianLength();
-        if (newGuardian.length == 0) revert ZeroGuardianLength();
+        if (guardian.length == 0) revert ZeroGuardian();
+        if (newGuardian.length == 0) revert ZeroGuardian();
 
         if (validUntil == 0) validUntil = type(uint48).max;
         uint48 minimalSecureValidAfter = uint48(
@@ -376,6 +378,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     function removeGuardian(bytes calldata guardian) external {
         delete _guardians[guardian][msg.sender];
         --_smartAccountSettings[msg.sender].guardiansCount;
+        if (_smartAccountSettings[msg.sender].guardiansCount == 0)
+            revert LastGuardianRemovalAttempt(guardian);
         emit GuardianRemoved(msg.sender, guardian);
         // if number of guardians became less than threshold, lower the threshold
         if (
@@ -412,6 +416,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
 
     // set the threshold
     function setThreshold(uint8 newThreshold) external {
+        if (newThreshold == 0) revert ZeroThreshold();
         if (newThreshold > _smartAccountSettings[msg.sender].guardiansCount)
             revert ThresholdTooHigh(
                 newThreshold,
@@ -441,11 +446,25 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
 
     // recoveryCallData is something like execute(module, 0, encode(transferOwnership(newOwner)))
     function submitRecoveryRequest(bytes calldata recoveryCallData) public {
+        if (recoveryCallData.length == 0) revert EmptyRecoveryCallData();
+        if (
+            _smartAccountRequests[msg.sender].callDataHash ==
+            keccak256(recoveryCallData)
+        ) revert RecoveryRequestAlreadyExists(msg.sender, keccak256(recoveryCallData));
+        
         _smartAccountRequests[msg.sender] = RecoveryRequest(
             keccak256(recoveryCallData),
             uint48(block.timestamp)
         );
         emit RecoveryRequestSubmitted(msg.sender, recoveryCallData);
+    }
+
+    /**
+     * @dev renounces existing recovery request. Can be used during the security delay
+     */
+    function renounceRecoveryRequest() public {
+        delete _smartAccountRequests[msg.sender];
+        emit RecoveryRequestRenounced(msg.sender);
     }
 
     /**

@@ -409,7 +409,7 @@ export async function makeMultiSignedUserOpWithGuardiansList(
   moduleAddress: string,
   options?: {
     preVerificationGas?: number;
-  },
+  }
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -462,7 +462,7 @@ export async function makeUnsignedUserOp(
   moduleAddress: string,
   options?: {
     preVerificationGas?: number;
-  },
+  }
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 

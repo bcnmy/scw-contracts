@@ -18,7 +18,8 @@ import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 
 describe("Account Recovery Module (via Bundler)", async () => {
-  let [deployer,
+  let [
+    deployer,
     smartAccountOwner,
     alice,
     bob,
@@ -26,8 +27,8 @@ describe("Account Recovery Module (via Bundler)", async () => {
     verifiedSigner,
     eve,
     fox,
-    newOwner] =
-    [] as SignerWithAddress[];
+    newOwner,
+  ] = [] as SignerWithAddress[];
 
   let environment: BundlerTestEnvironment;
 
@@ -41,7 +42,8 @@ describe("Account Recovery Module (via Bundler)", async () => {
   });
 
   beforeEach(async function () {
-    [deployer,
+    [
+      deployer,
       smartAccountOwner,
       alice,
       bob,
@@ -49,8 +51,8 @@ describe("Account Recovery Module (via Bundler)", async () => {
       verifiedSigner,
       eve,
       fox,
-      newOwner] =
-      await ethers.getSigners();
+      newOwner,
+    ] = await ethers.getSigners();
   });
 
   afterEach(async function () {
@@ -142,8 +144,11 @@ describe("Account Recovery Module (via Bundler)", async () => {
           preVerificationGas: 70000,
         }
       );
-      
-      await environment.sendUserOperation(setupAndEnableUserOp, entryPoint.address);
+
+      await environment.sendUserOperation(
+        setupAndEnableUserOp,
+        entryPoint.address
+      );
 
       return {
         entryPoint: entryPoint,
@@ -174,7 +179,6 @@ describe("Account Recovery Module (via Bundler)", async () => {
       controlMessage,
     } = await setupTests();
 
-    
     const charlieTokenBalanceBefore = await mockToken.balanceOf(
       charlie.address
     );
@@ -218,7 +222,10 @@ describe("Account Recovery Module (via Bundler)", async () => {
       }
     );
 
-    await environment.sendUserOperation(submitRequestUserOp, entryPoint.address);
+    await environment.sendUserOperation(
+      submitRequestUserOp,
+      entryPoint.address
+    );
 
     const recoveryRequest = await accountRecoveryModule.getRecoveryRequest(
       userSA.address
@@ -248,10 +255,13 @@ describe("Account Recovery Module (via Bundler)", async () => {
       }
     );
 
-    //await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
-    //await ethers.provider.send("evm_mine", []);
+    // await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
+    // await ethers.provider.send("evm_mine", []);
 
-    await environment.sendUserOperation(executeRecoveryRequestUserOp, entryPoint.address);
+    await environment.sendUserOperation(
+      executeRecoveryRequestUserOp,
+      entryPoint.address
+    );
 
     expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
       newOwner.address
@@ -259,10 +269,5 @@ describe("Account Recovery Module (via Bundler)", async () => {
     expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(
       smartAccountOwner.address
     );
-
-    
-
   });
-
-
 });
