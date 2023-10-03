@@ -7,7 +7,6 @@ import {
   getSmartAccountFactory,
   getMockToken,
   getEcdsaOwnershipRegistryModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import {
   makeEcdsaModuleUserOp,
@@ -140,7 +139,6 @@ describe("Gas Benchmarking. Basic operations", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
   });
 
@@ -312,51 +310,6 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
 
     expect(await charlie.getBalance()).to.equal(
-      charlieTokenBalanceBefore.add(tokenAmountToTransfer)
-    );
-  });
-
-  it("Can send a userOp with Paymaster payment", async () => {
-    const { entryPoint, mockToken, userSA, ecdsaModule, verifyingPaymaster } =
-      await setupTests();
-
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(
-      charlie.address
-    );
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
-
-    const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
-    const validUntil = blockTimestamp + 1000;
-    const validAfter = blockTimestamp;
-
-    const userOp = await makeEcdsaModuleUserOpWithPaymaster(
-      "execute_ncC",
-      [
-        mockToken.address,
-        ethers.utils.parseEther("0"),
-        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      ],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address,
-      verifyingPaymaster,
-      verifiedSigner,
-      validUntil,
-      validAfter
-    );
-
-    const handleOpsTxn = await entryPoint.handleOps(
-      [userOp],
-      verifiedSigner.address
-    );
-    const receipt = await handleOpsTxn.wait();
-    console.log(
-      "UserOp ERC20 Token transfer with Paymaster gas used: ",
-      receipt.gasUsed.toString()
-    );
-
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore.add(tokenAmountToTransfer)
     );
   });

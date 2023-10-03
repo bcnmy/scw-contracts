@@ -8,7 +8,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../utils/userOp";
 
@@ -60,7 +59,6 @@ describe("UserOps", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
   });
 
