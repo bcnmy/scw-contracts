@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {BaseSmartAccount, IEntryPoint, UserOperation} from "./BaseSmartAccount.sol";
 import {ModuleManager} from "./base/ModuleManager.sol";
 import {FallbackManager} from "./base/FallbackManager.sol";
 import {LibAddress} from "./libs/LibAddress.sol";
 import {ISignatureValidator} from "./interfaces/ISignatureValidator.sol";
-import {IERC165} from "./interfaces/IERC165.sol";
 import {SmartAccountErrors} from "./common/Errors.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";

@@ -2,9 +2,10 @@
 pragma solidity 0.8.17;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@account-abstraction/contracts/core/Helpers.sol";
-import "./SessionValidationModules/ISessionValidationModule.sol";
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {ISessionValidationModule} from "./SessionValidationModules/ISessionValidationModule.sol";
 import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 
 struct SessionStorage {
@@ -147,7 +148,7 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
     function isValidSignature(
         bytes32 _dataHash,
         bytes memory _signature
-    ) public view override returns (bytes4) {
+    ) public pure override returns (bytes4) {
         (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }

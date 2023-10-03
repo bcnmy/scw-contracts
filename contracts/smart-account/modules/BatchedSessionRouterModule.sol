@@ -7,7 +7,7 @@ import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {ISessionValidationModule} from "./SessionValidationModules/ISessionValidationModule.sol";
 import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "@account-abstraction/contracts/core/Helpers.sol";
+import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 /**
@@ -147,7 +147,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
     function isValidSignature(
         bytes32 _dataHash,
         bytes memory _signature
-    ) public view override returns (bytes4) {
+    ) public pure override returns (bytes4) {
         (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }
