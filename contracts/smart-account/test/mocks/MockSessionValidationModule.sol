@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.17;
 
-import {ISessionValidationModule} from "../../modules/SessionValidationModules/ISessionValidationModule.sol";
+import {ISessionValidationModule} from "../../modules/interfaces/ISessionValidationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 

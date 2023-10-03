@@ -1,10 +1,13 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, ISignatureValidator} from "./BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
+import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
+import {ISmartContractOwnershipRegistryModule} from "./interfaces/ISmartContractOwnershipRegistryModule.sol";
+import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 
 /**
  * @title Smart Contract Ownership Authorization module for Biconomy Smart Accounts.
@@ -23,75 +26,51 @@ import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignature
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
+contract SmartContractOwnershipRegistryModule is
+    BaseAuthorizationModule,
+    ISmartContractOwnershipRegistryModule
+{
     using ECDSA for bytes32;
 
     string public constant NAME = "Smart Contract Ownership Registry Module";
     string public constant VERSION = "0.1.0";
     mapping(address => address) internal _smartAccountOwners;
 
-    event OwnershipTransferred(
-        address indexed smartAccount,
-        address indexed oldOwner,
-        address indexed newOwner
-    );
-
-    error NoOwnerRegisteredForSmartAccount(address smartAccount);
-    error AlreadyInitedForSmartAccount(address smartAccount);
-    error WrongSignatureLength();
-    error NotSmartContract(address account);
-
-    /**
-     * @dev Initializes the module for a Smart Account.
-     * @dev no need to check for address(0) as it is not a Smart Contract
-     * Should be used at a time of first enabling the module for a Smart Account.
-     * @param owner The owner of the Smart Account.
-     */
-    function initForSmartAccount(address owner) external returns (address) {
-        if (_smartAccountOwners[msg.sender] != address(0))
+    /// @inheritdoc ISmartContractOwnershipRegistryModule
+    function initForSmartAccount(
+        address owner
+    ) external override returns (address) {
+        if (_smartAccountOwners[msg.sender] != address(0)) {
             revert AlreadyInitedForSmartAccount(msg.sender);
+        }
         if (!_isSmartContract(owner)) revert NotSmartContract(owner);
         _smartAccountOwners[msg.sender] = owner;
         return address(this);
     }
 
-    /**
-     * @dev Sets/changes an for a Smart Account.
-     * @dev no need to check for address(0) as it is not a Smart Contract
-     * Should be called by Smart Account itself.
-     * @param owner The owner of the Smart Account.
-     */
-    function transferOwnership(address owner) external {
+    /// @inheritdoc ISmartContractOwnershipRegistryModule
+    function transferOwnership(address owner) external override {
         if (!_isSmartContract(owner)) revert NotSmartContract(owner);
         _transferOwnership(msg.sender, owner);
     }
 
-    /**
-     * @dev Renounces ownership
-     * should be called by Smart Account.
-     */
-    function renounceOwnership() external {
+    /// @inheritdoc ISmartContractOwnershipRegistryModule
+    function renounceOwnership() external override {
         _transferOwnership(msg.sender, address(0));
     }
 
-    /**
-     * @dev Returns the owner of the Smart Account. Reverts for Smart Accounts without owners.
-     * @param smartAccount Smart Account address.
-     * @return owner The owner of the Smart Account.
-     */
-    function getOwner(address smartAccount) external view returns (address) {
+    /// @inheritdoc ISmartContractOwnershipRegistryModule
+    function getOwner(
+        address smartAccount
+    ) external view override returns (address) {
         address owner = _smartAccountOwners[smartAccount];
-        if (owner == address(0))
+        if (owner == address(0)) {
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
+        }
         return owner;
     }
 
-    /**
-     * @dev validates userOperation
-     * @param userOp User Operation to be validated.
-     * @param userOpHash Hash of the User Operation to be validated.
-     * @return sigValidationResult 0 if signature is valid, SIG_VALIDATION_FAILED otherwise.
-     */
+    /// @inheritdoc IAuthorizationModule
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
@@ -111,13 +90,7 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
         return SIG_VALIDATION_FAILED;
     }
 
-    /**
-     * @dev Validates a signature for a message.
-     * To be called from a Smart Account.
-     * @param dataHash Exact hash of the data that was signed.
-     * @param moduleSignature Signature to be validated.
-     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
-     */
+    /// @inheritdoc ISignatureValidator
     function isValidSignature(
         bytes32 dataHash,
         bytes memory moduleSignature
@@ -126,18 +99,12 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
             isValidSignatureForAddress(dataHash, moduleSignature, msg.sender);
     }
 
-    /**
-     * @dev Validates a signature for a message signed by address.
-     * @param dataHash Exact hash of the data that was signed.
-     * @param moduleSignature Signature to be validated.
-     * @param smartAccount expected signer Smart Account address.
-     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
-     */
+    /// @inheritdoc ISmartContractOwnershipRegistryModule
     function isValidSignatureForAddress(
         bytes32 dataHash,
         bytes memory moduleSignature,
         address smartAccount
-    ) public view virtual returns (bytes4) {
+    ) public view virtual override returns (bytes4) {
         if (_verifySignature(dataHash, moduleSignature, smartAccount)) {
             return EIP1271_MAGIC_VALUE;
         }
@@ -172,8 +139,9 @@ contract SmartContractOwnershipRegistryModule is BaseAuthorizationModule {
         address smartAccount
     ) internal view returns (bool) {
         address expectedContractSigner = _smartAccountOwners[smartAccount];
-        if (expectedContractSigner == address(0))
+        if (expectedContractSigner == address(0)) {
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
+        }
         return
             ISignatureValidator(expectedContractSigner).isValidSignature(
                 dataHash,

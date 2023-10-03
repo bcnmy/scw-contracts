@@ -1,51 +1,42 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-/* solhint-disable function-max-lines */
+/* solhint-disable function-max-lines,no-unused-import */
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
-import {ISessionValidationModule} from "./SessionValidationModules/ISessionValidationModule.sol";
-import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
+import {ISessionValidationModule} from "./interfaces/ISessionValidationModule.sol";
+import {ISessionKeyManagerModule} from "./interfaces/ISessionKeyManagerModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {IBatchedSessionRouterModule} from "./interfaces/IBatchedSessionRouterModule.sol";
+import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
+import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 
 /**
  * @title Batched Session Router
  * @dev Built to process executeBatch and executeBatch_y6U calls
  *         - Every call inside batch should be covered by an appropriate Session Validation Module
- *         - Parses data provided and sequentially 
-                a) verifies the session key was enabled via SessionKeyManager
-                b) verifies the session key permissions via Session Validation Modules
+ *         - Parses data provided and sequentially
+ *                 a) verifies the session key was enabled via SessionKeyManager
+ *                 b) verifies the session key permissions via Session Validation Modules
  *         - Should be used with carefully verified and audited Session Validation Modules only
  *         - Compatible with Biconomy Modular Interface v 0.1
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract BatchedSessionRouter is BaseAuthorizationModule {
-    struct SessionData {
-        uint48 validUntil;
-        uint48 validAfter;
-        address sessionValidationModule;
-        bytes sessionKeyData;
-        bytes32[] merkleProof;
-        bytes callSpecificData;
-    }
-
+contract BatchedSessionRouter is
+    BaseAuthorizationModule,
+    IBatchedSessionRouterModule
+{
     bytes4 public constant EXECUTE_BATCH_SELECTOR = 0x47e1da2a;
     bytes4 public constant EXECUTE_BATCH_OPTIMIZED_SELECTOR = 0x00004680;
 
-    /**
-     * @dev validates userOperation. Expects userOp.callData to be an executeBatch
-     * or executeBatch_y6U call. If something goes wrong, reverts.
-     * @param userOp User Operation to be validated.
-     * @param userOpHash Hash of the User Operation to be validated.
-     * @return SIG_VALIDATION_FAILED or packed validation result.
-     */
+    /// @inheritdoc IAuthorizationModule
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual returns (uint256) {
+    ) external virtual override returns (uint256) {
         // check this is a proper method call
         bytes4 selector = bytes4(userOp.callData[0:4]);
         require(
@@ -89,7 +80,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
         for (uint256 i; i < length; ) {
             // validate the sessionKey
             // sessionKeyManager reverts if something wrong
-            ISessionKeyManager(sessionKeyManager).validateSessionKey(
+            ISessionKeyManagerModule(sessionKeyManager).validateSessionKey(
                 userOp.sender,
                 sessionData[i].validUntil,
                 sessionData[i].validAfter,
@@ -139,6 +130,7 @@ contract BatchedSessionRouter is BaseAuthorizationModule {
     }
 
     /**
+     * @inheritdoc ISignatureValidator
      * @dev isValidSignature according to BaseAuthorizationModule
      * @param _dataHash Hash of the data to be validated.
      * @param _signature Signature over the the _dataHash.

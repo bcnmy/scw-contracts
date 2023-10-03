@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
-import "../../../modules/SessionValidationModules/ISessionValidationModule.sol";
+import "../../../modules/interfaces/ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract MockProtocolSVM is ISessionValidationModule {
