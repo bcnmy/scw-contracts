@@ -18,7 +18,6 @@ src/utils/execution.ts
 src/utils/multisend.ts
 src/Create2Factory.ts
 typings/
-types
 typechain
 typechain-types
 .husky/pre-commit
