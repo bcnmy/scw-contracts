@@ -593,6 +593,57 @@ describe("SessionKey: SessionKey Manager Module", async () => {
     });
   });
 
+  describe("validateSessionKey(): ", async () => {
+    it("should revert if wrong leaf is provided", async () => {
+      const {
+        userSA,
+        sessionKeyManager,
+        mockSessionValidationModule,
+        sessionKeyData,
+        leafData,
+        merkleTree,
+      } = await setupTests();
+
+      const wrongValidUntil = 1;
+
+      const validateSesionKeyTxn = sessionKeyManager.callStatic.validateSessionKey(
+        userSA.address,
+        wrongValidUntil,
+        0,
+        mockSessionValidationModule.address,
+        sessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+      );
+
+      await expect(validateSesionKeyTxn)
+        .to.be.revertedWith("SessionNotApproved")
+    });
+
+    it("should not revert otherwise", async () => {
+      const {
+        userSA,
+        sessionKeyManager,
+        mockSessionValidationModule,
+        sessionKeyData,
+        leafData,
+        merkleTree,
+      } = await setupTests();
+
+      const validateSesionKeyTxn = sessionKeyManager.callStatic.validateSessionKey(
+        userSA.address,
+        0,
+        0,
+        mockSessionValidationModule.address,
+        sessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+      );
+
+      await expect(validateSesionKeyTxn)
+        .not.to.be.reverted;
+    });
+      
+  });
+
   describe("isValidSignature", async () => {
     it("should return 0xffffffff even for the valid hash/signature pair", async () => {
       const { sessionKeyManager } = await setupTests();
