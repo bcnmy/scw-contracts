@@ -117,7 +117,7 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         if (amount > maxAmount) {
             revert("ERC20SV Max Amount Exceeded");
         }
-        
+
         return
             ECDSA.recover(
                 ECDSA.toEthSignedMessageHash(_userOpHash),
