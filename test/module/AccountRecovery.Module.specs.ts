@@ -321,7 +321,7 @@ describe("Account Recovery Module: ", async () => {
         entryPoint,
         ecdsaModule.address
       );
-      
+
       const tx = await entryPoint.handleOps(
         [setupAndEnableUserOp],
         refundReceiver.address
@@ -329,11 +329,9 @@ describe("Account Recovery Module: ", async () => {
 
       // proper events are emitted
       for (let i = 0; i < guardians.length; i++) {
-        await expect(tx).to.emit(accountRecoveryModule, "GuardianAdded").withArgs(
-          aliceSA.address,
-          guardians[i],
-          timeFrames[i],
-        );
+        await expect(tx)
+          .to.emit(accountRecoveryModule, "GuardianAdded")
+          .withArgs(aliceSA.address, guardians[i], timeFrames[i]);
       }
 
       const userSASettingsAfter =
@@ -611,7 +609,7 @@ describe("Account Recovery Module: ", async () => {
         )
       );
 
-      let emptyGuardian = "0x";
+      const emptyGuardian = "0x";
       guardians.push(emptyGuardian);
 
       const bobTimeFrame = [16741936493, 1];
@@ -672,7 +670,7 @@ describe("Account Recovery Module: ", async () => {
 
       const bobTimeFrame = [16741936493, 1];
       const eveTimeFrame = [16741936494, 2];
-      const foxTimeFrame = [16741936495, 16741936495+1];
+      const foxTimeFrame = [16741936495, 16741936495 + 1];
 
       const timeFrames = [bobTimeFrame, eveTimeFrame, foxTimeFrame];
 
@@ -697,7 +695,7 @@ describe("Account Recovery Module: ", async () => {
       const errorData = ethers.utils.hexConcat([
         ethers.utils.id("InvalidTimeFrame(uint48,uint48)").slice(0, 10),
         ethers.utils.hexZeroPad(ethers.utils.hexlify(16741936495), 32),
-        ethers.utils.hexZeroPad(ethers.utils.hexlify(16741936495+1), 32),
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(16741936495 + 1), 32),
       ]);
 
       await expect(tx)
@@ -733,9 +731,7 @@ describe("Account Recovery Module: ", async () => {
       );
 
       const provider = entryPoint?.provider;
-      const currentTimestamp = (
-        await provider!.getBlock("latest")
-      ).timestamp;
+      const currentTimestamp = (await provider!.getBlock("latest")).timestamp;
 
       const bobTimeFrame = [16741936493, 1];
       const eveTimeFrame = [16741936494, 2];
@@ -777,16 +773,10 @@ describe("Account Recovery Module: ", async () => {
     });
   });
 
-  
-
   describe("submitRecoveryRequest", async () => {
-
-    //it("Should be able to submit the recovery request validated via other modules", async () => {});
-
-    //it("Should revert if such a request already exists", async () => {});
-
-    //it("Should revert if empty calldata provided", async () => {});
-
+    // it("Should be able to submit the recovery request validated via other modules", async () => {});
+    // it("Should revert if such a request already exists", async () => {});
+    // it("Should revert if empty calldata provided", async () => {});
   });
 
   /*
@@ -825,7 +815,6 @@ describe("Account Recovery Module: ", async () => {
   // Execution flow
   // it("Should not be able to use same request twice", async () => {});
   // it("Should revert if trying to execute the request with invalid calldata", async () => {});
-
 
   describe("addGuardian", async () => {
     it("Can add a guardian", async () => {

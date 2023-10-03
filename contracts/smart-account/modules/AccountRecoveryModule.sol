@@ -91,8 +91,11 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     error GuardiansAreIdentical();
     error LastGuardianRemovalAttempt(bytes lastGuardian);
 
-    error EmptyRecoveryCallData();        
-    error RecoveryRequestAlreadyExists(address smartAccount, bytes32 requestCallDataHash);
+    error EmptyRecoveryCallData();
+    error RecoveryRequestAlreadyExists(
+        address smartAccount,
+        bytes32 requestCallDataHash
+    );
 
     /**
      * @dev Initializes the module for a Smart Account.
@@ -102,7 +105,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * @param recoveryThreshold how many guardians' signatures are required to authorize recovery request
      * @param securityDelay amount of time required to pass between the submission of the recovery request
      * and its execution
-     * @dev no need for explicit check `length == 0` as it is covered by `recoveryThreshold > length` and 
+     * @dev no need for explicit check `length == 0` as it is covered by `recoveryThreshold > length` and
      * `recoveryThreshold == 0` cheks. So length can never be 0 while recoveryThreshold is not 0
      */
     function initForSmartAccount(
@@ -116,10 +119,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             revert AlreadyInitedForSmartAccount(msg.sender);
         if (recoveryThreshold > length)
             revert ThresholdTooHigh(recoveryThreshold, length);
-        if (recoveryThreshold == 0) 
-            revert ZeroThreshold();
-        if (length != timeFrames.length)
-            revert InvalidAmountOfGuardianParams();
+        if (recoveryThreshold == 0) revert ZeroThreshold();
+        if (length != timeFrames.length) revert InvalidAmountOfGuardianParams();
         _smartAccountSettings[msg.sender] = SaSettings(
             uint8(length),
             recoveryThreshold,
@@ -211,7 +212,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
                 .toEthSignedMessageHash()
                 .recover(currentGuardian);
 
-            if(currentUserOpSignerAddress != currentGuardianAddress) {
+            if (currentUserOpSignerAddress != currentGuardianAddress) {
                 return SIG_VALIDATION_FAILED;
             }
 
@@ -275,12 +276,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
                 (uint256(earliestValidUntil) << 160) |
                 (uint256(latestValidAfter) << (160 + 48));
         } else {
-            // a) if both conditions are true, it makes no sense, as with the 0 delay, there's no need to submit a 
+            // a) if both conditions are true, it makes no sense, as with the 0 delay, there's no need to submit a
             // request, as request can be immediately executed in the execution phase of userOp handling
-            // b) if non of the conditions are met, this means userOp is not for submitting a new request which is 
+            // b) if non of the conditions are met, this means userOp is not for submitting a new request which is
             // only allowed with when the securityDelay is non 0
             // not using custom error here because of how EntryPoint handles the revert data for the validation failure
-            revert("Acc Recovery: Wrong userOp");  
+            revert("Acc Recovery: Wrong userOp");
         }
     }
 
@@ -450,8 +451,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         if (
             _smartAccountRequests[msg.sender].callDataHash ==
             keccak256(recoveryCallData)
-        ) revert RecoveryRequestAlreadyExists(msg.sender, keccak256(recoveryCallData));
-        
+        )
+            revert RecoveryRequestAlreadyExists(
+                msg.sender,
+                keccak256(recoveryCallData)
+            );
+
         _smartAccountRequests[msg.sender] = RecoveryRequest(
             keccak256(recoveryCallData),
             uint48(block.timestamp)
