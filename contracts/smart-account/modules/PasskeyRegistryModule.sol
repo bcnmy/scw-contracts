@@ -5,6 +5,7 @@ import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {Secp256r1, PassKeyId} from "./PasskeyValidationModules/Secp256r1.sol";
+import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 
 /**
  * @title Passkey ownership Authorization module for Biconomy Smart Accounts.

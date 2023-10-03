@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 import {BaseAuthorizationModule, ISignatureValidator} from "./BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 
 /**
  * @title Smart Contract Ownership Authorization module for Biconomy Smart Accounts.

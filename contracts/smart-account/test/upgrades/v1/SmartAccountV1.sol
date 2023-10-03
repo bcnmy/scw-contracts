@@ -14,6 +14,7 @@ import {ReentrancyGuard} from "../../../common/ReentrancyGuard.sol";
 import {SmartAccountErrorsV1} from "./ErrorsV1.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IModule} from "./IModuleV1.sol";
+import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.

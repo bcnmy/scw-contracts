@@ -8,7 +8,6 @@ import {IERC721Receiver} from "@openzeppelin/contracts/token/ERC721/IERC721Recei
 import {IERC777Recipient} from "@openzeppelin/contracts/token/ERC777/IERC777Recipient.sol";
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 
-
 /** @title Default Callback Handler - returns true for known token callbacks
  *   @dev Handles EIP-1271 compliant isValidSignature requests.
  *  @notice inspired by Richard Meissner's <richard@gnosis.pm> implementation
