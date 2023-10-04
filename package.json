@@ -17,7 +17,7 @@
     "lint:sol-fix": "npx prettier 'contracts/**/*.sol' --write && npx solhint 'contracts/**/*.sol' --fix",
     "lint": "npm run lint:ts && npm run lint:sol",
     "lint:fix": "npm run lint:ts-fix && npm run lint:sol-fix",
-    "_postinstall": "husky install",
+    "postinstall": "husky install",
     "prepack": "pinst --disable && ./scripts/prepack-contracts.sh",
     "postpack": "pinst --enable && ./scripts/postpack-contracts.sh",
     "coverage": "COVERAGE=1 DISABLE_VIA_IR=true hardhat coverage",
