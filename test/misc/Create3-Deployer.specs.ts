@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { Deployer, Deployer__factory } from "../../typechain";
+import { Deployer, Deployer__factory } from "../../typechain-types";
 
 import { DEPLOYMENT_SALTS_DEV, isContract } from "../../scripts/utils";
 

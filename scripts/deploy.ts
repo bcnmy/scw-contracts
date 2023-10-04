@@ -22,7 +22,7 @@ import {
   SmartAccount__factory,
   SmartContractOwnershipRegistryModule__factory,
   VerifyingSingletonPaymaster__factory,
-} from "../typechain";
+} from "../typechain-types";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
 

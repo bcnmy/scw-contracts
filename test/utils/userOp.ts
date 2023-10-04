@@ -20,7 +20,7 @@ import {
   toRpcSig,
   keccak256 as keccak256Buffer,
 } from "ethereumjs-util";
-import { EntryPoint } from "../../typechain";
+import { EntryPoint } from "../../typechain-types";
 import { UserOperation } from "./userOperation";
 import { Create2Factory } from "../../src/Create2Factory";
 import { MerkleTree } from "merkletreejs";
