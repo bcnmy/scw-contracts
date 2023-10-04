@@ -186,7 +186,7 @@ export async function makeEcdsaSessionKeySignedUserOpSqrtTree(
       "uint48",
       "address",
       "bytes",
-      "tuple(bytes32[],bytes32[],uint128,uint128)",
+      "tuple(bytes32[],bytes32[],uint256,uint256)",
       "bytes",
     ],
     [

@@ -9,6 +9,7 @@ import {ISessionValidationModule} from "./interfaces/ISessionValidationModule.so
 import {ISessionKeyManagerModule} from "./interfaces/ISessionKeyManagerModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
+import "hardhat/console.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -43,6 +44,7 @@ contract SessionKeyManager is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256) {
+        uint256 gas = gasleft();
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -67,6 +69,8 @@ contract SessionKeyManager is
             sessionKeyData,
             merkleProof
         );
+
+        console.log("validateUserOp gas used: %s", gas - gasleft());
 
         return
             _packValidationData(
@@ -99,6 +103,7 @@ contract SessionKeyManager is
         bytes memory sessionKeyData,
         bytes32[] memory merkleProof
     ) public virtual override {
+        uint256 gas = gasleft();
         SessionStorage storage sessionKeyStorage = _getSessionData(
             smartAccount
         );
@@ -115,6 +120,7 @@ contract SessionKeyManager is
         ) {
             revert("SessionNotApproved");
         }
+        console.log("validateSessionKey gas used: %s", gas - gasleft());
     }
 
     /// @inheritdoc ISignatureValidator

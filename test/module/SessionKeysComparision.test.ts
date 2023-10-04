@@ -5,6 +5,7 @@ import {
   getERC20SessionKeyParams,
   enableNewSqrtTreeForSmartAccountViaEcdsa,
   makeEcdsaSessionKeySignedUserOpSqrtTree,
+  addLeavesForSmartAccountViaEcdsa,
 } from "../utils/sessionKey";
 import { ethers, deployments } from "hardhat";
 import { makeEcdsaModuleUserOp } from "../utils/userOp";
@@ -219,17 +220,30 @@ describe("Session Key Comparision Tests", async () => {
   };
 
   it("Merkle Tree Session Key Manager Module - Should be able to process Session Key signed userOp", async () => {
-    const {
+    let {
       entryPoint,
       userSA,
       sessionKeyManager,
       erc20SessionModule,
+      ecdsaModule,
       sessionKeyData,
       leafData,
       merkleTree,
       mockToken,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+
+    for (let i = 0; i < 10; i++) {
+      merkleTree = await addLeavesForSmartAccountViaEcdsa(
+        merkleTree,
+        [ethers.utils.keccak256(leafData)],
+        sessionKeyManager,
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+    }
 
     const transferUserOp = await makeErc20TransferUserOp(
       mockToken.address,

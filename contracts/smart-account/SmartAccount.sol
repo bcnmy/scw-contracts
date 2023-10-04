@@ -13,6 +13,7 @@ import {ISmartAccount} from "./interfaces/ISmartAccount.sol";
 import {IBaseSmartAccount} from "./interfaces/IBaseSmartAccount.sol";
 import {IModuleManager} from "./interfaces/IModuleManager.sol";
 import {IFallbackManager} from "./interfaces/IFallbackManager.sol";
+import "hardhat/console.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -214,8 +215,10 @@ contract SmartAccount is
         uint256 value,
         bytes calldata func
     ) public override {
+        uint256 gas = gasleft();
         _requireFromEntryPoint();
         _call(dest, value, func);
+        console.log("execute_ncC gas used: %s", gas - gasleft());
     }
 
     /// @inheritdoc ISmartAccount
