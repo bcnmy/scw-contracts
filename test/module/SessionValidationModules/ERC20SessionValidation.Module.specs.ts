@@ -727,33 +727,27 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
   });
 
   describe("validateSessionParams(): ", async () => {
-    it ("Should be able to validate valid session params and return the session key address", async () => {
-      const {
-        erc20SessionModule,
-        sessionKeyData,
-        mockToken,
-        sessionKey,
-      } = await setupTests();
+    it("Should be able to validate valid session params and return the session key address", async () => {
+      const { erc20SessionModule, sessionKeyData, mockToken, sessionKey } =
+        await setupTests();
 
       const funcCallData = encodeTransfer(charlie.address, "1");
       const destContract = mockToken.address;
       const callValue = ethers.utils.parseEther("0");
 
-      const returnedSessionKey = await erc20SessionModule.callStatic.validateSessionParams(
-        destContract,
-        callValue,
-        funcCallData,
-        sessionKeyData,
-        "0x"
-      );
+      const returnedSessionKey =
+        await erc20SessionModule.callStatic.validateSessionParams(
+          destContract,
+          callValue,
+          funcCallData,
+          sessionKeyData,
+          "0x"
+        );
       expect(returnedSessionKey).to.equal(sessionKey.address);
     });
 
     it("should revert when userOp is for an invalid token", async () => {
-      const {
-        erc20SessionModule,
-        sessionKeyData,
-      } = await setupTests();
+      const { erc20SessionModule, sessionKeyData } = await setupTests();
 
       const funcCallData = encodeTransfer(charlie.address, "1");
       const wrongDestContract = bob.address;
@@ -771,11 +765,8 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     });
 
     it("should revert if userOp calldata involves sending value", async () => {
-      const {
-        erc20SessionModule,
-        sessionKeyData,
-        mockToken
-      } = await setupTests();
+      const { erc20SessionModule, sessionKeyData, mockToken } =
+        await setupTests();
 
       const funcCallData = encodeTransfer(charlie.address, "1");
       const destContract = mockToken.address;
@@ -793,13 +784,10 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     });
 
     it("should revert if transfer is to wrong recipient", async () => {
-      const {
-        erc20SessionModule,
-        sessionKeyData,
-        mockToken
-      } = await setupTests();
+      const { erc20SessionModule, sessionKeyData, mockToken } =
+        await setupTests();
 
-      const funcCallData = encodeTransfer(bob.address, "1"); //wrong recepient
+      const funcCallData = encodeTransfer(bob.address, "1"); // wrong recepient
       const destContract = mockToken.address;
       const callValue = ethers.utils.parseEther("0");
 
@@ -815,14 +803,14 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     });
 
     it("should revert if transfer of amount is too high", async () => {
-      const {
-        erc20SessionModule,
-        sessionKeyData,
-        mockToken
-      } = await setupTests();
+      const { erc20SessionModule, sessionKeyData, mockToken } =
+        await setupTests();
 
       const tooBigTransferAmount = ethers.utils.parseEther("101").toString(); // maxAmount is 100
-      const funcCallData = encodeTransfer(charlie.address, tooBigTransferAmount); 
+      const funcCallData = encodeTransfer(
+        charlie.address,
+        tooBigTransferAmount
+      );
       const destContract = mockToken.address;
       const callValue = ethers.utils.parseEther("0");
 
@@ -837,5 +825,4 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       ).to.be.revertedWith("ERC20SV Max Amount Exceeded");
     });
   });
-
 });
