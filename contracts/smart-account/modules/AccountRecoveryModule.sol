@@ -10,7 +10,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @dev Compatible with Biconomy Modular Interface v 0.1
  *         - It allows to _______________
  *         - ECDSA guardians only
- *         - For security reasons, we store hashes of the addresses of guardians, not the addresses themselves
+ *         - For security reasons guardian address is not stored,
+ *           instead its signature over CONTROL_HASH is used as 
  *
  *
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
@@ -42,11 +43,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     bytes32 public constant CONTROL_HASH =
         keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"));
 
-    // guardian (signature over CONTROL_HASH) => (smartAccount => TimeFrame)
+    // guardianID => (smartAccount => TimeFrame)
+    // guardianID = keccak256(signature over CONTROL_HASH)
     // complies with associated storage rules
     // see https://eips.ethereum.org/EIPS/eip-4337#storage-associated-with-an-address
     // see https://docs.soliditylang.org/en/v0.8.15/internals/layout_in_storage.html#mappings-and-dynamic-arrays
-    mapping(bytes => mapping(address => TimeFrame)) internal _guardians;
+    mapping(bytes32 => mapping(address => TimeFrame)) internal _guardians;
 
     mapping(address => SaSettings) internal _smartAccountSettings;
 
@@ -61,13 +63,13 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     event RecoveryRequestRenounced(address indexed smartAccount);
     event GuardianAdded(
         address indexed smartAccount,
-        bytes guardian,
+        bytes32 guardian,
         TimeFrame timeFrame
     );
-    event GuardianRemoved(address indexed smartAccount, bytes guardian);
+    event GuardianRemoved(address indexed smartAccount, bytes32 guardian);
     event GuardianChanged(
         address indexed smartAccount,
-        bytes guardian,
+        bytes32 guardian,
         TimeFrame timeFrame
     );
     event ThresholdChanged(address indexed smartAccount, uint8 threshold);
@@ -83,13 +85,13 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     error ZeroGuardian();
     error InvalidTimeFrame(uint48 validUntil, uint48 validAfter);
     error ExpiredValidUntil(uint48 validUntil);
-    error GuardianAlreadySet(bytes guardian, address smartAccount);
+    error GuardianAlreadySet(bytes32 guardian, address smartAccount);
 
     error ThresholdTooHigh(uint8 threshold, uint256 guardiansExist);
     error ZeroThreshold();
     error InvalidAmountOfGuardianParams();
     error GuardiansAreIdentical();
-    error LastGuardianRemovalAttempt(bytes lastGuardian);
+    error LastGuardianRemovalAttempt(bytes32 lastGuardian);
 
     error EmptyRecoveryCallData();
     error RecoveryRequestAlreadyExists(
@@ -109,7 +111,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * `recoveryThreshold == 0` cheks. So length can never be 0 while recoveryThreshold is not 0
      */
     function initForSmartAccount(
-        bytes[] memory guardians,
+        bytes32[] memory guardians,
         TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
         uint48 securityDelay
@@ -127,7 +129,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             securityDelay
         );
         for (uint256 i; i < length; ) {
-            if (guardians[i].length == 0) revert ZeroGuardian();
+            if (guardians[i] == bytes32(0)) revert ZeroGuardian();
             if (timeFrames[i].validUntil == 0)
                 timeFrames[i].validUntil = type(uint48).max;
             if (timeFrames[i].validUntil < timeFrames[i].validAfter)
@@ -191,7 +193,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
 
         address lastGuardianAddress;
         address currentGuardianAddress;
-        bytes memory currentGuardian;
+        bytes memory currentGuardianSig;
         uint48 validAfter;
         uint48 validUntil;
         uint48 latestValidAfter;
@@ -204,20 +206,20 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
                     userOp.signature[96 + 2 * i * 65:96 + (2 * i + 1) * 65]
                 );
 
-            currentGuardian = userOp.signature[96 + (2 * i + 1) * 65:96 +
+            currentGuardianSig = userOp.signature[96 + (2 * i + 1) * 65:96 +
                 (2 * i + 2) *
                 65];
 
             currentGuardianAddress = CONTROL_HASH
                 .toEthSignedMessageHash()
-                .recover(currentGuardian);
+                .recover(currentGuardianSig);
 
             if (currentUserOpSignerAddress != currentGuardianAddress) {
                 return SIG_VALIDATION_FAILED;
             }
 
-            validAfter = _guardians[currentGuardian][userOp.sender].validAfter;
-            validUntil = _guardians[currentGuardian][userOp.sender].validUntil;
+            validAfter = _guardians[keccak256(currentGuardianSig)][userOp.sender].validAfter;
+            validUntil = _guardians[keccak256(currentGuardianSig)][userOp.sender].validUntil;
 
             // 0,0 means the `currentGuardian` has not been set as guardian for the userOp.sender smartAccount
             if (validUntil == 0 && validAfter == 0) {
@@ -295,11 +297,11 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     // as for security reasons new guardian is only active after securityDelay
 
     function addGuardian(
-        bytes calldata guardian,
+        bytes32 guardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian.length == 0) revert ZeroGuardian();
+        if (guardian == bytes32(0)) revert ZeroGuardian();
         if (_guardians[guardian][msg.sender].validUntil != 0)
             revert GuardianAlreadySet(guardian, msg.sender);
 
@@ -328,15 +330,15 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     // natspec
     // same as adding guardian, but also makes the old one active only until the new one is active
     function replaceGuardian(
-        bytes calldata guardian,
-        bytes calldata newGuardian,
+        bytes32 guardian,
+        bytes32 newGuardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (keccak256(guardian) == keccak256(newGuardian))
+        if (guardian == newGuardian)
             revert GuardiansAreIdentical();
-        if (guardian.length == 0) revert ZeroGuardian();
-        if (newGuardian.length == 0) revert ZeroGuardian();
+        if (guardian == bytes32(0)) revert ZeroGuardian();
+        if (newGuardian == bytes32(0)) revert ZeroGuardian();
 
         if (validUntil == 0) validUntil = type(uint48).max;
         uint48 minimalSecureValidAfter = uint48(
@@ -376,7 +378,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     }
 
     // natspec
-    function removeGuardian(bytes calldata guardian) external {
+    function removeGuardian(bytes32 guardian) external {
         delete _guardians[guardian][msg.sender];
         --_smartAccountSettings[msg.sender].guardiansCount;
         if (_smartAccountSettings[msg.sender].guardiansCount == 0)
@@ -397,7 +399,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
 
     // change timeframe
     function changeGuardianParams(
-        bytes calldata guardian,
+        bytes32 guardian,
         TimeFrame memory newTimeFrame
     ) external {
         if (newTimeFrame.validUntil == 0)
@@ -427,7 +429,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     }
 
     function getGuardianParams(
-        bytes calldata guardian,
+        bytes32 guardian,
         address smartAccount
     ) external view returns (TimeFrame memory) {
         return _guardians[guardian][smartAccount];

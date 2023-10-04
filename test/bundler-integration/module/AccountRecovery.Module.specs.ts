@@ -106,7 +106,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
         await ethers.getContractFactory("AccountRecoveryModule")
       ).deploy();
 
-      const defaultSecurityDelay = 150;
+      const defaultSecurityDelay = 15;
 
       const messageHash = ethers.utils.id(controlMessage);
       const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
@@ -114,7 +114,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
       const guardians = await Promise.all(
         [alice, bob, charlie].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
@@ -167,6 +167,10 @@ describe("Account Recovery Module (via Bundler)", async () => {
       };
     }
   );
+
+  const delay = async function(ms: number) : Promise<void> {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+  }
 
   it("Can submit a recovery request and execute it after a proper delay", async () => {
     const {
@@ -237,6 +241,14 @@ describe("Account Recovery Module (via Bundler)", async () => {
       smartAccountOwner.address
     );
 
+    // THIS IS NOT POSSIBLE YET
+    // await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
+    // await ethers.provider.send("evm_mine", []);
+
+    // USING THIS HACK INSTEAD
+    console.log("Waiting for the security delay of %i seconds to pass...", defaultSecurityDelay + 1);
+    await delay((defaultSecurityDelay + 1) * 1000);
+
     // can be non signed at all, just needs to be executed after the delay
     const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
       "execute",
@@ -255,9 +267,6 @@ describe("Account Recovery Module (via Bundler)", async () => {
       }
     );
 
-    // await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
-    // await ethers.provider.send("evm_mine", []);
-
     await environment.sendUserOperation(
       executeRecoveryRequestUserOp,
       entryPoint.address
@@ -269,5 +278,6 @@ describe("Account Recovery Module (via Bundler)", async () => {
     expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(
       smartAccountOwner.address
     );
+  
   });
 });

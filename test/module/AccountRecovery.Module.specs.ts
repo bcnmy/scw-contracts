@@ -81,7 +81,7 @@ describe("Account Recovery Module: ", async () => {
       const guardians = await Promise.all(
         [alice, bob, charlie].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
@@ -298,7 +298,7 @@ describe("Account Recovery Module: ", async () => {
       const guardians = await Promise.all(
         [bob, eve, fox].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
@@ -385,7 +385,7 @@ describe("Account Recovery Module: ", async () => {
       const guardians = await Promise.all(
         [bob, eve, fox].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
@@ -450,7 +450,7 @@ describe("Account Recovery Module: ", async () => {
       const guardians = await Promise.all(
         [bob, eve, fox].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
@@ -512,7 +512,7 @@ describe("Account Recovery Module: ", async () => {
       const guardians = await Promise.all(
         [bob, eve, fox].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
@@ -605,11 +605,14 @@ describe("Account Recovery Module: ", async () => {
       const guardians = await Promise.all(
         [bob, eve].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
-      const emptyGuardian = "0x";
+      // emptyGuardian is bytes32 of zeros
+      const emptyGuardian = ethers.utils.hexlify(
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32)
+      );
       guardians.push(emptyGuardian);
 
       const bobTimeFrame = [16741936493, 1];
@@ -664,7 +667,7 @@ describe("Account Recovery Module: ", async () => {
       const guardians = await Promise.all(
         [bob, eve, fox].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
@@ -726,7 +729,7 @@ describe("Account Recovery Module: ", async () => {
       const guardians = await Promise.all(
         [bob, eve, fox].map(
           async (guardian): Promise<string> =>
-            await guardian.signMessage(messageHashBytes)
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
         )
       );
 
