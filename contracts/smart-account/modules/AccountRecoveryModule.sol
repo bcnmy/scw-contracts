@@ -428,6 +428,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         _smartAccountSettings[msg.sender].recoveryThreshold = newThreshold;
     }
 
+    function setSecurityDelay(uint48 newSecurityDelay) external {
+        _smartAccountSettings[msg.sender].securityDelay = newSecurityDelay;
+    }
+
     function getGuardianParams(
         bytes32 guardian,
         address smartAccount

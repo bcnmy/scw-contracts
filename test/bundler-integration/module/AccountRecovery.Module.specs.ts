@@ -145,6 +145,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
         }
       );
 
+      // initForSmartAccount userOp goes thru bundler as well
       await environment.sendUserOperation(
         setupAndEnableUserOp,
         entryPoint.address
@@ -226,6 +227,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
       }
     );
 
+    // submit recovery request goes thru bundler
     await environment.sendUserOperation(
       submitRequestUserOp,
       entryPoint.address
@@ -267,6 +269,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
       }
     );
 
+    // execute recovery request goes thru bundler
     await environment.sendUserOperation(
       executeRecoveryRequestUserOp,
       entryPoint.address
