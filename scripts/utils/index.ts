@@ -12,7 +12,7 @@ import {
 } from "ethers/lib/utils";
 // eslint-disable-next-line node/no-extraneous-import
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
-import { Deployer, Deployer__factory } from "../../typechain";
+import { Deployer, Deployer__factory } from "../../typechain-types";
 
 // { FACTORY_ADDRESS  } is deployed from chirag's private key for nonce 0
 export const FACTORY_ADDRESS = "0x757056493cd5E44e4cFe2719aE05FbcfC1178087";

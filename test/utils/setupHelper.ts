@@ -1,6 +1,6 @@
 import hre, { deployments, ethers } from "hardhat";
 import { Wallet, Contract, BytesLike } from "ethers";
-import { EntryPoint__factory } from "../../typechain";
+import { EntryPoint__factory } from "../../typechain-types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import solc from "solc";
 

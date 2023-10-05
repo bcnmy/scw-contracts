@@ -4,15 +4,22 @@ node_modules
 .idea
 coverage
 coverage.json
-typechain
+types/
+dist/
 
 #Hardhat files
 cache
 artifacts
+artifacts-filtered
+typechain
+typechain-types
+
 
 #ignore .DS_Store recursively
 .DS_Store
 
 deployments/localhost
+
+typings
 forge-cache
 out

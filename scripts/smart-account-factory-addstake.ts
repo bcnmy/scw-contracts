@@ -1,5 +1,5 @@
 import { ethers } from "hardhat";
-import { SmartAccountFactory__factory } from "../typechain";
+import { SmartAccountFactory__factory } from "../typechain-types";
 import { factoryStakeConfig, isContract } from "./utils";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther } from "ethers/lib/utils";

@@ -12,7 +12,7 @@ import {
   ERC1967Proxy__factory,
   SimpleAccount,
   SimpleAccount__factory,
-} from "../typechain";
+} from "../typechain-types";
 import { BytesLike, hexValue } from "@ethersproject/bytes";
 import { TransactionResponse } from "@ethersproject/abstract-provider";
 import { fillAndSign, getUserOpHash } from "../test/UserOp";
