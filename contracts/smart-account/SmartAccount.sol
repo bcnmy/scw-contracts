@@ -11,8 +11,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IAuthorizationModule} from "./interfaces/IAuthorizationModule.sol";
 import {ISmartAccount} from "./interfaces/ISmartAccount.sol";
 import {IBaseSmartAccount} from "./interfaces/IBaseSmartAccount.sol";
-import {IModuleManager} from "./interfaces/IModuleManager.sol";
-import {IFallbackManager} from "./interfaces/IFallbackManager.sol";
+import {IModuleManager} from "./interfaces/base/IModuleManager.sol";
+import {IFallbackManager} from "./interfaces/base/IFallbackManager.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.

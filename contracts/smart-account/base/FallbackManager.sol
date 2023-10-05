@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {SelfAuthorized} from "../common/SelfAuthorized.sol";
-import {IFallbackManager} from "../interfaces/IFallbackManager.sol";
+import {IFallbackManager} from "../interfaces/base/IFallbackManager.sol";
 
 /**
  *   @title Fallback Manager - A contract that manages fallback calls made to the Smart Account

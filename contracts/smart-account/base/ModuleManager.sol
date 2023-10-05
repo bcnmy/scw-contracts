@@ -3,7 +3,7 @@ pragma solidity 0.8.17;
 
 import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 import {Executor, Enum} from "./Executor.sol";
-import {IModuleManager} from "../interfaces/IModuleManager.sol";
+import {IModuleManager} from "../interfaces/base/IModuleManager.sol";
 
 /**
  * @title Module Manager - A contract that manages modules that can execute transactions

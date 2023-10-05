@@ -5,8 +5,8 @@ import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {ISessionValidationModule} from "./interfaces/ISessionValidationModule.sol";
-import {ISessionKeyManagerModule} from "./interfaces/ISessionKeyManagerModule.sol";
+import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
+import {ISessionKeyManagerModule} from "../interfaces/modules/ISessionKeyManagerModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 

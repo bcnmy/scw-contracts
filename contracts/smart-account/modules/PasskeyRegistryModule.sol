@@ -6,7 +6,7 @@ import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOpera
 import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
 import {Secp256r1, PassKeyId} from "./PasskeyValidationModules/Secp256r1.sol";
 import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
-import {IPasskeyRegistryModule} from "./interfaces/IPasskeyRegistryModule.sol";
+import {IPasskeyRegistryModule} from "../interfaces/modules/IPasskeyRegistryModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 

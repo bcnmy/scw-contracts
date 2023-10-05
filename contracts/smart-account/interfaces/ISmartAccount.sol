@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {IBaseSmartAccount} from "./IBaseSmartAccount.sol";
-import {IModuleManager} from "./IModuleManager.sol";
+import {IModuleManager} from "./base/IModuleManager.sol";
 
 /* solhint-disable func-name-mixedcase */
 

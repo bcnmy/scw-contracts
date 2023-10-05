@@ -5,7 +5,7 @@ import "../Proxy.sol";
 import "../BaseSmartAccount.sol";
 import {DefaultCallbackHandler} from "../handler/DefaultCallbackHandler.sol";
 import {Stakeable} from "../common/Stakeable.sol";
-import {ISmartAccountFactory} from "../interfaces/ISmartAccountFactory.sol";
+import {ISmartAccountFactory} from "../interfaces/factory/ISmartAccountFactory.sol";
 
 /**
  * @title Smart Account Factory - factory responsible for deploying Smart Accounts using CREATE2 and CREATE

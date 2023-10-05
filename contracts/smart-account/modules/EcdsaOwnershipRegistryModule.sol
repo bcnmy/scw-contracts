@@ -7,7 +7,7 @@ import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IEcdsaOwnershipRegistryModule} from "./interfaces/IEcdsaOwnershipRegistryModule.sol";
+import {IEcdsaOwnershipRegistryModule} from "../interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 

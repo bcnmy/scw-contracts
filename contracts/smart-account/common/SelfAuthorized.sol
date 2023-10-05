@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.17;
 
-import {ISelfAuthorized} from "../interfaces/ISelfAuthorized.sol";
+import {ISelfAuthorized} from "../interfaces/common/ISelfAuthorized.sol";
 
 /// @title SelfAuthorized - authorizes current contract to perform actions
 contract SelfAuthorized is ISelfAuthorized {

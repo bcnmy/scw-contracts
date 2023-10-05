@@ -4,12 +4,12 @@ pragma solidity 0.8.17;
 /* solhint-disable function-max-lines,no-unused-import */
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
-import {ISessionValidationModule} from "./interfaces/ISessionValidationModule.sol";
-import {ISessionKeyManagerModule} from "./interfaces/ISessionKeyManagerModule.sol";
+import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
+import {ISessionKeyManagerModule} from "../interfaces/modules/ISessionKeyManagerModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {IBatchedSessionRouterModule} from "./interfaces/IBatchedSessionRouterModule.sol";
+import {IBatchedSessionRouterModule} from "../interfaces/modules/IBatchedSessionRouterModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 
