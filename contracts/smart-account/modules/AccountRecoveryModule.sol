@@ -11,7 +11,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  *         - It allows to _______________
  *         - ECDSA guardians only
  *         - For security reasons guardian address is not stored,
- *           instead its signature over CONTROL_HASH is used as 
+ *           instead its signature over CONTROL_HASH is used as
  *
  *
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
@@ -184,11 +184,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             .recoveryThreshold;
         if (requiredSignatures == 0)
             revert ThresholdNotSetForSmartAccount(userOp.sender);
+
         (bytes memory signatures, ) = abi.decode(
             userOp.signature,
             (bytes, address)
         );
-        if (signatures.length < requiredSignatures * 65)
+        if (signatures.length < requiredSignatures * 2*65)
             revert InvalidSignaturesLength();
 
         address lastGuardianAddress;
@@ -218,8 +219,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
                 return SIG_VALIDATION_FAILED;
             }
 
-            validAfter = _guardians[keccak256(currentGuardianSig)][userOp.sender].validAfter;
-            validUntil = _guardians[keccak256(currentGuardianSig)][userOp.sender].validUntil;
+            validAfter = _guardians[keccak256(currentGuardianSig)][
+                userOp.sender
+            ].validAfter;
+            validUntil = _guardians[keccak256(currentGuardianSig)][
+                userOp.sender
+            ].validUntil;
 
             // 0,0 means the `currentGuardian` has not been set as guardian for the userOp.sender smartAccount
             if (validUntil == 0 && validAfter == 0) {
@@ -335,8 +340,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        if (guardian == newGuardian)
-            revert GuardiansAreIdentical();
+        if (guardian == newGuardian) revert GuardiansAreIdentical();
         if (guardian == bytes32(0)) revert ZeroGuardian();
         if (newGuardian == bytes32(0)) revert ZeroGuardian();
 
