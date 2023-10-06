@@ -1035,7 +1035,7 @@ describe("SessionKey: Batched Session Router", async () => {
       expect(returnedSigValidationFailed).to.equal(0);
     });
 
-    it("Should return SIG_VALIDATION_FAILED if the userOp was signed with a proper session key", async () => {
+    it("Should return SIG_VALIDATION_FAILED if the userOp was not signed with the proper session key", async () => {
       const {
         entryPoint,
         userSA,
