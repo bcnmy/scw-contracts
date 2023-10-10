@@ -5,6 +5,8 @@ import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Account Recovery module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
@@ -169,20 +171,21 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             keccak256(userOp.callData) ==
             _smartAccountRequests[msg.sender].callDataHash
         ) {
+            uint48 reqValidAfter = _smartAccountRequests[msg.sender]
+                .requestTimestamp +
+                _smartAccountSettings[msg.sender].securityDelay;
             delete _smartAccountRequests[msg.sender];
             return
                 VALIDATION_SUCCESS |
                 (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
-                (uint256(_smartAccountRequests[msg.sender]
-                .requestTimestamp +
-                _smartAccountSettings[msg.sender].securityDelay) << (160 + 48));
+                (uint256(reqValidAfter) << (160 + 48));
         }
 
         // otherwise we need to check all the signatures first
         uint256 requiredSignatures = _smartAccountSettings[userOp.sender]
             .recoveryThreshold;
         if (requiredSignatures == 0)
-            revert ThresholdNotSetForSmartAccount(userOp.sender);
+            revert("AccRecovery: Threshold not set");
 
         (bytes memory signatures, ) = abi.decode(
             userOp.signature,

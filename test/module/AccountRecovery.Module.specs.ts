@@ -1,6 +1,5 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { encodeTransfer } from "../utils/testUtils";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -19,7 +18,7 @@ import {
   makeMultiSignedUserOpWithGuardiansList,
   makeMultisignedSubmitRecoveryRequestUserOp,
 } from "../utils/accountRecovery";
-import { defaultAbiCoder, keccak256 } from "ethers/lib/utils";
+import { arrayify } from "ethers/lib/utils";
 
 describe("Account Recovery Module: ", async () => {
   const [
@@ -88,6 +87,8 @@ describe("Account Recovery Module: ", async () => {
         )
       );
 
+      const closestValidUntil = 1760095431;
+
       // enable and setup Social Recovery Module
       const socialRecoverySetupData =
         accountRecoveryModule.interface.encodeFunctionData(
@@ -95,7 +96,7 @@ describe("Account Recovery Module: ", async () => {
           [
             guardians,
             [
-              [16741936496, 0],
+              [closestValidUntil, 0], //2025
               [16741936496, 0],
               [16741936496, 0],
             ],
@@ -135,6 +136,9 @@ describe("Account Recovery Module: ", async () => {
       });
       await mockToken.mint(aliceSA.address, ethers.utils.parseEther("1000000"));
 
+      const arrayOfSigners = [alice, bob, charlie];
+      arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
+
       return {
         entryPoint: entryPoint,
         smartAccountImplementation: await getSmartAccountImplementation(),
@@ -151,6 +155,9 @@ describe("Account Recovery Module: ", async () => {
         defaultSecurityDelay: defaultSecurityDelay,
         controlMessage: controlMessage,
         chainId: chainId,
+        closestValidUntil: closestValidUntil,
+        guardians: guardians,
+        arrayOfSigners: arrayOfSigners,
       };
     }
   );
@@ -680,7 +687,6 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         userSA,
-        controlMessage,
       } = await setupTests();
 
       const recoveryRequestCallData = ecdsaModule.interface.encodeFunctionData(
@@ -820,21 +826,61 @@ describe("Account Recovery Module: ", async () => {
   });
 
   describe("Validation Flow", async () => {
-    
-    /*
     it("Should revert validating the execute-request userOp if the delay has not passed yet", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        arrayOfSigners
+      } = await setupTests();
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
+
+      const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
+        gasLimit: 10000000,
+      });
+      await handleOpsTxn.wait();
+
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
+        smartAccountOwner.address
+      );
+
+      // can be non signed at all, just needs to be executed after the delay
+      const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
+        "execute",
+        [
+          ecdsaModule.address,
+          ethers.utils.parseEther("0"),
+          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+            newOwner.address,
+          ]),
+        ],
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
 
       // can not execute request before the delay passes
-    await expect(
-      entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
-        gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA22 expired or not due");
-
+      await expect(
+        entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA22 expired or not due");
     });
-    */
+    
 
     it("Can submit a recovery request and execute it after a proper delay (no bundler)", async () => {
       const {
@@ -844,10 +890,8 @@ describe("Account Recovery Module: ", async () => {
         ecdsaModule,
         defaultSecurityDelay,
         controlMessage,
+        arrayOfSigners
       } = await setupTests();
-
-      const arrayOfSigners = [alice, bob, charlie];
-      arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
 
       expect(
         await userSA.isModuleEnabled(accountRecoveryModule.address)
@@ -858,7 +902,7 @@ describe("Account Recovery Module: ", async () => {
         [newOwner.address],
         ecdsaModule,
         userSA.address,
-        [charlie, alice, bob],
+        arrayOfSigners,
         controlMessage,
         entryPoint,
         accountRecoveryModule
@@ -917,6 +961,7 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         controlMessage,
+        arrayOfSigners
       } = await setupTests();
 
       const recoveryRequestCallData = userSA.interface.encodeFunctionData(
@@ -941,7 +986,7 @@ describe("Account Recovery Module: ", async () => {
           ),
         ],
         userSA.address,
-        [charlie, alice, bob], // order is important
+        arrayOfSigners, // order is important
         controlMessage,
         entryPoint,
         accountRecoveryModule.address
@@ -967,6 +1012,7 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         controlMessage,
+        arrayOfSigners
       } = await setupTests();
 
       const changeSecurityDelayData =
@@ -1011,7 +1057,7 @@ describe("Account Recovery Module: ", async () => {
           ]),
         ],
         userSA.address,
-        [charlie, alice, bob], // order is important
+        arrayOfSigners, // order is important
         controlMessage,
         entryPoint,
         accountRecoveryModule.address
@@ -1056,7 +1102,7 @@ describe("Account Recovery Module: ", async () => {
         [newOwner.address],
         ecdsaModule,
         userSA.address,
-        [charlie, alice, bob],
+        arrayOfSigners,
         controlMessage,
         entryPoint,
         accountRecoveryModule
@@ -1135,6 +1181,7 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         controlMessage,
+        arrayOfSigners
       } = await setupTests();
 
       const changeSecurityDelayData =
@@ -1179,7 +1226,7 @@ describe("Account Recovery Module: ", async () => {
           ]),
         ],
         userSA.address,
-        [charlie, alice, bob], // order is important
+        arrayOfSigners, // order is important
         controlMessage,
         entryPoint,
         accountRecoveryModule.address
@@ -1210,6 +1257,7 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         controlMessage,
+        arrayOfSigners
       } = await setupTests();
 
       // the userOp.callData is not the submitRequest one
@@ -1223,7 +1271,7 @@ describe("Account Recovery Module: ", async () => {
           ]),
         ],
         userSA.address,
-        [charlie, alice, bob], // order is important
+        arrayOfSigners, // order is important
         controlMessage,
         entryPoint,
         accountRecoveryModule.address
@@ -1243,6 +1291,7 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         controlMessage,
+        arrayOfSigners
       } = await setupTests();
 
       const changeSecurityDelayData =
@@ -1281,7 +1330,7 @@ describe("Account Recovery Module: ", async () => {
         [newOwner.address],
         ecdsaModule,
         userSA.address,
-        [charlie, alice, bob],
+        arrayOfSigners,
         controlMessage,
         entryPoint,
         accountRecoveryModule
@@ -1301,6 +1350,7 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         controlMessage,
+        arrayOfSigners
       } = await setupTests();
 
       const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
@@ -1308,7 +1358,7 @@ describe("Account Recovery Module: ", async () => {
         [newOwner.address],
         ecdsaModule,
         userSA.address,
-        [charlie, alice, bob],
+        arrayOfSigners,
         controlMessage,
         entryPoint,
         accountRecoveryModule
@@ -1339,11 +1389,272 @@ describe("Account Recovery Module: ", async () => {
         .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
     });
 
-    // reverts if threshold has been somehow set to 0 or not set at all
+    it("Should revert if the recovery threshold is 0", async () => {
+      const {
+        entryPoint,
+        accountRecoveryModule,
+        ecdsaModule,
+        aliceSA,
+        controlMessage,
+        arrayOfSigners
+      } = await setupTests();
 
-    // revert if trying to submit the unsigned request ('signature' is empty)
+      const enableUserOp = await makeEcdsaModuleUserOp(
+        "enableModule",
+        [accountRecoveryModule.address],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      await entryPoint.handleOps(
+        [enableUserOp],
+        refundReceiver.address
+      );
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        aliceSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], refundReceiver.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: AccRecovery: Threshold not set");
+    });
+
+
+    it("Should revert if trying to submit the unsigned request ('signature' is empty)", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+      } = await setupTests();
+
+      const userOp = await makeUnsignedUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData(
+            "submitRecoveryRequest",
+            [
+              ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+                newOwner.address,
+              ]),
+            ]
+          ),
+        ],
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], refundReceiver.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
+    });
 
     it("Should revert if there's not enough signatures", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        arrayOfSigners
+      } = await setupTests();
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address,
+        [charlie, alice],
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule,
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
+    });
+
+    it("Should revert if at least one guardian is expired", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        closestValidUntil,
+        arrayOfSigners
+      } = await setupTests();
+
+      //warp to the closest validUntil + some time
+      await ethers.provider.send("evm_setNextBlockTimestamp", [
+        closestValidUntil + 12,
+      ]);
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA22 expired or not due");
+    });
+
+    it("Should revert if at least one guardian is not yet active", async () => {
+
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        guardians,
+        arrayOfSigners
+      } = await setupTests();
+
+      // current timestamp
+      const currentTimestamp = (
+        await ethers.provider.getBlock("latest")
+      ).timestamp;
+
+      const changeGuardianUserOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData(
+            "changeGuardianParams",
+            [
+              guardians[0],
+              [17641936496, currentTimestamp + 1000],
+            ]
+          ),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      await entryPoint.handleOps([changeGuardianUserOp], alice.address);
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA22 expired or not due");
+    });
+
+    it("Should revert if expired and not yet active cases intersect", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        guardians, 
+        closestValidUntil,
+        arrayOfSigners
+      } = await setupTests();
+
+      // current timestamp
+      const currentTimestamp = (
+        await ethers.provider.getBlock("latest")
+      ).timestamp;
+
+      const changeGuardianUserOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData(
+            "changeGuardianParams",
+            [
+              guardians[1],
+              [17641936496, closestValidUntil + 1000], // validAfter for this guardian is after previous one expires
+            ]
+          ),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      await entryPoint.handleOps([changeGuardianUserOp], alice.address);
+
+      await ethers.provider.send("evm_setNextBlockTimestamp", [
+        closestValidUntil + 500,
+      ]);
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA22 expired or not due");
+
+    });
+
+    it("Should return SIG_VALIDATION_FAILED if at least one signature is invalid", async () => {
       const {
         entryPoint,
         userSA,
@@ -1356,32 +1667,92 @@ describe("Account Recovery Module: ", async () => {
         "transferOwnership",
         [newOwner.address],
         ecdsaModule,
-        userSA.address,
-        [charlie, alice],
+        userSA.address, 
+        [charlie, alice, eve], // eve is not a guardian
         controlMessage,
         entryPoint,
         accountRecoveryModule
       );
 
       await expect(
-        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
+        .withArgs(0, "AA24 signature error");
     });
-/*
 
-    it("Should revert if at least one guardian is expired", async () => {});
+    it("Should return SIG_VALIDATION_FAILED if userOp signer does not match guardian provided with the userOp", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        arrayOfSigners
+      } = await setupTests();
 
-    it("Should revert if at least one guardian is not yet active", async () => {});
+      const userOp = await makeUnsignedUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData(
+            "submitRecoveryRequest",
+            [
+              ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+                newOwner.address,
+              ]),
+            ]
+          ),
+        ],
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+    
+      const chainId = await entryPoint.provider!.getNetwork().then((net) => net.chainId);
+      const messageUserOp = arrayify(getUserOpHash(userOp, entryPoint!.address, chainId));
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash);
+      
+      let signatures = "0x";
 
-    it("Should revert if expired and not yet active cases  intersect", async () => {});
+      let wrongArrayOfSigners = arrayOfSigners;
+      expect(wrongArrayOfSigners[1]).to.not.equal(eve);
+      wrongArrayOfSigners[1] = eve;
 
-    it("Should revert if at least one signature is invalid", async () => {});
+      for (let i = 0; i < arrayOfSigners.length; i++) {
+        const sig = await arrayOfSigners[i].signMessage(messageUserOp);
+        const guardian = await wrongArrayOfSigners[i].signMessage(messageHashBytes); //so the signers for the userOpHash and controlMessage do not match
+        signatures = signatures + sig.slice(2) + guardian.slice(2);
+      }
+
+      // add validator module address to the signature
+      const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"],
+        [signatures, accountRecoveryModule.address]
+      );
+
+      userOp.signature = signatureWithModuleAddress;
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA24 signature error");
+    });
+
+    /*
 
     it("Should revert if the signature is for other module", async () => {});
 
     it("Should revert if guardians are not unique", async () => {});
+
+    it("Reverts if signatures are not sorted by the ascending signer's address", async () => {});
 
     it("Events are emitted properly", async () => {});
     */

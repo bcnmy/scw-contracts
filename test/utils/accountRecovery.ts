@@ -48,7 +48,7 @@ export async function makeMultiSignedUserOpWithGuardiansList(
   );
 
   const chainId = await provider!.getNetwork().then((net) => net.chainId);
-  const message = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
+  const messageUserOp = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
 
   const messageHash = ethers.utils.id(controlMessage);
   const messageHashBytes = ethers.utils.arrayify(messageHash);
@@ -57,7 +57,7 @@ export async function makeMultiSignedUserOpWithGuardiansList(
 
   for (let i = 0; i < userOpSigners.length; i++) {
     const signer = userOpSigners[i];
-    const sig = await signer.signMessage(message);
+    const sig = await signer.signMessage(messageUserOp);
     const guardian = await signer.signMessage(messageHashBytes);
     signatures = signatures + sig.slice(2) + guardian.slice(2);
   }
