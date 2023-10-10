@@ -43,8 +43,7 @@ describe("Account Recovery Module: ", async () => {
       const mockToken = await getMockToken();
       const entryPoint = await getEntryPoint();
 
-      const provider = entryPoint?.provider;
-      const chainId = await provider!.getNetwork().then((net) => net.chainId);
+      const { chainId } = await entryPoint.provider.getNetwork()
 
       const ecdsaModule = await getEcdsaOwnershipRegistryModule();
       const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
@@ -1712,7 +1711,7 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule.address
       );
     
-      const chainId = await entryPoint.provider!.getNetwork().then((net) => net.chainId);
+      const { chainId } = await entryPoint.provider.getNetwork()
       const messageUserOp = arrayify(getUserOpHash(userOp, entryPoint!.address, chainId));
       const messageHash = ethers.utils.id(controlMessage);
       const messageHashBytes = ethers.utils.arrayify(messageHash);
