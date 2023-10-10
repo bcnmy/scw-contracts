@@ -169,14 +169,13 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             keccak256(userOp.callData) ==
             _smartAccountRequests[msg.sender].callDataHash
         ) {
-            uint48 reqValidAfter = _smartAccountRequests[msg.sender]
-                .requestTimestamp +
-                _smartAccountSettings[msg.sender].securityDelay;
             delete _smartAccountRequests[msg.sender];
             return
                 VALIDATION_SUCCESS |
                 (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
-                (uint256(reqValidAfter) << (160 + 48));
+                (uint256(_smartAccountRequests[msg.sender]
+                .requestTimestamp +
+                _smartAccountSettings[msg.sender].securityDelay) << (160 + 48));
         }
 
         // otherwise we need to check all the signatures first
@@ -189,8 +188,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             userOp.signature,
             (bytes, address)
         );
-        if (signatures.length < requiredSignatures * 2 * 65)
-            revert InvalidSignaturesLength();
+        require(signatures.length >= requiredSignatures * 2 * 65, "AccRecovery: Invalid Sigs Length");
 
         address lastGuardianAddress;
         address currentGuardianAddress;
@@ -288,7 +286,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             // b) if non of the conditions are met, this means userOp is not for submitting a new request which is
             // only allowed with when the securityDelay is non 0
             // not using custom error here because of how EntryPoint handles the revert data for the validation failure
-            revert("Acc Recovery: Wrong userOp");
+            revert("AccRecovery: Wrong userOp");
         }
     }
 
@@ -400,6 +398,9 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             );
         }
     }
+
+    // DISABLE ACCOUNT RECOVERY
+    // Requires to explicitly list all the guardians to delete them
 
     // change timeframe
     function changeGuardianParams(

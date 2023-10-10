@@ -17,7 +17,7 @@ import {
 } from "../utils/userOp";
 import {
   makeMultiSignedUserOpWithGuardiansList,
-  makeMultisignedSubmitRecoveryRequestUserOp
+  makeMultisignedSubmitRecoveryRequestUserOp,
 } from "../utils/accountRecovery";
 import { defaultAbiCoder, keccak256 } from "ethers/lib/utils";
 
@@ -675,8 +675,13 @@ describe("Account Recovery Module: ", async () => {
 
   describe("submitRecoveryRequest", async () => {
     it("Should be able to submit the recovery request validated via other modules", async () => {
-      const { entryPoint, accountRecoveryModule, ecdsaModule, userSA, controlMessage } =
-        await setupTests();
+      const {
+        entryPoint,
+        accountRecoveryModule,
+        ecdsaModule,
+        userSA,
+        controlMessage,
+      } = await setupTests();
 
       const recoveryRequestCallData = ecdsaModule.interface.encodeFunctionData(
         "transferOwnership",
@@ -815,6 +820,96 @@ describe("Account Recovery Module: ", async () => {
   });
 
   describe("Validation Flow", async () => {
+    
+    /*
+    it("Should revert validating the execute-request userOp if the delay has not passed yet", async () => {
+
+      // can not execute request before the delay passes
+    await expect(
+      entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
+        gasLimit: 10000000,
+      })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA22 expired or not due");
+
+    });
+    */
+
+    it("Can submit a recovery request and execute it after a proper delay (no bundler)", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+      } = await setupTests();
+
+      const arrayOfSigners = [alice, bob, charlie];
+      arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
+
+      expect(
+        await userSA.isModuleEnabled(accountRecoveryModule.address)
+      ).to.equal(true);
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address,
+        [charlie, alice, bob],
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
+
+      const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
+        gasLimit: 10000000,
+      });
+      await handleOpsTxn.wait();
+
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
+        smartAccountOwner.address
+      );
+
+      // can be non signed at all, just needs to be executed after the delay
+      const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
+        "execute",
+        [
+          ecdsaModule.address,
+          ethers.utils.parseEther("0"),
+          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+            newOwner.address,
+          ]),
+        ],
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+
+      // fast forward
+      await ethers.provider.send("evm_increaseTime", [
+        defaultSecurityDelay + 12,
+      ]);
+      await ethers.provider.send("evm_mine", []);
+
+      // now everything should work
+      await entryPoint.handleOps(
+        [executeRecoveryRequestUserOp],
+        alice.address,
+        {
+          gasLimit: 10000000,
+        }
+      );
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
+        newOwner.address
+      );
+      expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(
+        smartAccountOwner.address
+      );
+    });
+
     it("Should be able to validate userOp and proceed to submitting the recovery request with the proper amount of guardians sigs", async () => {
       const {
         entryPoint,
@@ -939,7 +1034,7 @@ describe("Account Recovery Module: ", async () => {
       );
     });
 
-    it("Can submit a recovery request and execute it after a proper delay (no bundler)", async () => {
+    it("Should not execute the same recovery request twice via unsigned userOp", async () => {
       const {
         entryPoint,
         userSA,
@@ -958,13 +1053,13 @@ describe("Account Recovery Module: ", async () => {
 
       const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
         "transferOwnership",
-        [ newOwner.address,],
+        [newOwner.address],
         ecdsaModule,
         userSA.address,
         [charlie, alice, bob],
         controlMessage,
         entryPoint,
-        accountRecoveryModule,
+        accountRecoveryModule
       );
 
       const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
@@ -992,81 +1087,19 @@ describe("Account Recovery Module: ", async () => {
       );
 
       // fast forward
-      await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
+      await ethers.provider.send("evm_increaseTime", [
+        defaultSecurityDelay + 12,
+      ]);
       await ethers.provider.send("evm_mine", []);
 
       // now everything should work
-      await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
-        gasLimit: 10000000,
-      });
-      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
-        newOwner.address
+      await entryPoint.handleOps(
+        [executeRecoveryRequestUserOp],
+        alice.address,
+        {
+          gasLimit: 10000000,
+        }
       );
-      expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(
-        smartAccountOwner.address
-      );
-    });
-
-    it("Should not execute the same recovery request twice via unsigned userOp after request was submitted", async () => {
-      const {
-        entryPoint,
-        userSA,
-        accountRecoveryModule,
-        ecdsaModule,
-        defaultSecurityDelay,
-        controlMessage,
-      } = await setupTests();
-
-      const arrayOfSigners = [alice, bob, charlie];
-      arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
-
-      expect(
-        await userSA.isModuleEnabled(accountRecoveryModule.address)
-      ).to.equal(true);
-
-      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
-        "transferOwnership",
-        [ newOwner.address,],
-        ecdsaModule,
-        userSA.address,
-        [charlie, alice, bob],
-        controlMessage,
-        entryPoint,
-        accountRecoveryModule,
-      );
-
-      const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
-        gasLimit: 10000000,
-      });
-      await handleOpsTxn.wait();
-
-      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
-        smartAccountOwner.address
-      );
-
-      // can be non signed at all, just needs to be executed after the delay
-      const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
-        "execute",
-        [
-          ecdsaModule.address,
-          ethers.utils.parseEther("0"),
-          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-            newOwner.address,
-          ]),
-        ],
-        userSA.address,
-        entryPoint,
-        accountRecoveryModule.address
-      );
-
-      // fast forward
-      await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
-      await ethers.provider.send("evm_mine", []);
-
-      // now everything should work
-      await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
-        gasLimit: 10000000,
-      });
 
       const executeRecoveryRequestUserOp2 = await makeUnsignedUserOp(
         "execute",
@@ -1081,13 +1114,17 @@ describe("Account Recovery Module: ", async () => {
         entryPoint,
         accountRecoveryModule.address
       );
-      
-      await expect(entryPoint.handleOps([executeRecoveryRequestUserOp2], alice.address, {gasLimit: 10000000}))
+
+      await expect(
+        entryPoint.handleOps([executeRecoveryRequestUserOp2], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted (or OOG)"); //fails at decoding the userOp.signature which is empty in this case
-        // - even if the userOp would be properly signed, it would fail as security delay is > 0, and the userOp is not 
-        //   to submit a request. See the appropriate test case below in the 'ValidateUserOp' section
-        // - if security delay is 0, see the next negative test.Aas it doesn't require submitting a request when security delay is 0
+        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length"); // fails as signatures.length is 0 and thus less than required
+      // - even if the userOp would be properly signed, it would fail as security delay is > 0, and the userOp is not
+      //   to submit a request. See the appropriate test case below in the 'ValidateUserOp' section
+      // - if security delay is 0, see the next negative test.Aas it doesn't require submitting a request when security delay is 0
     });
 
     // when the delay is 0, the properly signed userOp to execute the request can not be validated twice (unless it was re-signed)
@@ -1157,13 +1194,14 @@ describe("Account Recovery Module: ", async () => {
       );
       await handleOpsTxn2.wait();
 
-      await expect(entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000}))
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+      )
         .to.be.revertedWith("FailedOp")
         .withArgs(0, "AA25 invalid account nonce");
     });
   });
 
-   
   describe("validateUserOp", async () => {
     it("Should revert if the delay is >0 and the calldata is NOT for submitting request", async () => {
       const {
@@ -1174,7 +1212,7 @@ describe("Account Recovery Module: ", async () => {
         controlMessage,
       } = await setupTests();
 
-      //the userOp.callData is not the submitRequest one
+      // the userOp.callData is not the submitRequest one
       const userOp = await makeMultiSignedUserOpWithGuardiansList(
         "execute",
         [
@@ -1191,9 +1229,11 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule.address
       );
 
-      await expect(entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000}))
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+      )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: Acc Recovery: Wrong userOp");
+        .withArgs(0, "AA23 reverted: AccRecovery: Wrong userOp");
     });
 
     it("Should revert if the delay is 0 and the calldata IS for submitting request", async () => {
@@ -1236,23 +1276,25 @@ describe("Account Recovery Module: ", async () => {
         await accountRecoveryModule.getSmartAccountSettings(userSA.address);
       expect(userSASettings.securityDelay).to.equal(0);
 
-     const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
-      "transferOwnership",
-      [ newOwner.address,],
-      ecdsaModule,
-      userSA.address,
-      [charlie, alice, bob],
-      controlMessage,
-      entryPoint,
-      accountRecoveryModule,
-    );
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address,
+        [charlie, alice, bob],
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
 
-      await expect(entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000}))
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+      )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: Acc Recovery: Wrong userOp");
+        .withArgs(0, "AA23 reverted: AccRecovery: Wrong userOp");
     });
 
-    it("Should revert if userOp.callData doesn't match the submitted request", async () => {
+    it("Should revert if userOp.callData of the request doesn't match the submitted request", async () => {
       const {
         entryPoint,
         userSA,
@@ -1263,13 +1305,13 @@ describe("Account Recovery Module: ", async () => {
 
       const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
         "transferOwnership",
-        [ newOwner.address,],
+        [newOwner.address],
         ecdsaModule,
         userSA.address,
         [charlie, alice, bob],
         controlMessage,
         entryPoint,
-        accountRecoveryModule,
+        accountRecoveryModule
       );
 
       entryPoint.handleOps([userOp], alice.address);
@@ -1288,27 +1330,46 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule.address
       );
 
-      await expect(entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {gasLimit: 10000000}))
+      await expect(
+        entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted (or OOG)"); // means it fails at abi.decode
+        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
     });
 
-    /*
+    // reverts if threshold has been somehow set to 0 or not set at all
 
-    // wrong signatures length
+    // revert if trying to submit the unsigned request ('signature' is empty)
 
-    it("Should revert executing the request if the delay has not passed yet", async () => {
+    it("Should revert if there's not enough signatures", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+      } = await setupTests();
 
-      // can not execute request before the delay passes
-    await expect(
-      entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
-        gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA22 expired or not due");
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address,
+        [charlie, alice],
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
 
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
     });
+/*
 
     it("Should revert if at least one guardian is expired", async () => {});
 
@@ -1318,16 +1379,17 @@ describe("Account Recovery Module: ", async () => {
 
     it("Should revert if at least one signature is invalid", async () => {});
 
+    it("Should revert if the signature is for other module", async () => {});
+
     it("Should revert if guardians are not unique", async () => {});
 
     it("Events are emitted properly", async () => {});
     */
   });
-  
 
-  // Execution flow
-  // it("Should not be able to use same request twice", async () => {});
+  // Execution stage
   // it("Should revert if trying to execute the request with invalid calldata", async () => {});
+  
   // it("can change from one validation module to another (by enabling and setting it up) when making recovery", async () => {});
 
   describe("addGuardian", async () => {
@@ -1396,5 +1458,16 @@ describe("Account Recovery Module: ", async () => {
   describe("removeGuardian", async () => {
     it("_________", async () => {});
   });
+
+
+  // DISABLE ACC RECOVERY
+
+
+  // Check all the errors declarations to be actually used in the contract code
+  // as 'requires' should be used during the validation
+
+  // for the execution stage (all methods not related to validateUserOp) custom errors can be used
+  // make the according explanation in the smart contract header
+
   */
 });

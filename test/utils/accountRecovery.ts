@@ -2,8 +2,18 @@ import { BigNumber, BytesLike, Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { EntryPoint, SmartAccount } from "../../typechain";
 import { UserOperation } from "./userOperation";
-import { fillAndSign, makeEcdsaModuleUserOp, getUserOpHash, fillUserOp } from "./userOp";
-import { hexZeroPad, hexConcat, defaultAbiCoder, arrayify } from "ethers/lib/utils";
+import {
+  fillAndSign,
+  makeEcdsaModuleUserOp,
+  getUserOpHash,
+  fillUserOp,
+} from "./userOp";
+import {
+  hexZeroPad,
+  hexConcat,
+  defaultAbiCoder,
+  arrayify,
+} from "ethers/lib/utils";
 import MerkleTree from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
 
@@ -75,29 +85,28 @@ export async function makeMultisignedSubmitRecoveryRequestUserOp(
     preVerificationGas?: number;
   }
 ): Promise<UserOperation> {
-
-  const SmartAccount = await ethers.getContractFactory(
-    "SmartAccount"
-  );
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
   const recoveryRequestCallData = SmartAccount.interface.encodeFunctionData(
     "execute",
     [
       ownershipModule.address,
       ethers.utils.parseEther("0"),
-      ownershipModule.interface.encodeFunctionData(recoveryMethodName, recoveryMethodParams),
+      ownershipModule.interface.encodeFunctionData(
+        recoveryMethodName,
+        recoveryMethodParams
+      ),
     ]
   );
-  
+
   const userOp = await makeMultiSignedUserOpWithGuardiansList(
     "execute",
     [
       recoveryModule.address,
       ethers.utils.parseEther("0"),
-      recoveryModule.interface.encodeFunctionData(
-        "submitRecoveryRequest",
-        [recoveryRequestCallData]
-      ),
+      recoveryModule.interface.encodeFunctionData("submitRecoveryRequest", [
+        recoveryRequestCallData,
+      ]),
     ],
     userOpSender,
     userOpSigners, // order is important
@@ -105,7 +114,7 @@ export async function makeMultisignedSubmitRecoveryRequestUserOp(
     entryPoint,
     recoveryModule.address,
     {
-      ...options
+      ...options,
     }
   );
 
