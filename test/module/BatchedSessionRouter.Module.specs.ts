@@ -17,13 +17,8 @@ import {
 import { computeAddress, defaultAbiCoder } from "ethers/lib/utils";
 
 describe("SessionKey: Batched Session Router", async () => {
-  const [
-    deployer,
-    smartAccountOwner,
-    alice,
-    sessionKey,
-    nonAuthSessionKey,
-  ] = waffle.provider.getWallets();
+  const [deployer, smartAccountOwner, alice, sessionKey, nonAuthSessionKey] =
+    waffle.provider.getWallets();
   const maxAmount = ethers.utils.parseEther("100");
 
   const setupTests = deployments.createFixture(
@@ -1139,7 +1134,6 @@ describe("SessionKey: Batched Session Router", async () => {
         [mockToken.address, tokenAmountToTransfer]
       );
 
-      
       /*
       const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
         "executeBatch_y6U",
@@ -1201,9 +1195,9 @@ describe("SessionKey: Batched Session Router", async () => {
         ethers.utils.hexZeroPad(sessionKeyManager.address, 20),
       ]);
       const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
-      const signatureOverUserOpHashAndModuleAddress = (await sessionKey.signMessage(
-        ethers.utils.arrayify(resultingHash)
-      )).slice(0, -2);
+      const signatureOverUserOpHashAndModuleAddress = (
+        await sessionKey.signMessage(ethers.utils.arrayify(resultingHash))
+      ).slice(0, -2);
 
       const sessionData = [
         [
@@ -1222,7 +1216,7 @@ describe("SessionKey: Batched Session Router", async () => {
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
           "0x",
         ],
-      ]
+      ];
 
       const paddedSig = defaultAbiCoder.encode(
         [
@@ -1244,12 +1238,8 @@ describe("SessionKey: Batched Session Router", async () => {
       userOp.signature = signatureWithModuleAddress;
 
       await expect(
-        sessionRouter.validateUserOp(
-          userOp,
-          userOpHash
-        )
+        sessionRouter.validateUserOp(userOp, userOpHash)
       ).to.be.revertedWith("ECDSA: invalid signature length");
     });
-
   });
 });
