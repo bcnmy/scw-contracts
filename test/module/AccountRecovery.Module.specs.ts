@@ -171,83 +171,6 @@ describe("Account Recovery Module: ", async () => {
    * doesn't require any signature at all.
    */
 
-  it("Can submit a recovery request and execute it only after a proper delay (no bundler)", async () => {
-    const {
-      entryPoint,
-      userSA,
-      accountRecoveryModule,
-      ecdsaModule,
-      defaultSecurityDelay,
-      controlMessage,
-    } = await setupTests();
-
-    const arrayOfSigners = [alice, bob, charlie];
-    arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
-
-    expect(
-      await userSA.isModuleEnabled(accountRecoveryModule.address)
-    ).to.equal(true);
-
-    const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
-      "transferOwnership",
-      [ newOwner.address,],
-      ecdsaModule,
-      userSA.address,
-      [charlie, alice, bob],
-      controlMessage,
-      entryPoint,
-      accountRecoveryModule,
-    );
-
-    const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
-      gasLimit: 10000000,
-    });
-    await handleOpsTxn.wait();
-
-    expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
-      smartAccountOwner.address
-    );
-
-    // can be non signed at all, just needs to be executed after the delay
-    const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
-      "execute",
-      [
-        ecdsaModule.address,
-        ethers.utils.parseEther("0"),
-        ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-          newOwner.address,
-        ]),
-      ],
-      userSA.address,
-      entryPoint,
-      accountRecoveryModule.address
-    );
-
-    // can not execute request before the delay passes
-    await expect(
-      entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
-        gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA22 expired or not due");
-
-    // fast foprward
-    await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
-    await ethers.provider.send("evm_mine", []);
-
-    // now everything should work
-    await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
-      gasLimit: 10000000,
-    });
-    expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
-      newOwner.address
-    );
-    expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(
-      smartAccountOwner.address
-    );
-  });
-
   describe("initForSmartAccount", async () => {
     it("Successfully inits the Smart Account, by adding guardians and settings", async () => {
       const {
@@ -1015,11 +938,234 @@ describe("Account Recovery Module: ", async () => {
         smartAccountOwner.address
       );
     });
+
+    it("Can submit a recovery request and execute it after a proper delay (no bundler)", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+      } = await setupTests();
+
+      const arrayOfSigners = [alice, bob, charlie];
+      arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
+
+      expect(
+        await userSA.isModuleEnabled(accountRecoveryModule.address)
+      ).to.equal(true);
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [ newOwner.address,],
+        ecdsaModule,
+        userSA.address,
+        [charlie, alice, bob],
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule,
+      );
+
+      const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
+        gasLimit: 10000000,
+      });
+      await handleOpsTxn.wait();
+
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
+        smartAccountOwner.address
+      );
+
+      // can be non signed at all, just needs to be executed after the delay
+      const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
+        "execute",
+        [
+          ecdsaModule.address,
+          ethers.utils.parseEther("0"),
+          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+            newOwner.address,
+          ]),
+        ],
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+
+      // fast forward
+      await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
+      await ethers.provider.send("evm_mine", []);
+
+      // now everything should work
+      await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
+        gasLimit: 10000000,
+      });
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
+        newOwner.address
+      );
+      expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(
+        smartAccountOwner.address
+      );
+    });
+
+    it("Should not execute the same recovery request twice via unsigned userOp after request was submitted", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+      } = await setupTests();
+
+      const arrayOfSigners = [alice, bob, charlie];
+      arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
+
+      expect(
+        await userSA.isModuleEnabled(accountRecoveryModule.address)
+      ).to.equal(true);
+
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [ newOwner.address,],
+        ecdsaModule,
+        userSA.address,
+        [charlie, alice, bob],
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule,
+      );
+
+      const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
+        gasLimit: 10000000,
+      });
+      await handleOpsTxn.wait();
+
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
+        smartAccountOwner.address
+      );
+
+      // can be non signed at all, just needs to be executed after the delay
+      const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
+        "execute",
+        [
+          ecdsaModule.address,
+          ethers.utils.parseEther("0"),
+          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+            newOwner.address,
+          ]),
+        ],
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+
+      // fast forward
+      await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
+      await ethers.provider.send("evm_mine", []);
+
+      // now everything should work
+      await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
+        gasLimit: 10000000,
+      });
+
+      const executeRecoveryRequestUserOp2 = await makeUnsignedUserOp(
+        "execute",
+        [
+          ecdsaModule.address,
+          ethers.utils.parseEther("0"),
+          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+            newOwner.address,
+          ]),
+        ],
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+      
+      await expect(entryPoint.handleOps([executeRecoveryRequestUserOp2], alice.address, {gasLimit: 10000000}))
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted (or OOG)"); //fails at decoding the userOp.signature which is empty in this case
+        // - even if the userOp would be properly signed, it would fail as security delay is > 0, and the userOp is not 
+        //   to submit a request. See the appropriate test case below in the 'ValidateUserOp' section
+        // - if security delay is 0, see the next negative test.Aas it doesn't require submitting a request when security delay is 0
+    });
+
+    // when the delay is 0, the properly signed userOp to execute the request can not be validated twice (unless it was re-signed)
+    it("Should not validate the recovery request to be executed twice when the delay is 0", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+      } = await setupTests();
+
+      const changeSecurityDelayData =
+        accountRecoveryModule.interface.encodeFunctionData("setSecurityDelay", [
+          0,
+        ]);
+
+      const changeDelayUserOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          changeSecurityDelayData,
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const handleOpsTxn = await entryPoint.handleOps(
+        [changeDelayUserOp],
+        alice.address,
+        {
+          gasLimit: 10000000,
+        }
+      );
+      await handleOpsTxn.wait();
+
+      const userSASettings =
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address);
+      expect(userSASettings.securityDelay).to.equal(0);
+
+      // immediately execute the request, signed by the guardians
+      const userOp = await makeMultiSignedUserOpWithGuardiansList(
+        "execute",
+        [
+          ecdsaModule.address,
+          ethers.utils.parseEther("0"),
+          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+            newOwner.address,
+          ]),
+        ],
+        userSA.address,
+        [charlie, alice, bob], // order is important
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+
+      const handleOpsTxn2 = await entryPoint.handleOps(
+        [userOp],
+        alice.address,
+        {
+          gasLimit: 10000000,
+        }
+      );
+      await handleOpsTxn2.wait();
+
+      await expect(entryPoint.handleOps([userOp], alice.address, {gasLimit: 10000000}))
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA25 invalid account nonce");
+    });
   });
 
    
   describe("validateUserOp", async () => {
-    it("Should revert if the delay is >0 and the calldata is not for submitting request", async () => {
+    it("Should revert if the delay is >0 and the calldata is NOT for submitting request", async () => {
       const {
         entryPoint,
         userSA,
@@ -1050,7 +1196,7 @@ describe("Account Recovery Module: ", async () => {
         .withArgs(0, "AA23 reverted: Acc Recovery: Wrong userOp");
     });
 
-    it("Should revert if the delay is 0 and the calldata is for submitting request", async () => {
+    it("Should revert if the delay is 0 and the calldata IS for submitting request", async () => {
       const {
         entryPoint,
         userSA,
@@ -1151,7 +1297,18 @@ describe("Account Recovery Module: ", async () => {
 
     // wrong signatures length
 
-    it("Should revert executing the request if the delay has not passed yet", async () => {});
+    it("Should revert executing the request if the delay has not passed yet", async () => {
+
+      // can not execute request before the delay passes
+    await expect(
+      entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, {
+        gasLimit: 10000000,
+      })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA22 expired or not due");
+
+    });
 
     it("Should revert if at least one guardian is expired", async () => {});
 

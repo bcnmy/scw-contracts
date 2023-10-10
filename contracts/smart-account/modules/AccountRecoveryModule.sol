@@ -189,7 +189,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             userOp.signature,
             (bytes, address)
         );
-        if (signatures.length < requiredSignatures * 2*65)
+        if (signatures.length < requiredSignatures * 2 * 65)
             revert InvalidSignaturesLength();
 
         address lastGuardianAddress;
