@@ -1,10 +1,12 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {ISignatureValidator, ISignatureValidatorConstants} from "../interfaces/ISignatureValidator.sol";
+import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../interfaces/ISignatureValidator.sol";
 import {Enum} from "../common/Enum.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
-import {Math} from "../libs/Math.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
+/* solhint-disable function-max-lines */
 
 struct Transaction {
     address to;
@@ -80,7 +82,7 @@ interface IExecFromModule {
     ) external returns (bool success);
 }
 
-contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
+contract ForwardFlowModule is ReentrancyGuard {
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
         0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
@@ -194,7 +196,9 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
                 data,
                 operation
             )
-        ) revert ExecutionFailed();
+        ) {
+            revert ExecutionFailed();
+        }
         // Convert response to string and return via error message
         unchecked {
             revert(string(abi.encodePacked(startGas - gasleft())));
@@ -212,7 +216,6 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
      *                   Should be a signature over Typed Data Hash
      *                   Use eth_signTypedData, not a personal_sign
      */
-
     function execTransaction(
         address smartAccount,
         Transaction memory _tx,
@@ -253,12 +256,13 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
         if (
             gasleft() <
             Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 7500
-        )
+        ) {
             revert NotEnoughGasLeft(
                 gasleft(),
                 Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) +
                     7500
             );
+        }
         // Use scope here to limit variable lifetime and prevent `stack too deep` errors
         {
             //we always provide targetTxGas to execution
@@ -272,12 +276,13 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
 
             // If targetTxGas and gasPrice are both 0, the internal tx must succeed.
             // Enables safe use of `estimateGas` by finding the minimum gas where the transaction doesn't revert
-            if (!success && _tx.targetTxGas == 0 && refundInfo.gasPrice == 0)
+            if (!success && _tx.targetTxGas == 0 && refundInfo.gasPrice == 0) {
                 revert CanNotEstimateGas(
                     _tx.targetTxGas,
                     refundInfo.gasPrice,
                     success
                 );
+            }
 
             // Transfer transaction costs to tx.origin to avoid intermediate contract payments.
             uint256 payment;

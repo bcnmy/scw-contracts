@@ -2,14 +2,13 @@
 pragma solidity 0.8.17;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
-import "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import "@account-abstraction/contracts/core/Helpers.sol";
-import "./SessionValidationModules/ISessionValidationModule.sol";
-import {ISessionKeyManager} from "../interfaces/ISessionKeyManager.sol";
-
-struct SessionStorage {
-    bytes32 merkleRoot;
-}
+import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
+import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
+import {ISessionKeyManagerModule} from "../interfaces/modules/ISessionKeyManagerModule.sol";
+import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
+import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -23,29 +22,23 @@ struct SessionStorage {
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
+contract SessionKeyManager is
+    BaseAuthorizationModule,
+    ISessionKeyManagerModule
+{
     /**
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
      */
     mapping(address => SessionStorage) internal _userSessions;
 
-    /**
-     * @dev sets the merkle root of a tree containing session keys for msg.sender
-     * should be called by Smart Account
-     * @param _merkleRoot Merkle Root of a tree that contains session keys with their permissions and parameters
-     */
-    function setMerkleRoot(bytes32 _merkleRoot) external {
+    /// @inheritdoc ISessionKeyManagerModule
+    function setMerkleRoot(bytes32 _merkleRoot) external override {
         _userSessions[msg.sender].merkleRoot = _merkleRoot;
         // TODO:should we add an event here? which emits the new merkle root
     }
 
-    /**
-     * @dev validates userOperation
-     * @param userOp User Operation to be validated.
-     * @param userOpHash Hash of the User Operation to be validated.
-     * @return sigValidationResult 0 if signature is valid, SIG_VALIDATION_FAILED otherwise.
-     */
+    /// @inheritdoc IAuthorizationModule
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
@@ -90,28 +83,14 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
             );
     }
 
-    /**
-     * @dev returns the SessionStorage object for a given smartAccount
-     * @param smartAccount Smart Account address
-     */
+    /// @inheritdoc ISessionKeyManagerModule
     function getSessionKeys(
         address smartAccount
-    ) external view returns (SessionStorage memory) {
+    ) external view override returns (SessionStorage memory) {
         return _userSessions[smartAccount];
     }
 
-    /**
-     * @dev validates that Session Key + parameters are enabled
-     * by being included into the merkle tree
-     * @param smartAccount smartAccount for which session key is being validated
-     * @param validUntil timestamp when the session key expires
-     * @param validAfter timestamp when the session key becomes valid
-     * @param sessionValidationModule address of the Session Validation Module
-     * @param sessionKeyData session parameters (limitations/permissions)
-     * @param merkleProof merkle proof for the leaf which represents this session key + params
-     * @dev if doesn't revert, session key is considered valid
-     */
-
+    /// @inheritdoc ISessionKeyManagerModule
     function validateSessionKey(
         address smartAccount,
         uint48 validUntil,
@@ -138,16 +117,11 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
         }
     }
 
-    /**
-     * @dev isValidSignature according to BaseAuthorizationModule
-     * @param _dataHash Hash of the data to be validated.
-     * @param _signature Signature over the the _dataHash.
-     * @return always returns 0xffffffff as signing messages is not supported by SessionKeys
-     */
+    /// @inheritdoc ISignatureValidator
     function isValidSignature(
         bytes32 _dataHash,
         bytes memory _signature
-    ) public view override returns (bytes4) {
+    ) public pure override returns (bytes4) {
         (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }

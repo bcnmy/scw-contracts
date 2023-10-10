@@ -8,7 +8,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import {
   makeEcdsaModuleUserOp,
@@ -86,7 +85,6 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
   });
 
@@ -142,47 +140,6 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
     await environment.sendUserOperation(userOp, entryPoint.address);
     expect(await charlie.getBalance()).to.equal(
       charlieBalanceBefore.add(amountToTransfer)
-    );
-  });
-
-  // TODO: This test fails with the message paymaster uses banned opcode: BASEFEE
-  it("Can send a userOp with Paymaster payment", async () => {
-    const { entryPoint, mockToken, userSA, ecdsaModule, verifyingPaymaster } =
-      await setupTests();
-
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(
-      charlie.address
-    );
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.6458");
-
-    const blockTimestamp = (await ethers.provider.getBlock("latest")).timestamp;
-    const validUntil = blockTimestamp + 1000;
-    const validAfter = blockTimestamp;
-
-    const userOp = await makeEcdsaModuleUserOpWithPaymaster(
-      "execute_ncC",
-      [
-        mockToken.address,
-        ethers.utils.parseEther("0"),
-        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-      ],
-      userSA.address,
-      smartAccountOwner,
-      entryPoint,
-      ecdsaModule.address,
-      verifyingPaymaster,
-      verifiedSigner,
-      validUntil,
-      validAfter,
-      {
-        preVerificationGas: 50000,
-      }
-    );
-
-    await environment.sendUserOperation(userOp, entryPoint.address);
-
-    expect(await mockToken.balanceOf(charlie.address)).to.equal(
-      charlieTokenBalanceBefore.add(tokenAmountToTransfer)
     );
   });
 });

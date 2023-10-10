@@ -8,7 +8,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { fillAndSign, makeEcdsaModuleUserOp } from "../../utils/userOp";
 
@@ -91,7 +90,6 @@ describe("Upgrade v1 to Modular (v2) (ex. Ownerless)", async () => {
       ecdsaModule: ecdsaModule,
       userSA: userSA,
       userSAV1: userSAV1,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
   });
 

@@ -15,7 +15,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { BigNumber } from "ethers";
 import { UserOperation } from "../../utils/userOperation";
@@ -108,7 +107,6 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       ecdsaModule: ecdsaModule,
       userSA: userSA,
       mockToken: mockToken,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       sessionKeyManager: sessionKeyManager,
       erc20SessionModule: erc20SessionModule,
       sessionKeyData: sessionKeyData,
