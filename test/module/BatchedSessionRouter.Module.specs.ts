@@ -13,16 +13,14 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
-import { computeAddress } from "ethers/lib/utils";
+import { computeAddress, defaultAbiCoder } from "ethers/lib/utils";
 
 describe("SessionKey: Batched Session Router", async () => {
   const [
     deployer,
     smartAccountOwner,
     alice,
-    verifiedSigner,
     sessionKey,
     nonAuthSessionKey,
   ] = waffle.provider.getWallets();
@@ -1107,5 +1105,151 @@ describe("SessionKey: Batched Session Router", async () => {
       );
       expect(validationData).to.equal(SIG_VALIDATION_FAILED);
     });
+
+    it("Should return SIG_VALIDATION_FAILED if the userOp.signature length is less than 65", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        erc20SessionModule,
+        sessionKeyData,
+        leafData,
+        merkleTree,
+        sessionRouter,
+        mockProtocol,
+        mockProtocolSVM,
+        mockToken,
+        sessionKeyData2,
+        leafData2,
+        validUntilForMockProtocol,
+      } = await setupTests();
+
+      const SIG_VALIDATION_FAILED = 1;
+      const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
+
+      const MockProtocol = await ethers.getContractFactory("MockProtocol");
+      const IERC20 = await ethers.getContractFactory("ERC20");
+
+      const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+        mockProtocol.address,
+        tokenAmountToTransfer,
+      ]);
+      const interactCallData = MockProtocol.interface.encodeFunctionData(
+        "interact",
+        [mockToken.address, tokenAmountToTransfer]
+      );
+
+      
+      /*
+      const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
+        "executeBatch_y6U",
+        [
+          [mockToken.address, mockProtocol.address],
+          [0, 0],
+          [approveCallData, interactCallData],
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        [
+          [
+            0,
+            0,
+            erc20SessionModule.address,
+            sessionKeyData,
+            merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+            "0x",
+          ],
+          [
+            validUntilForMockProtocol,
+            0,
+            mockProtocolSVM.address,
+            sessionKeyData2,
+            merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+            "0x",
+          ],
+        ],
+        sessionRouter.address
+      );
+      */
+
+      const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+      const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+        "executeBatch_y6U",
+        [
+          [mockToken.address, mockProtocol.address],
+          [0, 0],
+          [approveCallData, interactCallData],
+        ]
+      );
+
+      const userOp = await fillAndSign(
+        {
+          sender: userSA.address,
+          callData: txnDataAA1,
+        },
+        sessionKey,
+        entryPoint,
+        "nonce"
+      );
+
+      const userOpHash = await entryPoint.getUserOpHash(userOp);
+      const userOpHashAndModuleAddress = ethers.utils.hexConcat([
+        ethers.utils.hexZeroPad(userOpHash, 32),
+        ethers.utils.hexZeroPad(sessionKeyManager.address, 20),
+      ]);
+      const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
+      const signatureOverUserOpHashAndModuleAddress = (await sessionKey.signMessage(
+        ethers.utils.arrayify(resultingHash)
+      )).slice(0, -2);
+
+      const sessionData = [
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          validUntilForMockProtocol,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
+      ]
+
+      const paddedSig = defaultAbiCoder.encode(
+        [
+          "address",
+          "tuple(uint48,uint48,address,bytes,bytes32[],bytes)[]",
+          "bytes",
+        ],
+        [
+          sessionKeyManager.address,
+          sessionData,
+          signatureOverUserOpHashAndModuleAddress,
+        ]
+      );
+
+      const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"],
+        [paddedSig, sessionRouter.address]
+      );
+      userOp.signature = signatureWithModuleAddress;
+
+      await expect(
+        sessionRouter.validateUserOp(
+          userOp,
+          userOpHash
+        )
+      ).to.be.revertedWith("ECDSA: invalid signature length");
+    });
+
   });
 });

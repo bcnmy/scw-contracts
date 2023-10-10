@@ -621,6 +621,31 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       );
     });
 
+    it("should revert if the module has not been set up for the smart account", async () => {
+      const {
+        userSA,
+        sessionKeyManager,
+        mockSessionValidationModule,
+        sessionKeyData,
+        leafData,
+        merkleTree,
+      } = await setupTests();
+
+      const validateSesionKeyTxn =
+        sessionKeyManager.callStatic.validateSessionKey(
+          alice.address,
+          0,
+          0,
+          mockSessionValidationModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+        );
+
+      await expect(validateSesionKeyTxn).to.be.revertedWith(
+        "SessionNotApproved"
+      );
+    });
+
     it("should not revert otherwise", async () => {
       const {
         userSA,
