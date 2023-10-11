@@ -32,7 +32,6 @@ type DeploymentSaltsType = {
   MULTI_SEND: string;
   WALLET_FACTORY: string;
   WALLET_IMP: string;
-  SINGELTON_PAYMASTER: string;
   ECDSA_REGISTRY_MODULE: string;
   MULTICHAIN_VALIDATOR_MODULE: string;
   PASSKEY_MODULE: string;
@@ -49,7 +48,6 @@ export const DEPLOYMENT_SALTS_DEV: DeploymentSaltsType = {
   MULTI_SEND: "DEVX_MULTI_SEND_V0_21082023",
   WALLET_FACTORY: "DEVX_WALLET_FACTORY_V2_050920203",
   WALLET_IMP: "DEVX_WALLET_IMP_V2_05092023",
-  SINGELTON_PAYMASTER: "DEVX_SINGLETON_PAYMASTER_V1_21082024",
   ECDSA_REGISTRY_MODULE: "DEVX_ECDSA_REGISTRY_MODULE_V0_21082023",
   MULTICHAIN_VALIDATOR_MODULE: "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_21082023",
   PASSKEY_MODULE: "DEVX_PASSKEY_MODULE_V0_21082023",
@@ -68,7 +66,6 @@ export const DEPLOYMENT_SALTS_PROD: DeploymentSaltsType = {
   MULTI_SEND: "",
   WALLET_FACTORY: "PROD_WALLET_FACTORY_V2_0509023SexZu7Y",
   WALLET_IMP: "PROD_WALLET_IMP_V2_05092023_ixWZVOM",
-  SINGELTON_PAYMASTER: "PROD_SINGLETON_PAYMASTER_V1_22082023N4hlwuH",
   ECDSA_REGISTRY_MODULE: "PROD_ECDSA_REGISTRY_MODULE_V1_22082023_ypI3tHh",
   MULTICHAIN_VALIDATOR_MODULE:
     "PROD_MULTICHAIN_VALIDATOR_MODULE_V1_22082023_vdQZbfh",
@@ -123,6 +120,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   },
   5001: {
     gasPrice: parseUnits("0.1", "gwei"),
+  },
+  4337: {
+    maxFeePerGas: parseUnits("100", "gwei"),
   },
 
   // Mainnets
@@ -204,6 +204,10 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.01"),
   },
+  4337: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
 
   // Mainnets
   137: {
@@ -233,112 +237,6 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
   43114: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("9.337"), // 1 AVAX = $10.71
-  },
-  1101: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  59144: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  8453: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  204: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.46"), // 1 BNB = $217.43
-  },
-  5000: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("226"), // 1 MNT = $0.444
-  },
-  1284: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("556"), // 1 GLMR = $0.18
-  },
-};
-
-export const paymasterStakeConfig: Record<number, StakingConfig> = {
-  // Testnets
-  80001: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  97: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  5: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  421613: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  420: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  43113: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  1442: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  59140: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  84531: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  5611: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  91715: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  5001: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-
-  // Mainnets
-  137: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("173"), // 1 MATIC = $0.5788
-  },
-  56: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.46"), // 1 BNB = $217.43
-  },
-  1: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  42161: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  10: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  43114: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("9.337"), // 1 AVAX = $10.71
-  },
-  42170: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
   },
   1101: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -454,7 +352,7 @@ export const deployContract = async (
 
   console.log(`Submitted transaction ${hash} for deployment`);
 
-  const { status, logs, blockNumber } = await wait(5);
+  const { status, logs, blockNumber } = await wait(1);
 
   if (status !== 1) {
     throw new Error(`Transaction ${hash} failed`);

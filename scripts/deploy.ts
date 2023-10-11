@@ -7,7 +7,6 @@ import {
   encodeParam,
   factoryStakeConfig,
   isContract,
-  paymasterStakeConfig,
 } from "./utils";
 import {
   BatchedSessionRouter__factory,
@@ -21,7 +20,6 @@ import {
   SmartAccountFactory__factory,
   SmartAccount__factory,
   SmartContractOwnershipRegistryModule__factory,
-  VerifyingSingletonPaymaster__factory,
 } from "../typechain-types";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
@@ -31,10 +29,6 @@ const DEPLOYMENT_MODE = process.env.DEPLOYMENT_MODE! as "DEV" | "PROD";
 
 const smartAccountFactoryOwnerAddress =
   process.env[`SMART_ACCOUNT_FACTORY_OWNER_ADDRESS_${DEPLOYMENT_MODE}`]!;
-const paymasterOwnerAddress =
-  process.env[`PAYMASTER_OWNER_ADDRESS_${DEPLOYMENT_MODE}`]!;
-const verifyingSigner =
-  process.env[`PAYMASTER_SIGNER_ADDRESS_${DEPLOYMENT_MODE}`]!;
 const DEPLOYER_CONTRACT_ADDRESS =
   process.env[`DEPLOYER_CONTRACT_ADDRESS_${DEPLOYMENT_MODE}`]!;
 const DEPLOYMENT_SALTS =
@@ -96,8 +90,7 @@ export async function deployGeneric(
 }
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
-  const chainId = (await provider.getNetwork()).chainId;
-  if (chainId !== 31337) {
+  if (await isContract(entryPointAddress, provider)) {
     console.log("Entry Point Already Deployed Address: ", entryPointAddress);
     return;
   }
@@ -203,71 +196,6 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
   }
 }
 
-async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
-  const [signer] = await ethers.getSigners();
-  const chainId = (await provider.getNetwork()).chainId;
-  const gasPriceConfig = DEPLOYMENT_CHAIN_GAS_PRICES[chainId];
-
-  const bytecode = `${
-    VerifyingSingletonPaymaster__factory.bytecode
-  }${encodeParam("address", signer.address).slice(2)}${encodeParam(
-    "address",
-    entryPointAddress
-  ).slice(2)}${encodeParam("address", verifyingSigner).slice(2)}`;
-
-  const paymasterAddress = await deployGeneric(
-    deployerInstance,
-    DEPLOYMENT_SALTS.SINGELTON_PAYMASTER,
-    bytecode,
-    "VerifyingPaymaster",
-    [signer.address, entryPointAddress, verifyingSigner]
-  );
-
-  console.log("Checking if VerifyingPaymaster is staked...");
-  const { unstakeDelayInSec, stakeInWei } = paymasterStakeConfig[chainId];
-  const entrypoint = EntryPoint__factory.connect(entryPointAddress, signer);
-  let stake = await entrypoint.getDepositInfo(paymasterAddress);
-  console.log("Current Paymaster Stake: ", JSON.stringify(stake, null, 2));
-  if (stake.staked) {
-    console.log("Paymaster already staked");
-    return;
-  }
-
-  console.log("Staking Paymaster...");
-  const paymaster = VerifyingSingletonPaymaster__factory.connect(
-    paymasterAddress,
-    signer
-  );
-
-  const contractOwner = await paymaster.owner();
-
-  if (contractOwner === signer.address) {
-    const { hash, wait } = await paymaster.addStake(unstakeDelayInSec, {
-      value: stakeInWei,
-      ...gasPriceConfig,
-    });
-    console.log("Paymaster Stake Transaction Hash: ", hash);
-    await wait();
-  } else {
-    console.log("Paymaster is not owned by signer, skipping staking...");
-  }
-
-  stake = await entrypoint.getDepositInfo(paymasterAddress);
-  console.log("Updated Paymaster Stake: ", JSON.stringify(stake, null, 2));
-
-  if (contractOwner !== paymasterOwnerAddress) {
-    console.log("Transferring Ownership of VerifyingPaymaster...");
-    const { hash, wait } = await paymaster.transferOwnership(
-      paymasterOwnerAddress,
-      {
-        ...gasPriceConfig,
-      }
-    );
-    console.log("Paymaster Transfer Ownership Transaction Hash: ", hash);
-    await wait();
-  }
-}
-
 async function deployEcdsaOwnershipRegistryModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
@@ -369,14 +297,6 @@ const verifyDeploymentConfig = () => {
     throw new Error("Invalid Smart Account Factory Owner Address");
   }
 
-  if (!isAddress(paymasterOwnerAddress)) {
-    throw new Error("Invalid Paymaster Owner Address");
-  }
-
-  if (!isAddress(verifyingSigner)) {
-    throw new Error("Invalid Verifying Signer Address");
-  }
-
   if (!isAddress(DEPLOYER_CONTRACT_ADDRESS)) {
     throw new Error("Invalid Deployer Contract Address");
   }
@@ -390,8 +310,6 @@ export async function mainDeploy(): Promise<Record<string, string>> {
     "Smart Account Factory Owner Address: ",
     smartAccountFactoryOwnerAddress
   );
-  console.log("Paymaster Owner Address: ", paymasterOwnerAddress);
-  console.log("Verifying Signer Address: ", verifyingSigner);
   console.log("Deployer Contract Address: ", DEPLOYER_CONTRACT_ADDRESS);
 
   const [deployer] = await ethers.getSigners();
@@ -409,8 +327,6 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   await deployBaseWalletImpContract(deployerInstance);
   console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
-  console.log("=========================================");
-  await deployVerifySingeltonPaymaster(deployerInstance);
   console.log("=========================================");
   await deployEcdsaOwnershipRegistryModule(deployerInstance);
   console.log("=========================================");
