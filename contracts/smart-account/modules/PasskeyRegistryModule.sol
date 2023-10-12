@@ -116,7 +116,11 @@ contract PasskeyRegistryModule is BaseAuthorizationModule {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) internal view virtual returns (uint256 sigValidationResult) {
-        if (_verifySignature(userOpHash, userOp.signature)) {
+        (bytes memory moduleSignature,) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        if (_verifySignature(userOpHash, moduleSignature)) {
             return 0;
         }
         return SIG_VALIDATION_FAILED;
