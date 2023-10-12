@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers, deployments, waffle } from "hardhat";
+import { ethers, deployments, waffle, network } from "hardhat";
 import {
   getSmartAccountImplementation,
   getSmartAccountFactory,
@@ -90,17 +90,31 @@ describe("Smart Account Factory", async () => {
 
   describe("Stakeable", async () => {
     describe("addStake(): ", async () => {
+      // positive cases
       it("can add stake to the EP", async () => {
         const { smartAccountFactory, smartAccountImplementation, entryPoint } =
           await setupTests();
         const stakeAmount = ethers.utils.parseEther("1.234256");
-        await smartAccountFactory.addStake(entryPoint.address, 600, {
+        const validUnstakeDelay = 600;
+        await smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
           value: stakeAmount,
         });
         const depositInfo = await entryPoint.getDepositInfo(
           smartAccountFactory.address
         );
         expect(depositInfo.stake).to.equal(stakeAmount);
+      });
+
+      // negative cases
+      it("reverts when wrong EntryPoint address is passed", async()=>{
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } =
+          await setupTests();
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        const validUnstakeDelay = 600;
+        const invalidEPAddress = AddressZero;
+        await expect(smartAccountFactory.addStake(invalidEPAddress, validUnstakeDelay, {
+          value: stakeAmount,
+        })).to.be.revertedWith("Invalid EP address");         
       });
 
       it("reverts when unstake delay not specified", async () => {
@@ -143,8 +157,9 @@ describe("Smart Account Factory", async () => {
         const { smartAccountFactory, smartAccountImplementation, entryPoint } =
           await setupTests();
         const invalidStakeAmount = ethers.utils.parseEther("0");
+        const validUnstakeDelay = 600;
         await expect(
-          smartAccountFactory.addStake(entryPoint.address, 600, {
+          smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
             value: invalidStakeAmount,
           })
         ).to.be.revertedWith("no stake specified");
@@ -156,8 +171,9 @@ describe("Smart Account Factory", async () => {
         const overflowedStakeAmount = ethers.utils.parseEther(
           "5192296858534827.628530496329220095"
         );
+        const validUnstakeDelay = 600;
         await expect(
-          smartAccountFactory.addStake(entryPoint.address, 600, {
+          smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
             value: overflowedStakeAmount,
           })
         ).to.be.revertedWith("stake overflow");
@@ -171,15 +187,30 @@ describe("Smart Account Factory", async () => {
           await setupTests();
         // staking first
         const stakeAmount = ethers.utils.parseEther("1.234256");
-        await smartAccountFactory.addStake(entryPoint.address, 600, {
+        const validUnstakeDelay = 600;
+        await smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
           value: stakeAmount,
         });
         // unstake
         const tx = await smartAccountFactory.unlockStake(entryPoint.address);
         await expect(tx).to.emit(entryPoint, "StakeUnlocked");
       });
+ 
+      // negative cases
+      it("reverts when wrong EntryPoint address is passed ", async()=>{
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } =
+          await setupTests();
+        // staking first
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        const validUnstakeDelay = 600;
+        await smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
+          value: stakeAmount,
+        });
+        // unstaking with wrong entryPoint address
+        const invalidEPAddress = AddressZero;
+        await expect(smartAccountFactory.unlockStake(invalidEPAddress)).to.be.revertedWith("Invalid EP address");
+      });
 
-      // positive cases
       it("reverts when amount is not staked yet", async () => {
         const { smartAccountFactory, smartAccountImplementation, entryPoint } =
           await setupTests();
@@ -194,7 +225,8 @@ describe("Smart Account Factory", async () => {
           await setupTests();
         // staking first
         const stakeAmount = ethers.utils.parseEther("1.234256");
-        await smartAccountFactory.addStake(entryPoint.address, 600, {
+        const validUnstakeDelay = 600;
+        await smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
           value: stakeAmount,
         });
         // unstake()
@@ -207,15 +239,20 @@ describe("Smart Account Factory", async () => {
     });
 
     describe("withdrawStake(): ", async () => {
+      // positive cases
       it("can withdraw Stake", async () => {
         const { smartAccountFactory, smartAccountImplementation, entryPoint } =
           await setupTests();
+
         // staking first
         const stakeAmount = ethers.utils.parseEther("1.234256");
-        await smartAccountFactory.addStake(entryPoint.address, 1, {
+        const validUnstakeDelay = 1;
+        await smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
           value: stakeAmount,
         });
-        // waiting for additional blocks
+
+        // Increase time (600 seconds)
+        // Mine additional blocks
         const blocksToWait = 10;
         const currentBlockNumber = await ethers.provider.getBlockNumber();
         const targetBlockNumber = currentBlockNumber + blocksToWait;
@@ -229,6 +266,32 @@ describe("Smart Account Factory", async () => {
           alice.address
         );
         await expect(tx).to.emit(entryPoint, "StakeWithdrawn");
+      });
+
+      // negative cases
+      it("reverts when wrong EntryPoint address is passed ", async()=>{
+        const { smartAccountFactory, smartAccountImplementation, entryPoint } =
+          await setupTests();
+
+        // staking first
+        const stakeAmount = ethers.utils.parseEther("1.234256");
+        const validUnstakeDelay = 1;
+        await smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
+          value: stakeAmount,
+        });
+
+        // Increase time (600 seconds)
+        // Mine additional blocks
+        const blocksToWait = 10;
+        const currentBlockNumber = await ethers.provider.getBlockNumber();
+        const targetBlockNumber = currentBlockNumber + blocksToWait;
+        while ((await ethers.provider.getBlockNumber()) < targetBlockNumber) {
+          await ethers.provider.send("evm_mine", []);
+        }
+
+        // withdrawing with wrong entryPoint address
+        const invalidEPAddress = AddressZero;
+        await expect(smartAccountFactory.withdrawStake(invalidEPAddress,alice.address)).to.be.revertedWith("Invalid EP address");
       });
 
       it("reverts on empty stake withdraw", async () => {
@@ -245,9 +308,11 @@ describe("Smart Account Factory", async () => {
           await setupTests();
         // staking first
         const stakeAmount = ethers.utils.parseEther("1.234256");
-        await smartAccountFactory.addStake(entryPoint.address, 1, {
+        const validUnstakeDelay = 1;
+        await smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
           value: stakeAmount,
         });
+
         // waiting for additional blocks
         const blocksToWait = 10;
         const currentBlockNumber = await ethers.provider.getBlockNumber();
@@ -266,7 +331,8 @@ describe("Smart Account Factory", async () => {
           await setupTests();
         // staking first
         const stakeAmount = ethers.utils.parseEther("1.234256");
-        await smartAccountFactory.addStake(entryPoint.address, 600, {
+        const validUnstakeDelay = 600;
+        await smartAccountFactory.addStake(entryPoint.address, validUnstakeDelay, {
           value: stakeAmount,
         });
         // waiting for additional blocks
