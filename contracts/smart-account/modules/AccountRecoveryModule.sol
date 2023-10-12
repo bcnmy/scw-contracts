@@ -235,10 +235,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             // gas efficient way to ensure all guardians are unique
             // requires from dapp to sort signatures before packing them into bytes
             if (currentGuardianAddress <= lastGuardianAddress)
-                revert NotUniqueGuardianOrInvalidOrder(
-                    lastGuardianAddress,
-                    currentGuardianAddress
-                );
+                revert("AccRecovery: NotUnique/BadOrder");
 
             // detect the common validity window for all the guardians
             // if at least one guardian is not valid yet or expired

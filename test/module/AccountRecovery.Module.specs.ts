@@ -13,6 +13,7 @@ import {
   makeEcdsaModuleUserOp,
   makeUnsignedUserOp,
   getUserOpHash,
+  fillUserOp
 } from "../utils/userOp";
 import {
   makeMultiSignedUserOpWithGuardiansList,
@@ -803,7 +804,13 @@ describe("Account Recovery Module: ", async () => {
         ethers.utils.keccak256(recoveryRequestCallData)
       );
 
-      await accountRecoveryModule.renounceRecoveryRequest();
+      const renounceTxn = await accountRecoveryModule.renounceRecoveryRequest();
+      expect(renounceTxn)
+        .to.emit(accountRecoveryModule, "RecoveryRequestRenounced")
+        .withArgs(
+          deployer.address,
+        );  
+
       const recoveryRequestAfter =
         await accountRecoveryModule.getRecoveryRequest(deployer.address);
       const emptyGuardian = ethers.utils.hexlify(
@@ -811,9 +818,7 @@ describe("Account Recovery Module: ", async () => {
       );
 
       expect(recoveryRequestAfter.callDataHash).to.equal(
-        ethers.utils.hexlify(
-          ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32)
-        )
+        emptyGuardian
       );
     });
 
@@ -1718,9 +1723,7 @@ describe("Account Recovery Module: ", async () => {
       
       let signatures = "0x";
 
-      let wrongArrayOfSigners = arrayOfSigners;
-      expect(wrongArrayOfSigners[1]).to.not.equal(eve);
-      wrongArrayOfSigners[1] = eve;
+      let wrongArrayOfSigners = [charlie, eve, bob]; // eve != alice
 
       for (let i = 0; i < arrayOfSigners.length; i++) {
         const sig = await arrayOfSigners[i].signMessage(messageUserOp);
@@ -1745,29 +1748,318 @@ describe("Account Recovery Module: ", async () => {
         .withArgs(0, "AA24 signature error");
     });
 
-    /*
+    it("Should revert if the signature is for other module", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+      } = await setupTests();
 
-    it("Should revert if the signature is for other module", async () => {});
+      const userOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData(
+            "submitRecoveryRequest",
+            [
+              ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+                newOwner.address,
+              ]),
+            ]
+          ),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        accountRecoveryModule.address //use account recovery module as validator
+      );
 
-    it("Should revert if guardians are not unique", async () => {});
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
+    });
 
-    it("Reverts if signatures are not sorted by the ascending signer's address", async () => {});
+    it("Should revert if guardians are not unique", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+      } = await setupTests();
 
-    it("Events are emitted properly", async () => {});
-    */
+      const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+        "transferOwnership",
+        [newOwner.address],
+        ecdsaModule,
+        userSA.address, 
+        [charlie, alice, alice], 
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: AccRecovery: NotUnique/BadOrder");
+    });
+
+    it("Reverts if signatures are not sorted by the ascending signer's address", async () => {
+        const {
+          entryPoint,
+          userSA,
+          accountRecoveryModule,
+          ecdsaModule,
+          controlMessage,
+        } = await setupTests();
+  
+        const userOp = await makeMultisignedSubmitRecoveryRequestUserOp(
+          "transferOwnership",
+          [newOwner.address],
+          ecdsaModule,
+          userSA.address, 
+          [alice, bob, charlie],  // they are not sorted by ascendance of eth addresses
+          controlMessage,
+          entryPoint,
+          accountRecoveryModule
+        );
+  
+        await expect(
+          entryPoint.handleOps([userOp], alice.address, {
+            gasLimit: 10000000,
+          })
+        )
+          .to.be.revertedWith("FailedOp")
+          .withArgs(0, "AA23 reverted: AccRecovery: NotUnique/BadOrder");
+    });
   });
 
-  // Execution stage
-  // it("Should revert if trying to execute the request with invalid calldata", async () => {});
   
-  // it("can change from one validation module to another (by enabling and setting it up) when making recovery", async () => {});
+  describe("Execution stage", async () => {
+
+    it("Can change from one validation module to another (by enabling and setting it up) when making recovery", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        arrayOfSigners,
+        defaultSecurityDelay
+      } = await setupTests();
+
+      const mockValidationModule = await (
+        await ethers.getContractFactory("MockAuthModule")
+      ).deploy(); 
+
+      const executeBatchParams = [
+        [ecdsaModule.address, userSA.address],
+        [ethers.utils.parseEther("0"), ethers.utils.parseEther("0")],
+        [
+          ecdsaModule.interface.encodeFunctionData(
+            "renounceOwnership",
+            []
+          ),
+          userSA.interface.encodeFunctionData(
+            "setupAndEnableModule", 
+            [
+              mockValidationModule.address,
+              mockValidationModule.interface.encodeFunctionData("init", [0xdecaf])
+            ]
+          ),
+        ],
+      ]
+      
+      const recoveryRequestCallData = userSA.interface.encodeFunctionData(
+        "executeBatch",
+        executeBatchParams
+      );
+
+      const addRequestUserOp = await makeMultiSignedUserOpWithGuardiansList(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData("submitRecoveryRequest", [
+            recoveryRequestCallData,
+          ]),
+        ],
+        userSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule.address,
+      );
+
+      await entryPoint.handleOps([addRequestUserOp], alice.address, { gasLimit: 10000000 });
+
+      const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
+        "executeBatch",
+        executeBatchParams,
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+
+      await ethers.provider.send("evm_increaseTime", [
+        defaultSecurityDelay + 12,
+      ]);
+      await ethers.provider.send("evm_mine", []);
+
+      const executeRequestTxn = await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, { gasLimit: 10000000 });
+      expect(executeRequestTxn).to.emit(ecdsaModule, "OwnershipTransferred");
+      expect(await userSA.isModuleEnabled(mockValidationModule.address)).to.equal(true);
+    });
+
+    it("The request with invalid calldata for the module executes but does nothing", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        arrayOfSigners,
+        defaultSecurityDelay
+      } = await setupTests();
+
+      const invalidCallData = "0xdecafdecaf";
+
+      const invalidArgs = [
+        ecdsaModule.address,
+        ethers.utils.parseEther("0"),
+        invalidCallData,
+      ];
+      
+      const recoveryRequestCallData = userSA.interface.encodeFunctionData(
+        "execute",
+        invalidArgs
+      );
+
+      const addRequestUserOp = await makeMultiSignedUserOpWithGuardiansList(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData("submitRecoveryRequest", [
+            recoveryRequestCallData,
+          ]),
+        ],
+        userSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule.address,
+      );
+
+      await entryPoint.handleOps([addRequestUserOp], alice.address, { gasLimit: 10000000 });
+
+      const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
+        "execute",
+        invalidArgs,
+        userSA.address,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+
+      await ethers.provider.send("evm_increaseTime", [
+        defaultSecurityDelay + 12,
+      ]);
+      await ethers.provider.send("evm_mine", []);
+
+      await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, { gasLimit: 10000000 });
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(smartAccountOwner.address); 
+    });
+
+    it("Executing request with completely invalid calldata reverts", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        arrayOfSigners,
+        defaultSecurityDelay,
+        chainId
+      } = await setupTests();
+      
+      const recoveryRequestCallData = "0xdecafdecaf";
+
+      const addRequestUserOp = await makeMultiSignedUserOpWithGuardiansList(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData("submitRecoveryRequest", [
+            recoveryRequestCallData,
+          ]),
+        ],
+        userSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule.address,
+      );
+
+      await entryPoint.handleOps([addRequestUserOp], alice.address, { gasLimit: 10000000 });
+    
+      const executeRecoveryRequestUserOp = await fillUserOp(
+        {
+          sender: userSA.address,
+          callData: recoveryRequestCallData,
+        },
+        entryPoint,
+        "nonce"
+      );
+    
+      const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"],
+        [0x0, accountRecoveryModule.address]
+      );
+    
+      executeRecoveryRequestUserOp.signature = signatureWithModuleAddress;
+
+      await ethers.provider.send("evm_increaseTime", [
+        defaultSecurityDelay + 12,
+      ]);
+      await ethers.provider.send("evm_mine", []);
+
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("NonExistingMethodCalled(bytes4)").slice(0, 10),
+        recoveryRequestCallData.slice(0,10),
+        ethers.utils.hexZeroPad("0x", 28), //add zeros
+      ]);
+
+      const txn = await entryPoint.handleOps([executeRecoveryRequestUserOp], alice.address, { gasLimit: 10000000 });
+      expect(await txn).to.emit(entryPoint, "UserOperationRevertReason")
+      .withArgs(
+        getUserOpHash(executeRecoveryRequestUserOp, entryPoint.address, chainId),
+        executeRecoveryRequestUserOp.sender,
+        executeRecoveryRequestUserOp.nonce,
+        errorData
+      );
+      expect(await ecdsaModule.getOwner(userSA.address)).to.equal(smartAccountOwner.address); 
+    });
+  });
 
   describe("addGuardian", async () => {
-    it("Can add a guardian", async () => {
-      const { entryPoint, userSA, accountRecoveryModule, ecdsaModule } =
+    it("Can add a guardian and proper event is emitted", async () => {
+      const { entryPoint, userSA, accountRecoveryModule, ecdsaModule, controlMessage } =
         await setupTests();
 
-      const newGuardian = ethers.utils.keccak256(eve.address);
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash);
+      
+      const newGuardian = ethers.utils.keccak256(await eve.signMessage(messageHashBytes));
 
       const guardiansBefore = (
         await accountRecoveryModule.getSmartAccountSettings(userSA.address)
@@ -1806,14 +2098,23 @@ describe("Account Recovery Module: ", async () => {
         await accountRecoveryModule.getSmartAccountSettings(userSA.address);
       const guardiansAfter = userSASettings.guardiansCount;
 
+      const expectedTimeFrame = {
+        validUntil: 16741936496,
+        validAfter: receiptTimestamp + userSASettings.securityDelay,
+      };
+
+      expect(handleOpsTxn).to.emit(accountRecoveryModule, "GuardianAdded").withArgs(
+        userSA.address,
+        newGuardian,
+        expectedTimeFrame
+      );
+
       const eveTimeFrame = await accountRecoveryModule.getGuardianParams(
         newGuardian,
         userSA.address
       );
-      expect(eveTimeFrame.validUntil).to.equal(16741936496);
-      expect(eveTimeFrame.validAfter).to.equal(
-        receiptTimestamp + userSASettings.securityDelay
-      );
+      expect(eveTimeFrame.validUntil).to.equal(expectedTimeFrame.validUntil);
+      expect(eveTimeFrame.validAfter).to.equal(expectedTimeFrame.validAfter);
       expect(guardiansAfter).to.equal(guardiansBefore + 1);
     });
 
