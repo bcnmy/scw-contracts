@@ -3,9 +3,24 @@ pragma solidity 0.8.17;
 
 import {ISecurityPolicyManagerPlugin, ISecurityPolicyPlugin, SENTINEL_MODULE_ADDRESS} from "contracts/smart-account/interfaces/modules/ISecurityPolicyManagerPlugin.sol";
 
+/// @title Security Policy Manager Plugin
+/// @author @ankurdubey521
+/// @dev Execution Phase Plugin responsible for enforcing security policies during plugin installation on the smart contract wallet
 contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     mapping(address => mapping(address => address))
         internal enabledSecurityPoliciesLinkedList;
+
+    ////////////////////////// PLUGIN INSTALLATION FUNCTIONS //////////////////////////
+
+    /// @inheritdoc ISecurityPolicyManagerPlugin
+    function checkSetupAndEnableModule(
+        address,
+        bytes calldata
+    ) external override returns (address) {
+        revert("Not implemented");
+    }
+
+    ////////////////////////// SECURITY POLICY MANAGEMENT FUNCTIONS //////////////////////////
 
     /// @inheritdoc ISecurityPolicyManagerPlugin
     function enableSecurityPolicy(
@@ -27,9 +42,10 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
             revert SecurityPolicyAlreadyEnabled(address(_policy));
         }
 
-        enabledSecurityPolicies[address(_policy)] = enabledSecurityPolicies[
-            SENTINEL_MODULE_ADDRESS
-        ];
+        address head = enabledSecurityPolicies[SENTINEL_MODULE_ADDRESS];
+        enabledSecurityPolicies[address(_policy)] = head == address(0x0)
+            ? SENTINEL_MODULE_ADDRESS
+            : head;
         enabledSecurityPolicies[SENTINEL_MODULE_ADDRESS] = address(_policy);
 
         emit SecurityPolicyEnabled(msg.sender, address(_policy));
@@ -64,7 +80,9 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
                 revert SecurityPolicyAlreadyEnabled(address(policy));
             }
 
-            enabledSecurityPolicies[policy] = head;
+            enabledSecurityPolicies[policy] = head == address(0x0)
+                ? SENTINEL_MODULE_ADDRESS
+                : head;
             head = policy;
 
             emit SecurityPolicyEnabled(msg.sender, policy);
@@ -110,6 +128,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         emit SecurityPolicyDisabled(msg.sender, address(_policy));
     }
 
+    /* solhint-disable code-complexity*/
     /// @inheritdoc ISecurityPolicyManagerPlugin
     function disableSecurityPoliciesRange(
         ISecurityPolicyPlugin _start,
@@ -145,15 +164,20 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
 
         bool endFound = false;
         address current = address(_start);
-        while (current != address(_end) || current != SENTINEL_MODULE_ADDRESS) {
-            if (current == address(_end)) {
-                endFound = true;
-            }
-
+        while (true) {
             address next = enabledSecurityPolicies[current];
             delete enabledSecurityPolicies[current];
 
             emit SecurityPolicyDisabled(msg.sender, current);
+
+            if (current == address(_end)) {
+                endFound = true;
+                break;
+            }
+
+            if (current == SENTINEL_MODULE_ADDRESS) {
+                break;
+            }
 
             current = next;
         }
@@ -164,17 +188,42 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     }
 
     /// @inheritdoc ISecurityPolicyManagerPlugin
-    function checkSetupAndEnableModule(
-        address,
-        bytes calldata
-    ) external override returns (address) {
-        revert("Not implemented");
-    }
+    function securityPoliciesPaginated(
+        address _scw,
+        address _start,
+        uint256 _pageSize
+    ) external view returns (ISecurityPolicyPlugin[] memory enabledPolicies) {
+        enabledPolicies = new ISecurityPolicyPlugin[](_pageSize);
+        uint256 actualEnabledPoliciesLength;
 
-    /// @inheritdoc ISecurityPolicyManagerPlugin
-    function securityPolicies(
-        address
-    ) external view override returns (ISecurityPolicyPlugin[] memory) {
-        revert("Not implemented");
+        mapping(address => address)
+            storage enabledSecurityPolicies = enabledSecurityPoliciesLinkedList[
+                _scw
+            ];
+
+        if (_start == address(0)) {
+            _start = SENTINEL_MODULE_ADDRESS;
+        }
+
+        ISecurityPolicyPlugin current = ISecurityPolicyPlugin(_start);
+        do {
+            if (current != ISecurityPolicyPlugin(SENTINEL_MODULE_ADDRESS)) {
+                enabledPolicies[actualEnabledPoliciesLength] = current;
+                unchecked {
+                    ++actualEnabledPoliciesLength;
+                }
+            }
+            current = ISecurityPolicyPlugin(
+                enabledSecurityPolicies[address(current)]
+            );
+        } while (
+            actualEnabledPoliciesLength < _pageSize &&
+                current != ISecurityPolicyPlugin(SENTINEL_MODULE_ADDRESS) &&
+                current != ISecurityPolicyPlugin(address(0))
+        );
+
+        assembly {
+            mstore(enabledPolicies, actualEnabledPoliciesLength)
+        }
     }
 }

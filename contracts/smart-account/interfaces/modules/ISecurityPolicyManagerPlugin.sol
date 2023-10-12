@@ -5,10 +5,7 @@ import {ISecurityPolicyPlugin} from "./ISecurityPolicyPlugin.sol";
 
 address constant SENTINEL_MODULE_ADDRESS = address(0x1);
 
-/// @title Security Policy Manager Plugin
-/// @author @ankurdubey521
-/// @dev Execution Phase Plugin responsible for enforcing security policies during plugin installation on the smart contract wallet
-interface ISecurityPolicyManagerPlugin {
+interface ISecurityPolicyManagerPluginEventsErrors {
     event SecurityPolicyEnabled(address indexed scw, address indexed policy);
     event SecurityPolicyDisabled(address indexed scw, address indexed policy);
 
@@ -17,7 +14,14 @@ interface ISecurityPolicyManagerPlugin {
     error InvalidSecurityPolicyAddress(address policy);
     error InvalidPointerAddress(address pointer);
     error EmptyPolicyList();
+}
 
+/// @title Security Policy Manager Plugin
+/// @author @ankurdubey521
+/// @dev Execution Phase Plugin responsible for enforcing security policies during plugin installation on the smart contract wallet
+interface ISecurityPolicyManagerPlugin is
+    ISecurityPolicyManagerPluginEventsErrors
+{
     /// @dev Enables the security policies for the smart contract wallet. Used during the setup process.
     /// @param _policy The security policy to be enabled
     function enableSecurityPolicy(ISecurityPolicyPlugin _policy) external;
@@ -56,8 +60,12 @@ interface ISecurityPolicyManagerPlugin {
 
     /// @dev Returns the security policy for the smart contract wallet.
     /// @param _scw The address of the smart contract wallet
-    /// @return SecurityPolicy The security policy of the smart contract wallet
-    function securityPolicies(
-        address _scw
-    ) external view returns (ISecurityPolicyPlugin[] memory);
+    /// @param _start The address of the first security policy in the list
+    /// @param _pageSize The number of security policies to be returned
+    /// @return enabledPolicies The list of enabled security policies
+    function securityPoliciesPaginated(
+        address _scw,
+        address _start,
+        uint256 _pageSize
+    ) external view returns (ISecurityPolicyPlugin[] memory enabledPolicies);
 }
