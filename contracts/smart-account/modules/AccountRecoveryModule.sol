@@ -184,14 +184,14 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         // otherwise we need to check all the signatures first
         uint256 requiredSignatures = _smartAccountSettings[userOp.sender]
             .recoveryThreshold;
-        if (requiredSignatures == 0)
-            revert("AccRecovery: Threshold not set");
+        if (requiredSignatures == 0) revert("AccRecovery: Threshold not set");
+        
+        bytes calldata moduleSignature = userOp.signature[96:];
 
-        (bytes memory signatures, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
+        require(
+            moduleSignature.length >= requiredSignatures * 2 * 65,
+            "AccRecovery: Invalid Sigs Length"
         );
-        require(signatures.length >= requiredSignatures * 2 * 65, "AccRecovery: Invalid Sigs Length");
 
         address lastGuardianAddress;
         address currentGuardianAddress;
@@ -205,12 +205,12 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             address currentUserOpSignerAddress = userOpHash
                 .toEthSignedMessageHash()
                 .recover(
-                    userOp.signature[96 + 2 * i * 65:96 + (2 * i + 1) * 65]
+                    moduleSignature[2 * i * 65:(2 * i + 1) * 65]
                 );
 
-            currentGuardianSig = userOp.signature[96 + (2 * i + 1) * 65:96 +
-                (2 * i + 2) *
-                65];
+            currentGuardianSig = moduleSignature[
+                (2 * i + 1) * 65 : (2 * i + 2) * 65
+            ];
 
             currentGuardianAddress = CONTROL_HASH
                 .toEthSignedMessageHash()

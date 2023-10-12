@@ -18,11 +18,14 @@ contract DefaultCallbackHandler is
     IERC721TokenReceiver,
     IERC165
 {
+    string public constant NAME = "Default Callback Handler";
+    string public constant VERSION = "1.0.0";
 
     error NonExistingMethodCalled(bytes4 selector);
 
-    string public constant NAME = "Default Callback Handler";
-    string public constant VERSION = "1.0.0";
+    fallback() external {
+        revert NonExistingMethodCalled(msg.sig);
+    }
 
     function supportsInterface(
         bytes4 interfaceId
@@ -72,9 +75,5 @@ contract DefaultCallbackHandler is
         bytes calldata
     ) external pure override {
         // We implement this for completeness, doesn't really have any value
-    }
-
-    fallback() external {
-        revert NonExistingMethodCalled(msg.sig);
     }
 }

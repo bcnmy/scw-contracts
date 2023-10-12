@@ -48,7 +48,9 @@ export async function makeMultiSignedUserOpWithGuardiansList(
   );
 
   const chainId = await provider!.getNetwork().then((net) => net.chainId);
-  const messageUserOp = arrayify(getUserOpHash(op2, entryPoint!.address, chainId));
+  const messageUserOp = arrayify(
+    getUserOpHash(op2, entryPoint!.address, chainId)
+  );
 
   const messageHash = ethers.utils.id(controlMessage);
   const messageHashBytes = ethers.utils.arrayify(messageHash);
