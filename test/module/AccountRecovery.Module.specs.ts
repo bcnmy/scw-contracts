@@ -2125,11 +2125,27 @@ describe("Account Recovery Module: ", async () => {
       expect(guardiansAfter).to.equal(guardiansBefore + 1);
     });
 
+    /*
+    it("Should revert if zero guardian is provided", async () => {});
+
+    it("Should revert if such a guardian has already been set", async () => {});
+
+    it("Should set validUntil to uint48.max if validUntil = 0 is provided", async () => {});
+
+    it("Should set validAfter as guardian.timeframe.validAfter if it is bigger than now+securityDelay", async () => {});
+
+    it("Should set now+securityDelay if validAfter is less than it", async () => {});
+
+    it("Should revert if validUntil is less than resulting validAfter", async () => {});
+
+    it("Should revert if validUntil < now", async () => {});
+    */
+
     // it("_________", async () => {});
   });
 
   /*
-  describe("changeGuardian", async () => {
+  describe("replaceGuardian", async () => {
     it("_________", async () => {});
   });
 
@@ -2137,8 +2153,21 @@ describe("Account Recovery Module: ", async () => {
     it("_________", async () => {});
   });
 
+  describe("removeExpiredGuardian", async () => {
+    it("_________", async () => {});
+  });
 
-  // DISABLE ACC RECOVERY
+  describe("changeGuardianParams", async () => {
+    it("_________", async () => {});
+  });
+
+  describe("setThreshold", async () => {
+    it("_________", async () => {});
+  });
+
+  describe("setSecurityDelay", async () => {
+    it("_________", async () => {});
+  });
 
 
   // Check all the errors declarations to be actually used in the contract code
