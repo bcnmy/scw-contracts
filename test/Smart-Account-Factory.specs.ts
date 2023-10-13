@@ -116,11 +116,15 @@ describe("Smart Account Factory", async () => {
         const stakeAmount = ethers.utils.parseEther("1.234256");
         const validUnstakeDelay = 600;
         const invalidEPAddress = AddressZero;
+        const depositInfo = await entryPoint.getDepositInfo(
+          smartAccountFactory.address
+        );     
         await expect(
           smartAccountFactory.addStake(invalidEPAddress, validUnstakeDelay, {
             value: stakeAmount,
           })
         ).to.be.revertedWith("Invalid EP address");
+        expect(depositInfo.stake).to.be.equal(0);
       });
 
       it("reverts when unstake delay not specified", async () => {
@@ -128,6 +132,9 @@ describe("Smart Account Factory", async () => {
           await setupTests();
         const stakeAmount = ethers.utils.parseEther("1.234256");
         const invalidUnstakeDelay = 0;
+        const depositInfo = await entryPoint.getDepositInfo(
+          smartAccountFactory.address
+        );
         await expect(
           smartAccountFactory.addStake(
             entryPoint.address,
@@ -135,6 +142,7 @@ describe("Smart Account Factory", async () => {
             { value: stakeAmount }
           )
         ).to.be.revertedWith("must specify unstake delay");
+        expect(depositInfo.stake).to.be.equal(0);
       });
 
       it("reverts when trying to decrease unstake time", async () => {
@@ -157,6 +165,7 @@ describe("Smart Account Factory", async () => {
             { value: stakeAmount }
           )
         ).to.be.revertedWith("cannot decrease unstake time");
+        expect(depositInfo.unstakeDelaySec).to.be.equal(validUnstakeDelay);
       });
 
       it("reverts when stake value not specified", async () => {
