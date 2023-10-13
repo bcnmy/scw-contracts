@@ -26,11 +26,9 @@ library PaymasterHelpers {
 
     /**
      * @dev Encodes the paymaster context: paymasterId and gasPrice
-     * @param op UserOperation object
      * @param data PaymasterData passed
      */
     function paymasterContext(
-        UserOperation calldata op,
         PaymasterData memory data
     )
         internal

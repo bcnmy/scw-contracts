@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {EcdsaOwnershipRegistryModule} from "../modules/EcdsaOwnershipRegistryModule.sol";
-import {UserOperation} from "../modules/BaseAuthorizationModule.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 contract WrongStorageAccessValidationModule is EcdsaOwnershipRegistryModule {
     uint256 public constant MAX_VALIDATION_COUNT = 10;

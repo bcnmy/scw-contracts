@@ -100,7 +100,7 @@ abstract contract ModuleManager is
         ) revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
         // Can add guards here to allow delegatecalls for selected modules (msg.senders) only
-        success = execute(
+        success = _execute(
             to,
             value,
             data,
@@ -266,7 +266,7 @@ abstract contract ModuleManager is
         bytes memory data,
         Enum.Operation operation
     ) internal returns (bool success) {
-        success = execute(to, value, data, operation, gasleft());
+        success = _execute(to, value, data, operation, gasleft());
         if (success) {
             emit ModuleTransaction(msg.sender, to, value, data, operation);
             emit ExecutionFromModuleSuccess(msg.sender);
@@ -275,8 +275,7 @@ abstract contract ModuleManager is
 
     /**
      * @notice Setup function sets the initial storage of the contract.
-     * @param setupContract Contract, that setups initial auth module for this smart account. It can be a module factory or
-     *                            a registry module that serves several smart accounts
+     * @param setupContract initializing the auth module; can be a module factory or a registry for multiple accounts.
      * @param setupData modules setup data (a standard calldata for the module setup contract)
      */
     function _initialSetupModules(

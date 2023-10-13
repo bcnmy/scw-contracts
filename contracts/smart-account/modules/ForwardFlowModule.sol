@@ -6,6 +6,22 @@ import {Enum} from "../common/Enum.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {Math} from "../libs/Math.sol";
 
+struct Transaction {
+    address to;
+    Enum.Operation operation;
+    uint256 value;
+    bytes data;
+    uint256 targetTxGas;
+}
+
+struct FeeRefund {
+    uint256 baseGas;
+    uint256 gasPrice; //gasPrice or tokenGasPrice
+    uint256 tokenGasPriceFactor;
+    address gasToken;
+    address payable refundReceiver;
+}
+
 /**
  * @notice Throws when the address that signed the data (restored from signature)
  * differs from the address we expected to sign the data (i.e. some authorized address)
@@ -64,46 +80,29 @@ interface IExecFromModule {
     ) external returns (bool success);
 }
 
-struct Transaction {
-    address to;
-    Enum.Operation operation;
-    uint256 value;
-    bytes data;
-    uint256 targetTxGas;
-}
-
-struct FeeRefund {
-    uint256 baseGas;
-    uint256 gasPrice; //gasPrice or tokenGasPrice
-    uint256 tokenGasPriceFactor;
-    address gasToken;
-    address payable refundReceiver;
-}
-
 contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
     // Domain Seperators keccak256("EIP712Domain(uint256 chainId,address verifyingContract)");
     bytes32 internal constant DOMAIN_SEPARATOR_TYPEHASH =
         0x47e79534a245952e8b16893a336b85a3d9ea9fa8c573f3d803afb92a79469218;
 
-    // keccak256(
-    //     "AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)"
-    // );
+    // solhint-disable-next-line
+    // keccak256("AccountTx(address to,uint256 value,bytes data,uint8 operation,uint256 targetTxGas,uint256 baseGas,uint256 gasPrice,uint256 tokenGasPriceFactor,address gasToken,address refundReceiver,uint256 nonce)");
     bytes32 internal constant ACCOUNT_TX_TYPEHASH =
         0xda033865d68bf4a40a5a7cb4159a99e33dba8569e65ea3e38222eb12d9e66eee;
 
-    uint256 private immutable _chainId;
+    uint256 private immutable CHAIN_ID;
 
     mapping(uint256 => uint256) public nonces;
 
     event AccountHandlePayment(bytes32 indexed txHash, uint256 indexed payment);
 
     constructor() {
-        _chainId = block.chainid;
+        CHAIN_ID = block.chainid;
     }
 
     /**
      * @dev Allows to estimate a transaction.
-     * @notice This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
+     * @notice This method is for estimation only, it will always revert and encode the result in the revert data.
      * @notice Call this method to get an estimate of the handlePayment costs that are deducted with `execTransaction`
      * @param gasUsed Gas used by the transaction.
      * @param baseGas Gas costs that are independent of the transaction execution
@@ -171,8 +170,8 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
 
     /**
      * @dev Allows to estimate a transaction.
-     *      This method is only meant for estimation purpose, therefore the call will always revert and encode the result in the revert data.
-     *      Since the `estimateGas` function includes refunds, call this method to get an estimated of the costs that are deducted from the wallet with `execTransaction`
+     * This method is for estimation only, it will always revert and encode the result in the revert data.
+     * Call this method to get an estimate of the handlePayment costs that are deducted with `execTransaction`
      * @param to Destination address of the transaction.
      * @param value Ether value of transaction.
      * @param data Data payload of transaction.
@@ -204,7 +203,7 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
 
     /**
      * @dev Safe (ex-Gnosis) style transaction with optional repay in native tokens or ERC20
-     * @dev Allows to execute a transaction confirmed by required signature/s and then pays the account that submitted the transaction.
+     * @dev Execute a transaction confirmed by required signature/s and then pays the account that submitted it.
      * @dev Function name optimized to have hash started with zeros to make this function calls cheaper
      * @notice The fees are always transferred, even if the user transaction fails.
      * @param _tx Smart Account transaction
@@ -270,15 +269,17 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
                 _tx.operation,
                 _tx.targetTxGas
             );
-            // If no targetTxGas and no gasPrice was set (e.g. both are 0), then the internal tx is required to be successful
-            // This makes it possible to use `estimateGas` without issues, as it searches for the minimum gas where the tx doesn't revert
+
+            // If targetTxGas and gasPrice are both 0, the internal tx must succeed.
+            // Enables safe use of `estimateGas` by finding the minimum gas where the transaction doesn't revert
             if (!success && _tx.targetTxGas == 0 && refundInfo.gasPrice == 0)
                 revert CanNotEstimateGas(
                     _tx.targetTxGas,
                     refundInfo.gasPrice,
                     success
                 );
-            // We transfer the calculated tx costs to the tx.origin to avoid sending it to intermediate contracts that have made calls
+
+            // Transfer transaction costs to tx.origin to avoid intermediate contract payments.
             uint256 payment;
             if (refundInfo.gasPrice != 0) {
                 payment = _handlePayment(
@@ -369,16 +370,16 @@ contract ForwardFlowModule is ReentrancyGuard, ISignatureValidatorConstants {
     ) public view returns (bytes32) {
         return
             keccak256(
-                abi.encode(DOMAIN_SEPARATOR_TYPEHASH, _chainId, smartAccount)
+                abi.encode(DOMAIN_SEPARATOR_TYPEHASH, CHAIN_ID, smartAccount)
             );
     }
 
     /**
      * @notice Returns the ID of the chain the contract is currently deployed on.
-     * @return _chainId The ID of the current chain as a uint256.
+     * @return CHAIN_ID The ID of the current chain as a uint256.
      */
     function getChainId() public view returns (uint256) {
-        return _chainId;
+        return CHAIN_ID;
     }
 
     /**
