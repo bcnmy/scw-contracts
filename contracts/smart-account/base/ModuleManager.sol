@@ -215,8 +215,14 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         emit DisabledModule(module);
     }
 
-    // TODO: can use not executor.execute, but SmartAccount._call for the unification
-
+    /**
+     * @notice Executes an operation from a module, emits specific events based on the result.
+     * @param to The address to which the operation should be executed.
+     * @param value The amount of ether (in wei) to send with the call (only for Call operations).
+     * @param data The call data to send with the operation.
+     * @param operation The type of operation to execute (either Call or DelegateCall).
+     * @return success A boolean indicating whether the operation was successful.
+     */
     function _executeFromModule(
         address to,
         uint256 value,
@@ -259,6 +265,14 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         return initialAuthorizationModule;
     }
 
+    /**
+     * @notice Sets up a new module by calling a specified setup contract with provided data.
+     *         The function will revert if the setupContract address is zero or if the setup call fails.
+     * @dev This function is internal and utilizes assembly for low-level call operations and error handling.
+     * @param setupContract The address of the contract that will be called to set up the module.
+     * @param setupData The call data to send to the setup contract.
+     * @return module The address of the newly set up module.
+     */
     function _setupModule(
         address setupContract,
         bytes memory setupData
