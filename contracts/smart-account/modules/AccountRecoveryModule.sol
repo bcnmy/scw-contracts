@@ -177,7 +177,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         uint256 requiredSignatures = _smartAccountSettings[userOp.sender]
             .recoveryThreshold;
         if (requiredSignatures == 0) revert("AccRecovery: Threshold not set");
-        
+
         bytes calldata moduleSignature = userOp.signature[96:];
 
         require(
@@ -196,13 +196,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         for (uint256 i; i < requiredSignatures; ) {
             address currentUserOpSignerAddress = userOpHash
                 .toEthSignedMessageHash()
-                .recover(
-                    moduleSignature[2 * i * 65:(2 * i + 1) * 65]
-                );
+                .recover(moduleSignature[2 * i * 65:(2 * i + 1) * 65]);
 
-            currentGuardianSig = moduleSignature[
-                (2 * i + 1) * 65 : (2 * i + 2) * 65
-            ];
+            currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 * i + 2) *
+                65];
 
             currentGuardianAddress = CONTROL_HASH
                 .toEthSignedMessageHash()
@@ -292,7 +289,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         if (_guardians[guardian][msg.sender].validUntil != 0)
             revert GuardianAlreadySet(guardian, msg.sender);
 
-        (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(validUntil, validAfter);
+        (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(
+            validUntil,
+            validAfter
+        );
 
         // TODO:
         // make a test case that it fails if validAfter + securityDelay together overflow uint48
@@ -319,7 +319,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         if (guardian == bytes32(0)) revert ZeroGuardian();
         if (newGuardian == bytes32(0)) revert ZeroGuardian();
 
-        (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(validUntil, validAfter);
+        (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(
+            validUntil,
+            validAfter
+        );
 
         // make the new one valid
         _guardians[newGuardian][msg.sender] = TimeFrame(
@@ -358,11 +361,13 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     // REMOVE EXPIRED GUARDIAN
     // not permissioned - anyone can call it but the check if the guardian is expired is on-chain
     // it will allow us clearing expired guardians from the backend and maintain the list of guardians actual
-    function removeExpiredGuardian(bytes32 guardian, address smartAccount) external {
+    function removeExpiredGuardian(
+        bytes32 guardian,
+        address smartAccount
+    ) external {
         uint48 validUntil = _guardians[guardian][smartAccount].validUntil;
-        if (validUntil == 0)
-            revert GuardianNotSet(guardian, smartAccount);
-        if(validUntil>=block.timestamp)
+        if (validUntil == 0) revert GuardianNotSet(guardian, smartAccount);
+        if (validUntil >= block.timestamp)
             revert GuardianNotExpired(guardian, smartAccount);
         _removeGuardianAndChangeTresholdIfNeeded(guardian, smartAccount);
     }
@@ -376,7 +381,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     // @note if validAfter is less then now + securityDelay, it is set to now + securityDelay
     // as for security reasons new guardian is only active after securityDelay
     function _checkAndAdjustValidUntilValidAfter(
-        uint48 validUntil, 
+        uint48 validUntil,
         uint48 validAfter
     ) internal view returns (uint48, uint48) {
         if (validUntil == 0) validUntil = type(uint48).max;
@@ -392,7 +397,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         return (validUntil, validAfter);
     }
 
-    function _removeGuardianAndChangeTresholdIfNeeded(bytes32 guardian, address smartAccount) internal {
+    function _removeGuardianAndChangeTresholdIfNeeded(
+        bytes32 guardian,
+        address smartAccount
+    ) internal {
         delete _guardians[guardian][smartAccount];
         --_smartAccountSettings[smartAccount].guardiansCount;
         emit GuardianRemoved(smartAccount, guardian);
