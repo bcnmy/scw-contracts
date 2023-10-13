@@ -12,6 +12,7 @@ import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOpera
 import {IBatchedSessionRouterModule} from "../interfaces/modules/IBatchedSessionRouterModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 
+
 /**
  * @title Batched Session Router
  * @dev Built to process executeBatch and executeBatch_y6U calls
@@ -129,7 +130,6 @@ contract BatchedSessionRouter is
     }
 
     /**
-     * @inheritdoc ISignatureValidator
      * @dev isValidSignature according to BaseAuthorizationModule
      * @param _dataHash Hash of the data to be validated.
      * @param _signature Signature over the the _dataHash.
