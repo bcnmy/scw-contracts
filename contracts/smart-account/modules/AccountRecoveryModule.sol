@@ -327,7 +327,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             validUntil == 0 ? type(uint48).max : validUntil,
             validAfter
         );
-        // don't increment guardiansCount as we haven't decremented it when deleting previous one    
+        // don't increment guardiansCount as we haven't decremented it when deleting previous one
         emit GuardianAdded(
             msg.sender,
             newGuardian,

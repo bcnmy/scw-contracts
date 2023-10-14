@@ -2068,12 +2068,8 @@ describe("Account Recovery Module: ", async () => {
     });
 
     it("Can add a guardian and proper event is emitted", async () => {
-      const {
-        entryPoint,
-        userSA,
-        accountRecoveryModule,
-        ecdsaModule,
-      } = await setupTests();
+      const { entryPoint, userSA, accountRecoveryModule, ecdsaModule } =
+        await setupTests();
 
       const guardiansBefore = (
         await accountRecoveryModule.getSmartAccountSettings(userSA.address)
@@ -2262,7 +2258,6 @@ describe("Account Recovery Module: ", async () => {
     });
   });
 
-  
   describe("replaceGuardian", async () => {
     let newGuardian: string;
 
@@ -2283,7 +2278,7 @@ describe("Account Recovery Module: ", async () => {
         userSA,
         accountRecoveryModule,
         ecdsaModule,
-        guardians
+        guardians,
       } = await setupTests();
 
       const guardianToRemove = guardians[1];
@@ -2338,61 +2333,197 @@ describe("Account Recovery Module: ", async () => {
         .to.emit(accountRecoveryModule, "GuardianRemoved")
         .withArgs(userSA.address, guardianToRemove);
 
-      const newGuardianTimeFrame = await accountRecoveryModule.getGuardianParams(
-        newGuardian,
-        userSA.address
+      const newGuardianTimeFrame =
+        await accountRecoveryModule.getGuardianParams(
+          newGuardian,
+          userSA.address
+        );
+      const removedGuardianTimeFrame =
+        await accountRecoveryModule.getGuardianParams(
+          guardianToRemove,
+          userSA.address
+        );
+      expect(newGuardianTimeFrame.validUntil).to.equal(
+        expectedTimeFrame.validUntil
       );
-      const removedGuardianTimeFrame = await accountRecoveryModule.getGuardianParams(
-        guardianToRemove,
-        userSA.address
+      expect(newGuardianTimeFrame.validAfter).to.equal(
+        expectedTimeFrame.validAfter
       );
-      expect(newGuardianTimeFrame.validUntil).to.equal(expectedTimeFrame.validUntil);
-      expect(newGuardianTimeFrame.validAfter).to.equal(expectedTimeFrame.validAfter);
       expect(removedGuardianTimeFrame.validUntil).to.equal(0);
       expect(removedGuardianTimeFrame.validAfter).to.equal(0);
       expect(guardiansAfter).to.equal(guardiansBefore);
-
     });
 
     it("reverts if guardian has not been set", async () => {
-      const { accountRecoveryModule, guardians } =
-          await setupTests();
+      const { accountRecoveryModule, guardians } = await setupTests();
 
       // no guardians are set for deployer
       const guardianToReplace = guardians[1];
 
-      await expect(accountRecoveryModule.replaceGuardian(guardianToReplace, newGuardian, 16741936496, 0)).
-        to.be.revertedWith("GuardianNotSet").
-        withArgs(guardianToReplace, deployer.address);
+      await expect(
+        accountRecoveryModule.replaceGuardian(
+          guardianToReplace,
+          newGuardian,
+          16741936496,
+          0
+        )
+      )
+        .to.be.revertedWith("GuardianNotSet")
+        .withArgs(guardianToReplace, deployer.address);
     });
 
     it("reverts if guardian to replace and new guardian are identical", async () => {
-      const { accountRecoveryModule, guardians } =
-          await setupTests();
+      const { accountRecoveryModule, guardians } = await setupTests();
       await accountRecoveryModule.addGuardian(newGuardian, 16741936496, 0);
 
-      await expect(accountRecoveryModule.replaceGuardian(newGuardian, newGuardian, 16741936496, 0)).
-        to.be.revertedWith("GuardiansAreIdentical")
+      await expect(
+        accountRecoveryModule.replaceGuardian(
+          newGuardian,
+          newGuardian,
+          16741936496,
+          0
+        )
+      ).to.be.revertedWith("GuardiansAreIdentical");
     });
 
     it("reverts if new guardian is zero", async () => {
-      const { accountRecoveryModule, guardians } =
-          await setupTests();
+      const { accountRecoveryModule, guardians } = await setupTests();
 
       await accountRecoveryModule.addGuardian(guardians[1], 16741936496, 0);
 
       const zeroGuardian = ethers.utils.hexZeroPad("0x", 32);
 
-      await expect(accountRecoveryModule.replaceGuardian(guardians[1], zeroGuardian, 16741936496, 0)).
-        to.be.revertedWith("ZeroGuardian");
+      await expect(
+        accountRecoveryModule.replaceGuardian(
+          guardians[1],
+          zeroGuardian,
+          16741936496,
+          0
+        )
+      ).to.be.revertedWith("ZeroGuardian");
+    });
+  });
+
+  describe("removeGuardian", async () => {
+    it("Can remove guardian and it is removed and the event is emitted", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        guardians,
+      } = await setupTests();
+
+      const guardianToRemove = guardians[1];
+      const guardiansBefore = (
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address)
+      ).guardiansCount;
+
+      const removeGuardianData =
+        accountRecoveryModule.interface.encodeFunctionData("removeGuardian", [
+          guardianToRemove,
+        ]);
+
+      const replaceGuardianUserOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          removeGuardianData,
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const handleOpsTxn = await entryPoint.handleOps(
+        [replaceGuardianUserOp],
+        alice.address,
+        { gasLimit: 10000000 }
+      );
+      expect(handleOpsTxn)
+        .to.emit(accountRecoveryModule, "GuardianRemoved")
+        .withArgs(userSA.address, guardianToRemove);
+
+      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(
+        userSA.address
+      );
+      const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
+        guardianToRemove,
+        userSA.address
+      );
+      const guardiansAfter = userSASettings.guardiansCount;
+      expect(guardianTimeFrame.validUntil).to.equal(0);
+      expect(guardianTimeFrame.validAfter).to.equal(0);
+      expect(guardiansAfter).to.equal(guardiansBefore - 1);
+    });
+
+    it("The threshold is adjusted if needed and event is emitted", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        guardians,
+      } = await setupTests();
+
+      const guardianToRemove = guardians[1];
+      const guardiansBefore = (
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address)
+      ).guardiansCount;
+      const thresholdBefore = (
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address)
+      ).recoveryThreshold;
+      expect(thresholdBefore).to.equal(guardiansBefore);
+
+      const removeGuardianData =
+        accountRecoveryModule.interface.encodeFunctionData("removeGuardian", [
+          guardianToRemove,
+        ]);
+
+      const replaceGuardianUserOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          removeGuardianData,
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const handleOpsTxn = await entryPoint.handleOps(
+        [replaceGuardianUserOp],
+        alice.address,
+        { gasLimit: 10000000 }
+      );
+      expect(handleOpsTxn)
+        .to.emit(accountRecoveryModule, "ThresholdChanged")
+        .withArgs(userSA.address, thresholdBefore-1);
+
+      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(
+        userSA.address
+      );
+      
+      expect(userSASettings.recoveryThreshold).to.equal(thresholdBefore-1);
+    });
+
+    it("Reverts if the guardian has not been set", async () => {
+      const { accountRecoveryModule, guardians } = await setupTests();
+
+      // no guardians are set for deployer
+      const guardianToRemove = guardians[1];
+
+      await expect(
+        accountRecoveryModule.removeGuardian(guardianToRemove)
+      )
+        .to.be.revertedWith("GuardianNotSet")
+        .withArgs(guardianToRemove, deployer.address);
     });
   });
 
   /*
-  describe("removeGuardian", async () => {
-    it("_________", async () => {});
-  });
-
   describe("removeExpiredGuardian", async () => {
     it("_________", async () => {});
   });
