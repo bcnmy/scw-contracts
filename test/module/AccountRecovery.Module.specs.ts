@@ -2054,12 +2054,10 @@ describe("Account Recovery Module: ", async () => {
   });
 
   describe("addGuardian", async () => {
-    let newGuardian: String;
+    let newGuardian: string;
 
-    before (async () => {
-      const {
-        controlMessage,
-      } = await setupTests();
+    before(async () => {
+      const { controlMessage } = await setupTests();
 
       const messageHash = ethers.utils.id(controlMessage);
       const messageHashBytes = ethers.utils.arrayify(messageHash);
@@ -2067,7 +2065,6 @@ describe("Account Recovery Module: ", async () => {
       newGuardian = ethers.utils.keccak256(
         await eve.signMessage(messageHashBytes)
       );
-
     });
 
     it("Can add a guardian and proper event is emitted", async () => {
@@ -2134,98 +2131,137 @@ describe("Account Recovery Module: ", async () => {
       expect(guardiansAfter).to.equal(guardiansBefore + 1);
     });
 
-    
     it("Should revert if zero guardian is provided", async () => {
-      const {
-        userSA,
-        accountRecoveryModule,
-      } = await setupTests();
+      const { accountRecoveryModule } = await setupTests();
 
-      //assign empty bytes32
+      // assign empty bytes32
       const zeroGuardian = ethers.utils.hexZeroPad("0x", 32);
-      const guardiansCountBefore = (await accountRecoveryModule.getSmartAccountSettings(deployer.address)).guardiansCount;
-        
-      await expect(accountRecoveryModule.addGuardian(
-        zeroGuardian,
-        16741936496,
-        0,
-      )).to.be.revertedWith("ZeroGuardian");
+      const guardiansCountBefore = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
 
-      const guardiansCountAfter = (await accountRecoveryModule.getSmartAccountSettings(deployer.address)).guardiansCount;
+      await expect(
+        accountRecoveryModule.addGuardian(zeroGuardian, 16741936496, 0)
+      ).to.be.revertedWith("ZeroGuardian");
+
+      const guardiansCountAfter = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
       expect(guardiansCountAfter).to.equal(guardiansCountBefore);
     });
 
     it("Should revert if such a guardian has already been set", async () => {
-      const {
-        accountRecoveryModule,
-        guardians
-      } = await setupTests();
+      const { accountRecoveryModule, guardians } = await setupTests();
 
       const guardian = guardians[1];
 
-      //add guardian first
-      await accountRecoveryModule.addGuardian(
-        guardian,
-        15555934444,
-        0,
-      );
+      // add guardian first
+      await accountRecoveryModule.addGuardian(guardian, 15555934444, 0);
 
-      const guardiansCountBefore = (await accountRecoveryModule.getSmartAccountSettings(deployer.address)).guardiansCount;
+      const guardiansCountBefore = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
 
-      await expect(accountRecoveryModule.addGuardian(
-        guardian,
-        15555934444,
-        0,
-      )).to.be.revertedWith("GuardianAlreadySet")
-        .withArgs(
-          guardian,
-          deployer.address
-        );
-      
-      const guardiansCountAfter = (await accountRecoveryModule.getSmartAccountSettings(deployer.address)).guardiansCount;
+      await expect(accountRecoveryModule.addGuardian(guardian, 15555934444, 0))
+        .to.be.revertedWith("GuardianAlreadySet")
+        .withArgs(guardian, deployer.address);
+
+      const guardiansCountAfter = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
       expect(guardiansCountAfter).to.equal(guardiansCountBefore);
     });
 
     it("Should set validUntil to uint48.max if validUntil = 0 is provided", async () => {
-      const {
-        accountRecoveryModule,
-      } = await setupTests();
+      const { accountRecoveryModule } = await setupTests();
 
       const validUntil = 0;
       const validAfter = 0;
 
-      //add guardian first
+      // add guardian first
       await accountRecoveryModule.addGuardian(
         newGuardian,
         validUntil,
-        validAfter,
+        validAfter
       );
 
-      const newGuardianTimeFrame = await accountRecoveryModule.getGuardianParams(
+      const newGuardianTimeFrame =
+        await accountRecoveryModule.getGuardianParams(
+          newGuardian,
+          deployer.address
+        );
+
+      expect(newGuardianTimeFrame.validUntil).to.equal(2 ** 48 - 1);
+    });
+
+    it("Should set validAfter as guardian.timeframe.validAfter if it is bigger than now+securityDelay", async () => {
+      const { accountRecoveryModule, defaultSecurityDelay } = await setupTests();
+      await accountRecoveryModule.setSecurityDelay(defaultSecurityDelay);
+
+      const nowPlusSecurityDelay = (
+        await ethers.provider.getBlock("latest")
+      ).timestamp + defaultSecurityDelay;
+
+      const validAfter = nowPlusSecurityDelay + 1000;
+
+      await accountRecoveryModule.addGuardian(newGuardian, 15555934444, validAfter);
+
+      const guardianDetails = await accountRecoveryModule.getGuardianParams(
         newGuardian,
         deployer.address
       );
 
-      expect(newGuardianTimeFrame.validUntil).to.equal(2**48-1);
+      expect(guardianDetails.validAfter).to.equal(validAfter);
     });
 
-    
-    /*
-    it("Should set validAfter as guardian.timeframe.validAfter if it is bigger than now+securityDelay", async () => {});
+    it("Should set now+securityDelay if validAfter is less than it", async () => {
+      const { accountRecoveryModule, defaultSecurityDelay } = await setupTests();
+      await accountRecoveryModule.setSecurityDelay(defaultSecurityDelay);
 
-    it("Should set now+securityDelay if validAfter is less than it", async () => {});
+      const nowPlusSecurityDelay = (
+        await ethers.provider.getBlock("latest")
+      ).timestamp + defaultSecurityDelay;
 
-    it("Should revert if validUntil is less than resulting validAfter", async () => {});
+      const validAfter = nowPlusSecurityDelay - 1000;
 
-    it("Should revert if validUntil < now", async () => {});
-    */
+      await accountRecoveryModule.addGuardian(newGuardian, 15555934444, validAfter);
 
-    // it("_________", async () => {});
+      const guardianDetails = await accountRecoveryModule.getGuardianParams(
+        newGuardian,
+        deployer.address
+      );
+
+      expect(guardianDetails.validAfter).to.be.gte(nowPlusSecurityDelay);
+    });
+
+    it("Should revert if validUntil is less than resulting validAfter", async () => {
+      const { accountRecoveryModule, defaultSecurityDelay } = await setupTests();
+
+      const nowPlusSecurityDelay = (
+        await ethers.provider.getBlock("latest")
+      ).timestamp + defaultSecurityDelay;
+
+      const validAfter = nowPlusSecurityDelay + 1000;
+      const validUntil = nowPlusSecurityDelay - 1000;
+
+      await expect(accountRecoveryModule.addGuardian(newGuardian, validUntil, validAfter)).to.be.revertedWith("InvalidTimeFrame")
+        .withArgs(validUntil, validAfter);
+    });
   });
 
   /*
   describe("replaceGuardian", async () => {
-    it("_________", async () => {});
+
+    it("Can replace guardian, old is deleted, new is active, guardians count has not changed and events are emitted", async () => {});
+
+    it("reverts if guardian has not been set", async () => {});
+
+    it("reverts if guardian to replace and new guardian are identical", async () => {});
+
+    it("reverts if guardian to replace is zero", async () => {});
+
+    it("reverts if new guardian is zero", async () => {});
+
   });
 
   describe("removeGuardian", async () => {

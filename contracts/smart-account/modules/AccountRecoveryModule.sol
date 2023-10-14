@@ -288,14 +288,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         if (guardian == bytes32(0)) revert ZeroGuardian();
         if (_guardians[guardian][msg.sender].validUntil != 0)
             revert GuardianAlreadySet(guardian, msg.sender);
-
         (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(
             validUntil,
             validAfter
         );
-
-        // TODO:
-        // make a test case that it fails if validAfter + securityDelay together overflow uint48
         _guardians[guardian][msg.sender] = TimeFrame(validUntil, validAfter);
         ++_smartAccountSettings[msg.sender].guardiansCount;
         emit GuardianAdded(
@@ -306,7 +302,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     }
 
     // natspec
-    // same as adding guardian, but also makes the old one active only until the new one is active
+    // deletes guardian and adds the new one, however it will still be valid not earlier than now+securityDelay
     function replaceGuardian(
         bytes32 guardian,
         bytes32 newGuardian,
@@ -319,6 +315,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         if (guardian == bytes32(0)) revert ZeroGuardian();
         if (newGuardian == bytes32(0)) revert ZeroGuardian();
 
+        // remove guardian
+
         (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(
             validUntil,
             validAfter
@@ -329,7 +327,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             validUntil == 0 ? type(uint48).max : validUntil,
             validAfter
         );
-        ++_smartAccountSettings[msg.sender].guardiansCount;
+        
+        // don't increment guardiansCount as we haven't decremented it when deleting previous one
+        // ++_smartAccountSettings[msg.sender].guardiansCount;
+        
         emit GuardianAdded(
             msg.sender,
             newGuardian,
@@ -338,16 +339,6 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
                 validAfter
             )
         );
-
-        // make the previous stay valid until the new one becomes valid
-        // if the new one becomes valid earlier, than old one validUntil, change the validUntil for the old one
-        // to the validAfter of the new one. So two are never valid at the same time
-        uint48 oldGuardianValidUntil = _guardians[guardian][msg.sender]
-            .validUntil;
-        _guardians[guardian][msg.sender].validUntil = (oldGuardianValidUntil <
-            validAfter)
-            ? oldGuardianValidUntil
-            : validAfter;
     }
 
     // natspec
@@ -380,6 +371,9 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     // validUntil's and validAfter's for several guardians works correctly
     // @note if validAfter is less then now + securityDelay, it is set to now + securityDelay
     // as for security reasons new guardian is only active after securityDelay
+    // validAfter is always gte now+securityDelay
+    // and validUntil is always gte validAfter
+    // thus we do not need to check than validUntil is gte now
     function _checkAndAdjustValidUntilValidAfter(
         uint48 validUntil,
         uint48 validAfter
@@ -393,7 +387,6 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
             : validAfter;
         if (validUntil < validAfter)
             revert InvalidTimeFrame(validUntil, validAfter);
-        if (validUntil < block.timestamp) revert ExpiredValidUntil(validUntil);
         return (validUntil, validAfter);
     }
 
