@@ -2445,9 +2445,8 @@ describe("Account Recovery Module: ", async () => {
         .to.emit(accountRecoveryModule, "GuardianRemoved")
         .withArgs(userSA.address, guardianToRemove);
 
-      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(
-        userSA.address
-      );
+      const userSASettings =
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address);
       const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
         guardianToRemove,
         userSA.address
@@ -2500,13 +2499,12 @@ describe("Account Recovery Module: ", async () => {
       );
       expect(handleOpsTxn)
         .to.emit(accountRecoveryModule, "ThresholdChanged")
-        .withArgs(userSA.address, thresholdBefore-1);
+        .withArgs(userSA.address, thresholdBefore - 1);
 
-      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(
-        userSA.address
-      );
-      
-      expect(userSASettings.recoveryThreshold).to.equal(thresholdBefore-1);
+      const userSASettings =
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address);
+
+      expect(userSASettings.recoveryThreshold).to.equal(thresholdBefore - 1);
     });
 
     it("Reverts if the guardian has not been set", async () => {
@@ -2515,23 +2513,112 @@ describe("Account Recovery Module: ", async () => {
       // no guardians are set for deployer
       const guardianToRemove = guardians[1];
 
-      await expect(
-        accountRecoveryModule.removeGuardian(guardianToRemove)
-      )
+      await expect(accountRecoveryModule.removeGuardian(guardianToRemove))
         .to.be.revertedWith("GuardianNotSet")
         .withArgs(guardianToRemove, deployer.address);
     });
   });
 
-  /*
+  
   describe("removeExpiredGuardian", async () => {
-    it("_________", async () => {});
+    
+    it("Anyone can remove the expired guardian", async () => {
+      const { accountRecoveryModule, guardians } = await setupTests();
+
+      await accountRecoveryModule.addGuardian(guardians[1], 16741936496, 0);
+      const guardiansBefore = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
+
+      await ethers.provider.send("evm_setNextBlockTimestamp", [
+        16741936496 + 1000,
+      ]);
+
+      await accountRecoveryModule.connect(eve).removeExpiredGuardian(guardians[1], deployer.address);
+
+      const guardiansAfter = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
+
+      expect(guardiansAfter).to.equal(guardiansBefore - 1);
+
+      const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
+        guardians[1],
+        deployer.address
+      );
+      expect(guardianTimeFrame.validUntil).to.equal(0);
+      expect(guardianTimeFrame.validAfter).to.equal(0);
+    });
+
+    it("Reverts if trying remove the guardian that is not expired yet", async () => {
+      const { accountRecoveryModule, guardians } = await setupTests();
+
+      await accountRecoveryModule.addGuardian(guardians[1], 16741936496, 0);
+      const guardiansBefore = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
+
+      await expect(accountRecoveryModule.removeExpiredGuardian(guardians[1], deployer.address))
+        .to.be.revertedWith("GuardianNotExpired")
+        .withArgs(guardians[1], deployer.address);
+
+      const guardiansAfter = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
+
+      expect(guardiansAfter).to.equal(guardiansBefore);
+    });
+
+    it("Reverts if guardian has not been set", async () => {
+      const { accountRecoveryModule, guardians } = await setupTests();
+
+      // no guardians are set for deployer
+      const guardianToRemove = guardians[1];
+
+      await expect(accountRecoveryModule.removeExpiredGuardian(guardianToRemove, deployer.address))
+        .to.be.revertedWith("GuardianNotSet")
+        .withArgs(guardianToRemove, deployer.address);
+    });
+
   });
 
+  
   describe("changeGuardianParams", async () => {
-    it("_________", async () => {});
+    it("Can chage Guardian params and event is emitted", async () => {
+      const { accountRecoveryModule, guardians } = await setupTests();
+
+      const validUntilBefore = 16741936496;
+      const validAfterBefore = 0;
+      await accountRecoveryModule.addGuardian(guardians[1], validUntilBefore, validAfterBefore);
+
+      const validUntilAfter = validUntilBefore - 100;
+      const validAfterAfter = validAfterBefore + 100;
+
+      const newTimeFrame = {
+        validUntil: validUntilAfter,
+        validAfter: validAfterAfter,
+      };
+      const changeTxn = await accountRecoveryModule.changeGuardianParams(guardians[1], newTimeFrame);
+      expect(changeTxn).to.emit(accountRecoveryModule, "GuardianChanged").withArgs(deployer.address, guardians[1], newTimeFrame);
+
+      const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
+        guardians[1],
+        deployer.address
+      );
+
+      expect(guardianTimeFrame.validUntil).to.not.equal(validUntilBefore);
+      expect(guardianTimeFrame.validAfter).to.not.equal(validAfterBefore);
+      expect(guardianTimeFrame.validUntil).to.equal(validUntilAfter);
+      expect(guardianTimeFrame.validAfter).to.equal(validAfterAfter);
+      
+    });
+
+    //it("_________", async () => {});
+
+    //it("_________", async () => {});
   });
 
+  /*
   describe("setThreshold", async () => {
     it("_________", async () => {});
   });
