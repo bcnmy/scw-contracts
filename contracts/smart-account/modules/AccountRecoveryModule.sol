@@ -312,25 +312,22 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         if (_guardians[guardian][msg.sender].validUntil == 0)
             revert GuardianNotSet(guardian, msg.sender);
         if (guardian == newGuardian) revert GuardiansAreIdentical();
-        if (guardian == bytes32(0)) revert ZeroGuardian();
         if (newGuardian == bytes32(0)) revert ZeroGuardian();
 
         // remove guardian
+        delete _guardians[guardian][msg.sender];
+        emit GuardianRemoved(msg.sender, guardian);
 
         (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(
             validUntil,
             validAfter
         );
 
-        // make the new one valid
         _guardians[newGuardian][msg.sender] = TimeFrame(
             validUntil == 0 ? type(uint48).max : validUntil,
             validAfter
         );
-        
-        // don't increment guardiansCount as we haven't decremented it when deleting previous one
-        // ++_smartAccountSettings[msg.sender].guardiansCount;
-        
+        // don't increment guardiansCount as we haven't decremented it when deleting previous one    
         emit GuardianAdded(
             msg.sender,
             newGuardian,
