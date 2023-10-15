@@ -20,6 +20,7 @@ import {
   makeMultisignedSubmitRecoveryRequestUserOp,
 } from "../utils/accountRecovery";
 import { arrayify } from "ethers/lib/utils";
+import {Contract} from "ethers";
 
 describe("Account Recovery Module: ", async () => {
   const [
@@ -1542,7 +1543,7 @@ describe("Account Recovery Module: ", async () => {
           ethers.utils.parseEther("0"),
           accountRecoveryModule.interface.encodeFunctionData(
             "changeGuardianParams",
-            [guardians[0], [17641936496, currentTimestamp + 1000]]
+            [guardians[0], 17641936496, currentTimestamp + 1000]
           ),
         ],
         userSA.address,
@@ -1598,7 +1599,8 @@ describe("Account Recovery Module: ", async () => {
             "changeGuardianParams",
             [
               guardians[1],
-              [17641936496, closestValidUntil + 1000], // validAfter for this guardian is after previous one expires
+              17641936496, 
+              closestValidUntil + 1000, // validAfter for this guardian is after previous one expires
             ]
           ),
         ],
@@ -2519,9 +2521,7 @@ describe("Account Recovery Module: ", async () => {
     });
   });
 
-  
   describe("removeExpiredGuardian", async () => {
-    
     it("Anyone can remove the expired guardian", async () => {
       const { accountRecoveryModule, guardians } = await setupTests();
 
@@ -2534,7 +2534,9 @@ describe("Account Recovery Module: ", async () => {
         16741936496 + 1000,
       ]);
 
-      await accountRecoveryModule.connect(eve).removeExpiredGuardian(guardians[1], deployer.address);
+      await accountRecoveryModule
+        .connect(eve)
+        .removeExpiredGuardian(guardians[1], deployer.address);
 
       const guardiansAfter = (
         await accountRecoveryModule.getSmartAccountSettings(deployer.address)
@@ -2558,7 +2560,12 @@ describe("Account Recovery Module: ", async () => {
         await accountRecoveryModule.getSmartAccountSettings(deployer.address)
       ).guardiansCount;
 
-      await expect(accountRecoveryModule.removeExpiredGuardian(guardians[1], deployer.address))
+      await expect(
+        accountRecoveryModule.removeExpiredGuardian(
+          guardians[1],
+          deployer.address
+        )
+      )
         .to.be.revertedWith("GuardianNotExpired")
         .withArgs(guardians[1], deployer.address);
 
@@ -2575,31 +2582,50 @@ describe("Account Recovery Module: ", async () => {
       // no guardians are set for deployer
       const guardianToRemove = guardians[1];
 
-      await expect(accountRecoveryModule.removeExpiredGuardian(guardianToRemove, deployer.address))
+      await expect(
+        accountRecoveryModule.removeExpiredGuardian(
+          guardianToRemove,
+          deployer.address
+        )
+      )
         .to.be.revertedWith("GuardianNotSet")
         .withArgs(guardianToRemove, deployer.address);
     });
-
   });
 
-  
   describe("changeGuardianParams", async () => {
-    it("Can chage Guardian params and event is emitted", async () => {
-      const { accountRecoveryModule, guardians } = await setupTests();
+    it("Can change Guardian params and event is emitted", async () => {
+      const { accountRecoveryModule, guardians, defaultSecurityDelay } = await setupTests();
 
       const validUntilBefore = 16741936496;
       const validAfterBefore = 0;
-      await accountRecoveryModule.addGuardian(guardians[1], validUntilBefore, validAfterBefore);
+      await accountRecoveryModule.addGuardian(
+        guardians[1],
+        validUntilBefore,
+        validAfterBefore
+      );
+      await accountRecoveryModule.setSecurityDelay(defaultSecurityDelay);
 
       const validUntilAfter = validUntilBefore - 100;
       const validAfterAfter = validAfterBefore + 100;
 
+      // by some reason blockchain timestamp for the txn is 1 sec higher
+      const nowPlusSecurityDelay = defaultSecurityDelay + 1 + (await ethers.provider.getBlock("latest")).timestamp;
+      const expectedOnchainValidAfter = validAfterAfter > nowPlusSecurityDelay ? validAfterAfter : nowPlusSecurityDelay;
+
       const newTimeFrame = {
         validUntil: validUntilAfter,
-        validAfter: validAfterAfter,
+        validAfter: expectedOnchainValidAfter,
       };
-      const changeTxn = await accountRecoveryModule.changeGuardianParams(guardians[1], newTimeFrame);
-      expect(changeTxn).to.emit(accountRecoveryModule, "GuardianChanged").withArgs(deployer.address, guardians[1], newTimeFrame);
+
+      const changeTxn = await accountRecoveryModule.changeGuardianParams(
+        guardians[1],
+        validUntilAfter,
+        validAfterAfter
+      );
+      expect(changeTxn)
+        .to.emit(accountRecoveryModule, "GuardianChanged")
+        .withArgs(deployer.address, guardians[1], newTimeFrame);
 
       const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
         guardians[1],
@@ -2609,30 +2635,72 @@ describe("Account Recovery Module: ", async () => {
       expect(guardianTimeFrame.validUntil).to.not.equal(validUntilBefore);
       expect(guardianTimeFrame.validAfter).to.not.equal(validAfterBefore);
       expect(guardianTimeFrame.validUntil).to.equal(validUntilAfter);
-      expect(guardianTimeFrame.validAfter).to.equal(validAfterAfter);
-      
+      expect(guardianTimeFrame.validAfter).to.equal(expectedOnchainValidAfter);
+    });
+  });
+
+  
+  describe("setThreshold", async () => {
+    let accountRecoveryModuleWithGuardiansForDeployer: Contract;
+    before(async () => {
+      const { accountRecoveryModule, guardians } = await setupTests();
+      await accountRecoveryModule.addGuardian(guardians[0], 16741936496, 0);
+      await accountRecoveryModule.addGuardian(guardians[1], 16741936496, 0);
+      await accountRecoveryModule.addGuardian(guardians[2], 16741936496, 0);
+      await accountRecoveryModule.setThreshold(3);
+      accountRecoveryModuleWithGuardiansForDeployer = accountRecoveryModule;
     });
 
-    //it("_________", async () => {});
+    it("Can set a new threshold", async () => {
+      const currentThreshold = (
+        await accountRecoveryModuleWithGuardiansForDeployer.getSmartAccountSettings(deployer.address)
+      ).recoveryThreshold;
+      const newThreshold = currentThreshold - 1;
+      const setThresholdTxn = await accountRecoveryModuleWithGuardiansForDeployer.setThreshold(newThreshold);
+      expect(setThresholdTxn)
+        .to.emit(accountRecoveryModuleWithGuardiansForDeployer, "ThresholdChanged")
+        .withArgs(deployer.address, newThreshold);
+      const newThresholdAfter = (
+        await accountRecoveryModuleWithGuardiansForDeployer.getSmartAccountSettings(deployer.address)
+      ).recoveryThreshold;
+      expect(newThresholdAfter).to.equal(newThreshold); 
+    });
 
-    //it("_________", async () => {});
+    it("Reverts for zero threshold", async () => {
+      await expect(
+        accountRecoveryModuleWithGuardiansForDeployer.setThreshold(0)
+      ).to.be.revertedWith("ZeroThreshold");
+    });
+
+    it("Reverts if threshold is more than number of guardians", async () => {
+      const currentNumberOfGuardians = (
+        await accountRecoveryModuleWithGuardiansForDeployer.getSmartAccountSettings(deployer.address)
+      ).guardiansCount;
+      await expect(
+        accountRecoveryModuleWithGuardiansForDeployer.setThreshold(currentNumberOfGuardians + 1)
+      ).to.be.revertedWith("ThresholdTooHigh");
+    });
   });
 
-  /*
-  describe("setThreshold", async () => {
-    it("_________", async () => {});
-  });
 
   describe("setSecurityDelay", async () => {
-    it("_________", async () => {});
+    it("Can set security delay and event is emitted", async () => {
+      const { accountRecoveryModule, defaultSecurityDelay } = await setupTests();
+
+      const newSecurityDelay = defaultSecurityDelay + 1000;
+      const setSecurityDelayTxn = await accountRecoveryModule.setSecurityDelay(newSecurityDelay);
+      expect(setSecurityDelayTxn)
+        .to.emit(accountRecoveryModule, "SecurityDelayChanged")
+        .withArgs(deployer.address, newSecurityDelay);
+      const newSecurityDelayAfter = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).securityDelay;
+      expect(newSecurityDelayAfter).to.equal(newSecurityDelay);
+    });
   });
-
-
-  // Check all the errors declarations to be actually used in the contract code
-  // as 'requires' should be used during the validation
 
   // for the execution stage (all methods not related to validateUserOp) custom errors can be used
   // make the according explanation in the smart contract header
 
-  */
+  
 });

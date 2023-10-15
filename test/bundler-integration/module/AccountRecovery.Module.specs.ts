@@ -2,9 +2,11 @@ import { expect, use } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
 import {
   makeEcdsaModuleUserOp,
-  makeMultiSignedUserOpWithGuardiansList,
   makeUnsignedUserOp,
 } from "../../utils/userOp";
+import {
+  makeMultiSignedUserOpWithGuardiansList,
+} from "../../utils/accountRecovery";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
