@@ -7,11 +7,11 @@ pragma solidity 0.8.17;
  * @dev    Implementation address is stored in the slot defined by the Proxy's address
  */
 contract Proxy {
+    error NotSmartContract(address account);
     constructor(address _implementation) {
-        require(
-            _implementation != address(0),
-            "Invalid implementation address"
-        );
+        if (!_isSmartContract(_implementation)) 
+            revert NotSmartContract(_implementation);
+        
         assembly {
             sstore(address(), _implementation)
         }
@@ -32,5 +32,17 @@ contract Proxy {
                 return(0, returndatasize())
             }
         }
+    }
+
+    /**
+     * @dev Checks if the address provided is a smart contract.
+     * @param account Address to be checked.
+     */
+     function _isSmartContract(address account) internal view returns (bool) {
+        uint256 size;
+        assembly {
+            size := extcodesize(account)
+        }
+        return size > 0;
     }
 }

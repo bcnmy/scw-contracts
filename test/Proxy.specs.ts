@@ -11,12 +11,15 @@ describe("Proxy ", async () => {
         "contracts/smart-account/Proxy.sol:Proxy"
       );
       await expect(Proxy.deploy(AddressZero)).to.be.revertedWith(
-        "Invalid implementation address"
+        "NotSmartContract"
       );
     });
 
     it("should store implementation at the slot with address encoded as proxy address", async () => {
-      const implementationAddress = randomAddress.address;
+      const MockTokenFactory = await ethers.getContractFactory("MockToken");
+      const mockToken = await MockTokenFactory.deploy();
+      const implementationAddress = await mockToken.address;
+
       const Proxy = await ethers.getContractFactory(
         "contracts/smart-account/Proxy.sol:Proxy"
       );
@@ -30,17 +33,16 @@ describe("Proxy ", async () => {
       );
       expect(recordedAddress).to.equal(implementationAddress);
     });
-  });
-  describe("call", async () => {
-    it("reverts when trying to delegatecall to the EOA implementation", async () => {
-      const implementationAddress = randomAddress.address;
+
+    it("reverts when trying to initiate by EOA parameter", async () => {
+      const EOAimplementationAddress = randomAddress.address;
+
       const Proxy = await ethers.getContractFactory(
         "contracts/smart-account/Proxy.sol:Proxy"
       );
-      let proxy = await Proxy.deploy(implementationAddress);
-      await proxy.deployed();
-      proxy = await ethers.getContractAt("SmartAccount", proxy.address);
-      await expect(proxy.getImplementation()).to.be.reverted;
+      await expect(Proxy.deploy(EOAimplementationAddress)).to.be.revertedWith(
+        "NotSmartContract"
+      );
     });
   });
 });
