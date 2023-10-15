@@ -8,10 +8,10 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 /**
  * @title Account Recovery module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
- *         - It allows to submit and execute recovery requests
+ *         - It allows the submission and execution of recovery requests
  *         - EOA guardians only
- *         - For security reasons guardian address is not stored,
- *           instead its signature over CONTROL_HASH is used
+ *         - For security reasons the guardian's address is not stored,
+ *           instead, its signature over CONTROL_HASH is used
  *         - Security delay is always applied to new guardians and recovery requests
  *         - It is highly recommended to not set security delay to 0
  * @dev For the validation stage (validateUserOp) can not use custom errors
@@ -77,7 +77,10 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         TimeFrame timeFrame
     );
     event ThresholdChanged(address indexed smartAccount, uint8 threshold);
-    event SecurityDelayChanged(address indexed smartAccount, uint48 securityDelay);
+    event SecurityDelayChanged(
+        address indexed smartAccount,
+        uint48 securityDelay
+    );
 
     error AlreadyInitedForSmartAccount(address smartAccount);
     error ZeroGuardian();
@@ -152,8 +155,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * @dev validates userOps to submut and execute recovery requests
      *     - if securityDelay is 0, it allows to execute the request immediately
      *     - if securityDelay is non 0, the request is submitted and stored on-chain
-     *     - if userOp.callData matches the callData of the request already submitted, 
-     *     - and the security delays has passed, it allows to execute the request
+     *     - if userOp.callData matches the callData of the request already submitted,
+     *     - and the security delay has passed, it allows to execute the request
      * @param userOp User Operation to be validated.
      * @param userOpHash Hash of the User Operation to be validated.
      * @return validation data (sig validation result + validUntil + validAfter)
@@ -223,7 +226,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
                 userOp.sender
             ].validUntil;
 
-            // validUntil == 0 means the `currentGuardian` has not been set as guardian 
+            // validUntil == 0 means the `currentGuardian` has not been set as guardian
             // for the userOp.sender smartAccount
             // validUntil can never be 0 as it is set to type(uint48).max in initForSmartAccount
             if (validUntil == 0) {
@@ -363,7 +366,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     /**
      * @dev Removes guardian for a Smart Account (msg.sender)
      * Should be called by the Smart Account
-     * @param guardian guardian to remove  
+     * @param guardian guardian to remove
      */
     function removeGuardian(bytes32 guardian) external {
         if (_guardians[guardian][msg.sender].validUntil == 0)
@@ -373,9 +376,9 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
 
     /**
      * @dev Removes the expired guardian for a Smart Account
-     * Can be called  by anyone. Allows clearing expired guardians automatically 
+     * Can be called  by anyone. Allows clearing expired guardians automatically
      * and maintain the list of guardians actual
-     * @param guardian guardian to remove  
+     * @param guardian guardian to remove
      */
     function removeExpiredGuardian(
         bytes32 guardian,
@@ -388,7 +391,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         _removeGuardianAndChangeTresholdIfNeeded(guardian, smartAccount);
     }
 
-    /** 
+    /**
      * @dev Internal method to check and adjust validUntil and validAfter
      * @dev if validUntil is 0, guardian is considered active forever
      * Thus we put type(uint48).max as value for validUntil in this case,
@@ -403,7 +406,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * thus we do not need to check than validUntil is gte now
      * @param validUntil guardian validity end timestamp
      * @param validAfter guardian validity start timestamp
-    */
+     */
     function _checkAndAdjustValidUntilValidAfter(
         uint48 validUntil,
         uint48 validAfter
@@ -420,13 +423,13 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         return (validUntil, validAfter);
     }
 
-    /** 
+    /**
      * @dev Internal method to remove guardian and adjust threshold if needed
      * It is needed when after removing guardian, the threshold becomes higher than
      * the number of guardians
-     * @param guardian guardian to remove 
+     * @param guardian guardian to remove
      * @param smartAccount smartAccount to remove guardian from
-    */
+     */
     function _removeGuardianAndChangeTresholdIfNeeded(
         bytes32 guardian,
         address smartAccount
@@ -447,27 +450,34 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         }
     }
 
-    /** 
+    /**
      * @dev Changes guardian validity timeframes for the Smart Account (msg.sender)
-     * @param guardian guardian to change 
+     * @param guardian guardian to change
      * @param validUntil guardian validity end timestamp
      * @param validAfter guardian validity start timestamp
-    */
+     */
     function changeGuardianParams(
         bytes32 guardian,
         uint48 validUntil,
         uint48 validAfter
     ) external {
-        (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(validUntil, validAfter);
+        (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(
+            validUntil,
+            validAfter
+        );
         _guardians[guardian][msg.sender] = TimeFrame(validUntil, validAfter);
-        emit GuardianChanged(msg.sender, guardian, TimeFrame(validUntil, validAfter));
+        emit GuardianChanged(
+            msg.sender,
+            guardian,
+            TimeFrame(validUntil, validAfter)
+        );
     }
 
     /**
      * @dev Changes recovery threshold for a Smart Account (msg.sender)
      * Should be called by the Smart Account
      * @param newThreshold new recovery threshold
-    */
+     */
     function setThreshold(uint8 newThreshold) external {
         if (newThreshold == 0) revert ZeroThreshold();
         if (newThreshold > _smartAccountSettings[msg.sender].guardiansCount)
@@ -483,18 +493,18 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * @dev Changes security delay for a Smart Account (msg.sender)
      * Should be called by the Smart Account
      * @param newSecurityDelay new security delay
-    */
+     */
     function setSecurityDelay(uint48 newSecurityDelay) external {
         _smartAccountSettings[msg.sender].securityDelay = newSecurityDelay;
         emit SecurityDelayChanged(msg.sender, newSecurityDelay);
     }
 
-    /** 
-    * @dev Returns guardian validity timeframes for the Smart Account
-    * @param guardian guardian to get params for
-    * @param smartAccount smartAccount to get params for
-    * @return TimeFrame struct
-    */
+    /**
+     * @dev Returns guardian validity timeframes for the Smart Account
+     * @param guardian guardian to get params for
+     * @param smartAccount smartAccount to get params for
+     * @return TimeFrame struct
+     */
     function getGuardianParams(
         bytes32 guardian,
         address smartAccount
@@ -502,11 +512,11 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         return _guardians[guardian][smartAccount];
     }
 
-    /** 
-    * @dev Returns Smart Account settings
-    * @param smartAccount smartAccount to get settings for
-    * @return Smart Account Settings struct
-    */
+    /**
+     * @dev Returns Smart Account settings
+     * @param smartAccount smartAccount to get settings for
+     * @return Smart Account Settings struct
+     */
     function getSmartAccountSettings(
         address smartAccount
     ) external view returns (SaSettings memory) {
@@ -518,7 +528,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * Only one request per Smart Account is stored at a time
      * @param smartAccount smartAccount to get recovery request for
      * @return RecoveryRequest struct
-    */
+     */
     function getRecoveryRequest(
         address smartAccount
     ) external view returns (RecoveryRequest memory) {
@@ -529,7 +539,7 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
      * @dev Submits recovery request for a Smart Account
      * Hash of the callData is stored on-chain along with the timestamp of the request submission
      * @param recoveryCallData callData of the recovery request
-    */
+     */
     function submitRecoveryRequest(bytes calldata recoveryCallData) public {
         if (recoveryCallData.length == 0) revert EmptyRecoveryCallData();
         if (
