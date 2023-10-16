@@ -331,7 +331,7 @@ contract SmartAccountV1 is
         address payable refundReceiver
     ) private returns (uint256 payment) {
         if (tokenGasPriceFactor == 0) revert TokenGasPriceFactorCanNotBeZero();
-        // solhint-disable-next-line avoid-tx-origin
+
         address payable receiver = refundReceiver == address(0)
             ? payable(tx.origin)
             : refundReceiver;
@@ -378,7 +378,7 @@ contract SmartAccountV1 is
     ) external returns (uint256 requiredGas) {
         require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         uint256 startGas = gasleft();
-        // solhint-disable-next-line avoid-tx-origin
+
         address payable receiver = refundReceiver == address(0)
             ? payable(tx.origin)
             : refundReceiver;
