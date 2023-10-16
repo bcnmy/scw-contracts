@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IAccountRecoveryModule} from "../interfaces/IAccountRecoveryModule.sol";
 
 /**
  * @title Account Recovery module for Biconomy Smart Accounts.
@@ -24,30 +25,18 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * based on https://vitalik.ca/general/2021/01/11/recovery.html by Vitalik Buterin
  */
 
-contract AccountRecoveryModule is BaseAuthorizationModule {
+contract AccountRecoveryModule is
+    BaseAuthorizationModule,
+    IAccountRecoveryModule
+{
     using ECDSA for bytes32;
-
-    struct TimeFrame {
-        uint48 validUntil;
-        uint48 validAfter;
-    }
-
-    struct SaSettings {
-        uint8 guardiansCount;
-        uint8 recoveryThreshold;
-        uint48 securityDelay;
-    }
-
-    struct RecoveryRequest {
-        bytes32 callDataHash;
-        uint48 requestTimestamp;
-    }
 
     string public constant NAME = "Account Recovery Module";
     string public constant VERSION = "0.1.0";
 
+    // keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"))
     bytes32 public constant CONTROL_HASH =
-        keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"));
+        0x1c3074d7ce4e35b6f0a67e3db0f31ff117ca8f0a1853e86a95837fea35af828b;
 
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
@@ -59,45 +48,6 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     mapping(address => SaSettings) internal _smartAccountSettings;
 
     mapping(address => RecoveryRequest) internal _smartAccountRequests;
-
-    event RecoveryRequestSubmitted(
-        address indexed smartAccount,
-        bytes indexed requestCallData
-    );
-    event RecoveryRequestRenounced(address indexed smartAccount);
-    event GuardianAdded(
-        address indexed smartAccount,
-        bytes32 guardian,
-        TimeFrame timeFrame
-    );
-    event GuardianRemoved(address indexed smartAccount, bytes32 guardian);
-    event GuardianChanged(
-        address indexed smartAccount,
-        bytes32 guardian,
-        TimeFrame timeFrame
-    );
-    event ThresholdChanged(address indexed smartAccount, uint8 threshold);
-    event SecurityDelayChanged(
-        address indexed smartAccount,
-        uint48 securityDelay
-    );
-
-    error AlreadyInitedForSmartAccount(address smartAccount);
-    error ZeroGuardian();
-    error InvalidTimeFrame(uint48 validUntil, uint48 validAfter);
-    error ExpiredValidUntil(uint48 validUntil);
-    error GuardianAlreadySet(bytes32 guardian, address smartAccount);
-    error GuardianNotSet(bytes32 guardian, address smartAccount);
-    error ThresholdTooHigh(uint8 threshold, uint256 guardiansExist);
-    error ZeroThreshold();
-    error InvalidAmountOfGuardianParams();
-    error GuardiansAreIdentical();
-    error GuardianNotExpired(bytes32 guardian, address smartAccount);
-    error EmptyRecoveryCallData();
-    error RecoveryRequestAlreadyExists(
-        address smartAccount,
-        bytes32 requestCallDataHash
-    );
 
     /**
      * @dev Initializes the module for a Smart Account.
@@ -137,10 +87,8 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
                     timeFrames[i].validUntil,
                     timeFrames[i].validAfter
                 );
-            if (
-                timeFrames[i].validUntil != 0 &&
-                timeFrames[i].validUntil < block.timestamp
-            ) revert ExpiredValidUntil(timeFrames[i].validUntil);
+            if (timeFrames[i].validUntil < block.timestamp)
+                revert ExpiredValidUntil(timeFrames[i].validUntil);
 
             _guardians[guardians[i]][msg.sender] = timeFrames[i];
             emit GuardianAdded(msg.sender, guardians[i], timeFrames[i]);
@@ -392,65 +340,6 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
     }
 
     /**
-     * @dev Internal method to check and adjust validUntil and validAfter
-     * @dev if validUntil is 0, guardian is considered active forever
-     * Thus we put type(uint48).max as value for validUntil in this case,
-     * so the calldata itself doesn't need to contain this big value and thus
-     * txn is cheaper.
-     * we need to explicitly change 0 to type(uint48).max, so the algorithm of intersecting
-     * validUntil's and validAfter's for several guardians works correctly
-     * @dev if validAfter is less then now + securityDelay, it is set to now + securityDelay
-     * as for security reasons new guardian is only active after securityDelay
-     * validAfter is always gte now+securityDelay
-     * and validUntil is always gte validAfter
-     * thus we do not need to check than validUntil is gte now
-     * @param validUntil guardian validity end timestamp
-     * @param validAfter guardian validity start timestamp
-     */
-    function _checkAndAdjustValidUntilValidAfter(
-        uint48 validUntil,
-        uint48 validAfter
-    ) internal view returns (uint48, uint48) {
-        if (validUntil == 0) validUntil = type(uint48).max;
-        uint48 minimalSecureValidAfter = uint48(
-            block.timestamp + _smartAccountSettings[msg.sender].securityDelay
-        );
-        validAfter = validAfter < minimalSecureValidAfter
-            ? minimalSecureValidAfter
-            : validAfter;
-        if (validUntil < validAfter)
-            revert InvalidTimeFrame(validUntil, validAfter);
-        return (validUntil, validAfter);
-    }
-
-    /**
-     * @dev Internal method to remove guardian and adjust threshold if needed
-     * It is needed when after removing guardian, the threshold becomes higher than
-     * the number of guardians
-     * @param guardian guardian to remove
-     * @param smartAccount smartAccount to remove guardian from
-     */
-    function _removeGuardianAndChangeTresholdIfNeeded(
-        bytes32 guardian,
-        address smartAccount
-    ) internal {
-        delete _guardians[guardian][smartAccount];
-        --_smartAccountSettings[smartAccount].guardiansCount;
-        emit GuardianRemoved(smartAccount, guardian);
-        // if number of guardians became less than threshold, lower the threshold
-        if (
-            _smartAccountSettings[smartAccount].guardiansCount <
-            _smartAccountSettings[smartAccount].recoveryThreshold
-        ) {
-            _smartAccountSettings[smartAccount].recoveryThreshold--;
-            emit ThresholdChanged(
-                smartAccount,
-                _smartAccountSettings[smartAccount].recoveryThreshold
-            );
-        }
-    }
-
-    /**
      * @dev Changes guardian validity timeframes for the Smart Account (msg.sender)
      * @param guardian guardian to change
      * @param validUntil guardian validity end timestamp
@@ -576,5 +465,64 @@ contract AccountRecoveryModule is BaseAuthorizationModule {
         bytes memory
     ) public view virtual override returns (bytes4) {
         return 0xffffffff; // not supported
+    }
+
+    /**
+     * @dev Internal method to remove guardian and adjust threshold if needed
+     * It is needed when after removing guardian, the threshold becomes higher than
+     * the number of guardians
+     * @param guardian guardian to remove
+     * @param smartAccount smartAccount to remove guardian from
+     */
+    function _removeGuardianAndChangeTresholdIfNeeded(
+        bytes32 guardian,
+        address smartAccount
+    ) internal {
+        delete _guardians[guardian][smartAccount];
+        --_smartAccountSettings[smartAccount].guardiansCount;
+        emit GuardianRemoved(smartAccount, guardian);
+        // if number of guardians became less than threshold, lower the threshold
+        if (
+            _smartAccountSettings[smartAccount].guardiansCount <
+            _smartAccountSettings[smartAccount].recoveryThreshold
+        ) {
+            _smartAccountSettings[smartAccount].recoveryThreshold--;
+            emit ThresholdChanged(
+                smartAccount,
+                _smartAccountSettings[smartAccount].recoveryThreshold
+            );
+        }
+    }
+
+    /**
+     * @dev Internal method to check and adjust validUntil and validAfter
+     * @dev if validUntil is 0, guardian is considered active forever
+     * Thus we put type(uint48).max as value for validUntil in this case,
+     * so the calldata itself doesn't need to contain this big value and thus
+     * txn is cheaper.
+     * we need to explicitly change 0 to type(uint48).max, so the algorithm of intersecting
+     * validUntil's and validAfter's for several guardians works correctly
+     * @dev if validAfter is less then now + securityDelay, it is set to now + securityDelay
+     * as for security reasons new guardian is only active after securityDelay
+     * validAfter is always gte now+securityDelay
+     * and validUntil is always gte validAfter
+     * thus we do not need to check than validUntil is gte now
+     * @param validUntil guardian validity end timestamp
+     * @param validAfter guardian validity start timestamp
+     */
+    function _checkAndAdjustValidUntilValidAfter(
+        uint48 validUntil,
+        uint48 validAfter
+    ) internal view returns (uint48, uint48) {
+        if (validUntil == 0) validUntil = type(uint48).max;
+        uint48 minimalSecureValidAfter = uint48(
+            block.timestamp + _smartAccountSettings[msg.sender].securityDelay
+        );
+        validAfter = validAfter < minimalSecureValidAfter
+            ? minimalSecureValidAfter
+            : validAfter;
+        if (validUntil < validAfter)
+            revert InvalidTimeFrame(validUntil, validAfter);
+        return (validUntil, validAfter);
     }
 }
