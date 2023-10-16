@@ -74,6 +74,12 @@ contract PasskeyRegistryModule is
         return bytes4(0xffffffff);
     }
 
+    /**
+     * @dev Internal utility function to verify a signature.
+     * @param userOpDataHash The hash of the user operation data.
+     * @param moduleSignature The signature provided by the module.
+     * @return True if the signature is valid, false otherwise.
+     */
     function _verifySignature(
         bytes32 userOpDataHash,
         bytes memory moduleSignature
@@ -108,6 +114,12 @@ contract PasskeyRegistryModule is
         return Secp256r1.verify(passKey, sigx, sigy, uint256(sigHash));
     }
 
+    /**
+     * @dev Internal function to validate a user operation signature.
+     * @param userOp The user operation to validate.
+     * @param userOpHash The hash of the user operation.
+     * @return sigValidationResult Returns 0 if the signature is valid, and SIG_VALIDATION_FAILED otherwise.
+     */
     function _validateSignature(
         UserOperation calldata userOp,
         bytes32 userOpHash

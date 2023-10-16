@@ -6,8 +6,6 @@ import {Enum} from "../common/Enum.sol";
 import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
-/* solhint-disable function-max-lines */
-
 struct Transaction {
     address to;
     Enum.Operation operation;
@@ -248,11 +246,9 @@ contract ForwardFlowModule is ReentrancyGuard {
             }
         }
 
-        // We require some gas to emit the events (at least 2500) after the execution and some to
-        // perform code until the execution (7500 = call the external function + checks inside it)
-        // We also include the 1/64 in the check that is not send along with a call to counteract
-        // potential shortings because of EIP-150
-        // Bitshift left 6 bits means multiplying by 64, just more gas efficient
+        // We need gas for events post-execution (~2500) and for code pre-execution (~7500: external call + checks).
+        // Including 1/64th for EIP-150 to address potential gas shortfalls.
+        // Bitshift left 6 bits (multiply by 64) is used for gas efficiency.
         if (
             gasleft() <
             Math.max((_tx.targetTxGas << 6) / 63, _tx.targetTxGas + 2500) + 7500
@@ -285,9 +281,8 @@ contract ForwardFlowModule is ReentrancyGuard {
             }
 
             // Transfer transaction costs to tx.origin to avoid intermediate contract payments.
-            uint256 payment;
             if (refundInfo.gasPrice != 0) {
-                payment = _handlePayment(
+                uint256 payment = _handlePayment(
                     smartAccount,
                     startGas - gasleft(),
                     refundInfo.baseGas,

@@ -32,7 +32,6 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
      * @param userOp user operation to be validated
      * @param userOpHash hash of the userOp provided by the EP
      */
-
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
@@ -43,13 +42,13 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
         );
 
         address sender;
-        //read sender from userOp, which is first userOp member (saves gas)
+        // read sender from userOp, which is first userOp member (saves gas)
         assembly {
             sender := calldataload(userOp)
         }
 
         if (moduleSignature.length == 65) {
-            //it's not a multichain signature
+            // it's not a multichain signature
             return
                 _verifySignature(
                     userOpHash,
@@ -60,7 +59,7 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
                     : SIG_VALIDATION_FAILED;
         }
 
-        //otherwise it is a multichain signature
+        // otherwise it is a multichain signature
         (
             uint48 validUntil,
             uint48 validAfter,
@@ -72,7 +71,7 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
                 (uint48, uint48, bytes32, bytes32[], bytes)
             );
 
-        //make a leaf out of userOpHash, validUntil and validAfter
+        // make a leaf out of userOpHash, validUntil and validAfter
         bytes32 leaf = keccak256(
             abi.encodePacked(validUntil, validAfter, userOpHash)
         );
@@ -94,10 +93,4 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
                 )
                 : SIG_VALIDATION_FAILED;
     }
-
-    /**
-     * Inherits isValideSignature method from EcdsaOwnershipRegistryModule
-     * isValidSignature is intended to work not with a multichain signature
-     * but with a regular ecdsa signature over a message hash
-     */
 }

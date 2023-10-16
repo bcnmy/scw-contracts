@@ -12,7 +12,6 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  *
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
-
 contract ERC20SessionValidationModule is ISessionValidationModule {
     /**
      * @dev validates that the call (destinationContract, callValue, funcCallData)
