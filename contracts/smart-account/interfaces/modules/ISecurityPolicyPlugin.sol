@@ -9,8 +9,5 @@ interface ISecurityPolicyPlugin {
     ///      set in the security policy of the smart contract wallet.
     /// @param _scw  The address of the smart contract wallet
     /// @param _plugin The address of the plugin to be installed
-    function validateSecurityPolicy(
-        address _scw,
-        address _plugin
-    ) external view;
+    function validateSecurityPolicy(address _scw, address _plugin) external;
 }

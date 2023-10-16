@@ -19,6 +19,9 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         address _setupContract,
         bytes calldata _setupData
     ) external override returns (address) {
+        // The Setup Contract must satisfy all security policies
+        _validateSecurityPolicies(msg.sender, _setupContract);
+
         // Instruct the SA to install the module and return the address
         ISmartAccount sa = ISmartAccount(msg.sender);
         (bool success, bytes memory returndata) = sa
@@ -37,8 +40,11 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
 
         address module = abi.decode(returndata, (address));
 
-        // Validate the security policies
-        _validateSecurityPolicies(msg.sender, module);
+        // If the setup contract differs from the installed module,
+        // Validate the module as well
+        if (module != _setupContract) {
+            _validateSecurityPolicies(msg.sender, module);
+        }
 
         return module;
     }
