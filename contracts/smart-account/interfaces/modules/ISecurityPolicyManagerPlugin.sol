@@ -8,11 +8,13 @@ address constant SENTINEL_MODULE_ADDRESS = address(0x1);
 interface ISecurityPolicyManagerPluginEventsErrors {
     event SecurityPolicyEnabled(address indexed scw, address indexed policy);
     event SecurityPolicyDisabled(address indexed scw, address indexed policy);
+    event ModuleValidated(address indexed scw, address indexed module);
 
     error SecurityPolicyAlreadyEnabled(address policy);
     error SecurityPolicyAlreadyDisabled(address policy);
     error InvalidSecurityPolicyAddress(address policy);
     error InvalidPointerAddress(address pointer);
+    error ModuleInstallationFailed();
     error EmptyPolicyList();
 }
 

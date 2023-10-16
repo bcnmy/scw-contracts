@@ -1041,4 +1041,129 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         assertEq(address(enabledSecurityPolicies[2]), address(p2));
         assertEq(address(enabledSecurityPolicies[3]), address(p1));
     }
+
+    function testShouldNotAllowEnablingAlreadyEnabledPolicySingleEnable()
+        external
+    {
+        bytes memory data = getSmartAccountExecuteCalldata(
+            address(spmp),
+            0,
+            abi.encodeCall(
+                ISecurityPolicyManagerPlugin.enableSecurityPolicy,
+                (p1)
+            )
+        );
+
+        UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+
+        op = makeEcdsaModuleUserOp(data, sa, 0, alice);
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(
+                abi.encodeWithSelector(
+                    SecurityPolicyAlreadyEnabled.selector,
+                    p1
+                )
+            )
+        );
+    }
+
+    function testShouldNotAllowEnablingAlreadyEnabledPolicySMultiEnable()
+        external
+    {
+        bytes memory data = getSmartAccountExecuteCalldata(
+            address(spmp),
+            0,
+            abi.encodeCall(
+                ISecurityPolicyManagerPlugin.enableSecurityPolicy,
+                (p1)
+            )
+        );
+        UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+
+        ISecurityPolicyPlugin[] memory policies = new ISecurityPolicyPlugin[](
+            1
+        );
+        policies[0] = p1;
+        data = getSmartAccountExecuteCalldata(
+            address(spmp),
+            0,
+            abi.encodeCall(
+                ISecurityPolicyManagerPlugin.enableSecurityPolicies,
+                (policies)
+            )
+        );
+        op = makeEcdsaModuleUserOp(data, sa, 0, alice);
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(
+                abi.encodeWithSelector(
+                    SecurityPolicyAlreadyEnabled.selector,
+                    p1
+                )
+            )
+        );
+    }
+
+    function testShouldAllowDisablingAlreadyEnabledPolicySingleDisable()
+        external
+    {
+        bytes memory data = getSmartAccountExecuteCalldata(
+            address(spmp),
+            0,
+            abi.encodeCall(
+                ISecurityPolicyManagerPlugin.disableSecurityPolicy,
+                (p1, p2)
+            )
+        );
+
+        UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(
+                abi.encodeWithSelector(
+                    SecurityPolicyAlreadyDisabled.selector,
+                    p1
+                )
+            )
+        );
+    }
 }

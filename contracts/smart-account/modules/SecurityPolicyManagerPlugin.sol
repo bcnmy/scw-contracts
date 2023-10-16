@@ -2,6 +2,8 @@
 pragma solidity 0.8.17;
 
 import {ISecurityPolicyManagerPlugin, ISecurityPolicyPlugin, SENTINEL_MODULE_ADDRESS} from "contracts/smart-account/interfaces/modules/ISecurityPolicyManagerPlugin.sol";
+import {ISmartAccount} from "contracts/smart-account/interfaces/ISmartAccount.sol";
+import {Enum} from "contracts/smart-account/common/Enum.sol";
 
 /// @title Security Policy Manager Plugin
 /// @author @ankurdubey521
@@ -14,10 +16,31 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
 
     /// @inheritdoc ISecurityPolicyManagerPlugin
     function checkSetupAndEnableModule(
-        address,
-        bytes calldata
+        address _setupContract,
+        bytes calldata _setupData
     ) external override returns (address) {
-        revert("Not implemented");
+        // Instruct the SA to install the module and return the address
+        ISmartAccount sa = ISmartAccount(msg.sender);
+        (bool success, bytes memory returndata) = sa
+            .execTransactionFromModuleReturnData(
+                msg.sender,
+                0,
+                abi.encodeCall(
+                    sa.setupAndEnableModule,
+                    (_setupContract, _setupData)
+                ),
+                Enum.Operation.Call
+            );
+        if (!success) {
+            revert ModuleInstallationFailed();
+        }
+
+        address module = abi.decode(returndata, (address));
+
+        // Validate the security policies
+        _validateSecurityPolicies(msg.sender, module);
+
+        return module;
     }
 
     ////////////////////////// SECURITY POLICY MANAGEMENT FUNCTIONS //////////////////////////
@@ -60,7 +83,6 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
                 msg.sender
             ];
 
-        // TODO: Verify if this reduces gas
         uint256 length = _policies.length;
 
         if (length == 0) {
@@ -192,7 +214,12 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         address _scw,
         address _start,
         uint256 _pageSize
-    ) external view returns (ISecurityPolicyPlugin[] memory enabledPolicies) {
+    )
+        external
+        view
+        override
+        returns (ISecurityPolicyPlugin[] memory enabledPolicies)
+    {
         enabledPolicies = new ISecurityPolicyPlugin[](_pageSize);
         uint256 actualEnabledPoliciesLength;
 
@@ -225,5 +252,22 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         assembly {
             mstore(enabledPolicies, actualEnabledPoliciesLength)
         }
+    }
+
+    ////////////////////////// PLUGIN INSTALLATION FUNCTIONS HELPERS //////////////////////////
+
+    function _validateSecurityPolicies(address _sa, address _module) internal {
+        mapping(address => address)
+            storage enabledSecurityPolicies = enabledSecurityPoliciesLinkedList[
+                _sa
+            ];
+
+        address current = enabledSecurityPolicies[SENTINEL_MODULE_ADDRESS];
+        while (current != address(0) && current != SENTINEL_MODULE_ADDRESS) {
+            ISecurityPolicyPlugin(current).validateSecurityPolicy(_sa, _module);
+            current = enabledSecurityPolicies[current];
+        }
+
+        emit ModuleValidated(_sa, _module);
     }
 }
