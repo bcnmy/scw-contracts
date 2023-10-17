@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-
 interface IAccountRecoveryModule {
-
     /**
      * @dev Struct that represents a guardian's validity time frame
      */
@@ -101,7 +98,7 @@ interface IAccountRecoveryModule {
     );
 
     /**
-     * @dev Thrown if trying to init module for the Smart Account 
+     * @dev Thrown if trying to init module for the Smart Account
      * but it has already been initialized
      * @param smartAccount address of the Smart Account
      */
@@ -146,14 +143,14 @@ interface IAccountRecoveryModule {
      * @param guardiansExist number of guardians currently stored for the account
      */
     error ThresholdTooHigh(uint8 threshold, uint256 guardiansExist);
-    
+
     /**
      * @dev Thrown if trying to set a zero threshold
      */
     error ZeroThreshold();
 
     /**
-     * @dev Thrown if not enough or too many params provided 
+     * @dev Thrown if not enough or too many params provided
      */
     error InvalidAmountOfGuardianParams();
 
@@ -162,12 +159,12 @@ interface IAccountRecoveryModule {
      */
     error GuardiansAreIdentical();
 
-    /** 
+    /**
      * @dev Thrown if trying to remove a not yet expired guardian
      * via removeExpiredGuardian method
      * @param guardian guardian address
      * @param smartAccount address of the Smart Account
-    */
+     */
     error GuardianNotExpired(bytes32 guardian, address smartAccount);
 
     /**
@@ -277,6 +274,20 @@ interface IAccountRecoveryModule {
     function setSecurityDelay(uint48 newSecurityDelay) external;
 
     /**
+     * @dev Submits recovery request for a Smart Account
+     * Hash of the callData is stored on-chain along with the timestamp of the request submission
+     * @param recoveryCallData callData of the recovery request
+     */
+    function submitRecoveryRequest(bytes calldata recoveryCallData) external;
+
+    /**
+     * @dev renounces existing recovery request for a Smart Account (msg.sender)
+     * Should be called by the Smart Account
+     * Can be used during the security delay to cancel the request
+     */
+    function renounceRecoveryRequest() external;
+
+    /**
      * @dev Returns guardian validity timeframes for the Smart Account
      * @param guardian guardian to get params for
      * @param smartAccount smartAccount to get params for
@@ -305,19 +316,4 @@ interface IAccountRecoveryModule {
     function getRecoveryRequest(
         address smartAccount
     ) external view returns (RecoveryRequest memory);
-
-    /**
-     * @dev Submits recovery request for a Smart Account
-     * Hash of the callData is stored on-chain along with the timestamp of the request submission
-     * @param recoveryCallData callData of the recovery request
-     */
-    function submitRecoveryRequest(bytes calldata recoveryCallData) external;
-
-    /**
-     * @dev renounces existing recovery request for a Smart Account (msg.sender)
-     * Should be called by the Smart Account
-     * Can be used during the security delay to cancel the request
-     */
-    function renounceRecoveryRequest() external;
-
 }
