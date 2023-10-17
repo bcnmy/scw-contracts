@@ -14,7 +14,13 @@ import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
 describe("MultiOwned ECDSA Module (with Bundler):", async () => {
-  let [deployer, smartAccountOwner1, smartAccountOwner2, smartAccountOwner3, eve] = [] as SignerWithAddress[];
+  let [
+    deployer,
+    smartAccountOwner1,
+    smartAccountOwner2,
+    smartAccountOwner3,
+    eve,
+  ] = [] as SignerWithAddress[];
   const smartAccountDeploymentIndex = 0;
   const SIG_VALIDATION_SUCCESS = 0;
   let environment: BundlerTestEnvironment;
@@ -29,7 +35,13 @@ describe("MultiOwned ECDSA Module (with Bundler):", async () => {
   });
 
   beforeEach(async function () {
-    [deployer, smartAccountOwner1, smartAccountOwner2, smartAccountOwner3, eve] = await ethers.getSigners();
+    [
+      deployer,
+      smartAccountOwner1,
+      smartAccountOwner2,
+      smartAccountOwner3,
+      eve,
+    ] = await ethers.getSigners();
   });
 
   afterEach(async function () {
@@ -55,9 +67,16 @@ describe("MultiOwned ECDSA Module (with Bundler):", async () => {
     const mockToken = await getMockToken();
 
     const ecdsaOwnershipSetupData =
-      multiOwnedECDSAModule.interface.encodeFunctionData("initForSmartAccount", [
-        [smartAccountOwner1.address, smartAccountOwner2.address, smartAccountOwner3.address],
-      ]);
+      multiOwnedECDSAModule.interface.encodeFunctionData(
+        "initForSmartAccount",
+        [
+          [
+            smartAccountOwner1.address,
+            smartAccountOwner2.address,
+            smartAccountOwner3.address,
+          ],
+        ]
+      );
 
     const deploymentData = saFactory.interface.encodeFunctionData(
       "deployCounterFactualAccount",
@@ -141,7 +160,7 @@ describe("MultiOwned ECDSA Module (with Bundler):", async () => {
         "execute_ncC",
         [multiOwnedECDSAModule.address, 0, txnData1],
         userSA.address,
-        smartAccountOwner1, //can be signed by any owner
+        smartAccountOwner1, // can be signed by any owner
         entryPoint,
         multiOwnedECDSAModule.address,
         {
@@ -150,76 +169,81 @@ describe("MultiOwned ECDSA Module (with Bundler):", async () => {
       );
 
       await environment.sendUserOperation(userOp, entryPoint.address);
-      expect(await multiOwnedECDSAModule.isOwner(userSA.address, eve.address)).to.be.true;
+      expect(
+        await multiOwnedECDSAModule.isOwner(userSA.address, eve.address)
+      ).to.equal(true);
     });
   });
 
   describe("removeOwner():", async () => {
     it("Should be able to renounce ownership and the new owner should be address(0)", async () => {
-        const { multiOwnedECDSAModule, entryPoint, userSA } = await setupTests();
-        const txnData1 = multiOwnedECDSAModule.interface.encodeFunctionData(
-          "removeOwner",
-          [smartAccountOwner2.address]
-        );
-        const userOp = await makeEcdsaModuleUserOp(
-          "execute_ncC",
-          [multiOwnedECDSAModule.address, 0, txnData1],
-          userSA.address,
-          smartAccountOwner3, //any owner can sign
-          entryPoint,
-          multiOwnedECDSAModule.address,
-          {
-            preVerificationGas: 50000,
-          }
-        );
+      const { multiOwnedECDSAModule, entryPoint, userSA } = await setupTests();
+      const txnData1 = multiOwnedECDSAModule.interface.encodeFunctionData(
+        "removeOwner",
+        [smartAccountOwner2.address]
+      );
+      const userOp = await makeEcdsaModuleUserOp(
+        "execute_ncC",
+        [multiOwnedECDSAModule.address, 0, txnData1],
+        userSA.address,
+        smartAccountOwner3, // any owner can sign
+        entryPoint,
+        multiOwnedECDSAModule.address,
+        {
+          preVerificationGas: 50000,
+        }
+      );
 
-        await environment.sendUserOperation(userOp, entryPoint.address);
-        expect(
-          await multiOwnedECDSAModule.isOwner(userSA.address, smartAccountOwner2.address)
-        ).to.be.false;
+      await environment.sendUserOperation(userOp, entryPoint.address);
+      expect(
+        await multiOwnedECDSAModule.isOwner(
+          userSA.address,
+          smartAccountOwner2.address
+        )
+      ).to.equal(false);
     });
   });
 
   describe("validateUserOp(): ", async () => {
     it("Returns SIG_VALIDATION_SUCCESS for a valid UserOp and valid userOpHash and allows to handle userOp", async () => {
-        const { multiOwnedECDSAModule, entryPoint, userSA, mockToken } =
-          await setupTests();
-        const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
-        const eveBalanceBefore = await mockToken.balanceOf(eve.address);
-        const tokenAmountToTransfer = ethers.utils.parseEther("3.5672");
+      const { multiOwnedECDSAModule, entryPoint, userSA, mockToken } =
+        await setupTests();
+      const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
+      const eveBalanceBefore = await mockToken.balanceOf(eve.address);
+      const tokenAmountToTransfer = ethers.utils.parseEther("3.5672");
 
-        const txnData = mockToken.interface.encodeFunctionData("transfer", [
-          eve.address,
-          tokenAmountToTransfer.toString(),
-        ]);
-        const userOp = await makeEcdsaModuleUserOp(
-          "execute_ncC",
-          [mockToken.address, 0, txnData],
-          userSA.address,
-          smartAccountOwner2, //any owner can sign
-          entryPoint,
-          multiOwnedECDSAModule.address,
-          {
-            preVerificationGas: 50000,
-          }
-        );
-        // Construct userOpHash
-        const provider = entryPoint?.provider;
-        const chainId = await provider!.getNetwork().then((net) => net.chainId);
-        const userOpHash = getUserOpHash(userOp, entryPoint.address, chainId);
+      const txnData = mockToken.interface.encodeFunctionData("transfer", [
+        eve.address,
+        tokenAmountToTransfer.toString(),
+      ]);
+      const userOp = await makeEcdsaModuleUserOp(
+        "execute_ncC",
+        [mockToken.address, 0, txnData],
+        userSA.address,
+        smartAccountOwner2, // any owner can sign
+        entryPoint,
+        multiOwnedECDSAModule.address,
+        {
+          preVerificationGas: 50000,
+        }
+      );
+      // Construct userOpHash
+      const provider = entryPoint?.provider;
+      const chainId = await provider!.getNetwork().then((net) => net.chainId);
+      const userOpHash = getUserOpHash(userOp, entryPoint.address, chainId);
 
-        const res = await multiOwnedECDSAModule.validateUserOp(
-          userOp,
-          userOpHash
-        );
-        expect(res).to.be.equal(SIG_VALIDATION_SUCCESS);
-        await environment.sendUserOperation(userOp, entryPoint.address);
-        expect(await mockToken.balanceOf(eve.address)).to.equal(
-          eveBalanceBefore.add(tokenAmountToTransfer)
-        );
-        expect(await mockToken.balanceOf(userSA.address)).to.equal(
-          userSABalanceBefore.sub(tokenAmountToTransfer)
-        );
+      const res = await multiOwnedECDSAModule.validateUserOp(
+        userOp,
+        userOpHash
+      );
+      expect(res).to.be.equal(SIG_VALIDATION_SUCCESS);
+      await environment.sendUserOperation(userOp, entryPoint.address);
+      expect(await mockToken.balanceOf(eve.address)).to.equal(
+        eveBalanceBefore.add(tokenAmountToTransfer)
+      );
+      expect(await mockToken.balanceOf(userSA.address)).to.equal(
+        userSABalanceBefore.sub(tokenAmountToTransfer)
+      );
     });
   });
 });

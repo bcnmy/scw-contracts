@@ -31,7 +31,9 @@ interface IMultiOwnedECDSAModule {
      * Should be used at a time of first enabling the module for a Smart Account.
      * @param eoaOwners The owner of the Smart Account. Should be EOA!
      */
-    function initForSmartAccount(address[] calldata eoaOwners) external returns (address);
+    function initForSmartAccount(
+        address[] calldata eoaOwners
+    ) external returns (address);
 
     /**
      * @dev Sets/changes an for a Smart Account.

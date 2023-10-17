@@ -34,21 +34,24 @@ contract MultiOwnedECDSAModule is
     string public constant VERSION = "0.2.0";
 
     // owner => smartAccount => isOwner
-    mapping(address => mapping (address => bool)) internal _smartAccountOwners;
-    mapping (address => uint256) internal numberOfOwners;
+    mapping(address => mapping(address => bool)) internal _smartAccountOwners;
+    mapping(address => uint256) internal numberOfOwners;
 
     /// @inheritdoc IMultiOwnedECDSAModule
     function initForSmartAccount(
         address[] calldata eoaOwners
     ) external returns (address) {
-
         if (numberOfOwners[msg.sender] != 0) {
             revert AlreadyInitedForSmartAccount(msg.sender);
         }
-        for(uint256 i; i < eoaOwners.length; ) {
-            if (eoaOwners[i] == address(0)) revert ZeroAddressNotAllowedAsOwner();
+        for (uint256 i; i < eoaOwners.length; ) {
+            if (eoaOwners[i] == address(0))
+                revert ZeroAddressNotAllowedAsOwner();
             if (_smartAccountOwners[eoaOwners[i]][msg.sender])
-                revert OwnerAlreadyUsedForSmartAccount(eoaOwners[i], msg.sender);
+                revert OwnerAlreadyUsedForSmartAccount(
+                    eoaOwners[i],
+                    msg.sender
+                );
 
             _smartAccountOwners[eoaOwners[i]][msg.sender] = true;
             numberOfOwners[msg.sender]++;
@@ -60,11 +63,15 @@ contract MultiOwnedECDSAModule is
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
-    function transferOwnership(address owner, address newOwner) external override {
+    function transferOwnership(
+        address owner,
+        address newOwner
+    ) external override {
         if (_isSmartContract(newOwner)) revert NotEOA(owner);
         if (newOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
-        if (owner == newOwner) revert OwnerAlreadyUsedForSmartAccount(newOwner, msg.sender);
+        if (owner == newOwner)
+            revert OwnerAlreadyUsedForSmartAccount(newOwner, msg.sender);
         _transferOwnership(msg.sender, owner, newOwner);
     }
 
@@ -83,7 +90,6 @@ contract MultiOwnedECDSAModule is
     function removeOwner(address owner) external override {
         _transferOwnership(msg.sender, owner, address(0));
         --numberOfOwners[msg.sender];
-
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
@@ -171,11 +177,17 @@ contract MultiOwnedECDSAModule is
         address recovered = (dataHash.toEthSignedMessageHash()).recover(
             signature
         );
-        if (recovered != address(0) && _smartAccountOwners[recovered][smartAccount]) {
+        if (
+            recovered != address(0) &&
+            _smartAccountOwners[recovered][smartAccount]
+        ) {
             return true;
         }
         recovered = dataHash.recover(signature);
-        if (recovered != address(0) && _smartAccountOwners[recovered][smartAccount]) {
+        if (
+            recovered != address(0) &&
+            _smartAccountOwners[recovered][smartAccount]
+        ) {
             return true;
         }
         return false;
