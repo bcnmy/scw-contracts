@@ -2,13 +2,8 @@ import { Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { EntryPoint } from "../../typechain-types";
 import { UserOperation } from "./userOperation";
-import {
-  getUserOpHash,
-  fillUserOp,
-} from "./userOp";
-import {
-  arrayify,
-} from "ethers/lib/utils";
+import { getUserOpHash, fillUserOp } from "./userOp";
+import { arrayify } from "ethers/lib/utils";
 
 export async function makeMultiSignedUserOpWithGuardiansList(
   functionName: string,
