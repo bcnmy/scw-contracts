@@ -37,6 +37,8 @@ contract AccountRecoveryModule is
     // keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"))
     bytes32 public constant CONTROL_HASH =
         0x1c3074d7ce4e35b6f0a67e3db0f31ff117ca8f0a1853e86a95837fea35af828b;
+    bytes32 public immutable controlHashEthSigned = CONTROL_HASH
+        .toEthSignedMessageHash();    
 
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
@@ -61,7 +63,7 @@ contract AccountRecoveryModule is
      * `recoveryThreshold == 0` cheks. So length can never be 0 while recoveryThreshold is not 0
      */
     function initForSmartAccount(
-        bytes32[] memory guardians,
+        bytes32[] calldata guardians,
         TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
         uint48 securityDelay
@@ -80,6 +82,7 @@ contract AccountRecoveryModule is
         );
         for (uint256 i; i < length; ) {
             if (guardians[i] == bytes32(0)) revert ZeroGuardian();
+            if (_guardians[guardians[i]][msg.sender].validUntil != 0) revert GuardianAlreadySet(guardians[i], msg.sender);
             if (timeFrames[i].validUntil == 0)
                 timeFrames[i].validUntil = type(uint48).max;
             if (timeFrames[i].validUntil < timeFrames[i].validAfter)
@@ -100,7 +103,7 @@ contract AccountRecoveryModule is
     }
 
     /**
-     * @dev validates userOps to submut and execute recovery requests
+     * @dev validates userOps to submit and execute recovery requests
      *     - if securityDelay is 0, it allows to execute the request immediately
      *     - if securityDelay is non 0, the request is submitted and stored on-chain
      *     - if userOp.callData matches the callData of the request already submitted,
@@ -150,29 +153,30 @@ contract AccountRecoveryModule is
         uint48 validUntil;
         uint48 latestValidAfter;
         uint48 earliestValidUntil = type(uint48).max;
+        bytes32 userOpHashSigned = userOpHash.toEthSignedMessageHash();
 
         for (uint256 i; i < requiredSignatures; ) {
-            address currentUserOpSignerAddress = userOpHash
-                .toEthSignedMessageHash()
+
+            // even indexed signatures are signatures over userOpHash
+            // every signature is 65 bytes long and they are packed into moduleSignature
+            address currentUserOpSignerAddress = userOpHashSigned
                 .recover(moduleSignature[2 * i * 65:(2 * i + 1) * 65]);
 
+            // odd indexed signatures are signatures over CONTROL_HASH used to calculate guardian id
             currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 * i + 2) *
                 65];
 
-            currentGuardianAddress = CONTROL_HASH
-                .toEthSignedMessageHash()
+            currentGuardianAddress = controlHashEthSigned
                 .recover(currentGuardianSig);
 
             if (currentUserOpSignerAddress != currentGuardianAddress) {
                 return SIG_VALIDATION_FAILED;
             }
 
-            validAfter = _guardians[keccak256(currentGuardianSig)][
-                userOp.sender
-            ].validAfter;
-            validUntil = _guardians[keccak256(currentGuardianSig)][
-                userOp.sender
-            ].validUntil;
+            bytes32 currentGuardian = keccak256(currentGuardianSig);
+
+            validAfter = _guardians[currentGuardian][userOp.sender].validAfter;
+            validUntil = _guardians[currentGuardian][userOp.sender].validUntil;
 
             // validUntil == 0 means the `currentGuardian` has not been set as guardian
             // for the userOp.sender smartAccount

@@ -554,6 +554,67 @@ describe("Account Recovery Module: ", async () => {
         );
     });
 
+    it("reverts if there are duplicate guardians", async () => {
+      const {
+        entryPoint,
+        aliceSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        defaultSecurityDelay,
+        controlMessage,
+        chainId,
+      } = await setupTests();
+
+      const recoveryThreshold = 3;
+      const messageHash = ethers.utils.id(controlMessage);
+      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+
+      const guardians = await Promise.all(
+        [bob, eve, eve].map(
+          async (guardian): Promise<string> =>
+            ethers.utils.keccak256(await guardian.signMessage(messageHashBytes))
+        )
+      );
+
+      const bobTimeFrame = [16741936493, 1];
+      const eveTimeFrame = [16741936494, 2];
+
+      const timeFrames = [bobTimeFrame, eveTimeFrame, eveTimeFrame];
+
+      const accountRecoverySetupData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [guardians, timeFrames, recoveryThreshold, defaultSecurityDelay]
+        );
+      const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
+        "setupAndEnableModule",
+        [accountRecoveryModule.address, accountRecoverySetupData],
+        aliceSA.address,
+        alice,
+        entryPoint,
+        ecdsaModule.address
+      );
+      const tx = await entryPoint.handleOps(
+        [setupAndEnableUserOp],
+        refundReceiver.address
+      );
+
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("GuardianAlreadySet(bytes32,address)").slice(0, 10),
+        guardians[2],
+        ethers.utils.hexZeroPad(aliceSA.address, 32),
+      ]);
+
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(setupAndEnableUserOp, entryPoint.address, chainId),
+          setupAndEnableUserOp.sender,
+          setupAndEnableUserOp.nonce,
+          errorData
+        );
+    });
+
     it("Should revert if validUntil < validAfter in any of the timeframes", async () => {
       const {
         entryPoint,
