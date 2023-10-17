@@ -27,6 +27,12 @@ contract DefaultCallbackHandler is
         revert NonExistingMethodCalled(msg.sig);
     }
 
+    /**
+     * @dev Checks if the contract supports a given interface.
+     * @param interfaceId The interface identifier, as specified in ERC-165.
+     * @return True if the contract implements the given interface, false otherwise.
+     */
+
     function supportsInterface(
         bytes4 interfaceId
     ) external view virtual override returns (bool) {
@@ -37,6 +43,10 @@ contract DefaultCallbackHandler is
             interfaceId == type(IERC165).interfaceId;
     }
 
+    /**
+     * @dev Handles the receipt of a single ERC1155 token type.
+     * @return The interface selector for the called function.
+     */
     function onERC1155Received(
         address,
         address,
@@ -47,6 +57,10 @@ contract DefaultCallbackHandler is
         return IERC1155Receiver.onERC1155Received.selector;
     }
 
+    /**
+     * @dev Handles the receipt of multiple ERC1155 token types.
+     * @return The interface selector for the called function.
+     */
     function onERC1155BatchReceived(
         address,
         address,
@@ -57,6 +71,10 @@ contract DefaultCallbackHandler is
         return IERC1155Receiver.onERC1155BatchReceived.selector;
     }
 
+    /**
+     * @dev Handles the receipt of an ERC721 token.
+     * @return The interface selector for the called function.
+     */
     function onERC721Received(
         address,
         address,
@@ -66,6 +84,10 @@ contract DefaultCallbackHandler is
         return IERC721Receiver.onERC721Received.selector;
     }
 
+    /**
+     * @dev Handles the receipt of an ERC777 token.
+     * This function does not have any specific logic as it's implemented for completeness.
+     */
     function tokensReceived(
         address,
         address,

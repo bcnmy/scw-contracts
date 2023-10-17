@@ -140,6 +140,7 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
       sessionKeyData: sessionKeyData,
       leafData: leafData,
       merkleTree: merkleTree,
+      sessionKey: sessionKey,
     };
   });
 

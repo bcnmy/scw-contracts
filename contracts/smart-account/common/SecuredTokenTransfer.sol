@@ -3,10 +3,15 @@ pragma solidity 0.8.17;
 
 /// @title SecuredTokenTransfer - Secure token transfer
 abstract contract SecuredTokenTransfer {
-    /// @dev Transfers a token and returns if it was a success
-    /// @param token Token that should be transferred
-    /// @param receiver Receiver to whom the token should be transferred
-    /// @param amount The amount of tokens that should be transferred
+    /**
+     * @dev Transfers a specified amount of ERC20 tokens to a receiver.
+     * @notice This function utilizes the standard `transfer` function of ERC20 tokens.
+     * It ensures the token address is valid and that the token contract exists before attempting the transfer.
+     * @param token The address of the ERC20 token to be transferred.
+     * @param receiver The address to receive the tokens.
+     * @param amount The amount of tokens to transfer.
+     * @return transferred A boolean indicating whether the transfer was successful.
+     */
     function _transferToken(
         address token,
         address receiver,
@@ -23,7 +28,7 @@ abstract contract SecuredTokenTransfer {
 
         assembly {
             // We write the return value to scratch space.
-            // See https://docs.soliditylang.org/en/v0.8.17/internals/layout_in_memory.html#layout-in-memory
+            // See https://docs.soliditylang.org/en/latest/internals/layout_in_memory.html#layout-in-memory
             let success := call(
                 sub(gas(), 10000),
                 token,

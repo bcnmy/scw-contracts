@@ -14,6 +14,12 @@ contract Stakeable is Ownable, IStakeable {
         _transferOwnership(_newOwner);
     }
 
+    /**
+     * @dev Stakes a certain amount of Ether on an EntryPoint.
+     * @notice The contract should have enough Ether to cover the stake.
+     * @param epAddress Address of the EntryPoint where the stake is added.
+     * @param unstakeDelaySec The delay in seconds before the stake can be unlocked.
+     */
     function addStake(
         address epAddress,
         uint32 unstakeDelaySec
@@ -22,11 +28,22 @@ contract Stakeable is Ownable, IStakeable {
         IEntryPoint(epAddress).addStake{value: msg.value}(unstakeDelaySec);
     }
 
+    /**
+     * @dev Unlocks the stake on an EntryPoint.
+     * @notice This starts the unstaking delay after which funds can be withdrawn.
+     * @param epAddress Address of the EntryPoint where the stake is unlocked.
+     */
     function unlockStake(address epAddress) external override onlyOwner {
         require(epAddress != address(0), "Invalid EP address");
         IEntryPoint(epAddress).unlockStake();
     }
 
+    /**
+     * @dev Withdraws the stake from an EntryPoint to a specified address.
+     * @notice This can only be done after the unstaking delay has passed since the unlock.
+     * @param epAddress Address of the EntryPoint where the stake is withdrawn from.
+     * @param withdrawAddress Address to receive the withdrawn stake.
+     */
     function withdrawStake(
         address epAddress,
         address payable withdrawAddress

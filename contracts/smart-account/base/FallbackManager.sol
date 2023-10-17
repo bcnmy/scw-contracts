@@ -61,16 +61,17 @@ abstract contract FallbackManager is SelfAuthorized, IFallbackManager {
         }
     }
 
+    /**
+     * @notice Sets a new fallback handler. This function will revert if the provided handler address is zero.
+     * @dev This function is internal and utilizes assembly for optimized storage operations.
+     * @param handler The address of the new fallback handler.
+     */
     function _setFallbackHandler(address handler) internal {
         if (handler == address(0)) revert HandlerCannotBeZero();
         address previousHandler;
 
         assembly {
             previousHandler := sload(FALLBACK_HANDLER_STORAGE_SLOT)
-            //}
-            //bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
-
-            //assembly {
             sstore(FALLBACK_HANDLER_STORAGE_SLOT, handler)
         }
         emit ChangedFallbackHandler(previousHandler, handler);

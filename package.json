@@ -51,7 +51,6 @@
     "@typescript-eslint/eslint-plugin": "^5.30.5",
     "@typescript-eslint/parser": "^5.30.5",
     "chai": "^4.3.7",
-    "dotenv": "^16.0.1",
     "merkletreejs": "^0.3.9",
     "ts-node": "^10.9.1",
     "typechain": "^8.1.1",
