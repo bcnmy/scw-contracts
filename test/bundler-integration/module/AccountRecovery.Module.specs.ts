@@ -9,7 +9,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
@@ -156,10 +155,6 @@ describe("Account Recovery Module (via Bundler)", async () => {
         ecdsaModule: ecdsaModule,
         userSA: userSA,
         accountRecoveryModule: accountRecoveryModule,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
         defaultSecurityDelay: defaultSecurityDelay,
         controlMessage: controlMessage,
       };

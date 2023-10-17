@@ -1,21 +1,14 @@
-import { BigNumber, BytesLike, Contract, Signer } from "ethers";
+import { Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
-import { EntryPoint, SmartAccount } from "../../typechain";
+import { EntryPoint } from "../../typechain-types";
 import { UserOperation } from "./userOperation";
 import {
-  fillAndSign,
-  makeEcdsaModuleUserOp,
   getUserOpHash,
   fillUserOp,
 } from "./userOp";
 import {
-  hexZeroPad,
-  hexConcat,
-  defaultAbiCoder,
   arrayify,
 } from "ethers/lib/utils";
-import MerkleTree from "merkletreejs";
-import { keccak256 } from "ethereumjs-util";
 
 export async function makeMultiSignedUserOpWithGuardiansList(
   functionName: string,

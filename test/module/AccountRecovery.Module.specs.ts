@@ -7,7 +7,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import {
   makeEcdsaModuleUserOp,
@@ -149,10 +148,6 @@ describe("Account Recovery Module: ", async () => {
         userSA: userSA,
         aliceSA: aliceSA,
         accountRecoveryModule: accountRecoveryModule,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
         defaultSecurityDelay: defaultSecurityDelay,
         controlMessage: controlMessage,
         chainId: chainId,
