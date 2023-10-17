@@ -37,8 +37,8 @@ contract AccountRecoveryModule is
     // keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"))
     bytes32 public constant CONTROL_HASH =
         0x1c3074d7ce4e35b6f0a67e3db0f31ff117ca8f0a1853e86a95837fea35af828b;
-    bytes32 public immutable controlHashEthSigned = CONTROL_HASH
-        .toEthSignedMessageHash();    
+    bytes32 public immutable controlHashEthSigned =
+        CONTROL_HASH.toEthSignedMessageHash();
 
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
@@ -82,7 +82,8 @@ contract AccountRecoveryModule is
         );
         for (uint256 i; i < length; ) {
             if (guardians[i] == bytes32(0)) revert ZeroGuardian();
-            if (_guardians[guardians[i]][msg.sender].validUntil != 0) revert GuardianAlreadySet(guardians[i], msg.sender);
+            if (_guardians[guardians[i]][msg.sender].validUntil != 0)
+                revert GuardianAlreadySet(guardians[i], msg.sender);
             if (timeFrames[i].validUntil == 0)
                 timeFrames[i].validUntil = type(uint48).max;
             if (timeFrames[i].validUntil < timeFrames[i].validAfter)
@@ -156,18 +157,19 @@ contract AccountRecoveryModule is
         bytes32 userOpHashSigned = userOpHash.toEthSignedMessageHash();
 
         for (uint256 i; i < requiredSignatures; ) {
-
             // even indexed signatures are signatures over userOpHash
             // every signature is 65 bytes long and they are packed into moduleSignature
-            address currentUserOpSignerAddress = userOpHashSigned
-                .recover(moduleSignature[2 * i * 65:(2 * i + 1) * 65]);
+            address currentUserOpSignerAddress = userOpHashSigned.recover(
+                moduleSignature[2 * i * 65:(2 * i + 1) * 65]
+            );
 
             // odd indexed signatures are signatures over CONTROL_HASH used to calculate guardian id
             currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 * i + 2) *
                 65];
 
-            currentGuardianAddress = controlHashEthSigned
-                .recover(currentGuardianSig);
+            currentGuardianAddress = controlHashEthSigned.recover(
+                currentGuardianSig
+            );
 
             if (currentUserOpSignerAddress != currentGuardianAddress) {
                 return SIG_VALIDATION_FAILED;
