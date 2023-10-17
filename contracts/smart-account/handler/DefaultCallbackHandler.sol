@@ -21,11 +21,18 @@ contract DefaultCallbackHandler is
     string public constant NAME = "Default Callback Handler";
     string public constant VERSION = "1.0.0";
 
+    error NonExistingMethodCalled(bytes4 selector);
+
+    fallback() external {
+        revert NonExistingMethodCalled(msg.sig);
+    }
+
     /**
      * @dev Checks if the contract supports a given interface.
      * @param interfaceId The interface identifier, as specified in ERC-165.
      * @return True if the contract implements the given interface, false otherwise.
      */
+
     function supportsInterface(
         bytes4 interfaceId
     ) external view virtual override returns (bool) {
