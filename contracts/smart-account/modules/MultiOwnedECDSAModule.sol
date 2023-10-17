@@ -145,7 +145,9 @@ contract MultiOwnedECDSAModule is
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
-    function getNumberOfOwners(address smartAccount) public view returns (uint256) {
+    function getNumberOfOwners(
+        address smartAccount
+    ) public view returns (uint256) {
         return numberOfOwners[smartAccount];
     }
 

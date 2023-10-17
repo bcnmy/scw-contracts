@@ -244,7 +244,9 @@ describe("MultiOwned ECDSA Module (with Bundler):", async () => {
       expect(await mockToken.balanceOf(userSA.address)).to.equal(
         userSABalanceBefore.sub(tokenAmountToTransfer)
       );
-      expect(await multiOwnedECDSAModule.getNumberOfOwners(userSA.address)).to.equal(3);
+      expect(
+        await multiOwnedECDSAModule.getNumberOfOwners(userSA.address)
+      ).to.equal(3);
     });
   });
 });

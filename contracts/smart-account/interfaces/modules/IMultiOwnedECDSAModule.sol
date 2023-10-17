@@ -67,12 +67,14 @@ interface IMultiOwnedECDSAModule {
         address eoaAddress
     ) external view returns (bool);
 
-    /** 
+    /**
      * @dev Returns the number of owners of the Smart Account.
      * @param smartAccount Smart Account address.
      * @return The number of owners of the Smart Account.
-    */
-    function getNumberOfOwners(address smartAccount) external view returns (uint256);
+     */
+    function getNumberOfOwners(
+        address smartAccount
+    ) external view returns (uint256);
 
     /**
      * @dev Validates a signature for a message signed by address.
