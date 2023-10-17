@@ -18,7 +18,7 @@ import {
   EntryPoint,
   EntryPoint__factory,
   SimpleWallet__factory,
-} from "../typechain"; */
+} from "../typechain-types"; */
 // import { BytesLike } from "@ethersproject/bytes";
 // import { expect } from "chai";
 // import { debugTransaction } from "./debugTx";

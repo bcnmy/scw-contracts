@@ -1,4 +1,4 @@
-import { expect, use } from "chai";
+import { expect } from "chai";
 import {
   enableNewTreeForSmartAccountViaEcdsa,
   getERC20SessionKeyParams,
@@ -13,11 +13,10 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import { computeAddress } from "ethers/lib/utils";
 
-describe("SessionKey: Session Router", async () => {
+describe("SessionKey: Batched Session Router", async () => {
   const [
     deployer,
     smartAccountOwner,
@@ -149,10 +148,6 @@ describe("SessionKey: Session Router", async () => {
         ecdsaModule: ecdsaModule,
         userSA: userSA,
         mockToken: mockToken,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
         sessionKeyManager: sessionKeyManager,
         erc20SessionModule: erc20SessionModule,
         sessionKeyData: sessionKeyData,
@@ -371,7 +366,7 @@ describe("SessionKey: Session Router", async () => {
         [approveCallData, interactCallData],
       ],
       userSA.address,
-      nonAuthSessionKey,
+      nonAuthSessionKey, // not authorized session key
       entryPoint,
       sessionKeyManager.address,
       [
@@ -400,6 +395,109 @@ describe("SessionKey: Session Router", async () => {
     )
       .to.be.revertedWith("FailedOp")
       .withArgs(0, "AA24 signature error");
+  });
+
+  it("Should revert when sessionData array is empty", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      sessionRouter,
+      mockProtocol,
+      mockToken,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
+
+    const MockProtocol = await ethers.getContractFactory("MockProtocol");
+    const IERC20 = await ethers.getContractFactory("ERC20");
+
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact",
+      [mockToken.address, tokenAmountToTransfer]
+    );
+
+    const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
+      "executeBatch_y6U",
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      [], // empty session data array
+      sessionRouter.address
+    );
+
+    await expect(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: Lengths mismatch");
+  });
+
+  it("Should revert if not enough session datas provided", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockToken,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
+
+    const MockProtocol = await ethers.getContractFactory("MockProtocol");
+    const IERC20 = await ethers.getContractFactory("ERC20");
+
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact",
+      [mockToken.address, tokenAmountToTransfer]
+    );
+
+    const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
+      "executeBatch_y6U",
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      [
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+      ],
+      sessionRouter.address
+    );
+
+    await expect(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: Lengths mismatch");
   });
 
   it("Should revert when when at least one SVM permission is violated", async () => {
@@ -695,7 +793,6 @@ describe("SessionKey: Session Router", async () => {
       entryPoint,
       userSA,
       sessionKeyManager,
-      erc20SessionModule,
       sessionKeyData,
       leafData,
       merkleTree,
@@ -705,7 +802,6 @@ describe("SessionKey: Session Router", async () => {
       mockToken,
       sessionKeyData2,
       leafData2,
-      validUntilForMockProtocol,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
@@ -770,7 +866,6 @@ describe("SessionKey: Session Router", async () => {
       userSA,
       sessionKeyManager,
       erc20SessionModule,
-      sessionKeyData,
       leafData,
       merkleTree,
       sessionRouter,
@@ -779,7 +874,6 @@ describe("SessionKey: Session Router", async () => {
       mockToken,
       sessionKeyData2,
       leafData2,
-      validUntilForMockProtocol,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 

@@ -7,7 +7,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import { makeEcdsaModuleUserOp } from "../utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
@@ -54,7 +53,6 @@ describe("Smart Account Setup", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
     };
   });
 

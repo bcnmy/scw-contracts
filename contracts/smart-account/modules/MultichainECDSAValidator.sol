@@ -24,6 +24,7 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
     using UserOperationLib for UserOperation;
 
     /**
+     * @inheritdoc EcdsaOwnershipRegistryModule
      * @dev Validates User Operation.
      * leaf = validUntil + validAfter + userOpHash
      * If the leaf is the part of the Tree with a root provided, userOp considered

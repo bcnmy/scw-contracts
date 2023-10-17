@@ -12,7 +12,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
@@ -168,10 +167,6 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
         ecdsaModule: ecdsaModule,
         userSA: userSA,
         mockToken: mockToken,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
         sessionKeyManager: sessionKeyManager,
         erc20SessionModule: erc20SessionModule,
         sessionKeyData: sessionKeyData,

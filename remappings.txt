@@ -1,0 +1,17 @@
+ds-test/=lib/forge-std/lib/ds-test/src/
+forge-std/=lib/forge-std/src/
+
+aa-core=node_modules/@account-abstraction/contracts/core
+
+sa=contracts/smart-account
+base=contracts/smart-account/base/
+common=contracts/smart-account/common/
+deployer=contracts/smart-account/deployer/
+estimation=contracts/smart-account/estimation/
+factory=contracts/smart-account/factory/
+handler=contracts/smart-account/handler/
+interfaces=contracts/smart-account/interfaces/
+libs=contracts/smart-account/libs/
+modules=contracts/smart-account/modules/
+paymasters=contracts/smart-account/paymasters/
+test-contracts=contracts/smart-account/test/

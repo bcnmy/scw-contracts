@@ -13,7 +13,6 @@ import {
   getSmartAccountImplementation,
   getMockToken,
   getStakedSmartAccountFactory,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { keccak256 } from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
@@ -234,7 +233,6 @@ describe("MultichainValidator Module", async () => {
       smartAccountFactory: smartAccountFactory,
       mockToken: mockToken,
       userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       multichainECDSAValidator: multichainECDSAValidator,
       sessionKeyManager: sessionKeyManager,
       sessionKeyMerkleTree: sessionKeyMerkleTree,

@@ -15,7 +15,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { BigNumber } from "ethers";
 import { UserOperation } from "../../utils/userOperation";
@@ -108,7 +107,6 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       ecdsaModule: ecdsaModule,
       userSA: userSA,
       mockToken: mockToken,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       sessionKeyManager: sessionKeyManager,
       erc20SessionModule: erc20SessionModule,
       sessionKeyData: sessionKeyData,
@@ -366,6 +364,169 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     )
       .to.be.revertedWith("FailedOp")
       .withArgs(0, "AA24 signature error");
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(
+      charlieTokenBalanceBefore
+    );
+  });
+
+  it("should revert callData is less than 4 bytes", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      mockToken,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(
+      charlie.address
+    );
+
+    const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+      "execute_ncC",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      0,
+      0,
+      erc20SessionModule.address,
+      sessionKeyData,
+      merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+    );
+
+    transferUserOp.callData = "0x1234"; // set callData to less than 4bytes
+
+    await expect(
+      entryPoint.handleOps([transferUserOp], alice.address, {
+        gasLimit: 10000000,
+      })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted (or OOG)");
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(
+      charlieTokenBalanceBefore
+    );
+  });
+
+  it("should revert callData is less than 4+32+32=68 bytes", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      mockToken,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(
+      charlie.address
+    );
+
+    const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+      "execute_ncC",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      0,
+      0,
+      erc20SessionModule.address,
+      sessionKeyData,
+      merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+    );
+
+    // trim userOp.callData to 66 bytes
+    transferUserOp.callData = transferUserOp.callData.toString().slice(0, 132); // 132 = 66*2
+
+    await expect(
+      entryPoint.handleOps([transferUserOp], alice.address, {
+        gasLimit: 10000000,
+      })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted (or OOG)");
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(
+      charlieTokenBalanceBefore
+    );
+  });
+
+  it("should revert if userOp.callData does not feature the correct length of execute() calldata argument", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      mockToken,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(
+      charlie.address
+    );
+
+    const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+      "execute_ncC",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      0,
+      0,
+      erc20SessionModule.address,
+      sessionKeyData,
+      merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+    );
+
+    const callDataString = transferUserOp.callData.toString().slice(2);
+
+    const offset = parseInt(callDataString.slice(68 * 2, 100 * 2), 16);
+    const length = parseInt(
+      callDataString.slice((4 + offset) * 2, (4 + offset + 32) * 2),
+      16
+    );
+
+    const newLength = ethers.utils.hexZeroPad(
+      ethers.utils.hexlify(length + 1),
+      32
+    );
+    transferUserOp.callData =
+      transferUserOp.callData.toString().slice(0, (4 + offset) * 2) +
+      newLength.slice(2) +
+      transferUserOp.callData.toString().slice((4 + offset + 32) * 2);
+
+    await expect(
+      entryPoint.handleOps([transferUserOp], alice.address, {
+        gasLimit: 10000000,
+      })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted (or OOG)"); // reverts when trying to abi.decode the callData[4:] to (address, uint256, bytes) since bytes length is incorrect
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore
     );

@@ -14,7 +14,6 @@ import {
   getSmartAccountFactory,
   getMockToken,
   getEcdsaOwnershipRegistryModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import { keccak256 } from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
@@ -239,7 +238,6 @@ describe("MultichainValidator Module", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       multichainECDSAValidator: multichainECDSAValidator,
       sessionKeyManager: sessionKeyManager,
       sessionKeyMerkleTree: sessionKeyMerkleTree,

@@ -15,7 +15,7 @@ import {
 import {
   EcdsaOwnershipRegistryModule__factory,
   ForbiddenOpcodeInvokingAuthModule__factory,
-} from "../../../typechain";
+} from "../../../typechain-types";
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
 import { encodeTransfer } from "../../utils/testUtils";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";

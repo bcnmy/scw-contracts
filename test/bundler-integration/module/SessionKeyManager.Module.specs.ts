@@ -14,7 +14,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { keccak256 } from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
@@ -127,7 +126,6 @@ describe("SessionKey: SessionKey Manager Module (with Bundler)", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       sessionKeyManager: sessionKeyManager,
       mockSessionValidationModule: mockSessionValidationModule,
       sessionKeyData: sessionKeyData,
