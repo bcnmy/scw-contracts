@@ -44,7 +44,8 @@ contract MultiOwnedECDSAModule is
         if (numberOfOwners[msg.sender] != 0) {
             revert AlreadyInitedForSmartAccount(msg.sender);
         }
-        for (uint256 i; i < eoaOwners.length; ) {
+        uint256 ownersToAdd = eoaOwners.length;
+        for (uint256 i; i < ownersToAdd; ) {
             if (eoaOwners[i] == address(0))
                 revert ZeroAddressNotAllowedAsOwner();
             if (_smartAccountOwners[eoaOwners[i]][msg.sender])
@@ -54,11 +55,11 @@ contract MultiOwnedECDSAModule is
                 );
 
             _smartAccountOwners[eoaOwners[i]][msg.sender] = true;
-            numberOfOwners[msg.sender]++;
             unchecked {
                 ++i;
             }
         }
+        numberOfOwners[msg.sender] = ownersToAdd;
         return address(this);
     }
 
@@ -141,6 +142,11 @@ contract MultiOwnedECDSAModule is
             return EIP1271_MAGIC_VALUE;
         }
         return bytes4(0xffffffff);
+    }
+
+    /// @inheritdoc IMultiOwnedECDSAModule
+    function getNumberOfOwners(address smartAccount) public view returns (uint256) {
+        return numberOfOwners[smartAccount];
     }
 
     /**
