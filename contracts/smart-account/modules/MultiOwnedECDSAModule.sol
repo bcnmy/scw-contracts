@@ -73,6 +73,10 @@ contract MultiOwnedECDSAModule is
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == newOwner)
             revert OwnerAlreadyUsedForSmartAccount(newOwner, msg.sender);
+        if (!_smartAccountOwners[owner][msg.sender])
+            revert NotAnOwner(owner, msg.sender);
+        if (_smartAccountOwners[newOwner][msg.sender])
+            revert OwnerAlreadyUsedForSmartAccount(newOwner, msg.sender);
         _transferOwnership(msg.sender, owner, newOwner);
     }
 
@@ -84,11 +88,15 @@ contract MultiOwnedECDSAModule is
             revert OwnerAlreadyUsedForSmartAccount(owner, msg.sender);
 
         _smartAccountOwners[owner][msg.sender] = true;
-        numberOfOwners[msg.sender]++;
+        unchecked {
+           ++numberOfOwners[msg.sender];
+        }
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
     function removeOwner(address owner) external override {
+        if(!_smartAccountOwners[owner][msg.sender]) 
+            revert NotAnOwner(owner, msg.sender);
         _transferOwnership(msg.sender, owner, address(0));
         --numberOfOwners[msg.sender];
     }

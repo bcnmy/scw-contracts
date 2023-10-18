@@ -25,6 +25,7 @@ interface IMultiOwnedECDSAModule {
     error NotEOA(address account);
     error ZeroAddressNotAllowedAsOwner();
     error OwnerAlreadyUsedForSmartAccount(address owner, address smartAccount);
+    error NotAnOwner(address owner, address smartAccount);
 
     /**
      * @dev Initializes the module for a Smart Account.

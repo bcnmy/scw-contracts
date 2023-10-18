@@ -149,7 +149,6 @@ describe("MultiOwned ECDSA Module (with Bundler):", async () => {
   describe("transferOwnership: ", async () => {
     it("Call transferOwnership from userSA and it successfully changes owner ", async () => {
       const { multiOwnedECDSAModule, entryPoint, userSA } = await setupTests();
-      // console.log(await userSA.getImplementation());
 
       // Calldata to set Eve as owner
       const txnData1 = multiOwnedECDSAModule.interface.encodeFunctionData(
