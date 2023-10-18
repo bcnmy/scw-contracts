@@ -89,16 +89,18 @@ contract MultiOwnedECDSAModule is
 
         _smartAccountOwners[owner][msg.sender] = true;
         unchecked {
-           ++numberOfOwners[msg.sender];
+            ++numberOfOwners[msg.sender];
         }
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
     function removeOwner(address owner) external override {
-        if(!_smartAccountOwners[owner][msg.sender]) 
+        if (!_smartAccountOwners[owner][msg.sender])
             revert NotAnOwner(owner, msg.sender);
         _transferOwnership(msg.sender, owner, address(0));
-        --numberOfOwners[msg.sender];
+        unchecked {
+            --numberOfOwners[msg.sender];   
+        }
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
