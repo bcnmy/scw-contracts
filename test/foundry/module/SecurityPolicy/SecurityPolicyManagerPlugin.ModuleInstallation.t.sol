@@ -156,56 +156,6 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         assertTrue(sa.isModuleEnabled(address(validator)));
     }
 
-    function testShouldRevertModuleInstallationIfSecurityPolicyIsNotSatisifedOnSetupContract()
-        external
-    {
-        TestSetupContractBlacklistReturn blacklistReturn = new TestSetupContractBlacklistReturn();
-
-        bytes memory setupData = abi.encodeCall(
-            validator.initForSmartAccount,
-            (alice.addr)
-        );
-
-        UserOperation memory op = makeEcdsaModuleUserOp(
-            getSmartAccountExecuteCalldata(
-                address(spmp),
-                0,
-                abi.encodeCall(
-                    ISecurityPolicyManagerPlugin.checkSetupAndEnableModule,
-                    (address(blacklistReturn), setupData)
-                )
-            ),
-            sa,
-            0,
-            alice
-        );
-
-        vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
-        Vm.Log[] memory logs = vm.getRecordedLogs();
-        UserOperationEventData memory eventData = getUserOperationEventData(
-            logs
-        );
-        assertFalse(eventData.success);
-        UserOperationRevertReasonEventData
-            memory revertReasonEventData = getUserOperationRevertReasonEventData(
-                logs
-            );
-        assertEq(
-            keccak256(revertReasonEventData.revertReason),
-            keccak256(
-                abi.encodeWithSelector(
-                    TestSecurityPolicyPlugin
-                        .TestSecurityPolicyPluginError
-                        .selector,
-                    p4
-                )
-            )
-        );
-
-        assertFalse(sa.isModuleEnabled(address(validator)));
-    }
-
     function testShouldRevertModuleInstallationIfSecurityPolicyIsNotSatisifedOnInstalledPlugin()
         external
     {

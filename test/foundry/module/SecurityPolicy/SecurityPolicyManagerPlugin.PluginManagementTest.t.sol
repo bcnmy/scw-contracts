@@ -1131,7 +1131,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         );
     }
 
-    function testShouldAllowDisablingAlreadyEnabledPolicySingleDisable()
+    function testShouldNotAllowDisablingAlreadyEnabledPolicySingleDisable()
         external
     {
         bytes memory data = getSmartAccountExecuteCalldata(
