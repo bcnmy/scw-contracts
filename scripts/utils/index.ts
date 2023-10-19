@@ -124,6 +124,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   5001: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
+  81: {
+    gasPrice: parseUnits("1", "gwei"),
+  },
 
   // Mainnets
   137: { maxPriorityFeePerGas: parseUnits("50", "gwei") },
@@ -141,6 +144,7 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   204: { gasPrice: parseUnits("0.1", "gwei") },
   5000: { gasPrice: parseUnits("1", "gwei") },
   1284: { gasPrice: parseUnits("200", "gwei") },
+  592: { gasPrice: parseUnits("2", "gwei") },
 };
 
 export type StakingConfig = {
