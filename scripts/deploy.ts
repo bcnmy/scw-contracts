@@ -5,9 +5,9 @@ import {
   DEPLOYMENT_SALTS_DEV,
   DEPLOYMENT_SALTS_PROD,
   encodeParam,
-  factoryStakeConfig,
+  factoryStakeConfigDevx,
+  factoryStakeConfigProd,
   isContract,
-  paymasterStakeConfig,
 } from "./utils";
 import {
   BatchedSessionRouter__factory,
@@ -21,13 +21,17 @@ import {
   SmartAccountFactory__factory,
   SmartAccount__factory,
   SmartContractOwnershipRegistryModule__factory,
-  VerifyingSingletonPaymaster__factory,
 } from "../typechain";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
 
 // Deployment Configuration
 const DEPLOYMENT_MODE = process.env.DEPLOYMENT_MODE! as "DEV" | "PROD";
+
+const factoryStakeConfig = {
+  DEV: factoryStakeConfigDevx,
+  PROD: factoryStakeConfigProd,
+}[DEPLOYMENT_MODE];
 
 const smartAccountFactoryOwnerAddress =
   process.env[`SMART_ACCOUNT_FACTORY_OWNER_ADDRESS_${DEPLOYMENT_MODE}`]!;
@@ -194,68 +198,6 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
       "SmartAccountFactory Transfer Ownership Transaction Hash: ",
       hash
     );
-    await wait();
-  }
-}
-
-async function deployVerifySingeltonPaymaster(deployerInstance: Deployer) {
-  const [signer] = await ethers.getSigners();
-  const chainId = (await provider.getNetwork()).chainId;
-  const gasPriceConfig = DEPLOYMENT_CHAIN_GAS_PRICES[chainId];
-
-  const bytecode = `${
-    VerifyingSingletonPaymaster__factory.bytecode
-  }${encodeParam("address", signer.address).slice(2)}${encodeParam(
-    "address",
-    entryPointAddress
-  ).slice(2)}${encodeParam("address", verifyingSigner).slice(2)}`;
-
-  const paymasterAddress = await deployGeneric(
-    deployerInstance,
-    DEPLOYMENT_SALTS.SINGELTON_PAYMASTER,
-    bytecode,
-    "VerifyingPaymaster",
-    [paymasterOwnerAddress, entryPointAddress, verifyingSigner]
-  );
-
-  console.log("Checking if VerifyingPaymaster is staked...");
-  const { unstakeDelayInSec, stakeInWei } = paymasterStakeConfig[chainId];
-  const entrypoint = EntryPoint__factory.connect(entryPointAddress, signer);
-  const stake = await entrypoint.getDepositInfo(paymasterAddress);
-  console.log("Current Paymster Stake: ", JSON.stringify(stake, null, 2));
-  if (stake.staked) {
-    console.log("Paymaster already staked");
-    return;
-  }
-
-  console.log("Staking Paymaster...");
-  const paymaster = VerifyingSingletonPaymaster__factory.connect(
-    paymasterAddress,
-    signer
-  );
-
-  const contractOwner = await paymaster.owner();
-
-  if (contractOwner === signer.address) {
-    const { hash, wait } = await paymaster.addStake(unstakeDelayInSec, {
-      value: stakeInWei,
-      ...gasPriceConfig,
-    });
-    console.log("Paymaster Stake Transaction Hash: ", hash);
-    await wait();
-  } else {
-    console.log("Paymaster is not owned by signer, skipping staking...");
-  }
-
-  if (contractOwner !== paymasterOwnerAddress) {
-    console.log("Transferring Ownership of SmartAccountFactory...");
-    const { hash, wait } = await paymaster.transferOwnership(
-      paymasterOwnerAddress,
-      {
-        ...gasPriceConfig,
-      }
-    );
-    console.log("Paymaster Transfer Ownership Transaction Hash: ", hash);
     await wait();
   }
 }

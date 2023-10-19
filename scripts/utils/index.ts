@@ -148,55 +148,175 @@ export type StakingConfig = {
   stakeInWei: BigNumber;
 };
 
-export const factoryStakeConfig: Record<number, StakingConfig> = {
+// For all chains, we stake 0.1 <native token>
+export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
   // Testnets
   80001: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   97: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   5: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   421613: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   420: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   43113: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   1442: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   59140: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   84531: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   5611: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   91715: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
   },
   5001: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
+    stakeInWei: parseEther("0.1"),
+  },
+  81: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+
+  // Mainnets
+  137: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 MATIC = $0.5788
+  },
+  56: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 BNB = $217.43
+  },
+  1: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+  },
+  42161: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+  },
+  42170: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+  },
+  10: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+  },
+  43114: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 AVAX = $10.71
+  },
+  1101: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+  },
+  59144: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+  },
+  8453: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+  },
+  204: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 BNB = $217.43
+  },
+  5000: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 MNT = $0.444
+  },
+  1284: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 GLMR = $0.18
+  },
+  592: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"), // 1 GLMR = $0.18
+  },
+};
+
+// For testnets, we stake 0.1 <native tokens>. For mainnets, we use industry standard values.
+export const factoryStakeConfigProd: Record<number, StakingConfig> = {
+  // Testnets
+  80001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  97: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  5: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  421613: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  420: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  43113: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  1442: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  59140: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  84531: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  5611: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  91715: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  5001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  81: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
   },
 
   // Mainnets
@@ -210,19 +330,19 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
   },
   1: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
   },
   42161: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
   },
   42170: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
   },
   10: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
   },
   43114: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -230,15 +350,15 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
   },
   1101: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
   },
   59144: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
   },
   8453: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
   },
   204: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -252,109 +372,7 @@ export const factoryStakeConfig: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("556"), // 1 GLMR = $0.18
   },
-};
-
-export const paymasterStakeConfig: Record<number, StakingConfig> = {
-  // Testnets
-  80001: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  97: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  5: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  421613: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  420: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  43113: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  1442: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  59140: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  84531: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  5611: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  91715: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-  5001: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.01"),
-  },
-
-  // Mainnets
-  137: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("173"), // 1 MATIC = $0.5788
-  },
-  56: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.46"), // 1 BNB = $217.43
-  },
-  1: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  42161: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  10: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  43114: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("9.337"), // 1 AVAX = $10.71
-  },
-  42170: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  1101: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  59144: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  8453: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.06"), // 1 ETH = $1,674.88
-  },
-  204: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.46"), // 1 BNB = $217.43
-  },
-  5000: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("226"), // 1 MNT = $0.444
-  },
-  1284: {
+  592: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("556"), // 1 GLMR = $0.18
   },
