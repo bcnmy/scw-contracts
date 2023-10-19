@@ -266,6 +266,16 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 91715,
     },
+    astarShibuyaTestnet: {
+      url: process.env.ASTAR_SHIBUYA_URL || "https://evm.shibuya.astar.network",
+      accounts: hardhatAccounts,
+      chainId: 81,
+    },
+    astarMainnet: {
+      url: process.env.ASTAR_MAINNET_URL || "https://evm.astar.network",
+      accounts: hardhatAccounts,
+      chainId: 592,
+    },
   },
 
   gasReporter: {
@@ -304,8 +314,26 @@ const config: HardhatUserConfig = {
       mantleTestnet: "PLACEHOLDER_STRING",
       mantleMainnet: "PLACEHOLDER_STRING",
       comboTestnet: process.env.COMBO_API_KEY || "",
+      astarShibuyaTestnet: process.env.ASTAR_SHIBUYA_API_KEY || "",
+      astarMainnet: process.env.ASTAR_MAINNET_API_KEY || "",
     },
     customChains: [
+      {
+        network: "astarShibuyaTestnet",
+        chainId: 81,
+        urls: {
+          apiURL: "https://blockscout.com/shibuya/api",
+          browserURL: "https://blockscout.com/shibuya/",
+        },
+      },
+      {
+        network: "astarMainnet",
+        chainId: 592,
+        urls: {
+          apiURL: "https://blockscout.com/astar/api",
+          browserURL: "https://blockscout.com/astar/",
+        },
+      },
       {
         network: "lineaGoerli",
         chainId: 59140,

@@ -14,3 +14,7 @@ artifacts
 .DS_Store
 
 deployments/localhost
+forge-cache/
+lib/
+out/
+typechain-types/
