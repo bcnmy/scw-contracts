@@ -2,7 +2,7 @@
 pragma solidity 0.8.19;
 
 import {IERC7484SecurityPolicyPlugin, ISecurityPolicyPlugin} from "contracts/smart-account/interfaces/modules/IERC7484SecurityPolicyPlugin.sol";
-import {IQuery} from "registry/src/interface/IQuery.sol";
+import {IQuery} from "lib/registry/src/interface/IQuery.sol";
 
 /// @title ERC7484 Security Policy Plugin
 /// @author @ankurdubey521
@@ -11,7 +11,7 @@ import {IQuery} from "registry/src/interface/IQuery.sol";
 contract ERC7484SecurityPolicyPlugin is IERC7484SecurityPolicyPlugin {
     IQuery public immutable registry;
 
-    mapping(address => Configuration) _configuration;
+    mapping(address => Configuration) internal _configuration;
 
     constructor(IQuery _regisry) {
         registry = _regisry;

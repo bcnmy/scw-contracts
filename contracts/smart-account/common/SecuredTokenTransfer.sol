@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.17;
+pragma solidity 0.8.19;
 
 /// @title SecuredTokenTransfer - Secure token transfer
 abstract contract SecuredTokenTransfer {
@@ -23,7 +23,7 @@ abstract contract SecuredTokenTransfer {
 
         assembly {
             // We write the return value to scratch space.
-            // See https://docs.soliditylang.org/en/v0.8.17/internals/layout_in_memory.html#layout-in-memory
+            // See https://docs.soliditylang.org/en/v0.8.19/internals/layout_in_memory.html#layout-in-memory
             let success := call(
                 sub(gas(), 10000),
                 token,

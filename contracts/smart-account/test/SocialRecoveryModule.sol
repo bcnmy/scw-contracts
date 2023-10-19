@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity 0.8.19;
 import "../SmartAccount.sol";
 import {Enum} from "../common/Enum.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";

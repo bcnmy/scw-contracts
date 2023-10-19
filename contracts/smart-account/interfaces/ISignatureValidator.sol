@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity 0.8.17;
+pragma solidity 0.8.19;
 
 // bytes4(keccak256("isValidSignature(bytes32,bytes)")
 bytes4 constant EIP1271_MAGIC_VALUE = 0x1626ba7e;
