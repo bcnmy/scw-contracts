@@ -1,5 +1,5 @@
 import hardhat, { ethers } from "hardhat";
-import { getContractAddress } from "ethers/lib/utils";
+import { getContractAddress, parseUnits } from "ethers/lib/utils";
 import { Deployer__factory } from "../typechain";
 import { BigNumber } from "ethers";
 
@@ -84,7 +84,7 @@ export async function mainDeployDeployer() {
       // const deployerContractDeployed = await new Deployer__factory(deployer).deploy({maxFeePerGas: 350e9, maxPriorityFeePerGas: 100e9, nonce: 0});
       const deployerContractDeployed = await new Deployer__factory(
         deployer
-      ).deploy();
+      ).deploy({});
       await deployerContractDeployed.deployed();
       console.log(
         "Deployed new Deployer Contract at %s on chain %s: %i",

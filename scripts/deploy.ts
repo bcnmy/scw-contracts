@@ -74,18 +74,19 @@ export async function deployGeneric(
         bytecode,
         deployerInstance
       );
-      try {
-        await run("verify:verify", {
-          address: computedAddress,
-          constructorArguments,
-        });
-      } catch (err) {
-        console.log(err);
-      }
     } else {
       console.log(
         `${contractName} is Already deployed with address ${computedAddress}`
       );
+    }
+
+    try {
+      await run("verify:verify", {
+        address: computedAddress,
+        constructorArguments,
+      });
+    } catch (err) {
+      console.log(err);
     }
 
     contractsDeployed[contractName] = computedAddress;

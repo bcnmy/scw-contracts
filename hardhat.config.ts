@@ -281,6 +281,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 88018,
     },
+    capxTestnet: {
+      url: process.env.CAPX_TESTNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 7116,
+    },
   },
 
   gasReporter: {
@@ -321,8 +326,18 @@ const config: HardhatUserConfig = {
       comboTestnet: process.env.COMBO_API_KEY || "",
       astarShibuyaTestnet: process.env.ASTAR_SHIBUYA_API_KEY || "",
       astarMainnet: process.env.ASTAR_MAINNET_API_KEY || "",
+      capxTestnet: "PLACEHOLDER_STRING",
     },
     customChains: [
+      {
+        network: "capxTestnet",
+        chainId: 7116,
+        urls: {
+          apiURL: "https://capxscan.com/api",
+          browserURL: "https://capxscan.com",
+        },
+      },
+
       {
         network: "astarShibuyaTestnet",
         chainId: 81,
