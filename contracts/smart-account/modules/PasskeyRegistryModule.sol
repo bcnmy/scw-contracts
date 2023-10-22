@@ -39,17 +39,15 @@ contract PasskeyRegistryModule is BaseAuthorizationModule {
     ) external returns (address) {
         PassKeyId memory passKeyId = smartAccountPassKeys[msg.sender];
 
-        if (
-            passKeyId.pubKeyX != 0 &&
-            passKeyId.pubKeyY != 0
-        ) revert AlreadyInitedForSmartAccount(msg.sender);
+        if (passKeyId.pubKeyX != 0 && passKeyId.pubKeyY != 0)
+            revert AlreadyInitedForSmartAccount(msg.sender);
 
         smartAccountPassKeys[msg.sender] = PassKeyId(
             _pubKeyX,
             _pubKeyY,
             _keyId
         );
-        
+
         return address(this);
     }
 
