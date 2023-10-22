@@ -49,8 +49,7 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
         bytes32 userOpHash,
         uint256 missingAccountFunds
     ) external virtual override returns (uint256 validationData) {
-        if (msg.sender != address(entryPoint()))
-            revert CallerIsNotAnEntryPoint(msg.sender);
+        _requireFromEntryPoint();
         validationData = _validateSignature(userOp, userOpHash);
         _payPrefund(missingAccountFunds);
     }
@@ -120,9 +119,7 @@ abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
      * ensure the request comes from the known entrypoint.
      */
     function _requireFromEntryPoint() internal view virtual {
-        require(
-            msg.sender == address(entryPoint()),
-            "account: not from EntryPoint"
-        );
+        if (msg.sender != address(entryPoint()))
+            revert CallerIsNotAnEntryPoint(msg.sender);
     }
 }
