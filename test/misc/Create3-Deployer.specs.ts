@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { Signer } from "ethers";
 import { ethers } from "hardhat";
-import { Deployer, Deployer__factory } from "../../typechain";
+import { Deployer, Deployer__factory } from "../../typechain-types";
 
 import { DEPLOYMENT_SALTS_DEV, isContract } from "../../scripts/utils";
 
@@ -54,42 +54,6 @@ describe("Deploy the deployer and then deploy more contracts using it", function
 
     await expect(
       deployerInstance.connect(anyDeployer).deploy(salt, entryPointBytecode)
-    ).to.be.revertedWith("TargetAlreadyExists");
-  });
-
-  it("Deploys MultiSend", async function () {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS_DEV.MULTI_SEND)
-    );
-
-    const provider = ethers.provider;
-
-    const multiSend = await ethers.getContractFactory("MultiSend");
-    const multiSendBytecode = `${multiSend.bytecode}`;
-    const multiSendComputedAddr = await deployerInstance.addressOf(salt);
-
-    // console.log("MultiSend Computed Address: ", multiSendComputedAddr);
-
-    const ismultiSendDeployed = await isContract(
-      multiSendComputedAddr,
-      provider
-    ); // true (deployed on-chain)
-    if (!ismultiSendDeployed) {
-      const code = await provider.getCode(multiSendComputedAddr);
-      // console.log("code before.. ", code);
-      expect(code).to.be.equal("0x");
-      await deployerInstance
-        .connect(anyDeployer)
-        .deploy(salt, multiSendBytecode);
-    }
-
-    // console.log("entrypoint deployed at: ", multiSendComputedAddr);
-    const code = await provider.getCode(multiSendComputedAddr);
-    // console.log("code after.. ", code);
-    expect(code).to.not.equal("0x");
-
-    await expect(
-      deployerInstance.connect(anyDeployer).deploy(salt, multiSendBytecode)
     ).to.be.revertedWith("TargetAlreadyExists");
   });
 });

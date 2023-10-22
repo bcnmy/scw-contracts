@@ -1,0 +1,17 @@
+[profile.default]
+src = "contracts"
+out = "out"
+libs = ["node_modules", "lib"]
+test = "test/foundry"
+cache_path = "forge-cache"
+remappings = [
+    "@account-abstraction/=node_modules/@account-abstraction/",
+    "@ethereum-waffle/=node_modules/@ethereum-waffle/",
+    "@openzeppelin/=node_modules/@openzeppelin/",
+    "eth-gas-reporter/=node_modules/eth-gas-reporter/",
+    "hardhat-deploy/=node_modules/hardhat-deploy/",
+    "hardhat/=node_modules/hardhat/",
+]
+via_ir = true
+
+# See more config options https://github.com/foundry-rs/foundry/tree/master/config

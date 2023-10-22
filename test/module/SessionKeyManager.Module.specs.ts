@@ -15,7 +15,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
 import { keccak256 } from "ethereumjs-util";
 import { MerkleTree } from "merkletreejs";
@@ -103,7 +102,6 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      verifyingPaymaster: await getVerifyingPaymaster(deployer, verifiedSigner),
       sessionKeyManager: sessionKeyManager,
       mockSessionValidationModule: mockSessionValidationModule,
       sessionKeyData: sessionKeyData,
@@ -590,6 +588,83 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
       );
+    });
+  });
+
+  describe("validateSessionKey(): ", async () => {
+    it("should revert if wrong leaf is provided", async () => {
+      const {
+        userSA,
+        sessionKeyManager,
+        mockSessionValidationModule,
+        sessionKeyData,
+        leafData,
+        merkleTree,
+      } = await setupTests();
+
+      const wrongValidUntil = 1;
+
+      const validateSesionKeyTxn =
+        sessionKeyManager.callStatic.validateSessionKey(
+          userSA.address,
+          wrongValidUntil,
+          0,
+          mockSessionValidationModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+        );
+
+      await expect(validateSesionKeyTxn).to.be.revertedWith(
+        "SessionNotApproved"
+      );
+    });
+
+    it("should revert if the module has not been set up for the smart account", async () => {
+      const {
+        userSA,
+        sessionKeyManager,
+        mockSessionValidationModule,
+        sessionKeyData,
+        leafData,
+        merkleTree,
+      } = await setupTests();
+
+      const validateSesionKeyTxn =
+        sessionKeyManager.callStatic.validateSessionKey(
+          alice.address,
+          0,
+          0,
+          mockSessionValidationModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+        );
+
+      await expect(validateSesionKeyTxn).to.be.revertedWith(
+        "SessionNotApproved"
+      );
+    });
+
+    it("should not revert otherwise", async () => {
+      const {
+        userSA,
+        sessionKeyManager,
+        mockSessionValidationModule,
+        sessionKeyData,
+        leafData,
+        merkleTree,
+      } = await setupTests();
+
+      const validateSesionKeyTxn =
+        sessionKeyManager.callStatic.validateSessionKey(
+          userSA.address,
+          0,
+          0,
+          mockSessionValidationModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+        );
+
+      await expect(validateSesionKeyTxn).not.to.be.reverted;
     });
   });
 

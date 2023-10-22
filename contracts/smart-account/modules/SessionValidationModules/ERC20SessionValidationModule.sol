@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
-import "./ISessionValidationModule.sol";
+import "../../interfaces/modules/ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
@@ -12,7 +12,6 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  *
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
-
 contract ERC20SessionValidationModule is ISessionValidationModule {
     /**
      * @dev validates that the call (destinationContract, callValue, funcCallData)
@@ -38,7 +37,7 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
             uint256 maxAmount
         ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
 
-        require(destinationContract == token, "ERC20SV Invalid Token");
+        require(destinationContract == token, "ERC20SV Wrong Token");
         require(callValue == 0, "ERC20SV Non Zero Value");
 
         (address recipientCalled, uint256 amount) = abi.decode(

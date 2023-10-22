@@ -1,26 +1,20 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity 0.8.17;
 
+import {IExecutor} from "../interfaces/base/IExecutor.sol";
 import {Enum} from "../common/Enum.sol";
 
 /// @title Executor - A contract that can execute transactions
-abstract contract Executor {
-    // Could add a flag fromEntryPoint for AA txn
-    event ExecutionFailure(
-        address indexed to,
-        uint256 indexed value,
-        bytes indexed data,
-        Enum.Operation operation,
-        uint256 txGas
-    );
-    event ExecutionSuccess(
-        address indexed to,
-        uint256 indexed value,
-        bytes indexed data,
-        Enum.Operation operation,
-        uint256 txGas
-    );
-
+abstract contract Executor is IExecutor {
+    /**
+     * @notice Executes a given operation (either Call or DelegateCall) to a specified address with provided data.
+     * @param to The address to which the operation should be executed.
+     * @param value The amount of ether (in wei) to send with the call (only for Call operations).
+     * @param data The call data to send with the operation.
+     * @param operation The type of operation to execute (either Call or DelegateCall).
+     * @param txGas The amount of gas to use for the operation.
+     * @return success A boolean indicating whether the operation was successful.
+     */
     function _execute(
         address to,
         uint256 value,
