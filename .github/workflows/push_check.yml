@@ -19,6 +19,10 @@ jobs:
         run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
       - name: Install dependencies
         run: yarn install --frozen-lockfile && yarn build
+      - name: Update submodule
+        run: git submodule update --remote
+      - name: Install submodules dependencies
+        run: cd biconomy-paymasters && yarn install --frozen-lockfile && yarn build && cd ..
       - name: Lint sources
         run:
           yarn run lint 
