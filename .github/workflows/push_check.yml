@@ -21,8 +21,10 @@ jobs:
         run: yarn install --frozen-lockfile
       - name: Update submodule
         run: git submodule update --remote
+      - name: Create a fake .secret file inside submodule
+        run: cd biconomy-paymasters && echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
       - name: Install submodules dependencies
-        run: cd biconomy-paymasters && yarn install --frozen-lockfile && yarn build && cd ..
+        run: yarn install --frozen-lockfile && yarn build && cd ..
       - name: build after submodule is built
         run: yarn build
       - name: Lint sources
