@@ -22,7 +22,7 @@ jobs:
       - name: Update submodule
         run: git submodule update --remote
       - name: Create a fake .secret file inside submodule
-        run: cd biconomy-paymasters && echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
+        run: cd biconomy-paymasters && echo "primary twist rack vendor diagram image used route theme frown either will" > .secret && cd ..
       - name: Install submodules dependencies
         run: cd biconomy-paymasters && yarn install --frozen-lockfile && npx hardhat compile && cd ..
       - name: build after submodule is built
