@@ -55,6 +55,14 @@ Below are the commands you can use for various tasks:
 
 ### 🧪 Testing
 
+#### Note if there are issue on paymaster dependencies follow below steps
+i. go to submodule directory: biconomy-paymasters
+ii. run `yarn` followed by `npx hardhat compile`
+
+to init or update submodules
+`git submodule update --remote`
+`git submodule update --init`
+
 Run regular tests:
 
 ```shell
