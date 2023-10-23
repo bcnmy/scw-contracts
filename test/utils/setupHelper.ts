@@ -1,7 +1,7 @@
 import hre, { deployments, ethers } from "hardhat";
 import { Wallet, Contract, BytesLike } from "ethers";
 import { EntryPoint__factory } from "../../typechain-types";
-import { VerifyingSingletonPaymaster__factory } from "@biconomy-devx/paymasters/dist/types";
+import { VerifyingSingletonPaymaster__factory } from "../../../biconomy-paymasters/typechain-types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import solc from "solc";
 
