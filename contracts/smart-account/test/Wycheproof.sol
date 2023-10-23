@@ -9,6 +9,6 @@ contract Wycheproof {
         uint s,
         uint e
     ) external view returns (bool) {
-        return Secp256r1.Verify(passKey, r, s, e);
+        return Secp256r1.verify(passKey, r, s, e);
     }
 }

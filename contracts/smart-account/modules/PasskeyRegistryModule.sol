@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.17;
+pragma solidity 0.8.17;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
@@ -59,19 +59,12 @@ contract PasskeyRegistryModule is BaseAuthorizationModule {
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view virtual returns (uint256) {
-        return _validateSignature(userOp, userOpHash);
-    }
-
-    function _validateSignature(
-        UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal view virtual returns (uint256 sigValidationResult) {
         (bytes memory passkeySignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
         );
         if (_verifySignature(userOpHash, passkeySignature)) {
-            return 0;
+            return VALIDATION_SUCCESS;
         }
         return SIG_VALIDATION_FAILED;
     }
@@ -124,15 +117,5 @@ contract PasskeyRegistryModule is BaseAuthorizationModule {
         if (passKey.pubKeyX == 0 && passKey.pubKeyY == 0)
             revert NoPassKeyRegisteredForSmartAccount(msg.sender);
         return Secp256r1.verify(passKey, sigx, sigy, uint256(sigHash));
-    }
-
-    function _validateSignature(
-        UserOperation calldata userOp,
-        bytes32 userOpHash
-    ) internal view virtual returns (uint256 sigValidationResult) {
-        if (_verifySignature(userOpHash, userOp.signature)) {
-            return 0;
-        }
-        return SIG_VALIDATION_FAILED;
     }
 }

@@ -52,7 +52,7 @@ library Secp256r1 {
         uint256 s,
         uint256 e
     ) internal view returns (bool) {
-        if (r == 0 || s == 0 || r >= nn || s >= nn) {
+        if (r == 0 || s == 0 || r >= NN || s >= NN) {
             return false;
         }
 
@@ -180,7 +180,7 @@ library Secp256r1 {
             mstore(add(freemem, 0x80), _exp)
             mstore(add(freemem, 0xa0), _mod)
 
-            let success := staticcall(1500, 0x5, freemem, 0xc0, freemem, 0x20)
+            let success := staticcall(not(0), 0x5, freemem, 0xc0, freemem, 0x20)
             switch success
             case 0 {
                 revert(0x0, 0x0)
@@ -369,48 +369,6 @@ library Secp256r1 {
             }
             y3 := sub(y3, u)
             z3 := mulmod(0x02, mulmod(y, z, pd), pd)
-        }
-    }
-
-    // Fermats little theorem https://en.wikipedia.org/wiki/Fermat%27s_little_theorem
-    // a^(p-1) = 1 mod p
-    // a^(-1) ≅ a^(p-2) (mod p)
-    // we then use the precompile bigModExp to compute a^(-1)
-    function _primemod(uint value, uint p) internal view returns (uint ret) {
-        ret = modexp(value, p - 2, p);
-        return ret;
-    }
-
-    // Wrapper for built-in BigNumber_modexp (contract 0x5) as described here. https://github.com/ethereum/EIPs/pull/198
-    function modexp(
-        uint _base,
-        uint _exp,
-        uint _mod
-    ) internal view returns (uint ret) {
-        // bigModExp(_base, _exp, _mod);
-        assembly {
-            if gt(_base, _mod) {
-                _base := mod(_base, _mod)
-            }
-            // Free memory pointer is always stored at 0x40
-            let freemem := mload(0x40)
-
-            mstore(freemem, 0x20)
-            mstore(add(freemem, 0x20), 0x20)
-            mstore(add(freemem, 0x40), 0x20)
-
-            mstore(add(freemem, 0x60), _base)
-            mstore(add(freemem, 0x80), _exp)
-            mstore(add(freemem, 0xa0), _mod)
-
-            let success := staticcall(not(0), 0x5, freemem, 0xc0, freemem, 0x20)
-            switch success
-            case 0 {
-                revert(0x0, 0x0)
-            }
-            default {
-                ret := mload(freemem)
-            }
         }
     }
 }
