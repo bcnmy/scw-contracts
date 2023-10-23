@@ -89,6 +89,11 @@ library Create3 {
         if (!success || codeSize(addr) == 0) revert ErrorCreatingContract();
     }
 
+    /**
+     * @dev Computes the CREATE2 proxy address using the provided salt.
+     * @param _salt The salt used to derive the proxy contract address.
+     * @return Address of the proxy contract derived using CREATE2.
+     */
     function addressOfProxy(bytes32 _salt) internal view returns (address) {
         return
             address(
@@ -129,10 +134,10 @@ library Create3 {
     }
 
     /**
-    @notice Returns the size of the code on a given address
-    @param _addr Address that may or may not contain code
-    @return size of the code on the given `_addr`
-  */
+     * @dev Returns the size of the code stored at a specific address.
+     * @param _addr The address to check.
+     * @return size The size of the code stored at the given address.
+     */
     function codeSize(address _addr) internal view returns (uint256 size) {
         assembly {
             size := extcodesize(_addr)

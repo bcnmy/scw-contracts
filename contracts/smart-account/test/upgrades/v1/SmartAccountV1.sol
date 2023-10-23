@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccountV1.sol";
 import {ModuleManagerV1} from "./ModuleManagerV1.sol";
 import {FallbackManagerV1} from "./FallbackManagerV1.sol";
@@ -8,12 +9,12 @@ import {SignatureDecoder} from "../../../common/SignatureDecoder.sol";
 import {SecuredTokenTransfer} from "../../../common/SecuredTokenTransfer.sol";
 import {LibAddress} from "../../../libs/LibAddress.sol";
 import {ISignatureValidator} from "../../../interfaces/ISignatureValidator.sol";
-import {Math} from "../../../libs/Math.sol";
-import {IERC165} from "../../../interfaces/IERC165.sol";
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "../../../common/ReentrancyGuard.sol";
 import {SmartAccountErrorsV1} from "./ErrorsV1.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IModule} from "./IModuleV1.sol";
+import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -330,7 +331,7 @@ contract SmartAccountV1 is
         address payable refundReceiver
     ) private returns (uint256 payment) {
         if (tokenGasPriceFactor == 0) revert TokenGasPriceFactorCanNotBeZero();
-        // solhint-disable-next-line avoid-tx-origin
+
         address payable receiver = refundReceiver == address(0)
             ? payable(tx.origin)
             : refundReceiver;
@@ -377,7 +378,7 @@ contract SmartAccountV1 is
     ) external returns (uint256 requiredGas) {
         require(tokenGasPriceFactor != 0, "invalid tokenGasPriceFactor");
         uint256 startGas = gasleft();
-        // solhint-disable-next-line avoid-tx-origin
+
         address payable receiver = refundReceiver == address(0)
             ? payable(tx.origin)
             : refundReceiver;

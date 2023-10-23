@@ -126,9 +126,8 @@ library Secp256r1 {
         return (x, y);
     }
 
-    /* affineFromJacobian
-     * @desription returns affine coordinates from a jacobian input follows
-     * golang elliptic/crypto library
+    /**
+     * @notice Returns affine coordinates from a jacobian input. Follows the golang elliptic/crypto library convention.
      */
     function affineFromJacobian(
         uint256 x,
@@ -146,10 +145,13 @@ library Secp256r1 {
         ay = mulmod(y, mulmod(zinvsq, zinv, PP), PP);
     }
 
-    // Fermats little theorem https://en.wikipedia.org/wiki/Fermat%27s_little_theorem
-    // a^(p-1) = 1 mod p
-    // a^(-1) ≅ a^(p-2) (mod p)
-    // we then use the precompile bigModExp to compute a^(-1)
+    /**
+     * @notice Computes a^(-1) mod p using Fermat's Little Theorem
+     * https://en.wikipedia.org/wiki/Fermat%27s_little_theorem
+     * - a^(p-1) = 1 mod p
+     * - a^(-1) ≅ a^(p-2) (mod p)
+     * Uses the precompiled bigModExp to compute a^(-1).
+     */
     function primemod(
         uint256 value,
         uint256 p
@@ -158,7 +160,10 @@ library Secp256r1 {
         return ret;
     }
 
-    // Wrapper for built-in BigNumber_modexp (contract 0x5) as described here. https://github.com/ethereum/EIPs/pull/198
+    /**
+     * @notice Wrapper function for built-in BigNumber_modexp (contract 0x5) as described here:
+     * - https://github.com/ethereum/EIPs/pull/198
+     */
     function modexp(
         uint256 _base,
         uint256 _exp,

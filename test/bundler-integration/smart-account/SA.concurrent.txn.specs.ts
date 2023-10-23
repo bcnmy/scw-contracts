@@ -8,13 +8,8 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
-import {
-  makeEcdsaModuleUserOp,
-  makeEcdsaModuleUserOp2D,
-  makeEcdsaModuleUserOpWithPaymaster,
-} from "../../utils/userOp";
+import { makeEcdsaModuleUserOp } from "../../utils/userOp";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { UserOperation } from "../../utils/userOperation";
@@ -100,10 +95,6 @@ describe("Modular Smart Account Basics (with Bundler)", async () => {
         mockToken: mockToken,
         ecdsaModule: ecdsaModule,
         userSA: userSA,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
       };
     }
   );

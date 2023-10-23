@@ -3,60 +3,31 @@ pragma solidity 0.8.17;
 
 import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 import {Executor, Enum} from "./Executor.sol";
-import {ModuleManagerErrors} from "../common/Errors.sol";
+import {IModuleManager} from "../interfaces/base/IModuleManager.sol";
 
 /**
  * @title Module Manager - A contract that manages modules that can execute transactions
  *        on behalf of the Smart Account via this contract.
  */
-abstract contract ModuleManager is
-    SelfAuthorized,
-    Executor,
-    ModuleManagerErrors
-{
+abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
     address internal constant SENTINEL_MODULES = address(0x1);
     mapping(address => address) internal _modules;
     uint256[24] private __gap;
 
-    // Events
-    event EnabledModule(address module);
-    event DisabledModule(address module);
-    event ExecutionFromModuleSuccess(address indexed module);
-    event ExecutionFromModuleFailure(address indexed module);
-    event ModuleTransaction(
-        address module,
-        address to,
-        uint256 value,
-        bytes data,
-        Enum.Operation operation
-    );
+    /// @inheritdoc IModuleManager
+    function enableModule(address module) external virtual override;
 
-    /**
-     * @dev Adds a module to the allowlist.
-     * @notice This SHOULD only be done via userOp or a selfcall.
-     */
-    function enableModule(address module) external virtual;
-
-    /**
-     * @dev Setups module for this Smart Account and enables it.
-     * @notice This SHOULD only be done via userOp or a selfcall.
-     */
+    /// @inheritdoc IModuleManager
     function setupAndEnableModule(
         address setupContract,
         bytes memory setupData
-    ) external virtual returns (address);
+    ) external virtual override returns (address);
 
-    /**
-     * @dev Returns array of modules. Useful for a widget
-     * @param start Start of the page.
-     * @param pageSize Maximum number of modules that should be returned.
-     * @return array Array of modules.
-     * @return next Start of the next page.
-     */
+    /// @inheritdoc IModuleManager
     function getModulesPaginated(
         address start,
         uint256 pageSize
-    ) external view returns (address[] memory array, address next) {
+    ) external view override returns (address[] memory array, address next) {
         // Init array with max page size
         array = new address[](pageSize);
 
@@ -80,20 +51,14 @@ abstract contract ModuleManager is
         }
     }
 
-    /**
-     * @dev Allows a Module to execute a Smart Account transaction without any further confirmations.
-     * @param to Destination address of module transaction.
-     * @param value Ether value of module transaction.
-     * @param data Data payload of module transaction.
-     * @param operation Operation type of module transaction.
-     */
+    /// @inheritdoc IModuleManager
     function execTransactionFromModule(
         address to,
         uint256 value,
         bytes memory data,
         Enum.Operation operation,
         uint256 txGas
-    ) public virtual returns (bool success) {
+    ) public virtual override returns (bool success) {
         // Only whitelisted modules are allowed.
         if (
             msg.sender == SENTINEL_MODULES || _modules[msg.sender] == address(0)
@@ -109,28 +74,23 @@ abstract contract ModuleManager is
         );
     }
 
+    /// @inheritdoc IModuleManager
     function execTransactionFromModule(
         address to,
         uint256 value,
         bytes memory data,
         Enum.Operation operation
-    ) public virtual returns (bool) {
+    ) public virtual override returns (bool) {
         return execTransactionFromModule(to, value, data, operation, 0);
     }
 
-    /**
-     * @dev Allows a Module to execute a wallet transaction without any further confirmations and returns data
-     * @param to Destination address of module transaction.
-     * @param value Ether value of module transaction.
-     * @param data Data payload of module transaction.
-     * @param operation Operation type of module transaction.
-     */
+    /// @inheritdoc IModuleManager
     function execTransactionFromModuleReturnData(
         address to,
         uint256 value,
         bytes memory data,
         Enum.Operation operation
-    ) public returns (bool success, bytes memory returnData) {
+    ) public override returns (bool success, bytes memory returnData) {
         success = execTransactionFromModule(to, value, data, operation);
 
         assembly {
@@ -148,31 +108,26 @@ abstract contract ModuleManager is
         }
     }
 
-    /**
-     * @dev Allows a Module to execute a batch of Smart Account transactions without any further confirmations.
-     * @param to Destination address of module transaction.
-     * @param value Ether value of module transaction.
-     * @param data Data payload of module transaction.
-     * @param operations Operation type of module transaction.
-     */
+    /// @inheritdoc IModuleManager
     function execBatchTransactionFromModule(
         address[] calldata to,
         uint256[] calldata value,
         bytes[] calldata data,
         Enum.Operation[] calldata operations
-    ) public virtual returns (bool success) {
+    ) public virtual override returns (bool success) {
         if (
             to.length == 0 ||
             to.length != value.length ||
             value.length != data.length ||
             data.length != operations.length
-        )
+        ) {
             revert WrongBatchProvided(
                 to.length,
                 value.length,
                 data.length,
                 operations.length
             );
+        }
 
         // Only whitelisted modules are allowed.
         if (
@@ -193,11 +148,10 @@ abstract contract ModuleManager is
         }
     }
 
-    /**
-     * @dev Returns if a module is enabled
-     * @return True if the module is enabled
-     */
-    function isModuleEnabled(address module) public view returns (bool) {
+    /// @inheritdoc IModuleManager
+    function isModuleEnabled(
+        address module
+    ) public view override returns (bool) {
         return SENTINEL_MODULES != module && _modules[module] != address(0);
     }
 
@@ -209,8 +163,9 @@ abstract contract ModuleManager is
      */
     function _enableModule(address module) internal virtual {
         // Module address cannot be null or sentinel.
-        if (module == address(0) || module == SENTINEL_MODULES)
+        if (module == address(0) || module == SENTINEL_MODULES) {
             revert ModuleCannotBeZeroOrSentinel(module);
+        }
         // Module cannot be added twice.
         if (_modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
 
@@ -245,21 +200,29 @@ abstract contract ModuleManager is
         address module
     ) internal virtual {
         // Validate module address and check that it corresponds to module index.
-        if (module == address(0) || module == SENTINEL_MODULES)
+        if (module == address(0) || module == SENTINEL_MODULES) {
             revert ModuleCannotBeZeroOrSentinel(module);
-        if (_modules[prevModule] != module)
+        }
+        if (_modules[prevModule] != module) {
             revert ModuleAndPrevModuleMismatch(
                 module,
                 _modules[prevModule],
                 prevModule
             );
+        }
         _modules[prevModule] = _modules[module];
         delete _modules[module];
         emit DisabledModule(module);
     }
 
-    // TODO: can use not executor.execute, but SmartAccount._call for the unification
-
+    /**
+     * @notice Executes an operation from a module, emits specific events based on the result.
+     * @param to The address to which the operation should be executed.
+     * @param value The amount of ether (in wei) to send with the call (only for Call operations).
+     * @param data The call data to send with the operation.
+     * @param operation The type of operation to execute (either Call or DelegateCall).
+     * @return success A boolean indicating whether the operation was successful.
+     */
     function _executeFromModule(
         address to,
         uint256 value,
@@ -270,7 +233,9 @@ abstract contract ModuleManager is
         if (success) {
             emit ModuleTransaction(msg.sender, to, value, data, operation);
             emit ExecutionFromModuleSuccess(msg.sender);
-        } else emit ExecutionFromModuleFailure(msg.sender);
+        } else {
+            emit ExecutionFromModuleFailure(msg.sender);
+        }
     }
 
     /**
@@ -291,13 +256,23 @@ abstract contract ModuleManager is
         if (
             initialAuthorizationModule == address(0) ||
             initialAuthorizationModule == SENTINEL_MODULES
-        ) revert ModuleCannotBeZeroOrSentinel(initialAuthorizationModule);
+        ) {
+            revert ModuleCannotBeZeroOrSentinel(initialAuthorizationModule);
+        }
 
         _modules[initialAuthorizationModule] = SENTINEL_MODULES;
         _modules[SENTINEL_MODULES] = initialAuthorizationModule;
         return initialAuthorizationModule;
     }
 
+    /**
+     * @notice Sets up a new module by calling a specified setup contract with provided data.
+     *         The function will revert if the setupContract address is zero or if the setup call fails.
+     * @dev This function is internal and utilizes assembly for low-level call operations and error handling.
+     * @param setupContract The address of the contract that will be called to set up the module.
+     * @param setupData The call data to send to the setup contract.
+     * @return module The address of the newly set up module.
+     */
     function _setupModule(
         address setupContract,
         bytes memory setupData

@@ -1,15 +1,10 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.17;
 
-/* solhint-disable avoid-low-level-calls */
-/* solhint-disable no-inline-assembly */
-/* solhint-disable reason-string */
-
 import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
 import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
 import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {Enum} from "../../common/Enum.sol";
-import {BaseSmartAccountErrors} from "../../common/Errors.sol";
 import "@account-abstraction/contracts/core/Helpers.sol";
 
 struct Transaction {
@@ -33,7 +28,9 @@ struct FeeRefund {
  * this contract provides the basic logic for implementing the IAccount interface  - validateUserOp
  * specific account implementation should inherit it and provide the account-specific logic
  */
-abstract contract BaseSmartAccountNew is IAccount, BaseSmartAccountErrors {
+abstract contract BaseSmartAccountNew is IAccount {
+    error CallerIsNotAnEntryPoint(address caller);
+
     using UserOperationLib for UserOperation;
 
     //return value in case of signature failure, with no time-range.

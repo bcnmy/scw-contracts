@@ -7,7 +7,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../utils/setupHelper";
 
 describe("Smart Account Getters", async () => {
@@ -53,10 +52,6 @@ describe("Smart Account Getters", async () => {
         mockToken: mockToken,
         ecdsaModule: ecdsaModule,
         userSA: userSA,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
       };
     }
   );

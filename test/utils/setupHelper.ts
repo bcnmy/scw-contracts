@@ -1,6 +1,7 @@
 import hre, { deployments, ethers } from "hardhat";
 import { Wallet, Contract, BytesLike } from "ethers";
-import { EntryPoint__factory } from "../../typechain";
+import { EntryPoint__factory } from "../../typechain-types";
+import { VerifyingSingletonPaymaster__factory } from "../../biconomy-paymasters/typechain-types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import solc from "solc";
 
@@ -8,6 +9,16 @@ export const getEntryPoint = async () => {
   const EntryPointDeployment = await deployments.get("EntryPoint");
   return EntryPoint__factory.connect(
     EntryPointDeployment.address,
+    ethers.provider.getSigner()
+  );
+};
+
+export const getVerifyingPaymaster = async () => {
+  const VerifyingPaymasterDeployment = await deployments.get(
+    "VerifyingSingletonPaymaster"
+  );
+  return VerifyingSingletonPaymaster__factory.connect(
+    VerifyingPaymasterDeployment.address,
     ethers.provider.getSigner()
   );
 };
@@ -73,35 +84,6 @@ export const getSmartContractOwnershipRegistryModule = async () => {
   return SmartContractOwnerhsipRegistryModule.attach(
     SmartContractOwnerhsipRegistryDeployment.address
   );
-};
-
-export const getVerifyingPaymaster = async (
-  owner: Wallet | SignerWithAddress,
-  verifiedSigner: Wallet | SignerWithAddress
-) => {
-  const entryPoint = await getEntryPoint();
-  const VerifyingSingletonPaymaster = await hre.ethers.getContractFactory(
-    "VerifyingSingletonPaymaster"
-  );
-  const verifyingSingletonPaymaster = await VerifyingSingletonPaymaster.deploy(
-    owner.address,
-    entryPoint.address,
-    verifiedSigner.address
-  );
-
-  await verifyingSingletonPaymaster
-    .connect(owner)
-    .addStake(10, { value: ethers.utils.parseEther("2") });
-
-  await verifyingSingletonPaymaster.depositFor(verifiedSigner.address, {
-    value: ethers.utils.parseEther("1"),
-  });
-
-  await entryPoint.depositTo(verifyingSingletonPaymaster.address, {
-    value: ethers.utils.parseEther("10"),
-  });
-
-  return verifyingSingletonPaymaster;
 };
 
 export const getSmartAccountWithModule = async (

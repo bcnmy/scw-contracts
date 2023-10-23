@@ -4,6 +4,7 @@ pragma solidity 0.8.17;
 import {BaseAuthorizationModule} from "../BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 
 /**
  * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
@@ -160,6 +161,20 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
         return size > 0;
     }
 
+    /**
+     * @dev Splits a signature into its `r`, `s`, and `v` components.
+     *
+     * The signature format is expected to be:
+     *   {bytes32 r}{bytes32 s}{uint8 v}
+     * Where the uint8 is not padded to 32 bytes.
+     *
+     * This function uses inline assembly for optimized extraction of the components.
+     *
+     * @param signature The concatenated Ethereum signature.
+     * @return v The recovery id.
+     * @return r The `r` component of the signature.
+     * @return s The `s` component of the signature.
+     */
     function _signatureSplit(
         bytes memory signature
     ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {

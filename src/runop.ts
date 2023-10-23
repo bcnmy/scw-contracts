@@ -4,7 +4,7 @@
 import hre, { ethers } from "hardhat";
 import { objdump } from "../test/testutils";
 import { AASigner, localUserOpSender, rpcUserOpSender } from "./AASigner";
-import { TestCounter__factory, EntryPoint__factory } from "../typechain";
+import { TestCounter__factory, EntryPoint__factory } from "../typechain-types";
 import "../test/aa.init";
 import { parseEther } from "ethers/lib/utils";
 import { providers } from "ethers";

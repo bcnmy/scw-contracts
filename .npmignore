@@ -2,7 +2,9 @@ hardhat.config.ts
 scripts
 test
 artifacts
+artifacts-filtered
 cache
+out
 coverage
 .env
 .env.*
@@ -16,6 +18,12 @@ src/utils/execution.ts
 src/utils/multisend.ts
 src/Create2Factory.ts
 typings/
+typechain
+typechain-types
 .husky/pre-commit
 .prettierignore
 .prettierrc
+.github/
+deployments/localhost
+src/AASigner.ts
+src/deploy/

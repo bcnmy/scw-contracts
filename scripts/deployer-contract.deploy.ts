@@ -1,6 +1,6 @@
 import hardhat, { ethers } from "hardhat";
 import { getContractAddress } from "ethers/lib/utils";
-import { Deployer__factory } from "../typechain";
+import { Deployer__factory } from "../typechain-types";
 import { BigNumber } from "ethers";
 
 export async function mainDeployDeployer() {

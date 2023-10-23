@@ -5,6 +5,7 @@ import "../Proxy.sol";
 import "../BaseSmartAccount.sol";
 import {DefaultCallbackHandler} from "../handler/DefaultCallbackHandler.sol";
 import {Stakeable} from "../common/Stakeable.sol";
+import {ISmartAccountFactory} from "../interfaces/factory/ISmartAccountFactory.sol";
 
 /**
  * @title Smart Account Factory - factory responsible for deploying Smart Accounts using CREATE2 and CREATE
@@ -12,19 +13,9 @@ import {Stakeable} from "../common/Stakeable.sol";
  *      This allows keeping the same address for the same Smart Account owner on various chains via CREATE2
  * @author Chirag Titiya - <chirag@biconomy.io>
  */
-contract SmartAccountFactory is Stakeable {
+contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
     address public immutable basicImplementation;
     DefaultCallbackHandler public immutable minimalHandler;
-
-    event AccountCreation(
-        address indexed account,
-        address indexed initialAuthModule,
-        uint256 indexed index
-    );
-    event AccountCreationWithoutIndex(
-        address indexed account,
-        address indexed initialAuthModule
-    );
 
     constructor(
         address _basicImplementation,
@@ -38,15 +29,12 @@ contract SmartAccountFactory is Stakeable {
         minimalHandler = new DefaultCallbackHandler();
     }
 
-    /**
-     * @notice Allows to find out account address prior to deployment
-     * @param index extra salt that allows to deploy more accounts if needed for same EOA (default 0)
-     */
+    /// @inheritdoc ISmartAccountFactory
     function getAddressForCounterFactualAccount(
         address moduleSetupContract,
         bytes calldata moduleSetupData,
         uint256 index
-    ) external view returns (address _account) {
+    ) external view override returns (address _account) {
         // create initializer data based on init method, _owner and minimalHandler
         bytes memory initializer = _getInitializer(
             moduleSetupContract,
@@ -65,16 +53,12 @@ contract SmartAccountFactory is Stakeable {
         _account = address(uint160(uint256(hash)));
     }
 
-    /**
-     * @notice Deploys account using create2 and points it to basicImplementation
-     *
-     * @param index extra salt that allows to deploy more account if needed for same EOA (default 0)
-     */
+    /// @inheritdoc ISmartAccountFactory
     function deployCounterFactualAccount(
         address moduleSetupContract,
         bytes calldata moduleSetupData,
         uint256 index
-    ) public returns (address proxy) {
+    ) public override returns (address proxy) {
         // create initializer data based on init method and parameters
         bytes memory initializer = _getInitializer(
             moduleSetupContract,
@@ -123,15 +107,11 @@ contract SmartAccountFactory is Stakeable {
         emit AccountCreation(proxy, initialAuthorizationModule, index);
     }
 
-    /**
-     * @notice Deploys account using create and points it to _implementation
-     
-     * @return proxy address of the deployed account
-     */
+    /// @inheritdoc ISmartAccountFactory
     function deployAccount(
         address moduleSetupContract,
         bytes calldata moduleSetupData
-    ) public returns (address proxy) {
+    ) public override returns (address proxy) {
         bytes memory deploymentData = abi.encodePacked(
             type(Proxy).creationCode,
             uint256(uint160(basicImplementation))
@@ -174,11 +154,8 @@ contract SmartAccountFactory is Stakeable {
         emit AccountCreationWithoutIndex(proxy, initialAuthorizationModule);
     }
 
-    /**
-     * @dev Allows to retrieve the creation code used for the Proxy deployment.
-     * @return The creation code for the Proxy.
-     */
-    function accountCreationCode() public pure returns (bytes memory) {
+    /// @inheritdoc ISmartAccountFactory
+    function accountCreationCode() public pure override returns (bytes memory) {
         return type(Proxy).creationCode;
     }
 

@@ -1,9 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
+/* solhint-disable no-unused-import */
+
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
+import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {IEcdsaOwnershipRegistryModule} from "../interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
+import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
+import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 
 /**
  * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
@@ -18,79 +24,56 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
+contract EcdsaOwnershipRegistryModule is
+    BaseAuthorizationModule,
+    IEcdsaOwnershipRegistryModule
+{
     using ECDSA for bytes32;
 
     string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "0.2.0";
     mapping(address => address) internal _smartAccountOwners;
 
-    event OwnershipTransferred(
-        address indexed smartAccount,
-        address indexed oldOwner,
-        address indexed newOwner
-    );
-
-    error NoOwnerRegisteredForSmartAccount(address smartAccount);
-    error AlreadyInitedForSmartAccount(address smartAccount);
-    error WrongSignatureLength();
-    error NotEOA(address account);
-    error ZeroAddressNotAllowedAsOwner();
-
-    /**
-     * @dev Initializes the module for a Smart Account.
-     * Should be used at a time of first enabling the module for a Smart Account.
-     * @param eoaOwner The owner of the Smart Account. Should be EOA!
-     */
-    function initForSmartAccount(address eoaOwner) external returns (address) {
-        if (_smartAccountOwners[msg.sender] != address(0))
+    /// @inheritdoc IEcdsaOwnershipRegistryModule
+    function initForSmartAccount(
+        address eoaOwner
+    ) external override returns (address) {
+        if (_smartAccountOwners[msg.sender] != address(0)) {
             revert AlreadyInitedForSmartAccount(msg.sender);
+        }
         if (eoaOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         _smartAccountOwners[msg.sender] = eoaOwner;
         return address(this);
     }
 
-    /**
-     * @dev Sets/changes an for a Smart Account.
-     * Should be called by Smart Account itself.
-     * @param owner The owner of the Smart Account.
-     */
-    function transferOwnership(address owner) external {
+    /// @inheritdoc IEcdsaOwnershipRegistryModule
+    function transferOwnership(address owner) external override {
         if (_isSmartContract(owner)) revert NotEOA(owner);
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         _transferOwnership(msg.sender, owner);
     }
 
-    /**
-     * @dev Renounces ownership
-     * should be called by Smart Account.
-     */
-    function renounceOwnership() external {
+    /// @inheritdoc IEcdsaOwnershipRegistryModule
+    function renounceOwnership() external override {
         _transferOwnership(msg.sender, address(0));
     }
 
-    /**
-     * @dev Returns the owner of the Smart Account. Reverts for Smart Accounts without owners.
-     * @param smartAccount Smart Account address.
-     * @return owner The owner of the Smart Account.
-     */
-    function getOwner(address smartAccount) external view returns (address) {
+    /// @inheritdoc IEcdsaOwnershipRegistryModule
+    function getOwner(
+        address smartAccount
+    ) external view override returns (address) {
         address owner = _smartAccountOwners[smartAccount];
-        if (owner == address(0))
+        if (owner == address(0)) {
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
+        }
         return owner;
     }
 
-    /**
-     * @dev validates userOperation
-     * @param userOp User Operation to be validated.
-     * @param userOpHash Hash of the User Operation to be validated.
-     * @return sigValidationResult 0 if signature is valid, SIG_VALIDATION_FAILED otherwise.
-     */
+    /// @inheritdoc IAuthorizationModule
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view virtual returns (uint256) {
+    ) external view virtual override returns (uint256) {
         (bytes memory cleanEcdsaSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -102,6 +85,7 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
     }
 
     /**
+     * @inheritdoc ISignatureValidator
      * @dev Validates a signature for a message.
      * To be called from a Smart Account.
      * @param dataHash Exact hash of the data that was signed.
@@ -116,19 +100,12 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
             isValidSignatureForAddress(dataHash, moduleSignature, msg.sender);
     }
 
-    /**
-     * @dev Validates a signature for a message signed by address.
-     * @dev Also try dataHash.toEthSignedMessageHash()
-     * @param dataHash hash of the data
-     * @param moduleSignature Signature to be validated.
-     * @param smartAccount expected signer Smart Account address.
-     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
-     */
+    /// @inheritdoc IEcdsaOwnershipRegistryModule
     function isValidSignatureForAddress(
         bytes32 dataHash,
         bytes memory moduleSignature,
         address smartAccount
-    ) public view virtual returns (bytes4) {
+    ) public view virtual override returns (bytes4) {
         if (_verifySignature(dataHash, moduleSignature, smartAccount)) {
             return EIP1271_MAGIC_VALUE;
         }
@@ -165,8 +142,9 @@ contract EcdsaOwnershipRegistryModule is BaseAuthorizationModule {
         address smartAccount
     ) internal view returns (bool) {
         address expectedSigner = _smartAccountOwners[smartAccount];
-        if (expectedSigner == address(0))
+        if (expectedSigner == address(0)) {
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
+        }
         if (signature.length < 65) revert WrongSignatureLength();
         address recovered = (dataHash.toEthSignedMessageHash()).recover(
             signature
