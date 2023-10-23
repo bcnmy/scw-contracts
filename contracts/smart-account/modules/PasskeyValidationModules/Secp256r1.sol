@@ -21,24 +21,24 @@ struct JPoint {
 }
 
 library Secp256r1 {
-    uint256 constant gx =
+    uint256 private constant GX =
         0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296;
-    uint256 constant gy =
+    uint256 private constant GY =
         0x4FE342E2FE1A7F9B8EE7EB4A7C0F9E162BCE33576B315ECECBB6406837BF51F5;
-    uint256 public constant pp =
+    uint256 private constant PP =
         0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF;
 
-    uint256 public constant nn =
+    uint256 private constant NN =
         0xFFFFFFFF00000000FFFFFFFFFFFFFFFFBCE6FAADA7179E84F3B9CAC2FC632551;
-    uint256 constant a =
+    uint256 private constant A =
         0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFC;
-    uint256 constant b =
+    uint256 private constant B =
         0x5AC635D8AA3A93E7B3EBBD55769886BC651D06B0CC53B0F63BCE3C3E27D2604B;
-    uint256 constant MOST_SIGNIFICANT =
+    uint256 private constant MOST_SIGNIFICANT =
         0xc000000000000000000000000000000000000000000000000000000000000000;
 
     /*
-     * Verify
+     * verify
      * @description - verifies that a public key has signed a given message
      * @param X - public key coordinate X
      * @param Y - public key coordinate Y
@@ -46,39 +46,39 @@ library Secp256r1 {
      * @param S - signature half S
      * @param input - hashed message
      */
-    function Verify(
+    function verify(
         PassKeyId memory passKey,
-        uint r,
-        uint s,
-        uint e
+        uint256 r,
+        uint256 s,
+        uint256 e
     ) internal view returns (bool) {
         if (r == 0 || s == 0 || r >= nn || s >= nn) {
             return false;
         }
 
-        JPoint[16] memory points = _preComputeJacobianPoints(passKey);
-        return VerifyWithPrecompute(points, r, s, e);
+        JPoint[16] memory points = preComputeJacobianPoints(passKey);
+        return verifyWithPrecompute(points, r, s, e);
     }
 
-    function VerifyWithPrecompute(
+    function verifyWithPrecompute(
         JPoint[16] memory points,
-        uint r,
-        uint s,
-        uint e
+        uint256 r,
+        uint256 s,
+        uint256 e
     ) internal view returns (bool) {
-        if (r >= nn || s >= nn) {
+        if (r >= NN || s >= NN) {
             return false;
         }
 
-        uint w = _primemod(s, nn);
+        uint256 w = primemod(s, NN);
 
-        uint u1 = mulmod(e, w, nn);
-        uint u2 = mulmod(r, w, nn);
+        uint256 u1 = mulmod(e, w, NN);
+        uint256 u2 = mulmod(r, w, NN);
 
-        uint x;
-        uint y;
+        uint256 x;
+        uint256 y;
 
-        (x, y) = ShamirMultJacobian(points, u1, u2);
+        (x, y) = shamirMultJacobian(points, u1, u2);
         return (x == r);
     }
 
@@ -89,27 +89,27 @@ library Secp256r1 {
      * the individual points for a single pass are precomputed
      * overall this reduces the number of additions while keeping the same number of doublings
      */
-    function ShamirMultJacobian(
+    function shamirMultJacobian(
         JPoint[16] memory points,
-        uint u1,
-        uint u2
-    ) internal view returns (uint, uint) {
-        uint x = 0;
-        uint y = 0;
-        uint z = 0;
-        uint bits = 128;
-        uint index = 0;
+        uint256 u1,
+        uint256 u2
+    ) internal view returns (uint256, uint256) {
+        uint256 x = 0;
+        uint256 y = 0;
+        uint256 z = 0;
+        uint256 bits = 128;
+        uint256 index = 0;
 
         while (bits > 0) {
             if (z > 0) {
-                (x, y, z) = _modifiedJacobianDouble(x, y, z);
-                (x, y, z) = _modifiedJacobianDouble(x, y, z);
+                (x, y, z) = modifiedJacobianDouble(x, y, z);
+                (x, y, z) = modifiedJacobianDouble(x, y, z);
             }
             index =
                 ((u1 & MOST_SIGNIFICANT) >> 252) |
                 ((u2 & MOST_SIGNIFICANT) >> 254);
             if (index > 0) {
-                (x, y, z) = _jAdd(
+                (x, y, z) = jAdd(
                     x,
                     y,
                     z,
@@ -122,97 +122,142 @@ library Secp256r1 {
             u2 <<= 2;
             bits--;
         }
-        (x, y) = _affineFromJacobian(x, y, z);
+        (x, y) = affineFromJacobian(x, y, z);
         return (x, y);
     }
 
-    function _preComputeJacobianPoints(
+    /* affineFromJacobian
+     * @desription returns affine coordinates from a jacobian input follows
+     * golang elliptic/crypto library
+     */
+    function affineFromJacobian(
+        uint256 x,
+        uint256 y,
+        uint256 z
+    ) internal view returns (uint256 ax, uint256 ay) {
+        if (z == 0) {
+            return (0, 0);
+        }
+
+        uint256 zinv = primemod(z, PP);
+        uint256 zinvsq = mulmod(zinv, zinv, PP);
+
+        ax = mulmod(x, zinvsq, PP);
+        ay = mulmod(y, mulmod(zinvsq, zinv, PP), PP);
+    }
+
+    // Fermats little theorem https://en.wikipedia.org/wiki/Fermat%27s_little_theorem
+    // a^(p-1) = 1 mod p
+    // a^(-1) ≅ a^(p-2) (mod p)
+    // we then use the precompile bigModExp to compute a^(-1)
+    function primemod(
+        uint256 value,
+        uint256 p
+    ) internal view returns (uint256 ret) {
+        ret = modexp(value, p - 2, p);
+        return ret;
+    }
+
+    // Wrapper for built-in BigNumber_modexp (contract 0x5) as described here. https://github.com/ethereum/EIPs/pull/198
+    function modexp(
+        uint256 _base,
+        uint256 _exp,
+        uint256 _mod
+    ) internal view returns (uint256 ret) {
+        // bigModExp(_base, _exp, _mod);
+        assembly {
+            if gt(_base, _mod) {
+                _base := mod(_base, _mod)
+            }
+            // Free memory pointer is always stored at 0x40
+            let freemem := mload(0x40)
+
+            mstore(freemem, 0x20)
+            mstore(add(freemem, 0x20), 0x20)
+            mstore(add(freemem, 0x40), 0x20)
+
+            mstore(add(freemem, 0x60), _base)
+            mstore(add(freemem, 0x80), _exp)
+            mstore(add(freemem, 0xa0), _mod)
+
+            let success := staticcall(1500, 0x5, freemem, 0xc0, freemem, 0x20)
+            switch success
+            case 0 {
+                revert(0x0, 0x0)
+            }
+            default {
+                ret := mload(freemem)
+            }
+        }
+    }
+
+    function preComputeJacobianPoints(
         PassKeyId memory passKey
     ) internal pure returns (JPoint[16] memory points) {
         // JPoint[] memory u1Points = new JPoint[](4);
         // u1Points[0] = JPoint(0, 0, 0);
-        // u1Points[1] = JPoint(gx, gy, 1); // u1
-        // u1Points[2] = _jPointDouble(u1Points[1]);
-        // u1Points[3] = _jPointAdd(u1Points[1], u1Points[2]);
+        // u1Points[1] = JPoint(GX, GY, 1); // u1
+        // u1Points[2] = jPointDouble(u1Points[1]);
+        // u1Points[3] = jPointAdd(u1Points[1], u1Points[2]);
         // avoiding this intermediate step by using it in a single array below
         // these are pre computed points for u1
 
         // JPoint[16] memory points;
         points[0] = JPoint(0, 0, 0);
         points[1] = JPoint(passKey.pubKeyX, passKey.pubKeyY, 1); // u2
-        points[2] = _jPointDouble(points[1]);
-        points[3] = _jPointAdd(points[1], points[2]);
+        points[2] = jPointDouble(points[1]);
+        points[3] = jPointAdd(points[1], points[2]);
 
-        points[4] = JPoint(gx, gy, 1); // u1Points[1]
-        points[5] = _jPointAdd(points[4], points[1]);
-        points[6] = _jPointAdd(points[4], points[2]);
-        points[7] = _jPointAdd(points[4], points[3]);
+        points[4] = JPoint(GX, GY, 1); // u1Points[1]
+        points[5] = jPointAdd(points[4], points[1]);
+        points[6] = jPointAdd(points[4], points[2]);
+        points[7] = jPointAdd(points[4], points[3]);
 
-        points[8] = _jPointDouble(points[4]); // u1Points[2]
-        points[9] = _jPointAdd(points[8], points[1]);
-        points[10] = _jPointAdd(points[8], points[2]);
-        points[11] = _jPointAdd(points[8], points[3]);
+        points[8] = jPointDouble(points[4]); // u1Points[2]
+        points[9] = jPointAdd(points[8], points[1]);
+        points[10] = jPointAdd(points[8], points[2]);
+        points[11] = jPointAdd(points[8], points[3]);
 
-        points[12] = _jPointAdd(points[4], points[8]); // u1Points[3]
-        points[13] = _jPointAdd(points[12], points[1]);
-        points[14] = _jPointAdd(points[12], points[2]);
-        points[15] = _jPointAdd(points[12], points[3]);
+        points[12] = jPointAdd(points[4], points[8]); // u1Points[3]
+        points[13] = jPointAdd(points[12], points[1]);
+        points[14] = jPointAdd(points[12], points[2]);
+        points[15] = jPointAdd(points[12], points[3]);
     }
 
-    function _jPointAdd(
+    function jPointAdd(
         JPoint memory p1,
         JPoint memory p2
     ) internal pure returns (JPoint memory) {
-        uint x;
-        uint y;
-        uint z;
-        (x, y, z) = _jAdd(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
+        uint256 x;
+        uint256 y;
+        uint256 z;
+        (x, y, z) = jAdd(p1.x, p1.y, p1.z, p2.x, p2.y, p2.z);
         return JPoint(x, y, z);
     }
 
-    function _jPointDouble(
+    function jPointDouble(
         JPoint memory p
     ) internal pure returns (JPoint memory) {
-        uint x;
-        uint y;
-        uint z;
-        (x, y, z) = _modifiedJacobianDouble(p.x, p.y, p.z);
+        uint256 x;
+        uint256 y;
+        uint256 z;
+        (x, y, z) = modifiedJacobianDouble(p.x, p.y, p.z);
         return JPoint(x, y, z);
-    }
-
-    /* _affineFromJacobian
-     * @desription returns affine coordinates from a jacobian input follows
-     * golang elliptic/crypto library
-     */
-    function _affineFromJacobian(
-        uint x,
-        uint y,
-        uint z
-    ) internal view returns (uint ax, uint ay) {
-        if (z == 0) {
-            return (0, 0);
-        }
-
-        uint zinv = _primemod(z, pp);
-        uint zinvsq = mulmod(zinv, zinv, pp);
-
-        ax = mulmod(x, zinvsq, pp);
-        ay = mulmod(y, mulmod(zinvsq, zinv, pp), pp);
     }
 
     /*
-     * _jAdd
+     * jAdd
      * @description performs double Jacobian as defined below:
      * https://hyperelliptic.org/EFD/g1p/auto-code/shortw/jacobian-3/doubling/mdbl-2007-bl.op3
      */
-    function _jAdd(
-        uint p1,
-        uint p2,
-        uint p3,
-        uint q1,
-        uint q2,
-        uint q3
-    ) internal pure returns (uint r1, uint r2, uint r3) {
+    function jAdd(
+        uint256 p1,
+        uint256 p2,
+        uint256 p3,
+        uint256 q1,
+        uint256 q2,
+        uint256 q3
+    ) internal pure returns (uint256 r1, uint256 r2, uint256 r3) {
         if (p3 == 0) {
             r1 = q1;
             r2 = q2;
@@ -290,11 +335,11 @@ library Secp256r1 {
 
     // Point doubling on the modified jacobian coordinates
     // http://point-at-infinity.org/ecc/Prime_Curve_Modified_Jacobian_Coordinates.html
-    function _modifiedJacobianDouble(
-        uint x,
-        uint y,
-        uint z
-    ) internal pure returns (uint x3, uint y3, uint z3) {
+    function modifiedJacobianDouble(
+        uint256 x,
+        uint256 y,
+        uint256 z
+    ) internal pure returns (uint256 x3, uint256 y3, uint256 z3) {
         assembly {
             let
                 pd

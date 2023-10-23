@@ -1,11 +1,13 @@
 import { expect } from "chai";
 import { ethers, deployments } from "hardhat";
-import { makeEcdsaModuleUserOp, getUserOpHash, fillAndSign } from "../../utils/userOp";
+import {
+  makeEcdsaModuleUserOp,
+  getUserOpHash,
+  fillAndSign,
+} from "../../utils/userOp";
 import {
   getEntryPoint,
-  getSmartAccountFactory,
   getEcdsaOwnershipRegistryModule,
-  deployContract,
   getMockToken,
   getStakedSmartAccountFactory,
 } from "../../utils/setupHelper";
@@ -55,7 +57,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       ecdsaRegistryModule.interface.encodeFunctionData("initForSmartAccount", [
         smartAccountOwner.address,
       ]);
-    
+
     const deploymentData = saFactory.interface.encodeFunctionData(
       "deployCounterFactualAccount",
       [
@@ -91,10 +93,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       {
         sender: expectedSmartAccountAddress,
         callGasLimit: 1_000_000,
-        initCode: ethers.utils.hexConcat([
-          saFactory.address,
-          deploymentData,
-        ]),
+        initCode: ethers.utils.hexConcat([saFactory.address, deploymentData]),
         callData: "0x",
         preVerificationGas: 50000,
       },
@@ -103,7 +102,7 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       "nonce"
     );
 
-    let signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"],
       [deploymentUserOp.signature, ecdsaRegistryModule.address]
     );
@@ -130,8 +129,8 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
   describe("transferOwnership: ", async () => {
     it("Call transferOwnership from userSA and it successfully changes owner ", async () => {
       const { ecdsaRegistryModule, entryPoint, userSA } = await setupTests();
-      //console.log(await userSA.getImplementation());
-      
+      // console.log(await userSA.getImplementation());
+
       // Calldata to set Bob as owner
       const txnData1 = ecdsaRegistryModule.interface.encodeFunctionData(
         "transferOwnership",

@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {EcdsaOwnershipRegistryModule} from "../modules/EcdsaOwnershipRegistryModule.sol";
-import {UserOperation} from "../modules/BaseAuthorizationModule.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 
 contract ForbiddenOpcodeInvokingAuthModule is EcdsaOwnershipRegistryModule {
     function validateUserOp(

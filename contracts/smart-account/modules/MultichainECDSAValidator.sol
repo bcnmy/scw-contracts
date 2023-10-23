@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation, ISignatureValidator} from "./BaseAuthorizationModule.sol";
+import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {EcdsaOwnershipRegistryModule} from "./EcdsaOwnershipRegistryModule.sol";
 import {UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
-import {calldataKeccak, _packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
+import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 
 /**
  * @title ECDSA Multichain Validator module for Biconomy Smart Accounts.

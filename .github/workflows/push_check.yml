@@ -1,0 +1,47 @@
+name: Test workflow
+on: push
+jobs:
+  lint:
+    name: Lint sources
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout
+        uses: 'actions/checkout@master'
+      - name: Set Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - name: Create a fake .secret file
+        run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile && yarn build
+      - name: Lint sources
+        run:
+          yarn run lint 
+
+  unit_test:
+    name: Unit tests
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        node-version: [18.x]
+
+    steps:
+      - name: Checkout
+        uses: 'actions/checkout@master'
+
+      - name: Set Node.js
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+
+      - name: Create a fake .secret file
+        run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
+      - name: Install dependencies
+        run: yarn install --frozen-lockfile && yarn build
+      - name: Run tests
+        run: yarn test

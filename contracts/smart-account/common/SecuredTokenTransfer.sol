@@ -7,7 +7,7 @@ abstract contract SecuredTokenTransfer {
     /// @param token Token that should be transferred
     /// @param receiver Receiver to whom the token should be transferred
     /// @param amount The amount of tokens that should be transferred
-    function transferToken(
+    function _transferToken(
         address token,
         address receiver,
         uint256 amount
@@ -20,7 +20,7 @@ abstract contract SecuredTokenTransfer {
             receiver,
             amount
         );
-        // solhint-disable-next-line no-inline-assembly
+
         assembly {
             // We write the return value to scratch space.
             // See https://docs.soliditylang.org/en/v0.8.17/internals/layout_in_memory.html#layout-in-memory

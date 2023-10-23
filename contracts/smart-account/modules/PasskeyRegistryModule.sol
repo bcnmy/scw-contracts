@@ -19,10 +19,10 @@ contract PasskeyRegistryModule is BaseAuthorizationModule {
     string public constant NAME = "PassKeys Ownership Registry Module";
     string public constant VERSION = "0.2.0";
 
+    mapping(address => PassKeyId) public smartAccountPassKeys;
+
     error NoPassKeyRegisteredForSmartAccount(address smartAccount);
     error AlreadyInitedForSmartAccount(address smartAccount);
-
-    mapping(address => PassKeyId) public smartAccountPassKeys;
 
     /**
      * @dev Initializes the module for a Smart Account.
@@ -108,6 +108,7 @@ contract PasskeyRegistryModule is BaseAuthorizationModule {
                 moduleSignature,
                 (bytes32, uint256, uint256, bytes, string, string)
             );
+        (keyHash);
         string memory opHashBase64 = Base64.encode(
             bytes.concat(userOpDataHash)
         );
@@ -122,6 +123,16 @@ contract PasskeyRegistryModule is BaseAuthorizationModule {
         PassKeyId memory passKey = smartAccountPassKeys[msg.sender];
         if (passKey.pubKeyX == 0 && passKey.pubKeyY == 0)
             revert NoPassKeyRegisteredForSmartAccount(msg.sender);
-        return Secp256r1.Verify(passKey, sigx, sigy, uint256(sigHash));
+        return Secp256r1.verify(passKey, sigx, sigy, uint256(sigHash));
+    }
+
+    function _validateSignature(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) internal view virtual returns (uint256 sigValidationResult) {
+        if (_verifySignature(userOpHash, userOp.signature)) {
+            return 0;
+        }
+        return SIG_VALIDATION_FAILED;
     }
 }
