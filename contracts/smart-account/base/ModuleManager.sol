@@ -72,6 +72,12 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
             operation,
             txGas == 0 ? gasleft() : txGas
         );
+        if (success) {
+            emit ModuleTransaction(msg.sender, to, value, data, operation);
+            emit ExecutionFromModuleSuccess(msg.sender);
+        } else {
+            emit ExecutionFromModuleFailure(msg.sender);
+        }
     }
 
     /// @inheritdoc IModuleManager
