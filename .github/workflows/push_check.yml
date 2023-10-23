@@ -18,7 +18,7 @@ jobs:
       - name: Create a fake .secret file
         run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
       - name: Install dependencies
-        run: yarn install --frozen-lockfile && yarn build
+        run: yarn install && yarn build
       - name: Lint sources
         run:
           yarn run lint 
