@@ -23,7 +23,6 @@ interface IExecFromModule {
 /**
  */
 interface ISimpleExecutionModule {
-    
     struct Transaction {
         address to;
         Enum.Operation operation;
