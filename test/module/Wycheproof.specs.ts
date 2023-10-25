@@ -48,14 +48,6 @@ describe("Passkeys Registry Module:", function () {
             test.result === "valid" || test.result === "acceptable"
           );
         } catch (err) {
-          // TODO: FIX IGNORED ERROR BELOW: failing for 2 edge test cases as reported in audit
-          // - k*G has a large x-coordinate
-          // - extreme value for k and s^-1
-          if (test.tcId === 285 || test.tcId === 345) {
-            // console.log({pubX, pubY, rValue, sValue, hash});
-            // console.log("test details", test.comment, test.result, test.tcId);
-            return;
-          }
           expect(test.result === "invalid").to.be.equal(true);
         }
       });

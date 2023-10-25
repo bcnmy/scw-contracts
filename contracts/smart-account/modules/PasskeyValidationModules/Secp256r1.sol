@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity >=0.8.17;
 //
+// Initial Implementation by
+// https://github.com/itsobvioustech/aa-passkeys-wallet/blob/main/src/Secp256r1.sol
 // Heavily inspired from
 // https://github.com/maxrobot/elliptic-solidity/blob/master/contracts/Secp256r1.sol
 // https://github.com/tdrerup/elliptic-curve-solidity/blob/master/contracts/curves/EllipticCurve.sol
@@ -79,7 +81,7 @@ library Secp256r1 {
         uint256 y;
 
         (x, y) = shamirMultJacobian(points, u1, u2);
-        return (x == r);
+        return ((x % NN) == r);
     }
 
     /*
@@ -250,6 +252,42 @@ library Secp256r1 {
         return JPoint(x, y, z);
     }
 
+    function jIsEqual(
+        uint256 p1,
+        uint256 p2,
+        uint256 p3,
+        uint256 q1,
+        uint256 q2,
+        uint256 q3
+    ) internal pure returns (bool isEqual) {
+        if ((p3 == 0) && (q3 == 0)) {
+            isEqual = true;
+        } else {
+            uint256 u1;
+            uint256 u2;
+            uint256 s1;
+            uint256 s2;
+            assembly {
+                let
+                    pd
+                := 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
+                let z1z1 := mulmod(p3, p3, pd) // Z1Z1 = Z1^2
+                let z2z2 := mulmod(q3, q3, pd) // Z2Z2 = Z2^2
+
+                u1 := mulmod(p1, z2z2, pd) // U1 = X1*Z2Z2
+                u2 := mulmod(q1, z1z1, pd) // U2 = X2*Z1Z1
+
+                s1 := mulmod(p2, mulmod(z2z2, q3, pd), pd) // S1 = Y1*Z2*Z2Z2
+                s2 := mulmod(q2, mulmod(z1z1, p3, pd), pd) // S2 = Y2*Z1*Z1Z1
+            }
+            if ((u1 == u2) && (s1 == s2)) {
+                isEqual = true;
+            } else {
+                isEqual = false;
+            }
+        }
+    }
+
     /*
      * jAdd
      * @description performs double Jacobian as defined below:
@@ -264,76 +302,72 @@ library Secp256r1 {
         uint256 q3
     ) internal pure returns (uint256 r1, uint256 r2, uint256 r3) {
         if (p3 == 0) {
-            r1 = q1;
-            r2 = q2;
-            r3 = q3;
-
-            return (r1, r2, r3);
+            return (q1, q2, q3);
         } else if (q3 == 0) {
-            r1 = p1;
-            r2 = p2;
-            r3 = p3;
-
-            return (r1, r2, r3);
+            return (p1, p2, p3);
         }
 
-        assembly {
-            let
-                pd
-            := 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
-            let z1z1 := mulmod(p3, p3, pd) // Z1Z1 = Z1^2
-            let z2z2 := mulmod(q3, q3, pd) // Z2Z2 = Z2^2
+        if (jIsEqual(p1, p2, p3, q1, q2, q3)) {
+            (r1, r2, r3) = modifiedJacobianDouble(p1, p2, p3);
+        } else {
+            assembly {
+                let
+                    pd
+                := 0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF
+                let z1z1 := mulmod(p3, p3, pd) // Z1Z1 = Z1^2
+                let z2z2 := mulmod(q3, q3, pd) // Z2Z2 = Z2^2
 
-            let u1 := mulmod(p1, z2z2, pd) // U1 = X1*Z2Z2
-            let u2 := mulmod(q1, z1z1, pd) // U2 = X2*Z1Z1
+                let u1 := mulmod(p1, z2z2, pd) // U1 = X1*Z2Z2
+                let u2 := mulmod(q1, z1z1, pd) // U2 = X2*Z1Z1
 
-            let s1 := mulmod(p2, mulmod(z2z2, q3, pd), pd) // S1 = Y1*Z2*Z2Z2
-            let s2 := mulmod(q2, mulmod(z1z1, p3, pd), pd) // S2 = Y2*Z1*Z1Z1
+                let s1 := mulmod(p2, mulmod(z2z2, q3, pd), pd) // S1 = Y1*Z2*Z2Z2
+                let s2 := mulmod(q2, mulmod(z1z1, p3, pd), pd) // S2 = Y2*Z1*Z1Z1
 
-            let p3q3 := addmod(p3, q3, pd)
+                let p3q3 := addmod(p3, q3, pd)
 
-            if lt(u2, u1) {
-                u2 := add(pd, u2) // u2 = u2+pd
+                if lt(u2, u1) {
+                    u2 := add(pd, u2) // u2 = u2+pd
+                }
+                let h := sub(u2, u1) // H = U2-U1
+
+                let i := mulmod(0x02, h, pd)
+                i := mulmod(i, i, pd) // I = (2*H)^2
+
+                let j := mulmod(h, i, pd) // J = H*I
+                if lt(s2, s1) {
+                    s2 := add(pd, s2) // u2 = u2+pd
+                }
+                let rr := mulmod(0x02, sub(s2, s1), pd) // r = 2*(S2-S1)
+                r1 := mulmod(rr, rr, pd) // X3 = R^2
+
+                let v := mulmod(u1, i, pd) // V = U1*I
+                let j2v := addmod(j, mulmod(0x02, v, pd), pd)
+                if lt(r1, j2v) {
+                    r1 := add(pd, r1) // X3 = X3+pd
+                }
+                r1 := sub(r1, j2v)
+
+                // Y3 = r*(V-X3)-2*S1*J
+                let s12j := mulmod(mulmod(0x02, s1, pd), j, pd)
+
+                if lt(v, r1) {
+                    v := add(pd, v)
+                }
+                r2 := mulmod(rr, sub(v, r1), pd)
+
+                if lt(r2, s12j) {
+                    r2 := add(pd, r2)
+                }
+                r2 := sub(r2, s12j)
+
+                // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2)*H
+                z1z1 := addmod(z1z1, z2z2, pd)
+                j2v := mulmod(p3q3, p3q3, pd)
+                if lt(j2v, z1z1) {
+                    j2v := add(pd, j2v)
+                }
+                r3 := mulmod(sub(j2v, z1z1), h, pd)
             }
-            let h := sub(u2, u1) // H = U2-U1
-
-            let i := mulmod(0x02, h, pd)
-            i := mulmod(i, i, pd) // I = (2*H)^2
-
-            let j := mulmod(h, i, pd) // J = H*I
-            if lt(s2, s1) {
-                s2 := add(pd, s2) // u2 = u2+pd
-            }
-            let rr := mulmod(0x02, sub(s2, s1), pd) // r = 2*(S2-S1)
-            r1 := mulmod(rr, rr, pd) // X3 = R^2
-
-            let v := mulmod(u1, i, pd) // V = U1*I
-            let j2v := addmod(j, mulmod(0x02, v, pd), pd)
-            if lt(r1, j2v) {
-                r1 := add(pd, r1) // X3 = X3+pd
-            }
-            r1 := sub(r1, j2v)
-
-            // Y3 = r*(V-X3)-2*S1*J
-            let s12j := mulmod(mulmod(0x02, s1, pd), j, pd)
-
-            if lt(v, r1) {
-                v := add(pd, v)
-            }
-            r2 := mulmod(rr, sub(v, r1), pd)
-
-            if lt(r2, s12j) {
-                r2 := add(pd, r2)
-            }
-            r2 := sub(r2, s12j)
-
-            // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2)*H
-            z1z1 := addmod(z1z1, z2z2, pd)
-            j2v := mulmod(p3q3, p3q3, pd)
-            if lt(j2v, z1z1) {
-                j2v := add(pd, j2v)
-            }
-            r3 := mulmod(sub(j2v, z1z1), h, pd)
         }
         return (r1, r2, r3);
     }
