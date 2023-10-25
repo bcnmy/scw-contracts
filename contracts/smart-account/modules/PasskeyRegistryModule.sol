@@ -33,17 +33,17 @@ contract PasskeyRegistryModule is
         uint256 _pubKeyY,
         string calldata _keyId
     ) external override returns (address) {
-        if (
-            smartAccountPassKeys[msg.sender].pubKeyX != 0 &&
-            smartAccountPassKeys[msg.sender].pubKeyY != 0
-        ) {
-            revert AlreadyInitedForSmartAccount(msg.sender);
-        }
+        PassKeyId storage passKeyId = smartAccountPassKeys[msg.sender];
+
+        if (passKeyId.pubKeyX != 0 && passKeyId.pubKeyY != 0)
+        revert AlreadyInitedForSmartAccount(msg.sender);
+
         smartAccountPassKeys[msg.sender] = PassKeyId(
             _pubKeyX,
             _pubKeyY,
             _keyId
         );
+
         return address(this);
     }
 
