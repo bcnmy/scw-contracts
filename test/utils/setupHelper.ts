@@ -75,6 +75,16 @@ export const getEcdsaOwnershipRegistryModule = async () => {
   );
 };
 
+export const getSimpleExecutionModule = async () => {
+  const SimpleExecutionModuleDeployment = await deployments.get(
+    "SimpleExecutionModule"
+  );
+  const SimpleExecutionModule = await hre.ethers.getContractFactory(
+    "SimpleExecutionModule"
+  );
+  return SimpleExecutionModule.attach(SimpleExecutionModuleDeployment.address);
+};
+
 export const getSmartContractOwnershipRegistryModule = async () => {
   const SmartContractOwnerhsipRegistryDeployment = await deployments.get(
     "SmartContractOwnershipRegistryModule"

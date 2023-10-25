@@ -78,7 +78,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
       });
       await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      // deploy forward flow module and enable it in the smart account
+      // deploy modules and enable it in the smart account
       const sessionKeyManager = await (
         await ethers.getContractFactory("SessionKeyManager")
       ).deploy();
