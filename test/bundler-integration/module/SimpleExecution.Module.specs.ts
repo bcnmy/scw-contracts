@@ -122,11 +122,6 @@ describe("ECDSA Registry Validation + Simple Execution Module (with Bundler):", 
     const tokensToMint = ethers.utils.parseEther("100");
     await mockToken.mint(bob.address, tokensToMint.toString());
 
-    await deployer.sendTransaction({
-      to: smartAccountOwner.address,
-      value: ethers.utils.parseEther("60"),
-    });
-
     return {
       entryPoint: entryPoint,
       smartAccountImplementation: await getSmartAccountImplementation(),
@@ -204,7 +199,19 @@ describe("ECDSA Registry Validation + Simple Execution Module (with Bundler):", 
         }
       );
 
-      await environment.sendUserOperation(userOp, entryPoint.address);
+      let thrownError: Error | null = null;
+
+      // let expectedError = new UserOperationSubmissionError()
+
+      // If bundler was supposed to throw from Validation.
+      try {
+        await environment.sendUserOperation(userOp, entryPoint.address);
+      } catch (e) {
+        thrownError = e as Error;
+        console.log("=================> error thrown here ==========>");
+      }
+
+      // expect(thrownError).to.deep.equal(expectedError);
 
       expect(await mockToken.balanceOf(bob.address)).to.equal(
         bobBalanceBefore.add(ethers.utils.parseEther("20"))
@@ -219,7 +226,10 @@ describe("ECDSA Registry Validation + Simple Execution Module (with Bundler):", 
       );
     });
 
-    /* it("Should not be able to execute if module is not enabled", async () => {
+    // TODO: negative test cases should be moved outside of bundler tests
+    // TODO: utils can be added to parse userOperationEvent and userOperationRevertReason
+    // Note: negative test case can have random sender calling this module method.
+    it("Should not be able to execute if module is not enabled", async () => {
       const {
         ecdsaRegistryModule,
         entryPoint,
@@ -230,12 +240,12 @@ describe("ECDSA Registry Validation + Simple Execution Module (with Bundler):", 
       } = await setupTests();
       // console.log(await userSA.getImplementation());
 
-    //   expect(await userSA.isModuleEnabled(delegateCallModule.address)).to.equal(
-    //     true
-    //   );
+      expect(await userSA.isModuleEnabled(delegateCallModule.address)).to.equal(
+        true
+      );
 
-      // const feeCollctorBalanceBefore = await mockToken.balanceOf(feeCollector);
-      // console.log("collector balance before ", feeCollctorBalanceBefore);
+      const feeCollctorBalanceBefore = await mockToken.balanceOf(feeCollector);
+      console.log("collector balance before ", feeCollctorBalanceBefore);
 
       // Checking enabled modules
       const returnedValueBefore = await userSA.getModulesPaginated(
@@ -244,11 +254,11 @@ describe("ECDSA Registry Validation + Simple Execution Module (with Bundler):", 
       );
       console.log("enabled modules before", returnedValueBefore);
 
-      // TODO: Review
+      // Accurate as modules are added in linked list in opposite order
       // Making a tx to disable a module
       const userOp1 = await makeEcdsaModuleUserOp(
         "disableModule",
-        [AddressOne, delegateCallModule.address],
+        [AddressOne, delegateCallModule.address], // in order to remove last added module prevModule would be Sentinel
         userSA.address,
         smartAccountOwner,
         entryPoint,
@@ -267,11 +277,11 @@ describe("ECDSA Registry Validation + Simple Execution Module (with Bundler):", 
       );
 
       // Logging modules after disabling
-    //   const returnedValue = await userSA.getModulesPaginated(
-    //     "0x0000000000000000000000000000000000000001",
-    //     10
-    //   );
-    //   console.log("enabled modules ", returnedValue); 
+      const returnedValue = await userSA.getModulesPaginated(
+        "0x0000000000000000000000000000000000000001",
+        10
+      );
+      console.log("enabled modules ", returnedValue);
 
       // Making the transaction using a module which should technically fail
       const wrapperCallData = mockWrapper.interface.encodeFunctionData(
@@ -304,14 +314,44 @@ describe("ECDSA Registry Validation + Simple Execution Module (with Bundler):", 
         }
       );
 
-      // await entryPoint.simulateValidation(userOp, { gasLimit: 1e6 });
-      // await entryPoint.handleOps([userOp], bob.address);
-      await environment.sendUserOperation(userOp1, entryPoint.address);
+      // Such transaction would fail at SDK estimation only when estimating callGasLimit!
+      /* try {
+        const estimation = await ethers.provider.estimateGas({
+          to: userSA.address,
+          data: userOp.callData,
+          from: entryPoint.address,
+        });
+      } catch (error) {
+        console.log("revert reason ", error);
+      } */
+
+      // await entryPoint.simulateValidation(userOp, { gasLimit: 1e6 }); // works as long as execution doesn't fail
+      // await environment.sendUserOperation(userOp1, entryPoint.address);
+      const tx = await entryPoint.handleOps([userOp], bob.address);
+      const receipt = await tx.wait();
+      console.log(receipt.logs);
+      const userOperationEvent = receipt.logs[3];
+
+      const eventLogs = entryPoint.interface.decodeEventLog(
+        "UserOperationEvent",
+        userOperationEvent.data
+      );
+
+      console.log(eventLogs);
+
+      expect(eventLogs.success).to.equal(false);
+
+      /* const eventLogs2 = entryPoint.interface.decodeEventLog(
+        "UserOperationRevertReason",
+        receipt.logs[2].data
+      );
+      console.log(eventLogs2); */
+      // revertReason: 0x21ac7c5f000000000000000000000000da19cab9cc9c4df0f360f0165e37ade1dd3455fd
 
       // Checking effects
-    //   expect(await mockToken.balanceOf(feeCollector)).to.equal(
-    //     feeCollctorBalanceBefore.add(ethers.utils.parseEther("0"))
-    //   );
-    }); */
+      expect(await mockToken.balanceOf(feeCollector)).to.equal(
+        feeCollctorBalanceBefore.add(ethers.utils.parseEther("0"))
+      );
+    });
   });
 });
