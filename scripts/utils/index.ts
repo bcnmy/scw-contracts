@@ -130,6 +130,7 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   7116: {
     // gasPrice: parseUnits("15", "gwei"),
   },
+  88018: {},
 
   // Mainnets
   137: { maxPriorityFeePerGas: parseUnits("50", "gwei") },
@@ -211,6 +212,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   7116: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  88018: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -330,6 +335,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   7116: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  88018: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -481,7 +490,7 @@ export const deployContract = async (
 
   console.log(`Submitted transaction ${hash} for deployment`);
 
-  const { status, logs, blockNumber } = await wait(5);
+  const { status, logs, blockNumber } = await wait();
 
   if (status !== 1) {
     throw new Error(`Transaction ${hash} failed`);

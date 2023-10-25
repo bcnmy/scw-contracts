@@ -45,9 +45,9 @@ const DEPLOYMENT_SALTS =
   DEPLOYMENT_MODE === "DEV" ? DEPLOYMENT_SALTS_DEV : DEPLOYMENT_SALTS_PROD;
 
 // State
-let entryPointAddress =
-  process.env.ENTRY_POINT_ADDRESS ||
-  "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+let entryPointAddress = "0x29D4cFA9869C4fb4a78a6F7f32468f5e0b78da4e";
+// process.env.ENTRY_POINT_ADDRESS ||
+// "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 let baseImpAddress = "";
 const provider = ethers.provider;
 const contractsDeployed: Record<string, string> = {};
@@ -81,10 +81,10 @@ export async function deployGeneric(
     }
 
     try {
-      await run("verify:verify", {
-        address: computedAddress,
-        constructorArguments,
-      });
+      // await run("verify:verify", {
+      //   address: computedAddress,
+      //   constructorArguments,
+      // });
     } catch (err) {
       console.log(err);
     }
@@ -302,14 +302,6 @@ async function getPredeployedDeployerContractInstance(): Promise<Deployer> {
 const verifyDeploymentConfig = () => {
   if (!isAddress(smartAccountFactoryOwnerAddress)) {
     throw new Error("Invalid Smart Account Factory Owner Address");
-  }
-
-  if (!isAddress(paymasterOwnerAddress)) {
-    throw new Error("Invalid Paymaster Owner Address");
-  }
-
-  if (!isAddress(verifyingSigner)) {
-    throw new Error("Invalid Verifying Signer Address");
   }
 
   if (!isAddress(DEPLOYER_CONTRACT_ADDRESS)) {
