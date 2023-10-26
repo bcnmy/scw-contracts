@@ -11,6 +11,7 @@ import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.s
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {IBatchedSessionRouterModule} from "../interfaces/modules/IBatchedSessionRouterModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
+import {IModuleManager} from "../interfaces/base/IModuleManager.sol";
 
 /**
  * @title Batched Session Router
@@ -56,10 +57,12 @@ contract BatchedSessionRouter is
             bytes memory sessionKeySignature
         ) = abi.decode(moduleSignature, (address, SessionData[], bytes));
 
+        if(!IModuleManager(userOp.sender).isModuleEnabled(sessionKeyManager)) {
+            revert ("SR Invalid SKM");
+        }
+
         address recovered = ECDSA.recover(
-            ECDSA.toEthSignedMessageHash(
-                keccak256(abi.encodePacked(userOpHash, sessionKeyManager))
-            ),
+            ECDSA.toEthSignedMessageHash(userOpHash),
             sessionKeySignature
         );
 

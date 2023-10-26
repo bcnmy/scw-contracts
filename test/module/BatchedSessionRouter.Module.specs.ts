@@ -15,6 +15,7 @@ import {
   getSmartAccountWithModule,
 } from "../utils/setupHelper";
 import { computeAddress, defaultAbiCoder } from "ethers/lib/utils";
+import { ERC20SessionValidationModule } from "../../typechain";
 
 describe("SessionKey: Batched Session Router", async () => {
   const [deployer, smartAccountOwner, alice, sessionKey, nonAuthSessionKey] =
@@ -271,24 +272,14 @@ describe("SessionKey: Batched Session Router", async () => {
       "nonce"
     );
 
-    // create a signature with the sessionKeyManager address
-    const userOpHash = await entryPoint.getUserOpHash(userOp);
-    const userOpHashAndModuleAddress = ethers.utils.hexConcat([
-      ethers.utils.hexZeroPad(userOpHash, 32),
-      ethers.utils.hexZeroPad(sessionKeyManager.address, 20),
-    ]);
-    const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
-    const signatureOverUserOpHashAndModuleAddress =
-      await sessionKey.signMessage(ethers.utils.arrayify(resultingHash));
-
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
       [
-        "uint256", // uint256 instead of address
+        "address",
         "tuple(uint48,uint48,address,bytes,bytes32[],bytes)[]",
-        "bytes",
+        "uint256",
       ],
       [
-        0,
+        sessionKeyManager.address,
         [
           [
             0,
@@ -307,7 +298,7 @@ describe("SessionKey: Batched Session Router", async () => {
             "0x",
           ],
         ],
-        signatureOverUserOpHashAndModuleAddress,
+        111,
       ]
     );
 
@@ -858,6 +849,80 @@ describe("SessionKey: Batched Session Router", async () => {
       .withArgs(0, "AA23 reverted: SessionNotApproved");
   });
 
+  it("should revert if Session Key Manager address provided in the sig is wrong", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+      sessionRouter,
+      mockProtocol,
+      mockProtocolSVM,
+      mockToken,
+      sessionKeyData2,
+      leafData2,
+      validUntilForMockProtocol,
+      erc20SessionModule
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
+
+    const MockProtocol = await ethers.getContractFactory("MockProtocol");
+    const IERC20 = await ethers.getContractFactory("ERC20");
+
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact",
+      [mockToken.address, tokenAmountToTransfer]
+    );
+
+    const wrongSessionKeyManagerAddress = computeAddress(
+      ethers.utils.randomBytes(32)
+    );
+
+    const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
+      "executeBatch_y6U",
+      [
+        [mockToken.address, mockProtocol.address],
+        [0, 0],
+        [approveCallData, interactCallData],
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      wrongSessionKeyManagerAddress,
+      [
+        [
+          0,
+          0,
+          erc20SessionModule.address,
+          sessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+          "0x",
+        ],
+        [
+          validUntilForMockProtocol,
+          0,
+          mockProtocolSVM.address,
+          sessionKeyData2,
+          merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
+          "0x",
+        ],
+      ],
+      sessionRouter.address
+    );
+
+    await expect(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: SR Invalid SKM");
+  });
+
   it("should revert if session key data provided in the sig is wrong", async () => {
     const {
       entryPoint,
@@ -1134,40 +1199,6 @@ describe("SessionKey: Batched Session Router", async () => {
         [mockToken.address, tokenAmountToTransfer]
       );
 
-      /*
-      const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
-        "executeBatch_y6U",
-        [
-          [mockToken.address, mockProtocol.address],
-          [0, 0],
-          [approveCallData, interactCallData],
-        ],
-        userSA.address,
-        sessionKey,
-        entryPoint,
-        sessionKeyManager.address,
-        [
-          [
-            0,
-            0,
-            erc20SessionModule.address,
-            sessionKeyData,
-            merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-            "0x",
-          ],
-          [
-            validUntilForMockProtocol,
-            0,
-            mockProtocolSVM.address,
-            sessionKeyData2,
-            merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-            "0x",
-          ],
-        ],
-        sessionRouter.address
-      );
-      */
-
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
       const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
@@ -1190,13 +1221,8 @@ describe("SessionKey: Batched Session Router", async () => {
       );
 
       const userOpHash = await entryPoint.getUserOpHash(userOp);
-      const userOpHashAndModuleAddress = ethers.utils.hexConcat([
-        ethers.utils.hexZeroPad(userOpHash, 32),
-        ethers.utils.hexZeroPad(sessionKeyManager.address, 20),
-      ]);
-      const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
-      const signatureOverUserOpHashAndModuleAddress = (
-        await sessionKey.signMessage(ethers.utils.arrayify(resultingHash))
+      const signatureOverUserOpHash = (
+        await sessionKey.signMessage(ethers.utils.arrayify(userOpHash))
       ).slice(0, -2);
 
       const sessionData = [
@@ -1227,7 +1253,7 @@ describe("SessionKey: Batched Session Router", async () => {
         [
           sessionKeyManager.address,
           sessionData,
-          signatureOverUserOpHashAndModuleAddress,
+          signatureOverUserOpHash,
         ]
       );
 
