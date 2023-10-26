@@ -44,10 +44,14 @@ const DEPLOYER_CONTRACT_ADDRESS =
 const DEPLOYMENT_SALTS =
   DEPLOYMENT_MODE === "DEV" ? DEPLOYMENT_SALTS_DEV : DEPLOYMENT_SALTS_PROD;
 
-// State
-const entryPointAddress = "0x00000061FEfce24A79343c27127435286BB7A4E1";
-// process.env.ENTRY_POINT_ADDRESS ||
-// "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+// Custom Entrypoint
+// const entryPointAddress = "0x00000061FEfce24A79343c27127435286BB7A4E1";
+
+// Standard Entrypoint
+const entryPointAddress =
+  process.env.ENTRY_POINT_ADDRESS ||
+  "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+
 let baseImpAddress = "";
 const provider = ethers.provider;
 const contractsDeployed: Record<string, string> = {};
