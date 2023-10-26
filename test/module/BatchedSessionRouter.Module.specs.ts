@@ -15,7 +15,6 @@ import {
   getSmartAccountWithModule,
 } from "../utils/setupHelper";
 import { computeAddress, defaultAbiCoder } from "ethers/lib/utils";
-import { ERC20SessionValidationModule } from "../../typechain";
 
 describe("SessionKey: Batched Session Router", async () => {
   const [deployer, smartAccountOwner, alice, sessionKey, nonAuthSessionKey] =
