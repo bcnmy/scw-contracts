@@ -233,8 +233,9 @@ describe("SessionKey: Batched Session Router (via Bundler)", async () => {
 
     // create a signature with the sessionKeyManager address
     const userOpHash = await entryPoint.getUserOpHash(userOp);
-    const signatureOverUserOpHash =
-      await sessionKey.signMessage(ethers.utils.arrayify(userOpHash));
+    const signatureOverUserOpHash = await sessionKey.signMessage(
+      ethers.utils.arrayify(userOpHash)
+    );
 
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
       [

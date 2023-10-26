@@ -36,7 +36,7 @@ contract PasskeyRegistryModule is
         PassKeyId storage passKeyId = smartAccountPassKeys[msg.sender];
 
         if (passKeyId.pubKeyX != 0 && passKeyId.pubKeyY != 0)
-        revert AlreadyInitedForSmartAccount(msg.sender);
+            revert AlreadyInitedForSmartAccount(msg.sender);
 
         smartAccountPassKeys[msg.sender] = PassKeyId(
             _pubKeyX,

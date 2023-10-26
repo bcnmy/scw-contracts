@@ -864,7 +864,7 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionKeyData2,
       leafData2,
       validUntilForMockProtocol,
-      erc20SessionModule
+      erc20SessionModule,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
@@ -1250,11 +1250,7 @@ describe("SessionKey: Batched Session Router", async () => {
           "tuple(uint48,uint48,address,bytes,bytes32[],bytes)[]",
           "bytes",
         ],
-        [
-          sessionKeyManager.address,
-          sessionData,
-          signatureOverUserOpHash,
-        ]
+        [sessionKeyManager.address, sessionData, signatureOverUserOpHash]
       );
 
       const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
