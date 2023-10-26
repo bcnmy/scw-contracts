@@ -45,9 +45,9 @@ const DEPLOYMENT_SALTS =
   DEPLOYMENT_MODE === "DEV" ? DEPLOYMENT_SALTS_DEV : DEPLOYMENT_SALTS_PROD;
 
 // State
-let entryPointAddress = "0x29D4cFA9869C4fb4a78a6F7f32468f5e0b78da4e";
-// process.env.ENTRY_POINT_ADDRESS ||
-// "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+const entryPointAddress =
+  process.env.ENTRY_POINT_ADDRESS ||
+  "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 let baseImpAddress = "";
 const provider = ethers.provider;
 const contractsDeployed: Record<string, string> = {};
@@ -96,22 +96,6 @@ export async function deployGeneric(
     console.log(err);
     return "";
   }
-}
-
-async function deployEntryPointContract(deployerInstance: Deployer) {
-  const chainId = (await provider.getNetwork()).chainId;
-  if (chainId !== 31337) {
-    console.log("Entry Point Already Deployed Address: ", entryPointAddress);
-    return;
-  }
-
-  entryPointAddress = await deployGeneric(
-    deployerInstance,
-    DEPLOYMENT_SALTS.ENTRY_POINT,
-    EntryPoint__factory.bytecode,
-    "EntryPoint",
-    []
-  );
 }
 
 async function deployBaseWalletImpContract(deployerInstance: Deployer) {
@@ -331,7 +315,6 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
 
   const deployerInstance = await getPredeployedDeployerContractInstance();
-  await deployEntryPointContract(deployerInstance);
   console.log("=========================================");
   await deployBaseWalletImpContract(deployerInstance);
   console.log("=========================================");
