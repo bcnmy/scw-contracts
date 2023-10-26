@@ -45,9 +45,9 @@ const DEPLOYMENT_SALTS =
   DEPLOYMENT_MODE === "DEV" ? DEPLOYMENT_SALTS_DEV : DEPLOYMENT_SALTS_PROD;
 
 // State
-const entryPointAddress =
-  process.env.ENTRY_POINT_ADDRESS ||
-  "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+const entryPointAddress = "0x00000061FEfce24A79343c27127435286BB7A4E1";
+// process.env.ENTRY_POINT_ADDRESS ||
+// "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 let baseImpAddress = "";
 const provider = ethers.provider;
 const contractsDeployed: Record<string, string> = {};
@@ -81,10 +81,10 @@ export async function deployGeneric(
     }
 
     try {
-      // await run("verify:verify", {
-      //   address: computedAddress,
-      //   constructorArguments,
-      // });
+      await run("verify:verify", {
+        address: computedAddress,
+        constructorArguments,
+      });
     } catch (err) {
       console.log(err);
     }
@@ -117,7 +117,7 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
   const gasPriceConfig = DEPLOYMENT_CHAIN_GAS_PRICES[chainId];
 
   if (!factoryStakeConfig[chainId]) {
-    throw new Error(`Paymaster stake config not found for chainId ${chainId}`);
+    throw new Error(`Factory stake config not found for chainId ${chainId}`);
   }
   if (!gasPriceConfig) {
     throw new Error(`Gas price config not found for chainId ${chainId}`);

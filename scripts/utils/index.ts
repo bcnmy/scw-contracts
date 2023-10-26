@@ -219,6 +219,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
+  88882: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
 
   // Mainnets
   137: {
@@ -276,6 +280,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
   592: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"), // 1 GLMR = $0.18
+  },
+  88888: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
   },
 };
 
@@ -342,6 +350,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
+  88882: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
 
   // Mainnets
   137: {
@@ -399,6 +411,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   592: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("556"), // 1 GLMR = $0.18
+  },
+  88888: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("3000"), // 1 CHZ = $0.05
   },
 };
 
@@ -490,7 +506,7 @@ export const deployContract = async (
 
   console.log(`Submitted transaction ${hash} for deployment`);
 
-  const { status, logs, blockNumber } = await wait();
+  const { status, logs, blockNumber } = await wait(5);
 
   if (status !== 1) {
     throw new Error(`Transaction ${hash} failed`);
