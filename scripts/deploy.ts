@@ -85,10 +85,10 @@ export async function deployGeneric(
     }
 
     try {
-      await run("verify:verify", {
-        address: computedAddress,
-        constructorArguments,
-      });
+      // await run("verify:verify", {
+      //   address: computedAddress,
+      //   constructorArguments,
+      // });
     } catch (err) {
       console.log(err);
     }
@@ -332,8 +332,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   // console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
   console.log("=========================================");
-  await deployBatchedSessionRouterModule(deployerInstance);
-  console.log("=========================================");
+  // await deployBatchedSessionRouterModule(deployerInstance);
+  // console.log("=========================================");
   await deployErc20SessionValidationModule(deployerInstance);
   console.log("=========================================");
   await deploySmartContractOwnershipRegistryModule(deployerInstance);
