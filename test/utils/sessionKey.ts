@@ -44,13 +44,8 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
   );
 
   const userOpHash = await entryPoint.getUserOpHash(userOp);
-  const userOpHashAndModuleAddress = ethers.utils.hexConcat([
-    ethers.utils.hexZeroPad(userOpHash, 32),
-    ethers.utils.hexZeroPad(sessionKeyManagerAddress, 20),
-  ]);
-  const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
   const signatureOverUserOpHashAndModuleAddress = await sessionKey.signMessage(
-    ethers.utils.arrayify(resultingHash)
+    ethers.utils.arrayify(userOpHash)
   );
 
   const paddedSig = defaultAbiCoder.encode(
