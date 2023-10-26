@@ -1,8 +1,8 @@
 import { formatEther, parseEther } from "ethers/lib/utils";
 import { ethers } from "hardhat";
 
-const to = "0xDb7dEe591333b2ff1eF13A91204E17665f3Ef2B7";
-const value = parseEther("1");
+const to = "0x500081E858F7a214cfe4F729f0321ee0e24F900F";
+const value = parseEther("0.1");
 
 (async () => {
   const [signer] = await ethers.getSigners();

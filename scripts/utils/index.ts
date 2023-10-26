@@ -29,7 +29,6 @@ const options = { gasLimit: 7000000 /*, gasPrice: 70000000000 */ };
 
 type DeploymentSaltsType = {
   ENTRY_POINT: string;
-  MULTI_SEND: string;
   WALLET_FACTORY: string;
   WALLET_IMP: string;
   SINGELTON_PAYMASTER: string;
@@ -46,7 +45,6 @@ type DeploymentSaltsType = {
 // Dev Salts
 export const DEPLOYMENT_SALTS_DEV: DeploymentSaltsType = {
   ENTRY_POINT: "DEVX_ENTRY_POINT_V0_30032023",
-  MULTI_SEND: "DEVX_MULTI_SEND_V0_21082023",
   WALLET_FACTORY: "DEVX_WALLET_FACTORY_V2_050920203",
   WALLET_IMP: "DEVX_WALLET_IMP_V2_05092023",
   SINGELTON_PAYMASTER: "DEVX_SINGLETON_PAYMASTER_V1_21082024",
@@ -65,7 +63,6 @@ export const DEPLOYMENT_SALTS_DEV: DeploymentSaltsType = {
 // Prod Salts
 export const DEPLOYMENT_SALTS_PROD: DeploymentSaltsType = {
   ENTRY_POINT: "",
-  MULTI_SEND: "",
   WALLET_FACTORY: "PROD_WALLET_FACTORY_V2_0509023SexZu7Y",
   WALLET_IMP: "PROD_WALLET_IMP_V2_05092023_ixWZVOM",
   SINGELTON_PAYMASTER: "PROD_SINGLETON_PAYMASTER_V1_22082023N4hlwuH",
@@ -131,6 +128,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
     // gasPrice: parseUnits("15", "gwei"),
   },
   88018: {},
+  88882: {
+    gasPrice: parseUnits("10", "gwei"),
+  },
 
   // Mainnets
   137: { maxPriorityFeePerGas: parseUnits("50", "gwei") },
@@ -149,6 +149,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   5000: { gasPrice: parseUnits("1", "gwei") },
   1284: { gasPrice: parseUnits("200", "gwei") },
   592: { gasPrice: parseUnits("2", "gwei") },
+  88888: {
+    gasPrice: parseUnits("10", "gwei"),
+  },
 };
 
 export type StakingConfig = {

@@ -1,20 +1,12 @@
 import hardhat, { ethers } from "hardhat";
-import { getContractAddress, parseUnits } from "ethers/lib/utils";
+import { getContractAddress, parseEther } from "ethers/lib/utils";
 import { Deployer__factory } from "../typechain";
-import { BigNumber } from "ethers";
+import { DEPLOYMENT_CHAIN_GAS_PRICES } from "./utils";
 
 export async function mainDeployDeployer() {
   try {
-    const deploymentGasPrice = getDeploymentGasPrice();
-    console.log(
-      "deploymentGasPrice %i : %f gwei",
-      deploymentGasPrice,
-      ethers.utils.formatUnits(deploymentGasPrice, "gwei")
-    );
-    const deploymentGasLimit = 287000;
-    const DEPLOYMENT_FEE = BigNumber.from(
-      (deploymentGasPrice * deploymentGasLimit).toString()
-    );
+    const DEPLOYMENT_FEE = parseEther("0.1");
+
     console.log(
       " DEPLOYMENT_FEE %i : %f",
       DEPLOYMENT_FEE.toString(),
@@ -22,6 +14,12 @@ export async function mainDeployDeployer() {
     );
 
     const provider = ethers.provider;
+    const chainId = (await provider.getNetwork()).chainId;
+
+    const DEPLOYMENT_GAS_PRICE = DEPLOYMENT_CHAIN_GAS_PRICES[chainId];
+    if (!DEPLOYMENT_GAS_PRICE) {
+      throw new Error(`No deployment gas price set for chain ${chainId}`);
+    }
 
     const deployerKey = process.env.DEPLOYER_CONTRACT_DEPLOYER_PRIVATE_KEY;
     if (!deployerKey) {
@@ -40,7 +38,6 @@ export async function mainDeployDeployer() {
       nonce: 0,
     });
 
-    const chainId = (await provider.getNetwork()).chainId;
     console.log(
       `Checking deployer contract ${deployerContractAddress} on chain ${chainId}...`
     );
@@ -81,10 +78,9 @@ export async function mainDeployDeployer() {
         }
       }
       console.log("Deploying Deployer Contract...");
-      // const deployerContractDeployed = await new Deployer__factory(deployer).deploy({maxFeePerGas: 350e9, maxPriorityFeePerGas: 100e9, nonce: 0});
       const deployerContractDeployed = await new Deployer__factory(
         deployer
-      ).deploy({});
+      ).deploy({ ...DEPLOYMENT_GAS_PRICE });
       await deployerContractDeployed.deployed();
       console.log(
         "Deployed new Deployer Contract at %s on chain %s: %i",
@@ -103,87 +99,6 @@ export async function mainDeployDeployer() {
   } catch (error) {
     console.log("error while deploying Deployer Contract");
     console.log(error);
-  }
-}
-
-function getDeploymentGasPrice(): number {
-  // TESTNETS
-  if (
-    hardhat.network.name === "polygon_mumbai" &&
-    hardhat.network.config.chainId === 80001
-  ) {
-    return 50e9;
-  } else if (
-    hardhat.network.name === "goerli" &&
-    hardhat.network.config.chainId === 5
-  ) {
-    return 400e9;
-  } else if (
-    hardhat.network.name === "avalancheTest" &&
-    hardhat.network.config.chainId === 43113
-  ) {
-    return 50e9; // 50 nAvax
-  } else if (
-    hardhat.network.name === "arbitrumGoerli" &&
-    hardhat.network.config.chainId === 421613
-  ) {
-    return 10e9; // 10 Gwei
-  } else if (
-    hardhat.network.name === "optimismGoerli" &&
-    hardhat.network.config.chainId === 420
-  ) {
-    return 10e9; // 10 gwei
-  } else if (
-    hardhat.network.name === "bnb_testnet" &&
-    hardhat.network.config.chainId === 97
-  ) {
-    return 50e9; // 50 gwei
-  } else if (
-    hardhat.network.name === "zkevm_testnet" &&
-    hardhat.network.config.chainId === 1442
-  ) {
-    return 100e9; // 100 gwei
-    // MAINNETS
-  } else if (
-    hardhat.network.name === "polygon_mainnet" &&
-    hardhat.network.config.chainId === 137
-  ) {
-    return 500e9; // 500 gwei
-  } else if (
-    hardhat.network.name === "eth_mainnet" &&
-    hardhat.network.config.chainId === 1
-  ) {
-    return 50e9; // 50 gwei
-  } else if (
-    hardhat.network.name === "avalancheMain" &&
-    hardhat.network.config.chainId === 43114
-  ) {
-    return 50e9; // 50 gwei
-  } else if (
-    hardhat.network.name === "arbitrumMain" &&
-    hardhat.network.config.chainId === 42161
-  ) {
-    return 1e9; // 1 gwei
-  } else if (
-    hardhat.network.name === "optimismMainnet" &&
-    hardhat.network.config.chainId === 10
-  ) {
-    return 1e8; // 0.1 gwei
-  } else if (
-    hardhat.network.name === "bnb_mainnet" &&
-    hardhat.network.config.chainId === 56
-  ) {
-    return 10e9; // 10 gwei
-  } else if (
-    hardhat.network.name === "zkevm_mainnet" &&
-    hardhat.network.config.chainId === 1101
-  ) {
-    return 10e9; // 500 gwei
-    // OTHERWISE CHECK HARDHAT CONFIG. IF NOT SET IN CONFIG, USE 100 GWEI
-  } else {
-    return hardhat.network.config.gasPrice === "auto"
-      ? 100e9
-      : hardhat.network.config.gasPrice;
   }
 }
 
