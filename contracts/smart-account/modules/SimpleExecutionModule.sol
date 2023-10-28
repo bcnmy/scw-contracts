@@ -8,7 +8,7 @@ import "../interfaces/modules/IExecFromModule.sol";
 contract SimpleExecutionModule is ISimpleExecutionModule, ReentrancyGuard {
     /**
      * @dev Allows to execute a transaction on SA.execute() internal method which opens up ability to do delegate calls
-     * @dev required to be called by a Smart Account hence signature validation should have been done 
+     * @dev required to be called by a Smart Account hence signature validation should have been done
      * using 4337 flow (validation modules) or non-4337 flow
      * @param _tx Smart Account transaction
      */
@@ -28,6 +28,6 @@ contract SimpleExecutionModule is ISimpleExecutionModule, ReentrancyGuard {
         // Review: We could add post checks to double check undesired effects of the transaction
         // below should not be allowed
         // 1. changing implementation
-        // 2. any changes in storage layout 
+        // 2. any changes in storage layout
     }
 }

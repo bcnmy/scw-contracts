@@ -10,7 +10,7 @@ contract MockWrapper {
 
     /**
      * @dev Intercept erc20 transfer and send 1/3 of the amount to the fee collector
-     * @notice This must be called via delegate call as this wrapper just acts as a logic to split payments 
+     * @notice This must be called via delegate call as this wrapper just acts as a logic to split payments
      */
     function interact(
         address token,
