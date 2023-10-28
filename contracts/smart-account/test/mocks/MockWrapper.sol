@@ -25,9 +25,11 @@ contract MockWrapper {
     /**
      * @dev Failing method in the wrapper
      */
-    function failToInteract(address token,
+    function failToInteract(
+        address token,
         address receiver,
-        uint256 amount) external {
-            revert('FailToInteract');
-        }
+        uint256 amount
+    ) external {
+        revert("FailToInteract");
+    }
 }
