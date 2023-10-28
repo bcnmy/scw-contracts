@@ -21,4 +21,13 @@ contract MockWrapper {
         IERC20(token).transfer(FEE_COLLECTOR, cut);
         IERC20(token).transfer(receiver, amount - cut);
     }
+
+    /**
+     * @dev Failing method in the wrapper
+     */
+    function failToInteract(address token,
+        address receiver,
+        uint256 amount) external {
+            revert('FailToInteract');
+        }
 }
