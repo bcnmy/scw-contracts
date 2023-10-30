@@ -13,6 +13,7 @@ import {ISmartAccount} from "./interfaces/ISmartAccount.sol";
 import {IBaseSmartAccount} from "./interfaces/IBaseSmartAccount.sol";
 import {IModuleManager} from "./interfaces/base/IModuleManager.sol";
 import {IFallbackManager} from "./interfaces/base/IFallbackManager.sol";
+import {IEcdsaOwnershipRegistryModule} from "./interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -298,6 +299,26 @@ contract SmartAccount is
         if (address(_modules[validationModule]) != address(0)) {
             return
                 ISignatureValidator(validationModule).isValidSignature(
+                    dataHash,
+                    moduleSignature
+                );
+        } else {
+            revert WrongValidationModule(validationModule);
+        }
+    }
+
+    /// @inheritdoc ISmartAccount
+    function isValidSignatureUnsafe(
+        bytes32 dataHash,
+        bytes memory signature
+    ) public view returns (bytes4) {
+        (bytes memory moduleSignature, address validationModule) = abi.decode(
+            signature,
+            (bytes, address)
+        );
+        if (address(_modules[validationModule]) != address(0)) {
+            return
+                IEcdsaOwnershipRegistryModule(validationModule).isValidSignatureUnsafe(
                     dataHash,
                     moduleSignature
                 );

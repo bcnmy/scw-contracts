@@ -54,8 +54,8 @@ interface IEcdsaOwnershipRegistryModule {
     function getOwner(address smartAccount) external view returns (address);
 
     /**
-     * @dev Validates a signature for a message signed by address.
-     * @dev Also try dataHash.toEthSignedMessageHash()
+     * @dev Validates an EIP-1271 signature
+     * @dev Appends Smart Account address to the hash to avoid replay attacks
      * @param dataHash hash of the data
      * @param moduleSignature Signature to be validated.
      * @param smartAccount expected signer Smart Account address.
@@ -66,4 +66,32 @@ interface IEcdsaOwnershipRegistryModule {
         bytes memory moduleSignature,
         address smartAccount
     ) external view returns (bytes4);
+
+    /**
+     * @dev Same as isValidSignatureForAddress but does not append Smart Account address to the hash
+     * @dev Expects the data Hash to already include smart account address information
+     * @param dataHash hash of the data whihc includes smart account address
+     * @param moduleSignature Signature to be validated.
+     * @param smartAccount expected signer Smart Account address.
+     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
+     */
+    function isValidSignatureForAddressUnsafe(
+        bytes32 dataHash,
+        bytes memory moduleSignature,
+        address smartAccount
+    ) external view returns (bytes4);
+
+    /**
+     * @dev Validates an EIP-1271 signature
+     * @dev Expects the data Hash to already include smart account address information
+     * @param dataHash hash of the data whihc includes smart account address
+     * @param moduleSignature Signature to be validated.
+     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
+     */
+
+    function isValidSignatureUnsafe(
+        bytes32 dataHash,
+        bytes memory moduleSignature
+    ) external view returns (bytes4);
+
 }

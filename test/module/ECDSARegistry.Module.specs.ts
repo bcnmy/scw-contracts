@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import hre, { ethers, deployments, waffle } from "hardhat";
-import { hashMessage } from "ethers/lib/utils";
+import { hashMessage, solidityKeccak256 } from "ethers/lib/utils";
 import {
   makeEcdsaModuleUserOp,
   getUserOpHash,
@@ -496,12 +496,21 @@ describe("ECDSA Registry Module: ", async () => {
     it("Returns EIP1271_MAGIC_VALUE for valid signature signed by Smart Account Owner", async () => {
       const { ecdsaRegistryModule, userSA } = await setupTests();
 
-      const messageToSign = "SCW signed this message";
-      const dataHash = hashMessage(messageToSign);
-      const signature = await smartAccountOwner.signMessage(messageToSign);
+      const stringMessage = "SCW signed this message";
+      const messageHash = solidityKeccak256(["string"], [stringMessage]);
+      const messageHashAndAddress = ethers.utils.arrayify(
+        ethers.utils.hexConcat([
+          messageHash,
+          userSA.address,
+        ])
+      );
+
+      // signMessage prepends the message with the prefix and length and then hashes it
+      const signature = await smartAccountOwner.signMessage(messageHashAndAddress);
+      
       expect(
         await ecdsaRegistryModule.isValidSignatureForAddress(
-          dataHash,
+          messageHash,
           signature,
           userSA.address
         )
@@ -511,14 +520,21 @@ describe("ECDSA Registry Module: ", async () => {
     it("Reverts when Unregistered Smart Account calls isValidSignature()", async () => {
       const { ecdsaRegistryModule, randomContract } = await setupTests();
       const unregisteredSmartAccount = randomContract.address;
-      const messageToSign = "SCW signed this message";
-      const dataHash = hashMessage(messageToSign);
-      const signature = await smartAccountOwner.signMessage(messageToSign);
+
+      const stringMessage = "SCW signed this message";
+      const messageHash = solidityKeccak256(["string"], [stringMessage]);
+      const messageHashAndAddress = ethers.utils.arrayify(
+        ethers.utils.hexConcat([
+          messageHash,
+          unregisteredSmartAccount,
+        ])
+      );
+      const signature = await smartAccountOwner.signMessage(messageHashAndAddress);
 
       // set msg.sender to be unregisteredSmartAccount instead of userSA.address
       await expect(
         ecdsaRegistryModule.isValidSignatureForAddress(
-          dataHash,
+          messageHash,
           signature,
           unregisteredSmartAccount
         )
@@ -528,8 +544,9 @@ describe("ECDSA Registry Module: ", async () => {
     it("Reverts when signature length is less than 65", async () => {
       const { ecdsaRegistryModule, userSA } = await setupTests();
 
-      const messageToSign = "SCW signed this message";
-      const dataHash = hashMessage(messageToSign);
+      const stringMessage = "SCW signed this message";
+      const messageHash = solidityKeccak256(["string"], [stringMessage]);
+
       // construct signature of length < 65
       const invalidSignature = new Uint8Array(64);
       for (let i = 0; i < invalidSignature.length; i++) {
@@ -537,7 +554,7 @@ describe("ECDSA Registry Module: ", async () => {
       }
       await expect(
         ecdsaRegistryModule.isValidSignatureForAddress(
-          dataHash,
+          messageHash,
           invalidSignature,
           userSA.address
         )
@@ -547,16 +564,70 @@ describe("ECDSA Registry Module: ", async () => {
     it("Returns 0xffffffff for signatures not signed by Smart Account Owners ", async () => {
       const { ecdsaRegistryModule, userSA } = await setupTests();
 
-      const messageToSign = "SCW signed this message";
-      const dataHash = hashMessage(messageToSign);
+      const stringMessage = "SCW signed this message";
+      const messageHash = solidityKeccak256(["string"], [stringMessage]);
+      const messageHashAndAddress = ethers.utils.arrayify(
+        ethers.utils.hexConcat([
+          messageHash,
+          userSA.address,
+        ])
+      );
       const invalidOwner = charlie;
-      const signature = await invalidOwner.signMessage(messageToSign);
+      const signature = await invalidOwner.signMessage(messageHashAndAddress);
 
       expect(
         await ecdsaRegistryModule.isValidSignatureForAddress(
-          dataHash,
+          messageHash,
           signature,
           userSA.address
+        )
+      ).to.equal(EIP1271_INVALID_SIGNATURE);
+    });
+
+    it("Can not replay signature for the SA with the same owner", async () => {
+      const { ecdsaRegistryModule, userSA, saFactory, ecdsaOwnershipSetupData } = await setupTests();
+  
+      const stringMessage = "SCW signed this message";
+      const messageHash = solidityKeccak256(["string"], [stringMessage]);
+      const messageHashAndAddress = ethers.utils.arrayify(
+        ethers.utils.hexConcat([
+          messageHash,
+          userSA.address,
+        ])
+      );
+      const signature = await smartAccountOwner.signMessage(messageHashAndAddress);
+  
+      expect(
+        await ecdsaRegistryModule.isValidSignatureForAddress(
+          messageHash,
+          signature,
+          userSA.address
+        )
+      ).to.equal(EIP1271_MAGIC_VALUE);
+
+      // get a new smart account
+      const userSA2Address =
+        await saFactory.getAddressForCounterFactualAccount(
+          ecdsaRegistryModule.address,
+          ecdsaOwnershipSetupData,
+          smartAccountDeploymentIndex + 1
+        );
+      await saFactory.deployCounterFactualAccount(
+        ecdsaRegistryModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex + 1
+      );
+      const userSA2 = await hre.ethers.getContractAt(
+        "SmartAccount",
+        userSA2Address
+      );
+
+      // when isValidSignatureForAddress receives userSA2 as parameter, it means isValidSignature was called from userSA2
+      expect(
+        await ecdsaRegistryModule.isValidSignatureForAddress(
+          messageHash,
+          signature,
+          userSA2.address // different SA with the same owner
         )
       ).to.equal(EIP1271_INVALID_SIGNATURE);
     });

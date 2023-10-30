@@ -208,6 +208,19 @@ interface ISmartAccount is IBaseSmartAccount, IModuleManager {
     ) external payable;
 
     /**
+     * @dev Validates an EIP-1271 signature
+     * @dev Expects the data Hash to already include smart account address information
+     * @param dataHash hash of the data whihc includes smart account address
+     * @param moduleSignature Signature to be validated.
+     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
+     */
+
+    function isValidSignatureUnsafe(
+        bytes32 dataHash,
+        bytes memory moduleSignature
+    ) external view returns (bytes4);
+
+    /**
      * @dev Check current account deposit in the entryPoint
      */
     function getDeposit() external view returns (uint256);
