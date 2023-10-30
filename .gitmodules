@@ -3,4 +3,4 @@
 	url = https://github.com/foundry-rs/forge-std
 [submodule "lib/registry"]
 	path = lib/registry
-	url = https://github.com/rhinestonewtf/registry@d0ee08c
+	url = https://github.com/rhinestonewtf/registry

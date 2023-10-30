@@ -46,7 +46,10 @@ jobs:
         with:
           version: nightly
 
-      - name: Install dependencies
+      - name: Install foundry dependencies
+        run: forge install
+
+      - name: Install hardhat dependencies
         run: yarn install --frozen-lockfile && yarn build
 
       - name: Run Forge build
