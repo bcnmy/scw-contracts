@@ -15,9 +15,15 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      - name: Install foundry dependencies
+        run: forge install
       - name: Create a fake .secret file
         run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
-      - name: Install dependencies
+      - name: Install hardhat dependencies
         run: yarn install --frozen-lockfile && yarn build
       - name: Lint sources
         run: yarn run lint
