@@ -93,5 +93,4 @@ interface IEcdsaOwnershipRegistryModule {
         bytes32 dataHash,
         bytes memory moduleSignature
     ) external view returns (bytes4);
-
 }

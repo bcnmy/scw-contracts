@@ -499,15 +499,14 @@ describe("ECDSA Registry Module: ", async () => {
       const stringMessage = "SCW signed this message";
       const messageHash = solidityKeccak256(["string"], [stringMessage]);
       const messageHashAndAddress = ethers.utils.arrayify(
-        ethers.utils.hexConcat([
-          messageHash,
-          userSA.address,
-        ])
+        ethers.utils.hexConcat([messageHash, userSA.address])
       );
 
       // signMessage prepends the message with the prefix and length and then hashes it
-      const signature = await smartAccountOwner.signMessage(messageHashAndAddress);
-      
+      const signature = await smartAccountOwner.signMessage(
+        messageHashAndAddress
+      );
+
       expect(
         await ecdsaRegistryModule.isValidSignatureForAddress(
           messageHash,
@@ -524,12 +523,11 @@ describe("ECDSA Registry Module: ", async () => {
       const stringMessage = "SCW signed this message";
       const messageHash = solidityKeccak256(["string"], [stringMessage]);
       const messageHashAndAddress = ethers.utils.arrayify(
-        ethers.utils.hexConcat([
-          messageHash,
-          unregisteredSmartAccount,
-        ])
+        ethers.utils.hexConcat([messageHash, unregisteredSmartAccount])
       );
-      const signature = await smartAccountOwner.signMessage(messageHashAndAddress);
+      const signature = await smartAccountOwner.signMessage(
+        messageHashAndAddress
+      );
 
       // set msg.sender to be unregisteredSmartAccount instead of userSA.address
       await expect(
@@ -567,10 +565,7 @@ describe("ECDSA Registry Module: ", async () => {
       const stringMessage = "SCW signed this message";
       const messageHash = solidityKeccak256(["string"], [stringMessage]);
       const messageHashAndAddress = ethers.utils.arrayify(
-        ethers.utils.hexConcat([
-          messageHash,
-          userSA.address,
-        ])
+        ethers.utils.hexConcat([messageHash, userSA.address])
       );
       const invalidOwner = charlie;
       const signature = await invalidOwner.signMessage(messageHashAndAddress);
@@ -585,18 +580,22 @@ describe("ECDSA Registry Module: ", async () => {
     });
 
     it("Can not replay signature for the SA with the same owner", async () => {
-      const { ecdsaRegistryModule, userSA, saFactory, ecdsaOwnershipSetupData } = await setupTests();
-  
+      const {
+        ecdsaRegistryModule,
+        userSA,
+        saFactory,
+        ecdsaOwnershipSetupData,
+      } = await setupTests();
+
       const stringMessage = "SCW signed this message";
       const messageHash = solidityKeccak256(["string"], [stringMessage]);
       const messageHashAndAddress = ethers.utils.arrayify(
-        ethers.utils.hexConcat([
-          messageHash,
-          userSA.address,
-        ])
+        ethers.utils.hexConcat([messageHash, userSA.address])
       );
-      const signature = await smartAccountOwner.signMessage(messageHashAndAddress);
-  
+      const signature = await smartAccountOwner.signMessage(
+        messageHashAndAddress
+      );
+
       expect(
         await ecdsaRegistryModule.isValidSignatureForAddress(
           messageHash,
@@ -606,12 +605,11 @@ describe("ECDSA Registry Module: ", async () => {
       ).to.equal(EIP1271_MAGIC_VALUE);
 
       // get a new smart account
-      const userSA2Address =
-        await saFactory.getAddressForCounterFactualAccount(
-          ecdsaRegistryModule.address,
-          ecdsaOwnershipSetupData,
-          smartAccountDeploymentIndex + 1
-        );
+      const userSA2Address = await saFactory.getAddressForCounterFactualAccount(
+        ecdsaRegistryModule.address,
+        ecdsaOwnershipSetupData,
+        smartAccountDeploymentIndex + 1
+      );
       await saFactory.deployCounterFactualAccount(
         ecdsaRegistryModule.address,
         ecdsaOwnershipSetupData,

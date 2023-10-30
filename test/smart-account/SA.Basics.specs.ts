@@ -81,16 +81,18 @@ describe("Modular Smart Account Basics: ", async () => {
     const { userSA, ecdsaModule } = await setupTests();
 
     const eip1271MagicValue = "0x1626ba7e";
-    
+
     const stringMessage = "SCW signed this message";
-    const messageHash = ethers.utils.solidityKeccak256(["string"], [stringMessage]);
+    const messageHash = ethers.utils.solidityKeccak256(
+      ["string"],
+      [stringMessage]
+    );
     const messageHashAndAddress = ethers.utils.arrayify(
-        ethers.utils.hexConcat([
-          messageHash,
-          userSA.address,
-        ])
-      );
-    const signature = await smartAccountOwner.signMessage(messageHashAndAddress);
+      ethers.utils.hexConcat([messageHash, userSA.address])
+    );
+    const signature = await smartAccountOwner.signMessage(
+      messageHashAndAddress
+    );
 
     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"],

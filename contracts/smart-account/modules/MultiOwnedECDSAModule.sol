@@ -148,17 +148,19 @@ contract MultiOwnedECDSAModule is
         bytes memory moduleSignature,
         address smartAccount
     ) public view virtual override returns (bytes4) {
-        if (_verifySignature(
-                keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n52", 
+        if (
+            _verifySignature(
+                keccak256(
                     abi.encodePacked(
-                        dataHash,
-                        smartAccount
+                        "\x19Ethereum Signed Message:\n52",
+                        abi.encodePacked(dataHash, smartAccount)
                     )
-                )), 
-                moduleSignature, 
-                smartAccount)
-            ) {
-                return EIP1271_MAGIC_VALUE;
+                ),
+                moduleSignature,
+                smartAccount
+            )
+        ) {
+            return EIP1271_MAGIC_VALUE;
         }
         return bytes4(0xffffffff);
     }

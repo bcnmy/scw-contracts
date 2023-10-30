@@ -107,17 +107,19 @@ contract EcdsaOwnershipRegistryModule is
         bytes memory moduleSignature,
         address smartAccount
     ) public view virtual override returns (bytes4) {
-        if (_verifySignature(
-                keccak256(abi.encodePacked("\x19Ethereum Signed Message:\n52", 
+        if (
+            _verifySignature(
+                keccak256(
                     abi.encodePacked(
-                        dataHash,
-                        smartAccount
+                        "\x19Ethereum Signed Message:\n52",
+                        abi.encodePacked(dataHash, smartAccount)
                     )
-                )), 
-                moduleSignature, 
-                smartAccount)
-            ) {
-                return EIP1271_MAGIC_VALUE;
+                ),
+                moduleSignature,
+                smartAccount
+            )
+        ) {
+            return EIP1271_MAGIC_VALUE;
         }
         return bytes4(0xffffffff);
     }
@@ -128,7 +130,11 @@ contract EcdsaOwnershipRegistryModule is
         bytes memory moduleSignature
     ) public view virtual returns (bytes4) {
         return
-            isValidSignatureForAddressUnsafe(dataHash, moduleSignature, msg.sender);
+            isValidSignatureForAddressUnsafe(
+                dataHash,
+                moduleSignature,
+                msg.sender
+            );
     }
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule
@@ -137,12 +143,8 @@ contract EcdsaOwnershipRegistryModule is
         bytes memory moduleSignature,
         address smartAccount
     ) public view virtual returns (bytes4) {
-        if (_verifySignature(
-                dataHash, 
-                moduleSignature, 
-                smartAccount)
-            ) {
-                return EIP1271_MAGIC_VALUE;
+        if (_verifySignature(dataHash, moduleSignature, smartAccount)) {
+            return EIP1271_MAGIC_VALUE;
         }
         return bytes4(0xffffffff);
     }
