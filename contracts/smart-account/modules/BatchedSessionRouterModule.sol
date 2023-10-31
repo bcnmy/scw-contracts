@@ -57,8 +57,8 @@ contract BatchedSessionRouter is
             bytes memory sessionKeySignature
         ) = abi.decode(moduleSignature, (address, SessionData[], bytes));
 
-        if(!IModuleManager(userOp.sender).isModuleEnabled(sessionKeyManager)) {
-            revert ("SR Invalid SKM");
+        if (!IModuleManager(userOp.sender).isModuleEnabled(sessionKeyManager)) {
+            revert("SR Invalid SKM");
         }
 
         address recovered = ECDSA.recover(

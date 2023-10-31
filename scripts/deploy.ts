@@ -332,8 +332,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   // console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
   console.log("=========================================");
-  // await deployBatchedSessionRouterModule(deployerInstance);
-  // console.log("=========================================");
+  await deployBatchedSessionRouterModule(deployerInstance);
+  console.log("=========================================");
   await deployErc20SessionValidationModule(deployerInstance);
   console.log("=========================================");
   await deploySmartContractOwnershipRegistryModule(deployerInstance);
