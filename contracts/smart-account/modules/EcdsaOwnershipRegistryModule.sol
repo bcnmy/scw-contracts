@@ -112,7 +112,8 @@ contract EcdsaOwnershipRegistryModule is
                 keccak256(
                     abi.encodePacked(
                         "\x19Ethereum Signed Message:\n52",
-                        abi.encodePacked(dataHash, smartAccount)
+                        dataHash, 
+                        smartAccount
                     )
                 ),
                 moduleSignature,
