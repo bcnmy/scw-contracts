@@ -153,7 +153,7 @@ contract MultiOwnedECDSAModule is
                 keccak256(
                     abi.encodePacked(
                         "\x19Ethereum Signed Message:\n52",
-                        dataHash, 
+                        dataHash,
                         smartAccount
                     )
                 ),
