@@ -1,7 +1,6 @@
 import hre, { deployments, ethers } from "hardhat";
 import { Wallet, Contract, BytesLike } from "ethers";
 import { EntryPoint__factory } from "../../typechain-types";
-import { VerifyingSingletonPaymaster__factory } from "../../biconomy-paymasters/typechain-types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import solc from "solc";
 
@@ -9,16 +8,6 @@ export const getEntryPoint = async () => {
   const EntryPointDeployment = await deployments.get("EntryPoint");
   return EntryPoint__factory.connect(
     EntryPointDeployment.address,
-    ethers.provider.getSigner()
-  );
-};
-
-export const getVerifyingPaymaster = async () => {
-  const VerifyingPaymasterDeployment = await deployments.get(
-    "VerifyingSingletonPaymaster"
-  );
-  return VerifyingSingletonPaymaster__factory.connect(
-    VerifyingPaymasterDeployment.address,
     ethers.provider.getSigner()
   );
 };
