@@ -3,7 +3,7 @@ import { Signer } from "ethers";
 import { ethers } from "hardhat";
 import { Deployer, Deployer__factory } from "../../typechain";
 
-import { DEPLOYMENT_SALTS_DEV, isContract } from "../../scripts/utils";
+import { isContract } from "../../scripts/utils";
 
 describe("Deploy the deployer and then deploy more contracts using it", function () {
   let entryPointAddress: string;
@@ -25,9 +25,7 @@ describe("Deploy the deployer and then deploy more contracts using it", function
   });
 
   it("Deploys Entrypoint", async function () {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS_DEV.ENTRY_POINT)
-    );
+    const salt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test"));
 
     const provider = ethers.provider;
 
@@ -58,9 +56,7 @@ describe("Deploy the deployer and then deploy more contracts using it", function
   });
 
   it("Deploys MultiSend", async function () {
-    const salt = ethers.utils.keccak256(
-      ethers.utils.toUtf8Bytes(DEPLOYMENT_SALTS_DEV.MULTI_SEND)
-    );
+    const salt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes("test2"));
 
     const provider = ethers.provider;
 

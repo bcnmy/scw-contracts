@@ -1,6 +1,6 @@
 import { BigNumber, BytesLike, Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
-import { EntryPoint } from "../../typechain";
+import { EntryPoint } from "../../typechain-types";
 import { UserOperation } from "./userOperation";
 import { fillAndSign, makeEcdsaModuleUserOp } from "./userOp";
 import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
@@ -44,13 +44,8 @@ export async function makeEcdsaSessionKeySignedBatchUserOp(
   );
 
   const userOpHash = await entryPoint.getUserOpHash(userOp);
-  const userOpHashAndModuleAddress = ethers.utils.hexConcat([
-    ethers.utils.hexZeroPad(userOpHash, 32),
-    ethers.utils.hexZeroPad(sessionKeyManagerAddress, 20),
-  ]);
-  const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
   const signatureOverUserOpHashAndModuleAddress = await sessionKey.signMessage(
-    ethers.utils.arrayify(resultingHash)
+    ethers.utils.arrayify(userOpHash)
   );
 
   const paddedSig = defaultAbiCoder.encode(

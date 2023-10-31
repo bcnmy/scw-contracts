@@ -12,12 +12,11 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 
-describe("SessionKey: Session Router (via Bundler)", async () => {
+describe("SessionKey: Batched Session Router (via Bundler)", async () => {
   let [deployer, smartAccountOwner, charlie, verifiedSigner, sessionKey] =
     [] as SignerWithAddress[];
 
@@ -168,10 +167,6 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
         ecdsaModule: ecdsaModule,
         userSA: userSA,
         mockToken: mockToken,
-        verifyingPaymaster: await getVerifyingPaymaster(
-          deployer,
-          verifiedSigner
-        ),
         sessionKeyManager: sessionKeyManager,
         erc20SessionModule: erc20SessionModule,
         sessionKeyData: sessionKeyData,
@@ -238,13 +233,8 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
 
     // create a signature with the sessionKeyManager address
     const userOpHash = await entryPoint.getUserOpHash(userOp);
-    const userOpHashAndModuleAddress = ethers.utils.hexConcat([
-      ethers.utils.hexZeroPad(userOpHash, 32),
-      ethers.utils.hexZeroPad(sessionKeyManager.address, 20),
-    ]);
-    const resultingHash = ethers.utils.keccak256(userOpHashAndModuleAddress);
-    const signatureOverUserOpHashAndModuleAddress =
-      await sessionKey.signMessage(ethers.utils.arrayify(resultingHash));
+    const signatureOverUserOpHash =
+      await sessionKey.signMessage(ethers.utils.arrayify(userOpHash));
 
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
       [
@@ -272,7 +262,7 @@ describe("SessionKey: Session Router (via Bundler)", async () => {
             "0x",
           ],
         ],
-        signatureOverUserOpHashAndModuleAddress,
+        signatureOverUserOpHash,
       ]
     );
 
