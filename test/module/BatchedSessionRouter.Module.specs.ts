@@ -187,7 +187,7 @@ describe("SessionKey: Batched Session Router", async () => {
     ]);
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
-      "execute",  // not executeBatch
+      "execute", // not executeBatch
       [mockToken.address, 0, approveCallData],
       userSA.address,
       sessionKey,
