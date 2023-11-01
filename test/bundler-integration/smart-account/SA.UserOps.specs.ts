@@ -8,7 +8,6 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-  getVerifyingPaymaster,
 } from "../../utils/setupHelper";
 import {
   makeEcdsaModuleUserOp,
@@ -80,21 +79,10 @@ describe("UserOps (with Bundler)", async () => {
 
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-    const verifyingPaymasterContract = await getVerifyingPaymaster();
-
-    await verifyingPaymasterContract.depositFor(await deployer.getAddress(), {
-      value: ethers.utils.parseEther("2"),
-    });
-
-    await verifyingPaymasterContract.addStake(86400, {
-      value: ethers.utils.parseEther("2"),
-    });
-
     return {
       entryPoint: await getEntryPoint(),
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
-      verifyingPaymaster: verifyingPaymasterContract,
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
@@ -103,15 +91,14 @@ describe("UserOps (with Bundler)", async () => {
 
   describe("validateUserOp ", async () => {
     it("Can validate a userOp via proper Authorization Module", async () => {
-      const { entryPoint, mockToken, userSA, ecdsaModule, verifyingPaymaster } =
-        await setupTests();
+      const { entryPoint, mockToken, userSA, ecdsaModule } = await setupTests();
 
       const charlieTokenBalanceBefore = await mockToken.balanceOf(
         charlie.address
       );
       const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
-      const userOp = await makeEcdsaModuleUserOpWithPaymaster(
+      const userOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
         [
           mockToken.address,
@@ -122,10 +109,6 @@ describe("UserOps (with Bundler)", async () => {
         smartAccountOwner,
         entryPoint,
         ecdsaModule.address,
-        verifyingPaymaster,
-        deployer,
-        0,
-        0,
         {
           preVerificationGas: 50000,
         }
