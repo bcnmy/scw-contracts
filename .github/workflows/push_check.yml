@@ -17,16 +17,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - name: Create a fake .secret file
         run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
-      - name: Update submodule
-        run: git submodule update --init --recursive && git submodule sync
-      - name: Create a fake .secret file inside submodule
-        run: cd biconomy-paymasters && echo "primary twist rack vendor diagram image used route theme frown either will" > .secret && cd ..
-      - name: Install submodules dependencies
-        run: cd biconomy-paymasters && yarn install --frozen-lockfile && npx hardhat compile && cd ..
-      - name: build after submodule is built
-        run: yarn build
+      - name: Install dependencies and build
+        run: yarn install --frozen-lockfile && yarn build
       - name: Lint sources
         run:
           yarn run lint 
@@ -50,20 +42,11 @@ jobs:
       - name: Create a fake .secret file
         run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
 
-      - name: Install dependencies
-        run: yarn install --frozen-lockfile
+      - name: Install dependencies and build
+        run: yarn install --frozen-lockfile && yarn build
 
       - name: Update submodule
         run: git submodule update --init --recursive && git submodule sync 
-
-      - name: Create a fake .secret file inside submodule
-        run: cd biconomy-paymasters && echo "primary twist rack vendor diagram image used route theme frown either will" > .secret && cd ..
-
-      - name: Install submodules dependencies
-        run: cd biconomy-paymasters && yarn install --frozen-lockfile && npx hardhat compile && cd ..
-
-      - name: build after submodule is built
-        run: yarn build
 
       - name: Run Hardhat Tests
         run: yarn test
