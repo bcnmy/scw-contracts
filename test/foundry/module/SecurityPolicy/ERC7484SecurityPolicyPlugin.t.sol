@@ -6,7 +6,9 @@ import {RhinestoneTestBase, RegistryTestLib, RegistryInstance, AttestationReques
 import {SmartAccount} from "sa/SmartAccount.sol";
 import {UserOperation} from "aa-core/EntryPoint.sol";
 import {ERC7484SecurityPolicyPlugin, IERC7484SecurityPolicyPlugin} from "modules/SecurityPolicies/ERC7484SecurityPolicy.sol";
+import {IERC7484SecurityPolicyPluginEventsErrors} from "interfaces/modules/IERC7484SecurityPolicyPlugin.sol";
 import {ISecurityPolicyManagerPlugin, ISecurityPolicyManagerPluginEventsErrors} from "interfaces/modules/ISecurityPolicyManagerPlugin.sol";
+import {ISecurityPolicyPlugin} from "interfaces/modules/ISecurityPolicyManagerPlugin.sol";
 import {SecurityPolicyManagerPlugin, SENTINEL_MODULE_ADDRESS} from "modules/SecurityPolicyManagerPlugin.sol";
 import {MultichainECDSAValidator} from "modules/MultichainECDSAValidator.sol";
 import {IQuery} from "lib/registry/src/interface/IQuery.sol";
@@ -14,7 +16,8 @@ import {Vm} from "forge-std/Test.sol";
 
 contract ERC7484SecurityPolicyPluginTest is
     RhinestoneTestBase,
-    ISecurityPolicyManagerPluginEventsErrors
+    ISecurityPolicyManagerPluginEventsErrors,
+    IERC7484SecurityPolicyPluginEventsErrors
 {
     using RegistryTestLib for RegistryInstance;
 
@@ -112,6 +115,49 @@ contract ERC7484SecurityPolicyPluginTest is
         );
     }
 
+    function testShouldSetConfiguration() external {
+        vm.startPrank(alice.addr);
+        assertEq(
+            erc7484SecurityPolicyPlugin.configuration(alice.addr).threshold,
+            0
+        );
+        assertEq(
+            erc7484SecurityPolicyPlugin
+                .configuration(alice.addr)
+                .trustedAttesters
+                .length,
+            0
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit ConfigurationSet(alice.addr, defaultConfig);
+
+        erc7484SecurityPolicyPlugin.setConfiguration(defaultConfig);
+
+        assertEq(
+            erc7484SecurityPolicyPlugin.configuration(alice.addr).threshold,
+            defaultConfig.threshold
+        );
+        assertEq(
+            erc7484SecurityPolicyPlugin
+                .configuration(alice.addr)
+                .trustedAttesters
+                .length,
+            defaultConfig.trustedAttesters.length
+        );
+
+        for (uint256 i = 0; i < defaultConfig.trustedAttesters.length; i++) {
+            assertEq(
+                erc7484SecurityPolicyPlugin
+                    .configuration(alice.addr)
+                    .trustedAttesters[i],
+                defaultConfig.trustedAttesters[i]
+            );
+        }
+
+        vm.stopPrank();
+    }
+
     function testShouldAllowModuleInstallationIfEnoughAttestationsExists()
         external
     {
@@ -173,6 +219,95 @@ contract ERC7484SecurityPolicyPluginTest is
         entryPoint.handleOps(arraifyOps(op), owner.addr);
 
         assertTrue(sa.isModuleEnabled(address(validator)));
+    }
+
+    function testShouldNotAllowModuleInstallationIfNotConfigured() external {
+        // Erase the default configuration
+        vm.prank(address(sa));
+        erc7484SecurityPolicyPlugin.setConfiguration(
+            IERC7484SecurityPolicyPluginEventsErrors.Configuration({
+                trustedAttesters: new address[](0),
+                threshold: 0
+            })
+        );
+        vm.stopPrank();
+
+        // Create 3 attestations for the multichain validator module
+        instancel1.newAttestation(
+            defaultSchema1,
+            bob.privateKey,
+            AttestationRequestData({
+                subject: address(validator),
+                expirationTime: uint48(0),
+                data: abi.encode(true),
+                value: 0
+            })
+        );
+        instancel1.newAttestation(
+            defaultSchema1,
+            charlie.privateKey,
+            AttestationRequestData({
+                subject: address(validator),
+                expirationTime: uint48(0),
+                data: abi.encode(true),
+                value: 0
+            })
+        );
+        instancel1.newAttestation(
+            defaultSchema1,
+            dan.privateKey,
+            AttestationRequestData({
+                subject: address(validator),
+                expirationTime: uint48(0),
+                data: abi.encode(true),
+                value: 0
+            })
+        );
+
+        // Attempt to install the multichain validator module
+        bytes memory setupData = abi.encodeCall(
+            validator.initForSmartAccount,
+            (alice.addr)
+        );
+
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkSetupAndEnableModule,
+                    (address(validator), setupData)
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(
+                abi.encodeWithSelector(
+                    ISecurityPolicyPlugin
+                        .SaConfigurationNotInitialized
+                        .selector,
+                    address(sa)
+                )
+            )
+        );
+
+        assertFalse(sa.isModuleEnabled(address(validator)));
     }
 
     function testShouldNotAllowModuleInstallationIfInsufficientAttestationsExists()
