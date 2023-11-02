@@ -14,7 +14,6 @@ abstract contract FallbackManagerV1 is SelfAuthorized, IFallbackManager {
     bytes32 internal constant FALLBACK_HANDLER_STORAGE_SLOT =
         0x6c9a6c4a39284e37ed1cf53d337577d14212a4870fb976a4366c693b939918d4;
 
-    // solhint-disable-next-line payable-fallback,no-complex-fallback
     fallback() external {
         bytes32 slot = FALLBACK_HANDLER_STORAGE_SLOT;
 

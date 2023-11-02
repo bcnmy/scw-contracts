@@ -19,8 +19,6 @@ Biconomy Smart Account is a smart contract wallet focused on implementing Accoun
 - **ModuleManager.sol**: Adopts the Gnosis Safe module manager pattern.
 - **DefaultCallbackHandler.sol**: Handles hooks to respond to token receipts.
 - **MultiSend.sol & MultiSendCallOnly.sol**: Facilitates batching multiple transactions into one.
-- **VerifyingSingletonPaymaster.sol**: A paymaster that uses an external service for transaction validation.
-- **PaymasterHelpers.sol**: A library essential for decoding paymaster data and context.
 
 ## 🛠️ Prerequisites
 
@@ -54,6 +52,14 @@ Before diving in, place a mnemonic in a `.secret` file at the root.
 Below are the commands you can use for various tasks:
 
 ### 🧪 Testing
+
+#### Note if there are issues with submodules
+
+to init or update submodules
+`git submodule update --remote`
+`git submodule update --init`
+
+you can alternatively also run forge install. 
 
 Run regular tests:
 

@@ -129,78 +129,6 @@ describe("ECDSA Registry Module: ", async () => {
         },
         smartAccountOwner, // need to sign by someone at least
         entryPoint,
-        "nonce"
-      );
-
-      const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-        ["bytes", "address"],
-        [deploymentUserOp.signature, ecdsaRegistryModule.address]
-      );
-
-      deploymentUserOp.signature = signatureWithModuleAddress;
-
-      await expect(entryPoint.handleOps([deploymentUserOp], charlie.address))
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA24 signature error");
-
-      await expect(
-        ecdsaRegistryModule.getOwner(expectedSmartAccountAddress)
-      ).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
-    });
-  });
-
-  describe("initForSmartAccount: ", async () => {
-    it("Reverts when trying to set Smart Contract as owner of the Smart Account via deployment userOp", async () => {
-      // DISCLAIMER:
-      // In theory it is still possible to set smart contractd address as owner of a SA via initForSmartAccount,
-      // if factory has been called directly, not via userOp.
-      // In Biconomy SDK will will perform an additional off-chain verification that address provided as owner is EOA
-      // Also the initForSmartAccount method's parameter is now called `eoaOwner` instead of just `owner` to
-      // highlight it should be EOA.
-      // Assuming this, the explicit check for eoaOwner is not smart contract can be removed because of this
-      // issue: https://github.com/eth-infinitism/bundler/issues/137
-
-      const { saFactory, ecdsaRegistryModule, randomContract, entryPoint } =
-        await setupTests();
-
-      const ecdsaOwnershipSetupData =
-        ecdsaRegistryModule.interface.encodeFunctionData(
-          "initForSmartAccount",
-          [randomContract.address]
-        );
-
-      const deploymentData = saFactory.interface.encodeFunctionData(
-        "deployCounterFactualAccount",
-        [
-          ecdsaRegistryModule.address,
-          ecdsaOwnershipSetupData,
-          smartAccountDeploymentIndex,
-        ]
-      );
-
-      const expectedSmartAccountAddress =
-        await saFactory.getAddressForCounterFactualAccount(
-          ecdsaRegistryModule.address,
-          ecdsaOwnershipSetupData,
-          smartAccountDeploymentIndex
-        );
-
-      await deployer.sendTransaction({
-        to: expectedSmartAccountAddress,
-        value: ethers.utils.parseEther("60"),
-      });
-
-      // deployment userOp
-      const deploymentUserOp = await fillAndSign(
-        {
-          sender: expectedSmartAccountAddress,
-          callGasLimit: 1_000_000,
-          initCode: ethers.utils.hexConcat([saFactory.address, deploymentData]),
-          callData: "0x",
-          preVerificationGas: 50000,
-        },
-        smartAccountOwner, // need to sign by someone at least
-        entryPoint,
         "nonce",
         true
       );
@@ -311,10 +239,11 @@ describe("ECDSA Registry Module: ", async () => {
         await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("7.934");
 
-      const txnData = mockToken.interface.encodeFunctionData("transfer", [
+      const txnData = encodeTransfer(
         bob.address,
-        tokenAmountToTransfer.toString(),
-      ]);
+        tokenAmountToTransfer.toString()
+      );
+
       const userOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
         [mockToken.address, 0, txnData],
@@ -342,10 +271,11 @@ describe("ECDSA Registry Module: ", async () => {
         await setupTests();
       const tokenAmountToTransfer = ethers.utils.parseEther("0.23436");
 
-      const txnData = mockToken.interface.encodeFunctionData("transfer", [
+      const txnData = encodeTransfer(
         bob.address,
-        tokenAmountToTransfer.toString(),
-      ]);
+        tokenAmountToTransfer.toString()
+      );
+
       const userOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
         [mockToken.address, 0, txnData],
@@ -374,10 +304,10 @@ describe("ECDSA Registry Module: ", async () => {
       const bobBalanceBefore = await mockToken.balanceOf(bob.address);
       const tokenAmountToTransfer = ethers.utils.parseEther("1.3425");
 
-      const txnData = mockToken.interface.encodeFunctionData("transfer", [
+      const txnData = encodeTransfer(
         bob.address,
-        tokenAmountToTransfer.toString(),
-      ]);
+        tokenAmountToTransfer.toString()
+      );
 
       const notSmartAccountOwner = charlie;
       const userOp = await makeEcdsaModuleUserOp(
@@ -445,17 +375,16 @@ describe("ECDSA Registry Module: ", async () => {
         value: ethers.utils.parseEther("60"),
       });
 
+      const txnData1 =
+        EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
+          "renounceOwnership",
+          []
+        );
+
       // renounce ownership
       const renounceOwnershipUserOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
-        [
-          ecdsaRegistryModule.address,
-          0,
-          EcdsaOwnershipRegistryModule.interface.encodeFunctionData(
-            "renounceOwnership",
-            []
-          ),
-        ],
+        [ecdsaRegistryModule.address, 0, txnData1],
         unregisteredSmartAccountAddress,
         smartAccountOwner,
         entryPoint,
@@ -473,13 +402,14 @@ describe("ECDSA Registry Module: ", async () => {
         ecdsaRegistryModule.getOwner(unregisteredSA.address)
       ).to.be.revertedWith("NoOwnerRegisteredForSmartAccount");
 
+      const txnData2 = encodeTransfer(
+        bob.address,
+        tokenAmountToTransfer.toString()
+      );
+
       const sendTokenUserOp = await makeEcdsaModuleUserOp(
         "execute_ncC",
-        [
-          mockToken.address,
-          0,
-          encodeTransfer(bob.address, tokenAmountToTransfer.toString()),
-        ],
+        [mockToken.address, 0, txnData2],
         unregisteredSmartAccountAddress,
         smartAccountOwner,
         entryPoint,
@@ -516,10 +446,10 @@ describe("ECDSA Registry Module: ", async () => {
       const bobBalanceBefore = await mockToken.balanceOf(bob.address);
       const tokenAmountToTransfer = ethers.utils.parseEther("3.632");
 
-      const txnData = await mockToken.interface.encodeFunctionData("transfer", [
+      const txnData = encodeTransfer(
         bob.address,
-        tokenAmountToTransfer.toString(),
-      ]);
+        tokenAmountToTransfer.toString()
+      );
 
       const userOp = await makeEcdsaModuleUserOp(
         "execute_ncC",

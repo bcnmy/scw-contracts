@@ -9,7 +9,10 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
 } from "../../utils/setupHelper";
-import { makeEcdsaModuleUserOp } from "../../utils/userOp";
+import {
+  makeEcdsaModuleUserOp,
+  makeEcdsaModuleUserOpWithPaymaster,
+} from "../../utils/userOp";
 import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 

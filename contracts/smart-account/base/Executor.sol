@@ -6,6 +6,15 @@ import {Enum} from "../common/Enum.sol";
 
 /// @title Executor - A contract that can execute transactions
 abstract contract Executor is IExecutor {
+    /**
+     * @notice Executes a given operation (either Call or DelegateCall) to a specified address with provided data.
+     * @param to The address to which the operation should be executed.
+     * @param value The amount of ether (in wei) to send with the call (only for Call operations).
+     * @param data The call data to send with the operation.
+     * @param operation The type of operation to execute (either Call or DelegateCall).
+     * @param txGas The amount of gas to use for the operation.
+     * @return success A boolean indicating whether the operation was successful.
+     */
     function _execute(
         address to,
         uint256 value,

@@ -58,20 +58,21 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         bytes memory data,
         Enum.Operation operation,
         uint256 txGas
-    ) public virtual override returns (bool success) {
+    ) public virtual override returns (bool) {
         // Only whitelisted modules are allowed.
         if (
             msg.sender == SENTINEL_MODULES || _modules[msg.sender] == address(0)
         ) revert ModuleNotEnabled(msg.sender);
         // Execute transaction without further confirmations.
         // Can add guards here to allow delegatecalls for selected modules (msg.senders) only
-        success = _execute(
-            to,
-            value,
-            data,
-            operation,
-            txGas == 0 ? gasleft() : txGas
-        );
+        return
+            _executeFromModule(
+                to,
+                value,
+                data,
+                operation,
+                txGas == 0 ? gasleft() : txGas
+            );
     }
 
     /// @inheritdoc IModuleManager
@@ -89,9 +90,10 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         address to,
         uint256 value,
         bytes memory data,
-        Enum.Operation operation
+        Enum.Operation operation,
+        uint256 txGas
     ) public override returns (bool success, bytes memory returnData) {
-        success = execTransactionFromModule(to, value, data, operation);
+        success = execTransactionFromModule(to, value, data, operation, txGas);
 
         assembly {
             // Load free memory location
@@ -106,6 +108,17 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
             // Point the return data to the correct memory location
             returnData := ptr
         }
+    }
+
+    /// @inheritdoc IModuleManager
+    function execTransactionFromModuleReturnData(
+        address to,
+        uint256 value,
+        bytes memory data,
+        Enum.Operation operation
+    ) public override returns (bool, bytes memory) {
+        return
+            execTransactionFromModuleReturnData(to, value, data, operation, 0);
     }
 
     /// @inheritdoc IModuleManager
@@ -140,7 +153,8 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
                 to[i],
                 value[i],
                 data[i],
-                operations[i]
+                operations[i],
+                gasleft()
             );
             unchecked {
                 ++i;
@@ -215,15 +229,22 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         emit DisabledModule(module);
     }
 
-    // TODO: can use not executor.execute, but SmartAccount._call for the unification
-
+    /**
+     * @notice Executes an operation from a module, emits specific events based on the result.
+     * @param to The address to which the operation should be executed.
+     * @param value The amount of ether (in wei) to send with the call (only for Call operations).
+     * @param data The call data to send with the operation.
+     * @param operation The type of operation to execute (either Call or DelegateCall).
+     * @return success A boolean indicating whether the operation was successful.
+     */
     function _executeFromModule(
         address to,
         uint256 value,
         bytes memory data,
-        Enum.Operation operation
+        Enum.Operation operation,
+        uint256 txGas
     ) internal returns (bool success) {
-        success = _execute(to, value, data, operation, gasleft());
+        success = _execute(to, value, data, operation, txGas);
         if (success) {
             emit ModuleTransaction(msg.sender, to, value, data, operation);
             emit ExecutionFromModuleSuccess(msg.sender);
@@ -259,6 +280,14 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         return initialAuthorizationModule;
     }
 
+    /**
+     * @notice Sets up a new module by calling a specified setup contract with provided data.
+     *         The function will revert if the setupContract address is zero or if the setup call fails.
+     * @dev This function is internal and utilizes assembly for low-level call operations and error handling.
+     * @param setupContract The address of the contract that will be called to set up the module.
+     * @param setupData The call data to send to the setup contract.
+     * @return module The address of the newly set up module.
+     */
     function _setupModule(
         address setupContract,
         bytes memory setupData

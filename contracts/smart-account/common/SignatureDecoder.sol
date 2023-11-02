@@ -3,8 +3,16 @@ pragma solidity 0.8.19;
 
 /// @title SignatureDecoder - Decodes signatures that a encoded as bytes
 abstract contract SignatureDecoder {
-    /// @dev divides bytes signature into `uint8 v, bytes32 r, bytes32 s`.
-    /// @param signature concatenated rsv signatures
+    /**
+     * @dev Splits a given signature into its `r`, `s`, and `v` components.
+     * @notice The signature is assumed to be in the compact format:
+     *         r (32 bytes) + s (32 bytes) + v (1 byte).
+     *         This function uses assembly for efficient memory operations.
+     * @param signature The signature bytes.
+     * @return v The `v` component of the signature.
+     * @return r The `r` component of the signature as bytes32.
+     * @return s The `s` component of the signature as bytes32.
+     */
     function _signatureSplit(
         bytes memory signature
     ) internal pure returns (uint8 v, bytes32 r, bytes32 s) {

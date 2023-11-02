@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.19;
 
-/* solhint-disable function-max-lines,no-unused-import */
+/* solhint-disable function-max-lines */
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
@@ -11,7 +11,7 @@ import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.s
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {IBatchedSessionRouterModule} from "../interfaces/modules/IBatchedSessionRouterModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
-import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
+import {IModuleManager} from "../interfaces/base/IModuleManager.sol";
 
 /**
  * @title Batched Session Router
@@ -57,10 +57,12 @@ contract BatchedSessionRouter is
             bytes memory sessionKeySignature
         ) = abi.decode(moduleSignature, (address, SessionData[], bytes));
 
+        if (!IModuleManager(userOp.sender).isModuleEnabled(sessionKeyManager)) {
+            revert("SR Invalid SKM");
+        }
+
         address recovered = ECDSA.recover(
-            ECDSA.toEthSignedMessageHash(
-                keccak256(abi.encodePacked(userOpHash, sessionKeyManager))
-            ),
+            ECDSA.toEthSignedMessageHash(userOpHash),
             sessionKeySignature
         );
 
@@ -130,7 +132,6 @@ contract BatchedSessionRouter is
     }
 
     /**
-     * @inheritdoc ISignatureValidator
      * @dev isValidSignature according to BaseAuthorizationModule
      * @param _dataHash Hash of the data to be validated.
      * @param _signature Signature over the the _dataHash.

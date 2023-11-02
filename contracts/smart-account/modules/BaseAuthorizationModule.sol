@@ -4,13 +4,12 @@ pragma solidity 0.8.19;
 /* solhint-disable no-empty-blocks */
 
 import {IBaseAuthorizationModule} from "../interfaces/modules/IBaseAuthorizationModule.sol";
+import {AuthorizationModulesConstants} from "./AuthorizationModulesConstants.sol";
 
-contract AuthorizationModulesConstants {
-    uint256 internal constant VALIDATION_SUCCESS = 0;
-    uint256 internal constant SIG_VALIDATION_FAILED = 1;
-}
-
+/// @dev Base contract for authorization modules
 abstract contract BaseAuthorizationModule is
     IBaseAuthorizationModule,
     AuthorizationModulesConstants
-{}
+{
+
+}
