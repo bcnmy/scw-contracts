@@ -17,24 +17,33 @@ contract ERC7484SecurityPolicyPlugin is IERC7484SecurityPolicyPlugin {
         registry = _regisry;
     }
 
-    /// @inheritdoc ISecurityPolicyPlugin
-    function validateSecurityPolicy(
-        address _scw,
-        address _plugin
-    ) external override {
-        registry.checkN(
-            _plugin,
-            _configuration[_scw].trustedAttesters,
-            _configuration[_scw].threshold
-        );
-    }
-
     /// @inheritdoc IERC7484SecurityPolicyPlugin
     function setConfiguration(
         Configuration calldata _config
     ) external override {
         _configuration[msg.sender] = _config;
         emit ConfigurationSet(msg.sender, _config);
+    }
+
+    /// @inheritdoc ISecurityPolicyPlugin
+    function validateSecurityPolicy(
+        address _sa,
+        address _plugin
+    ) external view override {
+        Configuration storage saConfiguration = _configuration[_sa];
+
+        if (
+            saConfiguration.threshold == 0 ||
+            saConfiguration.trustedAttesters.length == 0
+        ) {
+            revert SaConfigurationNotInitialized(_sa);
+        }
+
+        registry.checkN(
+            _plugin,
+            saConfiguration.trustedAttesters,
+            saConfiguration.threshold
+        );
     }
 
     /// @inheritdoc IERC7484SecurityPolicyPlugin
