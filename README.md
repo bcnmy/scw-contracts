@@ -189,6 +189,10 @@ Boost your tests and scripts' speed by setting the `TS_NODE_TRANSPILE_ONLY` envi
 
 ---
 
+## 📋 Audit Reports
+
+We have had our contracts audited by reputable firms to ensure their security. You can find the reports in the [audits folder](https://github.com/bcnmy/scw-contracts/tree/main/audits).
+
 ## 🤝 Contributing
 
 Biconomy Smart Account is an open-source project. Contributions are welcome. If you're interested in contributing, please check our [contribution guidelines](./CONTRIBUTING.md) and feel free to submit pull requests or raise issues.
