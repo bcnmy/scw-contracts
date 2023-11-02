@@ -150,35 +150,37 @@ contract AccountRecoveryModule is
         address lastGuardianAddress;
         address currentGuardianAddress;
         bytes memory currentGuardianSig;
-        uint48 validAfter;
-        uint48 validUntil;
         uint48 latestValidAfter;
         uint48 earliestValidUntil = type(uint48).max;
         bytes32 userOpHashSigned = userOpHash.toEthSignedMessageHash();
 
         for (uint256 i; i < requiredSignatures; ) {
-            // even indexed signatures are signatures over userOpHash
-            // every signature is 65 bytes long and they are packed into moduleSignature
-            address currentUserOpSignerAddress = userOpHashSigned.recover(
-                moduleSignature[2 * i * 65:(2 * i + 1) * 65]
-            );
+            {
+                // even indexed signatures are signatures over userOpHash
+                // every signature is 65 bytes long and they are packed into moduleSignature
+                address currentUserOpSignerAddress = userOpHashSigned.recover(
+                    moduleSignature[2 * i * 65:(2 * i + 1) * 65]
+                );
 
-            // odd indexed signatures are signatures over CONTROL_HASH used to calculate guardian id
-            currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 * i + 2) *
-                65];
+                // odd indexed signatures are signatures over CONTROL_HASH used to calculate guardian id
+                currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 *
+                    i +
+                    2) * 65];
 
-            currentGuardianAddress = controlHashEthSigned.recover(
-                currentGuardianSig
-            );
+                currentGuardianAddress = controlHashEthSigned.recover(
+                    currentGuardianSig
+                );
 
-            if (currentUserOpSignerAddress != currentGuardianAddress) {
-                return SIG_VALIDATION_FAILED;
+                if (currentUserOpSignerAddress != currentGuardianAddress) {
+                    return SIG_VALIDATION_FAILED;
+                }
             }
 
+            address sender = userOp.sender;
             bytes32 currentGuardian = keccak256(currentGuardianSig);
 
-            validAfter = _guardians[currentGuardian][userOp.sender].validAfter;
-            validUntil = _guardians[currentGuardian][userOp.sender].validUntil;
+            uint48 validAfter = _guardians[currentGuardian][sender].validAfter;
+            uint48 validUntil = _guardians[currentGuardian][sender].validUntil;
 
             // validUntil == 0 means the `currentGuardian` has not been set as guardian
             // for the userOp.sender smartAccount
