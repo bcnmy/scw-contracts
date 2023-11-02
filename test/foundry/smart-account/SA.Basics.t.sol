@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.20;
 
 import {SATestBase} from "../base/SATestBase.sol";
 import {SmartAccount} from "sa/SmartAccount.sol";

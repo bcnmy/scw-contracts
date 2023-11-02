@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.20;
 
 import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../interfaces/ISignatureValidator.sol";
 import {Enum} from "../common/Enum.sol";

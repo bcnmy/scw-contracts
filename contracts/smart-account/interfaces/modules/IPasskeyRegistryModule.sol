@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.19;
+pragma solidity ^0.8.20;
 
 /**
  * @title Passkey ownership Authorization module for Biconomy Smart Accounts.
