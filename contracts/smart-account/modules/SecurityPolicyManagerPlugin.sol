@@ -4,11 +4,14 @@ pragma solidity ^0.8.20;
 import {ISecurityPolicyManagerPlugin, ISecurityPolicyPlugin, SENTINEL_MODULE_ADDRESS} from "contracts/smart-account/interfaces/modules/ISecurityPolicyManagerPlugin.sol";
 import {ISmartAccount} from "contracts/smart-account/interfaces/ISmartAccount.sol";
 import {Enum} from "contracts/smart-account/common/Enum.sol";
+import {LibAddress} from "contracts/smart-account/libs/LibAddress.sol";
 
 /// @title Security Policy Manager Plugin
 /// @author @ankurdubey521
 /// @dev Execution Phase Plugin responsible for enforcing security policies during plugin installation on the smart contract wallet
 contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
+    using LibAddress for address;
+
     mapping(address => mapping(address => address))
         internal enabledSecurityPoliciesLinkedList;
 
@@ -37,10 +40,42 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
 
         address module = abi.decode(returndata, (address));
 
+        // Reject if the module is not a contract
+        if (!module.isContract()) {
+            revert ModuleIsNotAContract(module);
+        }
+
         // Validate the module installed
         _validateSecurityPolicies(msg.sender, module);
 
         return module;
+    }
+
+    /// @inheritdoc ISecurityPolicyManagerPlugin
+    function checkAndEnableModule(
+        address _module
+    ) external override returns (address) {
+        // Reject if the module is not a contract
+        if (!_module.isContract()) {
+            revert ModuleIsNotAContract(_module);
+        }
+
+        // Validate the module installed
+        _validateSecurityPolicies(msg.sender, _module);
+
+        // Instruct the SA to install the module
+        ISmartAccount sa = ISmartAccount(msg.sender);
+        bool success = sa.execTransactionFromModule(
+            msg.sender,
+            0,
+            abi.encodeCall(sa.enableModule, (_module)),
+            Enum.Operation.Call
+        );
+        if (!success) {
+            revert ModuleInstallationFailed();
+        }
+
+        return _module;
     }
 
     ////////////////////////// SECURITY POLICY MANAGEMENT FUNCTIONS //////////////////////////
@@ -211,7 +246,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
 
     /// @inheritdoc ISecurityPolicyManagerPlugin
     function securityPoliciesPaginated(
-        address _scw,
+        address _sa,
         address _start,
         uint256 _pageSize
     )
@@ -225,7 +260,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
 
         mapping(address => address)
             storage enabledSecurityPolicies = enabledSecurityPoliciesLinkedList[
-                _scw
+                _sa
             ];
 
         if (_start == address(0)) {

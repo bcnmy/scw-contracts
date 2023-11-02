@@ -6,9 +6,9 @@ import {ISecurityPolicyPlugin} from "./ISecurityPolicyPlugin.sol";
 address constant SENTINEL_MODULE_ADDRESS = address(0x1);
 
 interface ISecurityPolicyManagerPluginEventsErrors {
-    event SecurityPolicyEnabled(address indexed scw, address indexed policy);
-    event SecurityPolicyDisabled(address indexed scw, address indexed policy);
-    event ModuleValidated(address indexed scw, address indexed module);
+    event SecurityPolicyEnabled(address indexed sa, address indexed policy);
+    event SecurityPolicyDisabled(address indexed sa, address indexed policy);
+    event ModuleValidated(address indexed sa, address indexed module);
 
     error SecurityPolicyAlreadyEnabled(address policy);
     error SecurityPolicyAlreadyDisabled(address policy);
@@ -16,6 +16,7 @@ interface ISecurityPolicyManagerPluginEventsErrors {
     error InvalidPointerAddress(address pointer);
     error ModuleInstallationFailed();
     error EmptyPolicyList();
+    error ModuleIsNotAContract(address module);
 }
 
 /// @title Security Policy Manager Plugin
@@ -60,13 +61,17 @@ interface ISecurityPolicyManagerPlugin is
         bytes calldata _setupData
     ) external returns (address module);
 
+    /// @dev Queries the registry and checks if the module is valid and enables the module.
+    /// @param _module The address of the module contract to be enabled
+    function checkAndEnableModule(address _module) external returns (address);
+
     /// @dev Returns the security policy for the smart contract wallet.
-    /// @param _scw The address of the smart contract wallet
+    /// @param _sa The address of the smart contract wallet
     /// @param _start The address of the first security policy in the list
     /// @param _pageSize The number of security policies to be returned
     /// @return enabledPolicies The list of enabled security policies
     function securityPoliciesPaginated(
-        address _scw,
+        address _sa,
         address _start,
         uint256 _pageSize
     ) external view returns (ISecurityPolicyPlugin[] memory enabledPolicies);

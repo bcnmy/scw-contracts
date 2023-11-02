@@ -39,7 +39,7 @@ contract TestSecurityPolicyPlugin is ISecurityPolicyPlugin {
 }
 
 contract TestSetupContractBlacklistReturn {
-    function initForSmartAccount(address) external view returns (address) {
+    function initForSmartAccount(address) external pure returns (address) {
         return address(0x2);
     }
 }
@@ -125,6 +125,33 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
     }
 
     function testModuleInstallation() external {
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkAndEnableModule,
+                    (address(validator))
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.expectEmit(true, true, true, true);
+        emit ModuleValidated(address(sa), address(validator));
+
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+
+        assertTrue(p1.wasCalled());
+        assertTrue(p2.wasCalled());
+        assertTrue(p3.wasCalled());
+        assertTrue(p4.wasCalled());
+        assertTrue(sa.isModuleEnabled(address(validator)));
+    }
+
+    function testModuleInstallationWithSetup() external {
         bytes memory setupData = abi.encodeCall(
             validator.initForSmartAccount,
             (alice.addr)
@@ -157,6 +184,51 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
     }
 
     function testShouldRevertModuleInstallationIfSecurityPolicyIsNotSatisifedOnInstalledPlugin()
+        external
+    {
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkAndEnableModule,
+                    (address(validator))
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        p4.setShouldRevert(true);
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(
+                abi.encodeWithSelector(
+                    TestSecurityPolicyPlugin
+                        .TestSecurityPolicyPluginError
+                        .selector,
+                    p4
+                )
+            )
+        );
+
+        assertFalse(sa.isModuleEnabled(address(validator)));
+    }
+
+    function testShouldRevertModuleInstallationWithSetupIfSecurityPolicyIsNotSatisifedOnInstalledPlugin()
         external
     {
         bytes memory setupData = abi.encodeCall(
@@ -203,6 +275,79 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
             )
         );
 
+        assertFalse(sa.isModuleEnabled(address(validator)));
+    }
+
+    function testShouldRevertModuleInstallationIfModuleIsNotAContract()
+        external
+    {
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkAndEnableModule,
+                    (frank.addr)
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(
+                abi.encodeWithSelector(
+                    ModuleIsNotAContract.selector,
+                    frank.addr
+                )
+            )
+        );
+
+        assertFalse(sa.isModuleEnabled(address(validator)));
+    }
+
+    function testShouldRevertModuleInstallationWithSetupIfModuleIsNotAContract()
+        external
+    {
+        bytes memory setupData = abi.encodeCall(
+            validator.initForSmartAccount,
+            (alice.addr)
+        );
+
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkSetupAndEnableModule,
+                    (frank.addr, setupData)
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
         assertFalse(sa.isModuleEnabled(address(validator)));
     }
 }
