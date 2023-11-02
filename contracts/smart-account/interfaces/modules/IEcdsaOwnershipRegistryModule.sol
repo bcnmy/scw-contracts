@@ -9,7 +9,7 @@ pragma solidity 0.8.17;
  *         - One owner per Smart Account.
  *         - Does not support outdated eth_sign flow for cheaper validations
  *         (see https://support.metamask.io/hc/en-us/articles/14764161421467-What-is-eth-sign-and-why-is-it-a-risk-)
- * !!!!!!! Only EOA owners supported, no Smart Account Owners
+ * !!!!!!! Only EOA owners are supported, no Smart Account Owners
  *         For Smart Contract Owners check SmartContractOwnership module instead
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
@@ -28,7 +28,7 @@ interface IEcdsaOwnershipRegistryModule {
 
     /**
      * @dev Initializes the module for a Smart Account.
-     * Should be used at a time of first enabling the module for a Smart Account.
+     * Should be used at time of first enabling the module for a Smart Account.
      * @param eoaOwner The owner of the Smart Account. Should be EOA!
      */
     function initForSmartAccount(address eoaOwner) external returns (address);
@@ -70,7 +70,7 @@ interface IEcdsaOwnershipRegistryModule {
     /**
      * @dev Same as isValidSignatureForAddress but does not append Smart Account address to the hash
      * @dev Expects the data Hash to already include smart account address information
-     * @param dataHash hash of the data whihc includes smart account address
+     * @param dataHash hash of the data which includes smart account address
      * @param moduleSignature Signature to be validated.
      * @param smartAccount expected signer Smart Account address.
      * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
@@ -84,11 +84,10 @@ interface IEcdsaOwnershipRegistryModule {
     /**
      * @dev Validates an EIP-1271 signature
      * @dev Expects the data Hash to already include smart account address information
-     * @param dataHash hash of the data whihc includes smart account address
+     * @param dataHash hash of the data which includes smart account address
      * @param moduleSignature Signature to be validated.
      * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
      */
-
     function isValidSignatureUnsafe(
         bytes32 dataHash,
         bytes memory moduleSignature
