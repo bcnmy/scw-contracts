@@ -8,7 +8,7 @@ import {LibAddress} from "contracts/smart-account/libs/LibAddress.sol";
 
 /// @title Security Policy Manager Plugin
 /// @author @ankurdubey521
-/// @dev Execution Phase Plugin responsible for enforcing security policies during plugin installation on the smart contract wallet
+/// @dev Execution Phase Plugin responsible for enforcing security policies during plugin installation on the smart account
 contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     using LibAddress for address;
 

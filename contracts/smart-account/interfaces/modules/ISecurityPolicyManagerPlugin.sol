@@ -2,40 +2,27 @@
 pragma solidity ^0.8.20;
 
 import {ISecurityPolicyPlugin} from "./ISecurityPolicyPlugin.sol";
+import {ISecurityPolicyManagerPluginEventsErrors} from "./ISecurityPolicyManagerPluginEventsErrors.sol";
 
 address constant SENTINEL_MODULE_ADDRESS = address(0x1);
 
-interface ISecurityPolicyManagerPluginEventsErrors {
-    event SecurityPolicyEnabled(address indexed sa, address indexed policy);
-    event SecurityPolicyDisabled(address indexed sa, address indexed policy);
-    event ModuleValidated(address indexed sa, address indexed module);
-
-    error SecurityPolicyAlreadyEnabled(address policy);
-    error SecurityPolicyAlreadyDisabled(address policy);
-    error InvalidSecurityPolicyAddress(address policy);
-    error InvalidPointerAddress(address pointer);
-    error ModuleInstallationFailed();
-    error EmptyPolicyList();
-    error ModuleIsNotAContract(address module);
-}
-
 /// @title Security Policy Manager Plugin
 /// @author @ankurdubey521
-/// @dev Execution Phase Plugin responsible for enforcing security policies during plugin installation on the smart contract wallet
+/// @dev Execution Phase Plugin responsible for enforcing security policies during plugin installation on the smart account
 interface ISecurityPolicyManagerPlugin is
     ISecurityPolicyManagerPluginEventsErrors
 {
-    /// @dev Enables the security policies for the smart contract wallet. Used during the setup process.
+    /// @dev Enables the security policies for the smart account. Used during the setup process.
     /// @param _policy The security policy to be enabled
     function enableSecurityPolicy(ISecurityPolicyPlugin _policy) external;
 
-    /// @dev Enables the security policies for the smart contract wallet. Used during the setup process.
+    /// @dev Enables the security policies for the smart account. Used during the setup process.
     /// @param _policies The security policies to be enabled
     function enableSecurityPolicies(
         ISecurityPolicyPlugin[] calldata _policies
     ) external;
 
-    /// @dev Disables the security policy for the smart contract wallet.
+    /// @dev Disables the security policy for the smart account.
     /// @param _policy The security policy to be disabled.
     /// @param _pointer The address of the security policy preceeding _policy in the list of enabled modules.
     function disableSecurityPolicy(
@@ -43,7 +30,7 @@ interface ISecurityPolicyManagerPlugin is
         ISecurityPolicyPlugin _pointer
     ) external;
 
-    /// @dev Disables the security policies for the smart contract wallet.
+    /// @dev Disables the security policies for the smart account.
     /// @param _start The first iterm in the list to be disabled.
     /// @param _end The last iterm in the list to be disabled.
     /// @param _pointer The address of the security policy preceeding _start in the list of enabled modules.
@@ -65,8 +52,8 @@ interface ISecurityPolicyManagerPlugin is
     /// @param _module The address of the module contract to be enabled
     function checkAndEnableModule(address _module) external returns (address);
 
-    /// @dev Returns the security policy for the smart contract wallet.
-    /// @param _sa The address of the smart contract wallet
+    /// @dev Returns the security policy for the smart account.
+    /// @param _sa The address of the smart account
     /// @param _start The address of the first security policy in the list
     /// @param _pageSize The number of security policies to be returned
     /// @return enabledPolicies The list of enabled security policies

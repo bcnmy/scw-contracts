@@ -15,7 +15,7 @@ import {IModuleManager} from "./interfaces/base/IModuleManager.sol";
 import {IFallbackManager} from "./interfaces/base/IFallbackManager.sol";
 
 /**
- * @title SmartAccount - EIP-4337 compatible smart contract wallet.
+ * @title SmartAccount - EIP-4337 compatible smart account.
  * @dev This contract is the base for the Smart Account functionality.
  *         - It is modular by nature. UserOp and txns validation happens in Authorization Modules.
  *         - It provides the functionality to execute AA (EIP-4337) userOps. Gnosis style txns removed to a module.
