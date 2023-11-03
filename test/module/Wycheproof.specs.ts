@@ -3,11 +3,8 @@ import { BigNumber, Contract } from "ethers";
 import { ethers } from "hardhat";
 import testVectors from "./PasskeyModule/ecdsa_secp256r1_sha256_test.json";
 import { sha256 } from "ethereumjs-util";
-// import elliptic from "elliptic";
-// const ec = new elliptic.ec("p256");
 
 describe("Passkeys Registry Module:", function () {
-  // const [alice] = waffle.provider.getWallets();
   let secp256r1: Contract;
 
   it("Deploy spec256r1 contract", async () => {

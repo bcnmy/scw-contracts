@@ -99,7 +99,7 @@ contract MultiOwnedECDSAModule is
             revert NotAnOwner(owner, msg.sender);
         _transferOwnership(msg.sender, owner, address(0));
         unchecked {
-            --numberOfOwners[msg.sender];   
+            --numberOfOwners[msg.sender];
         }
     }
 
