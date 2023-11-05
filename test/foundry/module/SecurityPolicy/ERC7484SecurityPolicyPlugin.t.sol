@@ -216,6 +216,7 @@ contract ERC7484SecurityPolicyPluginTest is
         vm.expectEmit(true, true, true, true);
         emit ModuleValidated(address(sa), address(validator));
 
+        vm.breakpoint("a");
         entryPoint.handleOps(arraifyOps(op), owner.addr);
 
         assertTrue(sa.isModuleEnabled(address(validator)));

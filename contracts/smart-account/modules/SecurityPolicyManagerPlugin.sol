@@ -18,27 +18,96 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     ////////////////////////// PLUGIN INSTALLATION FUNCTIONS //////////////////////////
 
     /// @inheritdoc ISecurityPolicyManagerPlugin
+    // solhint-disable function-max-lines
     function checkSetupAndEnableModule(
-        address _setupContract,
-        bytes calldata _setupData
+        address, //setupContract
+        bytes calldata //setupData
     ) external override returns (address) {
         // Instruct the SA to install the module and return the address
-        ISmartAccount sa = ISmartAccount(msg.sender);
-        (bool success, bytes memory returndata) = sa
-            .execTransactionFromModuleReturnData(
-                msg.sender,
+
+        bool moduleInstallationSuccess;
+        address module;
+
+        // Optimised Version of the following code:
+        // (bool success, bytes memory returndata) = sa
+        //     .execTransactionFromModuleReturnData(
+        //         msg.sender,
+        //         0,
+        //         abi.encodeCall(
+        //             sa.setupAndEnableModule,
+        //             (_setupContract, _setupData)
+        //         ),
+        //         Enum.Operation.Call
+        //     );
+        // if (!success) {
+        //     revert ModuleInstallationFailed();
+        // }
+        // address module = abi.decode(returndata, (address));
+        //
+        // The major gas saving comes from saving on memory expansion gas by re-using the space
+        // allocated for creating calldata for the sa.setupAndEnableModule call.
+        assembly ("memory-safe") {
+            let ptr := mload(0x40)
+            let savePtr := ptr
+
+            // Store selector
+            mstore(ptr, hex"5229073f") // execTransactionFromModuleReturnData(address,uint256,bytes,uint8)
+            ptr := add(ptr, 0x4)
+
+            // Store SA address and 0 for value
+            mstore(ptr, caller())
+            ptr := add(ptr, 0x40)
+
+            // Store offset for calldata and 0 for Enum.Operation.Call
+            mstore(ptr, 0x80)
+            ptr := add(ptr, 0x40)
+
+            // Create calldata for abi.encodeCall(sa.setupAndEnableModule, (_setupContract, _setupData))
+            // Store length of calldata (notice that it's going to be the same length as checkSetupAndEnableModule calldata)
+            let thisCallCalldataSize := calldatasize()
+            mstore(ptr, thisCallCalldataSize)
+            ptr := add(ptr, 0x20)
+
+            // Store selector for sa.setupAndEnableModule
+            mstore(ptr, hex"5305dd27") // setupAndEnableModule(address,bytes)
+            ptr := add(ptr, 0x4)
+
+            // Append parameters from checkSetupAndEnableModule calldata
+            calldatacopy(ptr, 0x4, sub(thisCallCalldataSize, 0x4))
+            ptr := add(ptr, sub(thisCallCalldataSize, 0x4))
+
+            // Call execTransactionFromModuleReturnData
+            let success := call(
+                gas(),
+                caller(),
                 0,
-                abi.encodeCall(
-                    sa.setupAndEnableModule,
-                    (_setupContract, _setupData)
-                ),
-                Enum.Operation.Call
-            );
-        if (!success) {
-            revert ModuleInstallationFailed();
+                savePtr,
+                sub(ptr, savePtr),
+                0,
+                0
+            )
+
+            ptr := savePtr
+
+            // copy the returndata to ptr
+            let size := returndatasize()
+            returndatacopy(ptr, 0, size)
+
+            switch success
+            case 0x1 {
+                moduleInstallationSuccess := mload(ptr)
+                module := mload(add(ptr, 0x60))
+            }
+            case 0x0 {
+                // TODO: Needs to be tested
+                revert(ptr, size)
+            }
         }
 
-        address module = abi.decode(returndata, (address));
+        if (!moduleInstallationSuccess) {
+            // TODO: Needs to be tested
+            revert ModuleInstallationFailed();
+        }
 
         // Reject if the module is not a contract
         if (!module.isContract()) {
