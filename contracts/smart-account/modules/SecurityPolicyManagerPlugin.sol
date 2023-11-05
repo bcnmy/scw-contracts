@@ -2,7 +2,6 @@
 pragma solidity ^0.8.20;
 
 import {ISecurityPolicyManagerPlugin, ISecurityPolicyPlugin, SENTINEL_MODULE_ADDRESS} from "contracts/smart-account/interfaces/modules/ISecurityPolicyManagerPlugin.sol";
-import {ISmartAccount} from "contracts/smart-account/interfaces/ISmartAccount.sol";
 import {Enum} from "contracts/smart-account/common/Enum.sol";
 import {LibAddress} from "contracts/smart-account/libs/LibAddress.sol";
 
@@ -49,33 +48,26 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         assembly ("memory-safe") {
             let ptr := mload(0x40)
             let savePtr := ptr
-
             // Store selector
             mstore(ptr, hex"5229073f") // execTransactionFromModuleReturnData(address,uint256,bytes,uint8)
             ptr := add(ptr, 0x4)
-
             // Store SA address and 0 for value
             mstore(ptr, caller())
             ptr := add(ptr, 0x40)
-
             // Store offset for calldata and 0 for Enum.Operation.Call
             mstore(ptr, 0x80)
             ptr := add(ptr, 0x40)
-
             // Create calldata for abi.encodeCall(sa.setupAndEnableModule, (_setupContract, _setupData))
             // Store length of calldata (notice that it's going to be the same length as checkSetupAndEnableModule calldata)
             let thisCallCalldataSize := calldatasize()
             mstore(ptr, thisCallCalldataSize)
             ptr := add(ptr, 0x20)
-
             // Store selector for sa.setupAndEnableModule
             mstore(ptr, hex"5305dd27") // setupAndEnableModule(address,bytes)
             ptr := add(ptr, 0x4)
-
             // Append parameters from checkSetupAndEnableModule calldata
             calldatacopy(ptr, 0x4, sub(thisCallCalldataSize, 0x4))
             ptr := add(ptr, sub(thisCallCalldataSize, 0x4))
-
             // Call execTransactionFromModuleReturnData
             let success := call(
                 gas(),
@@ -86,9 +78,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
                 0,
                 0
             )
-
             ptr := savePtr
-
             // copy the returndata to ptr
             let size := returndatasize()
             returndatacopy(ptr, 0, size)
@@ -104,7 +94,6 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         }
 
         if (!moduleInstallationSuccess) {
-            // TODO: Needs to be tested
             revert ModuleInstallationFailed();
         }
 
@@ -132,14 +121,77 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         _validateSecurityPolicies(msg.sender, _module);
 
         // Instruct the SA to install the module
-        ISmartAccount sa = ISmartAccount(msg.sender);
-        bool success = sa.execTransactionFromModule(
-            msg.sender,
-            0,
-            abi.encodeCall(sa.enableModule, (_module)),
-            Enum.Operation.Call
-        );
-        if (!success) {
+
+        // Optimised Version of the following code:
+        // ISmartAccount sa = ISmartAccount(msg.sender);
+        // bool success = sa.execTransactionFromModule(
+        //     msg.sender,
+        //     0,
+        //     abi.encodeCall(sa.enableModule, (_module)),
+        //     Enum.Operation.Call
+        // );
+        //
+        // The major gas saving comes from saving on memory expansion gas by re-using the space
+        // allocated for creating calldata for the sa.setupAndEnableModule call.
+        bool moduleInstallationSuccess;
+        uint256 operationCallEnumValue = uint256(Enum.Operation.Call);
+        assembly ("memory-safe") {
+            // Discard any memory allocated previously
+            let ptr := 0x80
+            let savePtr := ptr
+            // Store selector
+            mstore(ptr, hex"468721a7") //  execTransactionFromModule(address,uint256,bytes,uint8)
+            ptr := add(ptr, 0x4)
+            // Store SA address
+            mstore(ptr, caller())
+            ptr := add(ptr, 0x20)
+            // Store 0 for value
+            mstore(ptr, 0x0)
+            ptr := add(ptr, 0x20)
+            // Store offset for calldata
+            mstore(ptr, 0x80)
+            ptr := add(ptr, 0x20)
+            // Store Enum.Operation.Call
+            mstore(ptr, operationCallEnumValue)
+            ptr := add(ptr, 0x20)
+            // Create calldata for abi.encodeCall(sa.enableModule, (_module))
+            // Store length of calldata (notice that it's going to be the same length as checkAndEnableModule calldata)
+            let thisCallCalldataSize := calldatasize()
+            mstore(ptr, thisCallCalldataSize)
+            ptr := add(ptr, 0x20)
+            // Store selector for sa.enableModule
+            mstore(ptr, hex"610b5925") // enableModule(address,bytes)
+            ptr := add(ptr, 0x4)
+            // Append parameters from checkAndEnableModule calldata
+            calldatacopy(ptr, 0x4, sub(thisCallCalldataSize, 0x4))
+            ptr := add(ptr, sub(thisCallCalldataSize, 0x4))
+            // Call execTransactionFromModule
+            let success := call(
+                gas(),
+                caller(),
+                0,
+                savePtr,
+                sub(ptr, savePtr),
+                0,
+                0
+            )
+
+            ptr := savePtr
+
+            // copy the returndata to ptr
+            let size := returndatasize()
+            returndatacopy(ptr, 0, size)
+
+            switch success
+            case 0x1 {
+                moduleInstallationSuccess := mload(ptr)
+            }
+            case 0x0 {
+                revert(ptr, size)
+            }
+        }
+
+        if (!moduleInstallationSuccess) {
             revert ModuleInstallationFailed();
         }
 
