@@ -99,7 +99,6 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
                 module := mload(add(ptr, 0x60))
             }
             case 0x0 {
-                // TODO: Needs to be tested
                 revert(ptr, size)
             }
         }
@@ -376,7 +375,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         );
 
         while (current != address(0) && current != SENTINEL_MODULE_ADDRESS) {
-            assembly {
+            assembly ("memory-safe") {
                 let success := call(
                     gas(),
                     current,

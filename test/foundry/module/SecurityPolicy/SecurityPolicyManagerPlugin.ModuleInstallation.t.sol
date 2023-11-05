@@ -350,4 +350,172 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         assertFalse(eventData.success);
         assertFalse(sa.isModuleEnabled(address(validator)));
     }
+
+    function testShouldRevertModuleInstallationIfExecTxFromModuleFailsWithSetup()
+        external
+    {
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkSetupAndEnableModule,
+                    (address(p1), bytes(""))
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.mockCallRevert(
+            address(sa),
+            abi.encodeWithSelector(bytes4(0x5229073f)),
+            abi.encode("CUSTOM_REVERT")
+        );
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(abi.encode("CUSTOM_REVERT"))
+        );
+
+        assertFalse(sa.isModuleEnabled(address(validator)));
+    }
+
+    function testShouldRevertModuleInstallationIfExecTxFromModuleInstallationFails()
+        external
+    {
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkAndEnableModule,
+                    (address(p1))
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.mockCallRevert(
+            address(sa),
+            abi.encodeWithSelector(bytes4(0x468721a7)),
+            abi.encode("CUSTOM_REVERT")
+        );
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(abi.encode("CUSTOM_REVERT"))
+        );
+
+        assertFalse(sa.isModuleEnabled(address(validator)));
+    }
+
+    function testShouldRevertModuleInstallationIfModuleInstallationFailsWithSetup()
+        external
+    {
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkSetupAndEnableModule,
+                    (address(p1), bytes(""))
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.mockCallRevert(
+            address(sa),
+            abi.encodeWithSelector(sa.setupAndEnableModule.selector),
+            abi.encode("CUSTOM_REVERT")
+        );
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(abi.encodeWithSelector(ModuleInstallationFailed.selector))
+        );
+
+        assertFalse(sa.isModuleEnabled(address(validator)));
+    }
+
+    function testShouldRevertModuleInstallationIfModuleInstallationFails()
+        external
+    {
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(spmp),
+                0,
+                abi.encodeCall(
+                    ISecurityPolicyManagerPlugin.checkAndEnableModule,
+                    (address(p1))
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.mockCallRevert(
+            address(sa),
+            abi.encodeWithSelector(sa.enableModule.selector),
+            abi.encode("CUSTOM_REVERT")
+        );
+
+        vm.recordLogs();
+        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        UserOperationEventData memory eventData = getUserOperationEventData(
+            logs
+        );
+        assertFalse(eventData.success);
+        UserOperationRevertReasonEventData
+            memory revertReasonEventData = getUserOperationRevertReasonEventData(
+                logs
+            );
+        assertEq(
+            keccak256(revertReasonEventData.revertReason),
+            keccak256(abi.encodeWithSelector(ModuleInstallationFailed.selector))
+        );
+
+        assertFalse(sa.isModuleEnabled(address(validator)));
+    }
 }
