@@ -367,8 +367,33 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
             ];
 
         address current = enabledSecurityPolicies[SENTINEL_MODULE_ADDRESS];
+
+        // The calldata for each call to validateSecurityPolicy is the same, so we can save on gas by
+        // creating it once and re-using it for each call.
+        bytes memory validateSecurityPolicyCalldata = abi.encodeCall(
+            ISecurityPolicyPlugin.validateSecurityPolicy,
+            (_sa, _module)
+        );
+
         while (current != address(0) && current != SENTINEL_MODULE_ADDRESS) {
-            ISecurityPolicyPlugin(current).validateSecurityPolicy(_sa, _module);
+            assembly {
+                let success := call(
+                    gas(),
+                    current,
+                    0,
+                    add(validateSecurityPolicyCalldata, 0x20),
+                    mload(validateSecurityPolicyCalldata),
+                    0,
+                    0
+                )
+
+                if iszero(success) {
+                    let ptr := mload(0x40)
+                    let size := returndatasize()
+                    returndatacopy(ptr, 0, size)
+                    revert(ptr, size)
+                }
+            }
             current = enabledSecurityPolicies[current];
         }
 
