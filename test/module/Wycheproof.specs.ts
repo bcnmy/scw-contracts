@@ -8,7 +8,7 @@ describe("Passkeys Registry Module:", function () {
   let secp256r1: Contract;
 
   it("Deploy spec256r1 contract", async () => {
-    const secp256rInstance = await ethers.getContractFactory("Wycheproof");
+    const secp256rInstance = await ethers.getContractFactory("TestSecp256r1");
     const secp256r1Deployment = await secp256rInstance.deploy();
     secp256r1 = secp256rInstance.attach(secp256r1Deployment.address);
   });
@@ -31,7 +31,7 @@ describe("Passkeys Registry Module:", function () {
           const hash =
             "0x" + sha256(Buffer.from(test.msg, "hex")).toString("hex");
 
-          const result = await secp256r1.verifyStatic(
+          const result = await secp256r1.verify(
             {
               pubKeyX: pubX,
               pubKeyY: pubY,
