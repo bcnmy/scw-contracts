@@ -28,11 +28,11 @@ contract AddressResolver {
     address public constant SA_V1_FACTORY =
         0x000000F9eE1842Bb72F6BBDD75E6D3d4e3e9594C;
     address public constant SA_V2_FACTORY =
-        0x00000016FD385cEE5116EF68C189733679770338;
+        0x000000a56Aaca3e9a4C479ea6b6CD0DbcB6634F5;
     address public constant SA_V1_IMPLEMENTATION =
         0x00006B7e42e01957dA540Dc6a8F7C30c4D816af5;
     address public constant SA_V2_IMPLEMENTATION =
-        0x000000988555091db5633a5Be66d563EfB48cB95;
+        0x0000002512019Dafb59528B82CB92D3c5D2423aC;
     address public constant ECDSA_REGISTRY_MODULE_ADDRESS =
         0x0000001c5b32F37F5beA87BDD5374eB2aC54eA8e;
 
