@@ -45,7 +45,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         //
         // The major gas saving comes from saving on memory expansion gas by re-using the space
         // allocated for creating calldata for the sa.setupAndEnableModule call.
-        assembly ("memory-safe") {
+        assembly {
             let ptr := mload(0x40)
             let savePtr := ptr
             // Store selector
@@ -135,7 +135,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         // allocated for creating calldata for the sa.setupAndEnableModule call.
         bool moduleInstallationSuccess;
         uint256 operationCallEnumValue = uint256(Enum.Operation.Call);
-        assembly ("memory-safe") {
+        assembly {
             // Discard any memory allocated previously
             let ptr := 0x80
             let savePtr := ptr
@@ -427,7 +427,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         );
 
         while (current != address(0) && current != SENTINEL_MODULE_ADDRESS) {
-            assembly ("memory-safe") {
+            assembly {
                 let success := call(
                     gas(),
                     current,
