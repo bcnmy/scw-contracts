@@ -243,9 +243,7 @@ contract TestSecp256r1 {
         return JPoint(x, y, z);
     }
 
-    function jPointDouble(
-        JPoint memory p
-    ) public pure returns (JPoint memory) {
+    function jPointDouble(JPoint memory p) public pure returns (JPoint memory) {
         uint256 x;
         uint256 y;
         uint256 z;
