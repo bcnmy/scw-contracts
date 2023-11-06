@@ -40,8 +40,8 @@ interface ISecurityPolicyManagerPlugin is
 
     /**
      * @dev Disables the security policies for the smart account.
-     * @param _start The first iterm in the list to be disabled.
-     * @param _end The last iterm in the list to be disabled.
+     * @param _start The first item in the list to be disabled.
+     * @param _end The last item in the list to be disabled.
      * @param _pointer The address of the security policy preceeding _start in the list of enabled modules.
      */
     function disableSecurityPoliciesRange(
