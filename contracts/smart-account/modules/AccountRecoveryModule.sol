@@ -33,16 +33,13 @@ contract AccountRecoveryModule is
 
     string public constant NAME = "Account Recovery Module";
     string public constant VERSION = "0.1.0";
-    
+
     // execute(address,uint256,bytes)
     bytes4 public constant EXECUTE_SELECTOR = 0xb61d27f6;
     // execute_ncC(address,uint256,bytes)
     bytes4 public constant EXECUTE_OPTIMIZED_SELECTOR = 0x0000189a;
-    // keccak256(abi.encodePacked("ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE"))
-    bytes32 public constant CONTROL_HASH =
-        0x1c3074d7ce4e35b6f0a67e3db0f31ff117ca8f0a1853e86a95837fea35af828b;
-    bytes32 public immutable controlHashEthSigned =
-        CONTROL_HASH.toEthSignedMessageHash();
+    // Hash to be signed by guardians to make a guardianId
+    string public constant CONTROL_MESSAGE = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
 
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
@@ -171,9 +168,10 @@ contract AccountRecoveryModule is
             currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 * i + 2) *
                 65];
 
-            currentGuardianAddress = controlHashEthSigned.recover(
-                currentGuardianSig
-            );
+            currentGuardianAddress = keccak256(abi.encodePacked(CONTROL_MESSAGE, userOp.sender))
+                .toEthSignedMessageHash().recover(
+                    currentGuardianSig
+                );
 
             if (currentUserOpSignerAddress != currentGuardianAddress) {
                 return SIG_VALIDATION_FAILED;
@@ -218,9 +216,10 @@ contract AccountRecoveryModule is
         // userOp.callData expected to be the calldata of the default execution function
         // in this case execute(address dest, uint256 value, bytes calldata data);
         // where `data` is the submitRecoveryRequest() method calldata
-        if(bytes4(userOp.callData[0:4]) != EXECUTE_OPTIMIZED_SELECTOR &&
-                bytes4(userOp.callData[0:4]) != EXECUTE_SELECTOR) 
-        revert ("AccRecovery: Wrong selector"); 
+        if (
+            bytes4(userOp.callData[0:4]) != EXECUTE_OPTIMIZED_SELECTOR &&
+            bytes4(userOp.callData[0:4]) != EXECUTE_SELECTOR
+        ) revert("AccRecovery: Wrong selector");
 
         (address dest, uint256 callValue, bytes memory innerCallData) = abi
             .decode(

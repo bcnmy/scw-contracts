@@ -1,7 +1,7 @@
 import { expect } from "chai";
 import { ethers, deployments } from "hardhat";
 import { makeEcdsaModuleUserOp, makeUnsignedUserOp } from "../../utils/userOp";
-import { makeMultiSignedUserOpWithGuardiansList } from "../../utils/accountRecovery";
+import { makeMultiSignedUserOpWithGuardiansList, makeHashToGetGuardianId } from "../../utils/accountRecovery";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -104,8 +104,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
 
       const defaultSecurityDelay = 15;
 
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userSA.address));
 
       const guardians = await Promise.all(
         [alice, bob, charlie].map(
