@@ -24,6 +24,7 @@ import {
 } from "../typechain-types";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
+import { AddressResolver__factory } from "../typechain-types/factories/contracts/smart-account/utils/AddressResolver__factory";
 
 // Deployment Configuration
 const DEPLOYMENT_MODE = process.env.DEPLOYMENT_MODE! as "DEV" | "PROD";
@@ -274,6 +275,16 @@ async function deploySmartContractOwnershipRegistryModule(
   );
 }
 
+async function deployAddressResolver(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.ADDRESS_RESOLVER,
+    `${AddressResolver__factory.bytecode}`,
+    "AddressResolver",
+    []
+  );
+}
+
 /*
  *  This function is added to support the flow with pre-deploying the deployer contract
  *  using the `deployer-contract.deploy.ts` script.
@@ -360,6 +371,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deploySmartContractOwnershipRegistryModule(deployerInstance);
   console.log("=========================================");
+  // await deployAddressResolver(deployerInstance);
+  // console.log("=========================================");
 
   console.log(
     "Deployed Contracts: ",
