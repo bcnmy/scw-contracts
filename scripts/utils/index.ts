@@ -130,16 +130,24 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   },
 
   // Mainnets
-  137: { maxPriorityFeePerGas: parseUnits("50", "gwei") },
-  56: { maxPriorityFeePerGas: parseUnits("10", "gwei") },
-  1: { maxPriorityFeePerGas: parseUnits("30", "gwei") },
+  137: {
+    // maxPriorityFeePerGas: parseUnits("50", "gwei")
+  },
+  56: {
+    // maxPriorityFeePerGas: parseUnits("10", "gwei")
+  },
+  1: {
+    // maxPriorityFeePerGas: parseUnits("30", "gwei")
+  },
   42161: { gasPrice: parseUnits("1", "gwei") },
   42170: {
     gasPrice: parseUnits("1", "gwei"),
   },
   10: { gasPrice: parseUnits("1", "gwei") },
   43114: { gasPrice: parseUnits("30", "gwei") },
-  1101: { gasPrice: parseUnits("1", "gwei") },
+  1101: {
+    //gasPrice: parseUnits("1", "gwei")
+  },
   59144: { gasPrice: parseUnits("2", "gwei") },
   8453: { gasPrice: parseUnits("1.5", "gwei") },
   204: { gasPrice: parseUnits("0.1", "gwei") },

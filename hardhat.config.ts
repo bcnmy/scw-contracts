@@ -339,8 +339,17 @@ const config: HardhatUserConfig = {
       capxTestnet: "PLACEHOLDER_STRING",
       chillizTestnet: "PLACEHOLDER_STRING",
       chillizMainnet: "PLACEHOLDER_STRING",
+      arbitrumNova: process.env.ARBITRUM_NOVA_API_KEY || "",
     },
     customChains: [
+      {
+        network: "arbitrumNova",
+        chainId: 42170,
+        urls: {
+          apiURL: "https://api-nova.arbiscan.io/api",
+          browserURL: "https://nova.arbiscan.io/",
+        },
+      },
       {
         network: "chillizTestnet",
         chainId: 88882,
