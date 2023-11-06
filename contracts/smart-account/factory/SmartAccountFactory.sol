@@ -85,8 +85,7 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
 
         address initialAuthorizationModule;
 
-        if (initializer.length > 0) {
-            assembly {
+        assembly {
                 let success := call(
                     gas(),
                     proxy,
@@ -103,7 +102,6 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
                 }
                 initialAuthorizationModule := mload(ptr)
             }
-        }
         emit AccountCreation(proxy, initialAuthorizationModule, index);
     }
 
@@ -132,8 +130,8 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
         );
         address initialAuthorizationModule;
 
-        if (initializer.length > 0) {
-            assembly {
+
+        assembly {
                 let success := call(
                     gas(),
                     proxy,
@@ -150,7 +148,6 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
                 }
                 initialAuthorizationModule := mload(ptr)
             }
-        }
         emit AccountCreationWithoutIndex(proxy, initialAuthorizationModule);
     }
 
