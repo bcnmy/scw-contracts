@@ -1,7 +1,10 @@
 import { expect } from "chai";
 import { ethers, deployments } from "hardhat";
 import { makeEcdsaModuleUserOp, makeUnsignedUserOp } from "../../utils/userOp";
-import { makeMultiSignedUserOpWithGuardiansList, makeHashToGetGuardianId } from "../../utils/accountRecovery";
+import {
+  makeMultiSignedUserOpWithGuardiansList,
+  makeHashToGetGuardianId,
+} from "../../utils/accountRecovery";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -104,7 +107,9 @@ describe("Account Recovery Module (via Bundler)", async () => {
 
       const defaultSecurityDelay = 15;
 
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       const guardians = await Promise.all(
         [alice, bob, charlie].map(

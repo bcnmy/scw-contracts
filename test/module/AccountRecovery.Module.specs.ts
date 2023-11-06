@@ -18,7 +18,7 @@ import {
   makeMultiSignedUserOpWithGuardiansList,
   makeMultisignedSubmitRecoveryRequestUserOp,
   makeMultiSignedUserOpWithGuardiansListArbitraryCalldata,
-  makeHashToGetGuardianId
+  makeHashToGetGuardianId,
 } from "../utils/accountRecovery";
 import { arrayify } from "ethers/lib/utils";
 import { Contract } from "ethers";
@@ -78,7 +78,9 @@ describe("Account Recovery Module: ", async () => {
 
       const defaultSecurityDelay = 150;
 
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       const guardians = await Promise.all(
         [alice, bob, charlie].map(
@@ -192,7 +194,9 @@ describe("Account Recovery Module: ", async () => {
       const securityDelayBefore = userSASettingsBefore.securityDelay;
 
       const recoveryThreshold = 3;
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, aliceSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -278,7 +282,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 2;
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -342,7 +348,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 5;
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, aliceSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -403,7 +411,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, aliceSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -495,7 +505,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, aliceSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve].map(
@@ -556,7 +568,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, aliceSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, eve].map(
@@ -616,7 +630,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, aliceSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -677,7 +693,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, aliceSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -1782,7 +1800,9 @@ describe("Account Recovery Module: ", async () => {
       const messageUserOp = arrayify(
         getUserOpHash(userOp, entryPoint!.address, chainId)
       );
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       let signatures = "0x";
 
@@ -2144,7 +2164,9 @@ describe("Account Recovery Module: ", async () => {
     before(async () => {
       const { controlMessage, userSA } = await setupTests();
 
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       newGuardian = ethers.utils.keccak256(
         await eve.signMessage(messageHashBytes)
@@ -2348,7 +2370,9 @@ describe("Account Recovery Module: ", async () => {
     before(async () => {
       const { controlMessage, userSA } = await setupTests();
 
-      const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userSA.address));
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       newGuardian = ethers.utils.keccak256(
         await eve.signMessage(messageHashBytes)

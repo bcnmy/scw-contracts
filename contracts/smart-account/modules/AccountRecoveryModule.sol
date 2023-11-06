@@ -39,7 +39,8 @@ contract AccountRecoveryModule is
     // execute_ncC(address,uint256,bytes)
     bytes4 public constant EXECUTE_OPTIMIZED_SELECTOR = 0x0000189a;
     // Hash to be signed by guardians to make a guardianId
-    string public constant CONTROL_MESSAGE = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
+    string public constant CONTROL_MESSAGE =
+        "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
 
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
@@ -168,10 +169,9 @@ contract AccountRecoveryModule is
             currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 * i + 2) *
                 65];
 
-            currentGuardianAddress = keccak256(abi.encodePacked(CONTROL_MESSAGE, userOp.sender))
-                .toEthSignedMessageHash().recover(
-                    currentGuardianSig
-                );
+            currentGuardianAddress = keccak256(
+                abi.encodePacked(CONTROL_MESSAGE, userOp.sender)
+            ).toEthSignedMessageHash().recover(currentGuardianSig);
 
             if (currentUserOpSignerAddress != currentGuardianAddress) {
                 return SIG_VALIDATION_FAILED;
@@ -310,7 +310,7 @@ contract AccountRecoveryModule is
         );
 
         _guardians[newGuardian][msg.sender] = TimeFrame(
-            validUntil == 0 ? type(uint48).max : validUntil,
+            validUntil,
             validAfter
         );
         // don't increment guardiansCount as we haven't decremented it when deleting previous one

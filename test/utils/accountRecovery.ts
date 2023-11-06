@@ -40,7 +40,9 @@ export async function makeMultiSignedUserOpWithGuardiansList(
     getUserOpHash(op2, entryPoint!.address, chainId)
   );
 
-  const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userOpSender));
+  const messageHashBytes = ethers.utils.arrayify(
+    makeHashToGetGuardianId(controlMessage, userOpSender)
+  );
 
   let signatures = "0x";
 
@@ -141,7 +143,9 @@ export async function makeMultiSignedUserOpWithGuardiansListArbitraryCalldata(
     getUserOpHash(op2, entryPoint!.address, chainId)
   );
 
-  const messageHashBytes = ethers.utils.arrayify(makeHashToGetGuardianId(controlMessage, userOpSender));
+  const messageHashBytes = ethers.utils.arrayify(
+    makeHashToGetGuardianId(controlMessage, userOpSender)
+  );
 
   let signatures = "0x";
 
@@ -164,8 +168,11 @@ export async function makeMultiSignedUserOpWithGuardiansListArbitraryCalldata(
 
 export function makeHashToGetGuardianId(
   controlMessage: string,
-  smartAccount: string,
+  smartAccount: string
 ): Uint8Array {
-  const messageHash = ethers.utils.solidityKeccak256([ "string", "address" ], [ controlMessage, smartAccount ]);
+  const messageHash = ethers.utils.solidityKeccak256(
+    ["string", "address"],
+    [controlMessage, smartAccount]
+  );
   return ethers.utils.arrayify(messageHash);
 }
