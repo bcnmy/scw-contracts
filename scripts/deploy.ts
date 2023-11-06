@@ -85,10 +85,10 @@ export async function deployGeneric(
     }
 
     try {
-      // await run("verify:verify", {
-      //   address: computedAddress,
-      //   constructorArguments,
-      // });
+      await run("verify:verify", {
+        address: computedAddress,
+        constructorArguments,
+      });
     } catch (err) {
       console.log(err);
     }
