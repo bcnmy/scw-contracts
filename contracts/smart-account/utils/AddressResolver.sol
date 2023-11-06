@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import { IEcdsaOwnershipRegistryModule } from "../interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
-import { IAddressResolver } from "../interfaces/IAddressResolver.sol";
-import { ISmartAccountFactory } from "../interfaces/factory/ISmartAccountFactory.sol";
-import { ISmartAccountFactoryV1 } from "../interfaces/factory/ISmartAccountFactoryV1.sol";
-import { ISmartAccount } from "../interfaces/ISmartAccount.sol";
+import {IEcdsaOwnershipRegistryModule} from "../interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
+import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
+import {ISmartAccountFactory} from "../interfaces/factory/ISmartAccountFactory.sol";
+import {ISmartAccountFactoryV1} from "../interfaces/factory/ISmartAccountFactoryV1.sol";
+import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
 
 /// EOA <-> Smart Account address resolver for Biconomy smart accounts
 contract AddressResolver is IAddressResolver {
