@@ -17,6 +17,7 @@ import {
 import {
   makeMultiSignedUserOpWithGuardiansList,
   makeMultisignedSubmitRecoveryRequestUserOp,
+  makeMultiSignedUserOpWithGuardiansListArbitraryCalldata
 } from "../utils/accountRecovery";
 import { arrayify } from "ethers/lib/utils";
 import { Contract } from "ethers";
@@ -1302,6 +1303,43 @@ describe("Account Recovery Module: ", async () => {
   });
 
   describe("validateUserOp", async () => {
+
+    it("Should revert if there has been no request and userOp.callData is not for SA.execute()", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        controlMessage,
+        arrayOfSigners,
+      } = await setupTests();
+
+      const calldata = userSA.interface.encodeFunctionData(
+          "updateImplementation",
+          [accountRecoveryModule.address]
+      )
+          + "0000000000000000000000000000000000000000000000000000000000000000"  // value
+          + "0000000000000000000000000000000000000000000000000000000000000060"  // offset
+          + "0000000000000000000000000000000000000000000000000000000000000004"  // 0x60   length
+          + "0fe0128700000000000000000000000000000000000000000000000000000000"  // 0x80   selector, padded for convenience
+      ;
+
+      const arbitraryCalldataUserOp = await makeMultiSignedUserOpWithGuardiansListArbitraryCalldata(
+        calldata,
+        userSA.address,
+        arrayOfSigners,
+        controlMessage,
+        entryPoint,
+        accountRecoveryModule.address
+      );
+
+
+      await expect(
+        entryPoint.handleOps([arbitraryCalldataUserOp], alice.address, { gasLimit: 10000000 })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: AccRecovery: Wrong selector");
+    });
+
     it("Should revert if the delay is >0 and the calldata is NOT for submitting request", async () => {
       const {
         entryPoint,
