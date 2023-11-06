@@ -86,22 +86,22 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
         address initialAuthorizationModule;
 
         assembly {
-                let success := call(
-                    gas(),
-                    proxy,
-                    0,
-                    add(initializer, 0x20),
-                    mload(initializer),
-                    0,
-                    0
-                )
-                let ptr := mload(0x40)
-                returndatacopy(ptr, 0, returndatasize())
-                if iszero(success) {
-                    revert(ptr, returndatasize())
-                }
-                initialAuthorizationModule := mload(ptr)
+            let success := call(
+                gas(),
+                proxy,
+                0,
+                add(initializer, 0x20),
+                mload(initializer),
+                0,
+                0
+            )
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
             }
+            initialAuthorizationModule := mload(ptr)
+        }
         emit AccountCreation(proxy, initialAuthorizationModule, index);
     }
 
@@ -130,24 +130,23 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
         );
         address initialAuthorizationModule;
 
-
         assembly {
-                let success := call(
-                    gas(),
-                    proxy,
-                    0,
-                    add(initializer, 0x20),
-                    mload(initializer),
-                    0,
-                    0
-                )
-                let ptr := mload(0x40)
-                returndatacopy(ptr, 0, returndatasize())
-                if iszero(success) {
-                    revert(ptr, returndatasize())
-                }
-                initialAuthorizationModule := mload(ptr)
+            let success := call(
+                gas(),
+                proxy,
+                0,
+                add(initializer, 0x20),
+                mload(initializer),
+                0,
+                0
+            )
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
             }
+            initialAuthorizationModule := mload(ptr)
+        }
         emit AccountCreationWithoutIndex(proxy, initialAuthorizationModule);
     }
 
