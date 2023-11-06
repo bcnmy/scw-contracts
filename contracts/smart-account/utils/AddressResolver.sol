@@ -23,6 +23,8 @@ contract AddressResolver {
     address public constant ECDSA_REGISTRY_MODULE_ADDRESS =
         0x0000001c5b32F37F5beA87BDD5374eB2aC54eA8e;
 
+    // Note: Could also add a method to just get V1 accounts upgraded to V2
+
     /**
      * @dev Returns the addresses of all the smart accounts deployed by the EOA for any deployment index from 0 to _maxIndex.
      * @param _eoa Address of the EOA.
