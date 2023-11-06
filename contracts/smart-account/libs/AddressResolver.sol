@@ -28,7 +28,7 @@ interface ISmartAccount {
 }
 
 contract AddressResolver {
-     struct SmartAccountResult {
+    struct SmartAccountResult {
         address accountAddress;
         address factoryAddress;
         address currentImplementation;
@@ -43,7 +43,7 @@ contract AddressResolver {
     // marked for deletion
     address public constant SA_V1_IMPLEMENTATION =
         0x00006B7e42e01957dA540Dc6a8F7C30c4D816af5;
-    // marked for deletion    
+    // marked for deletion
     address public constant SA_V2_IMPLEMENTATION =
         0x0000002512019Dafb59528B82CB92D3c5D2423aC;
     address public constant ECDSA_REGISTRY_MODULE_ADDRESS =
@@ -55,7 +55,9 @@ contract AddressResolver {
         address _eoa,
         uint8 _maxIndex
     ) external view returns (SmartAccountResult[] memory) {
-        SmartAccountResult[] memory _saInfo = new SmartAccountResult[](_maxIndex * 2);
+        SmartAccountResult[] memory _saInfo = new SmartAccountResult[](
+            _maxIndex * 2
+        );
         uint saInfoIndex = 0; // To keep track of the current index in _saAddresses
 
         for (uint i; i < _maxIndex; i++) {
@@ -96,7 +98,9 @@ contract AddressResolver {
         }
 
         // Create a new dynamic array with only the used elements
-        SmartAccountResult[] memory result = new SmartAccountResult[](saInfoIndex);
+        SmartAccountResult[] memory result = new SmartAccountResult[](
+            saInfoIndex
+        );
         for (uint j = 0; j < saInfoIndex; j++) {
             result[j] = _saInfo[j];
         }
