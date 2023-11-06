@@ -1,21 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {IEcdsaOwnershipRegistryModule} from "../interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
-import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
-import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
+import { IEcdsaOwnershipRegistryModule } from "../interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
+import { IAddressResolver } from "../interfaces/IAddressResolver.sol";
+import { ISmartAccountFactory } from "../interfaces/factory/ISmartAccountFactory.sol";
+import { ISmartAccountFactoryV1 } from "../interfaces/factory/ISmartAccountFactoryV1.sol";
+import { ISmartAccount } from "../interfaces/ISmartAccount.sol";
 
 /// EOA <-> Smart Account address resolver for Biconomy smart accounts
-contract AddressResolver {
-    struct SmartAccountResult {
-        address accountAddress;
-        address factoryAddress;
-        address currentImplementation;
-        string currentVersion;
-        string factoryVersion;
-        uint256 deploymentIndex;
-    }
-
+contract AddressResolver is IAddressResolver {
     address public constant SA_V1_FACTORY =
         0x000000F9eE1842Bb72F6BBDD75E6D3d4e3e9594C;
     address public constant SA_V2_FACTORY =
@@ -42,7 +35,7 @@ contract AddressResolver {
         uint256 saInfoIndex = 0; // To keep track of the current index in _saAddresses
 
         for (uint256 i; i < _maxIndex; i++) {
-            address v1Address = IAddressResolver(SA_V1_FACTORY)
+            address v1Address = ISmartAccountFactoryV1(SA_V1_FACTORY)
                 .getAddressForCounterFactualAccount(_eoa, i);
             if (v1Address != address(0) && _isSmartContract(v1Address)) {
                 _saInfo[saInfoIndex] = SmartAccountResult(
@@ -61,7 +54,7 @@ contract AddressResolver {
             ).initForSmartAccount.selector;
             bytes memory data = abi.encodeWithSelector(selector, _eoa);
 
-            address v2Address = IAddressResolver(SA_V2_FACTORY)
+            address v2Address = ISmartAccountFactory(SA_V2_FACTORY)
                 .getAddressForCounterFactualAccount(
                     ECDSA_REGISTRY_MODULE_ADDRESS,
                     data,
@@ -111,7 +104,7 @@ contract AddressResolver {
         uint256 saInfoIndex = 0; // To keep track of the current index in _saAddresses
 
         for (uint256 i; i < _maxIndex; i++) {
-            address v1Address = IAddressResolver(SA_V1_FACTORY)
+            address v1Address = ISmartAccountFactoryV1(SA_V1_FACTORY)
                 .getAddressForCounterFactualAccount(_eoa, i);
             if (v1Address != address(0) && _isSmartContract(v1Address)) {
                 _saInfo[saInfoIndex] = SmartAccountResult(
@@ -125,7 +118,7 @@ contract AddressResolver {
                 saInfoIndex++;
             }
 
-            address v2Address = IAddressResolver(SA_V2_FACTORY)
+            address v2Address = ISmartAccountFactory(SA_V2_FACTORY)
                 .getAddressForCounterFactualAccount(
                     _moduleAddress,
                     _moduleSetupData,
