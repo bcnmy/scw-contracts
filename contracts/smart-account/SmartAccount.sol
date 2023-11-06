@@ -13,7 +13,6 @@ import {ISmartAccount} from "./interfaces/ISmartAccount.sol";
 import {IBaseSmartAccount} from "./interfaces/IBaseSmartAccount.sol";
 import {IModuleManager} from "./interfaces/base/IModuleManager.sol";
 import {IFallbackManager} from "./interfaces/base/IFallbackManager.sol";
-import {IEcdsaOwnershipRegistryModule} from "./interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
 
 /**
  * @title SmartAccount - EIP-4337 compatible smart contract wallet.
@@ -307,7 +306,7 @@ contract SmartAccount is
         }
     }
 
-    /// @inheritdoc ISmartAccount
+    /// @inheritdoc ISignatureValidator
     function isValidSignatureUnsafe(
         bytes32 dataHash,
         bytes memory signature
@@ -318,7 +317,7 @@ contract SmartAccount is
         );
         if (address(_modules[validationModule]) != address(0)) {
             return
-                IEcdsaOwnershipRegistryModule(validationModule)
+                ISignatureValidator(validationModule)
                     .isValidSignatureUnsafe(dataHash, moduleSignature);
         } else {
             revert WrongValidationModule(validationModule);

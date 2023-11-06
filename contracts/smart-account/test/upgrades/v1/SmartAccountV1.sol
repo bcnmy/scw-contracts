@@ -8,7 +8,7 @@ import {FallbackManagerV1} from "./FallbackManagerV1.sol";
 import {SignatureDecoder} from "../../../common/SignatureDecoder.sol";
 import {SecuredTokenTransfer} from "../../../common/SecuredTokenTransfer.sol";
 import {LibAddress} from "../../../libs/LibAddress.sol";
-import {ISignatureValidator} from "../../../interfaces/ISignatureValidator.sol";
+import {ISignatureValidatorV1} from "./ISignatureValidatorV1.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "../../../common/ReentrancyGuard.sol";
 import {SmartAccountErrorsV1} from "./ErrorsV1.sol";
@@ -34,7 +34,7 @@ contract SmartAccountV1 is
     IERC165,
     ReentrancyGuard,
     SmartAccountErrorsV1,
-    ISignatureValidator
+    ISignatureValidatorV1
 {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -450,7 +450,7 @@ contract SmartAccountV1 is
                 contractSignature := add(add(signatures, s), 0x20)
             }
             if (
-                ISignatureValidator(_signer).isValidSignature(
+                ISignatureValidatorV1(_signer).isValidSignature(
                     dataHash,
                     contractSignature
                 ) != EIP1271_MAGIC_VALUE
@@ -697,7 +697,7 @@ contract SmartAccountV1 is
     ) public view override returns (bytes4) {
         if (owner.code.length > 0) {
             return
-                ISignatureValidator(owner).isValidSignature(
+                ISignatureValidatorV1(owner).isValidSignature(
                     _dataHash,
                     _signature
                 );

@@ -125,7 +125,7 @@ contract EcdsaOwnershipRegistryModule is
         return bytes4(0xffffffff);
     }
 
-    /// @inheritdoc IEcdsaOwnershipRegistryModule
+    /// @inheritdoc ISignatureValidator
     function isValidSignatureUnsafe(
         bytes32 dataHash,
         bytes memory moduleSignature

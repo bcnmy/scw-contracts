@@ -474,6 +474,16 @@ contract AccountRecoveryModule is
     }
 
     /**
+     * @dev Not supported here
+     */
+    function isValidSignatureUnsafe(
+        bytes32,
+        bytes memory
+    ) public view virtual override returns (bytes4) {
+        return 0xffffffff; // not supported
+    }
+
+    /**
      * @dev Internal method to remove guardian and adjust threshold if needed
      * It is needed when after removing guardian, the threshold becomes higher than
      * the number of guardians

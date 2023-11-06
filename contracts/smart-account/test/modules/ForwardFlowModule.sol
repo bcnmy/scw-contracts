@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
 
-import {EIP1271_MAGIC_VALUE} from "../../interfaces/ISignatureValidator.sol";
+import {EIP1271_MAGIC_VALUE, ISignatureValidator} from "../../interfaces/ISignatureValidator.sol";
 import {ISmartAccount} from "../../interfaces/ISmartAccount.sol";
 import {Enum} from "../../common/Enum.sol";
 import {ReentrancyGuard} from "../../common/ReentrancyGuard.sol";
@@ -238,7 +238,7 @@ contract ForwardFlowModule is ReentrancyGuard {
 
             txHash = keccak256(txHashData);
             if (
-                ISmartAccount(smartAccount).isValidSignatureUnsafe(
+                ISignatureValidator(smartAccount).isValidSignatureUnsafe(
                     txHash,
                     signatures
                 ) != EIP1271_MAGIC_VALUE

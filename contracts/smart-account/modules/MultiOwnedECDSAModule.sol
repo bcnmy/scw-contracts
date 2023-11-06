@@ -166,6 +166,31 @@ contract MultiOwnedECDSAModule is
         return bytes4(0xffffffff);
     }
 
+    /// @inheritdoc ISignatureValidator
+    function isValidSignatureUnsafe(
+        bytes32 dataHash,
+        bytes memory moduleSignature
+    ) public view virtual returns (bytes4) {
+        return
+            isValidSignatureForAddressUnsafe(
+                dataHash,
+                moduleSignature,
+                msg.sender
+            );
+    }
+
+    /// @inheritdoc IMultiOwnedECDSAModule
+    function isValidSignatureForAddressUnsafe(
+        bytes32 dataHash,
+        bytes memory moduleSignature,
+        address smartAccount
+    ) public view virtual returns (bytes4) {
+        if (_verifySignature(dataHash, moduleSignature, smartAccount)) {
+            return EIP1271_MAGIC_VALUE;
+        }
+        return bytes4(0xffffffff);
+    }
+
     /// @inheritdoc IMultiOwnedECDSAModule
     function getNumberOfOwners(
         address smartAccount

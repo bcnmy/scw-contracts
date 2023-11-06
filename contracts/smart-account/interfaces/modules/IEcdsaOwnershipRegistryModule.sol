@@ -80,16 +80,4 @@ interface IEcdsaOwnershipRegistryModule {
         bytes memory moduleSignature,
         address smartAccount
     ) external view returns (bytes4);
-
-    /**
-     * @dev Validates an EIP-1271 signature
-     * @dev Expects the data Hash to already include smart account address information
-     * @param dataHash hash of the data which includes smart account address
-     * @param moduleSignature Signature to be validated.
-     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
-     */
-    function isValidSignatureUnsafe(
-        bytes32 dataHash,
-        bytes memory moduleSignature
-    ) external view returns (bytes4);
 }
