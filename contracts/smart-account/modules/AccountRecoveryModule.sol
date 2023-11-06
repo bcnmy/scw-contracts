@@ -309,10 +309,7 @@ contract AccountRecoveryModule is
             validAfter
         );
 
-        _guardians[newGuardian][msg.sender] = TimeFrame(
-            validUntil,
-            validAfter
-        );
+        _guardians[newGuardian][msg.sender] = TimeFrame(validUntil, validAfter);
         // don't increment guardiansCount as we haven't decremented it when deleting previous one
         emit GuardianAdded(
             msg.sender,
