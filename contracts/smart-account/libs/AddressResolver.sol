@@ -34,6 +34,7 @@ contract AddressResolver {
         address currentImplementation;
         string currentVersion;
         string factoryVersion;
+        uint256 deploymentIndex;
     }
 
     address public constant SA_V1_FACTORY =
@@ -69,7 +70,8 @@ contract AddressResolver {
                     SA_V1_FACTORY,
                     ISmartAccount(v1Address).getImplementation(),
                     ISmartAccount(v1Address).VERSION(),
-                    "v1"
+                    "v1",
+                    i
                 );
                 saInfoIndex++;
             }
@@ -91,7 +93,8 @@ contract AddressResolver {
                     SA_V2_FACTORY,
                     ISmartAccount(v2Address).getImplementation(),
                     ISmartAccount(v2Address).VERSION(),
-                    "v2"
+                    "v2",
+                    i
                 );
                 saInfoIndex++;
             }
