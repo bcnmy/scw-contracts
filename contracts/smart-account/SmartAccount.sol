@@ -317,8 +317,10 @@ contract SmartAccount is
         );
         if (address(_modules[validationModule]) != address(0)) {
             return
-                ISignatureValidator(validationModule)
-                    .isValidSignatureUnsafe(dataHash, moduleSignature);
+                ISignatureValidator(validationModule).isValidSignatureUnsafe(
+                    dataHash,
+                    moduleSignature
+                );
         } else {
             revert WrongValidationModule(validationModule);
         }
