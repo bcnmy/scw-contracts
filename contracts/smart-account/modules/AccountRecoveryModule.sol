@@ -441,10 +441,7 @@ contract AccountRecoveryModule is
      */
     function submitRecoveryRequest(bytes calldata recoveryCallData) public {
         if (recoveryCallData.length == 0) revert EmptyRecoveryCallData();
-        if (
-            _smartAccountRequests[msg.sender].callDataHash !=
-            bytes32(0)
-        )
+        if (_smartAccountRequests[msg.sender].callDataHash != bytes32(0))
             revert RecoveryRequestAlreadyExists(
                 msg.sender,
                 _smartAccountRequests[msg.sender].callDataHash
