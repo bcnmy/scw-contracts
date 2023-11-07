@@ -442,12 +442,12 @@ contract AccountRecoveryModule is
     function submitRecoveryRequest(bytes calldata recoveryCallData) public {
         if (recoveryCallData.length == 0) revert EmptyRecoveryCallData();
         if (
-            _smartAccountRequests[msg.sender].callDataHash ==
-            keccak256(recoveryCallData)
+            _smartAccountRequests[msg.sender].callDataHash !=
+            bytes32(0)
         )
             revert RecoveryRequestAlreadyExists(
                 msg.sender,
-                keccak256(recoveryCallData)
+                _smartAccountRequests[msg.sender].callDataHash
             );
 
         _smartAccountRequests[msg.sender] = RecoveryRequest(

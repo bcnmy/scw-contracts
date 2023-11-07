@@ -818,7 +818,7 @@ describe("Account Recovery Module: ", async () => {
       );
     });
 
-    it("Should revert if such a request already exists", async () => {
+    it("Should revert if there's already a request for this SA", async () => {
       const { accountRecoveryModule, ecdsaModule } = await setupTests();
 
       const recoveryRequestCallData = ecdsaModule.interface.encodeFunctionData(
@@ -829,8 +829,13 @@ describe("Account Recovery Module: ", async () => {
         recoveryRequestCallData
       );
 
+      const recoveryRequestCallData2 = ecdsaModule.interface.encodeFunctionData(
+        "transferOwnership",
+        [charlie.address]
+      );
+
       await expect(
-        accountRecoveryModule.submitRecoveryRequest(recoveryRequestCallData)
+        accountRecoveryModule.submitRecoveryRequest(recoveryRequestCallData2)
       )
         .to.be.revertedWith("RecoveryRequestAlreadyExists")
         .withArgs(
