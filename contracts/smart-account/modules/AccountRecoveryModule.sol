@@ -68,7 +68,7 @@ contract AccountRecoveryModule is
         bytes32[] calldata guardians,
         TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
-        uint48 securityDelay
+        uint24 securityDelay
     ) external returns (address) {
         uint256 length = guardians.length;
         if (_smartAccountSettings[msg.sender].guardiansCount > 0)
@@ -393,7 +393,7 @@ contract AccountRecoveryModule is
      * Should be called by the Smart Account
      * @param newSecurityDelay new security delay
      */
-    function setSecurityDelay(uint48 newSecurityDelay) external {
+    function setSecurityDelay(uint24 newSecurityDelay) external {
         _smartAccountSettings[msg.sender].securityDelay = newSecurityDelay;
         emit SecurityDelayChanged(msg.sender, newSecurityDelay);
     }

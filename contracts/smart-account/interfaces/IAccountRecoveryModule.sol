@@ -20,7 +20,7 @@ interface IAccountRecoveryModule {
     struct SaSettings {
         uint8 guardiansCount;
         uint8 recoveryThreshold;
-        uint48 securityDelay;
+        uint24 securityDelay;
     }
 
     /**
@@ -197,7 +197,7 @@ interface IAccountRecoveryModule {
         bytes32[] calldata guardians,
         TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
-        uint48 securityDelay
+        uint24 securityDelay
     ) external returns (address);
 
     /**
@@ -271,7 +271,7 @@ interface IAccountRecoveryModule {
      * Should be called by the Smart Account
      * @param newSecurityDelay new security delay
      */
-    function setSecurityDelay(uint48 newSecurityDelay) external;
+    function setSecurityDelay(uint24 newSecurityDelay) external;
 
     /**
      * @dev Submits recovery request for a Smart Account
