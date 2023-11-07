@@ -45,9 +45,6 @@ jobs:
       - name: Install dependencies and build
         run: yarn install --frozen-lockfile && yarn build
 
-      - name: Update submodule
-        run: git submodule update --init --recursive && git submodule sync 
-
       - name: Run Hardhat Tests
         run: yarn test
 
