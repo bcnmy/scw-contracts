@@ -60,6 +60,15 @@ contract PasskeyRegistryModule is
         bytes32 signedDataHash,
         bytes memory moduleSignature
     ) public view virtual override returns (bytes4) {
+        // TODO: @amanraj1608 make it safe
+        return isValidSignatureForAddress(signedDataHash, moduleSignature);
+    }
+
+    /// @inheritdoc ISignatureValidator
+    function isValidSignatureUnsafe(
+        bytes32 signedDataHash,
+        bytes memory moduleSignature
+    ) public view virtual override returns (bytes4) {
         return isValidSignatureForAddress(signedDataHash, moduleSignature);
     }
 

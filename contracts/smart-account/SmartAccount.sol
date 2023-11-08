@@ -306,6 +306,26 @@ contract SmartAccount is
         }
     }
 
+    /// @inheritdoc ISignatureValidator
+    function isValidSignatureUnsafe(
+        bytes32 dataHash,
+        bytes memory signature
+    ) public view returns (bytes4) {
+        (bytes memory moduleSignature, address validationModule) = abi.decode(
+            signature,
+            (bytes, address)
+        );
+        if (address(_modules[validationModule]) != address(0)) {
+            return
+                ISignatureValidator(validationModule).isValidSignatureUnsafe(
+                    dataHash,
+                    moduleSignature
+                );
+        } else {
+            revert WrongValidationModule(validationModule);
+        }
+    }
+
     /**
      * @dev internal method that fecilitates the extenral calls from SmartAccount
      * @dev similar to execute() of Executor.sol

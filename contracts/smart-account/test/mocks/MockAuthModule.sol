@@ -28,4 +28,12 @@ contract MockAuthModule is BaseAuthorizationModule {
         (_dataHash, _signature);
         return EIP1271_MAGIC_VALUE; //always valid signature
     }
+
+    function isValidSignatureUnsafe(
+        bytes32 _dataHash,
+        bytes memory _signature
+    ) public view virtual override returns (bytes4) {
+        (_dataHash, _signature);
+        return EIP1271_MAGIC_VALUE; //always valid signature
+    }
 }

@@ -126,6 +126,15 @@ contract SessionKeyManager is
         return 0xffffffff; // do not support it here
     }
 
+    /// @inheritdoc ISignatureValidator
+    function isValidSignatureUnsafe(
+        bytes32 _dataHash,
+        bytes memory _signature
+    ) public pure override returns (bytes4) {
+        (_dataHash, _signature);
+        return 0xffffffff; // do not support it here
+    }
+
     /**
      * @dev returns the SessionStorage object for a given smartAccount
      * @param _account Smart Account address
