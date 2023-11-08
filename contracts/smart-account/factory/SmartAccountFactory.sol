@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 import "../Proxy.sol";
 import "../BaseSmartAccount.sol";
@@ -85,24 +85,22 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
 
         address initialAuthorizationModule;
 
-        if (initializer.length > 0) {
-            assembly {
-                let success := call(
-                    gas(),
-                    proxy,
-                    0,
-                    add(initializer, 0x20),
-                    mload(initializer),
-                    0,
-                    0
-                )
-                let ptr := mload(0x40)
-                returndatacopy(ptr, 0, returndatasize())
-                if iszero(success) {
-                    revert(ptr, returndatasize())
-                }
-                initialAuthorizationModule := mload(ptr)
+        assembly {
+            let success := call(
+                gas(),
+                proxy,
+                0,
+                add(initializer, 0x20),
+                mload(initializer),
+                0,
+                0
+            )
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
             }
+            initialAuthorizationModule := mload(ptr)
         }
         emit AccountCreation(proxy, initialAuthorizationModule, index);
     }
@@ -132,24 +130,22 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
         );
         address initialAuthorizationModule;
 
-        if (initializer.length > 0) {
-            assembly {
-                let success := call(
-                    gas(),
-                    proxy,
-                    0,
-                    add(initializer, 0x20),
-                    mload(initializer),
-                    0,
-                    0
-                )
-                let ptr := mload(0x40)
-                returndatacopy(ptr, 0, returndatasize())
-                if iszero(success) {
-                    revert(ptr, returndatasize())
-                }
-                initialAuthorizationModule := mload(ptr)
+        assembly {
+            let success := call(
+                gas(),
+                proxy,
+                0,
+                add(initializer, 0x20),
+                mload(initializer),
+                0,
+                0
+            )
+            let ptr := mload(0x40)
+            returndatacopy(ptr, 0, returndatasize())
+            if iszero(success) {
+                revert(ptr, returndatasize())
             }
+            initialAuthorizationModule := mload(ptr)
         }
         emit AccountCreationWithoutIndex(proxy, initialAuthorizationModule);
     }

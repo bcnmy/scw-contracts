@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 /* solhint-disable function-max-lines */
 
@@ -11,6 +11,7 @@ import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.s
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {IBatchedSessionRouterModule} from "../interfaces/modules/IBatchedSessionRouterModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
+import {IModuleManager} from "../interfaces/base/IModuleManager.sol";
 
 /**
  * @title Batched Session Router
@@ -36,32 +37,46 @@ contract BatchedSessionRouter is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual override returns (uint256) {
-        // check this is a proper method call
-        bytes4 selector = bytes4(userOp.callData[0:4]);
-        require(
-            selector == EXECUTE_BATCH_OPTIMIZED_SELECTOR ||
-                selector == EXECUTE_BATCH_SELECTOR,
-            "SR Invalid Selector"
-        );
+        {
+            // check this is a proper method call
+            bytes4 selector = bytes4(userOp.callData[0:4]);
+            require(
+                selector == EXECUTE_BATCH_OPTIMIZED_SELECTOR ||
+                    selector == EXECUTE_BATCH_SELECTOR,
+                "SR Invalid Selector"
+            );
+        }
 
-        (bytes memory moduleSignature, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
+        address sessionKeyManager;
+        SessionData[] memory sessionData;
+        address recovered;
+        {
+            bytes memory sessionKeySignature;
 
-        // parse the signature to get the array of required parameters
-        (
-            address sessionKeyManager,
-            SessionData[] memory sessionData,
-            bytes memory sessionKeySignature
-        ) = abi.decode(moduleSignature, (address, SessionData[], bytes));
+            {
+                (bytes memory moduleSignature, ) = abi.decode(
+                    userOp.signature,
+                    (bytes, address)
+                );
 
-        address recovered = ECDSA.recover(
-            ECDSA.toEthSignedMessageHash(
-                keccak256(abi.encodePacked(userOpHash, sessionKeyManager))
-            ),
-            sessionKeySignature
-        );
+                // parse the signature to get the array of required parameters
+                (sessionKeyManager, sessionData, sessionKeySignature) = abi
+                    .decode(moduleSignature, (address, SessionData[], bytes));
+            }
+
+            if (
+                !IModuleManager(userOp.sender).isModuleEnabled(
+                    sessionKeyManager
+                )
+            ) {
+                revert("SR Invalid SKM");
+            }
+
+            recovered = ECDSA.recover(
+                ECDSA.toEthSignedMessageHash(userOpHash),
+                sessionKeySignature
+            );
+        }
 
         uint48 earliestValidUntil = type(uint48).max;
         uint48 latestValidAfter;

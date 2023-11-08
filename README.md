@@ -19,8 +19,6 @@ Biconomy Smart Account is a smart contract wallet focused on implementing Accoun
 - **ModuleManager.sol**: Adopts the Gnosis Safe module manager pattern.
 - **DefaultCallbackHandler.sol**: Handles hooks to respond to token receipts.
 - **MultiSend.sol & MultiSendCallOnly.sol**: Facilitates batching multiple transactions into one.
-- **VerifyingSingletonPaymaster.sol**: A paymaster that uses an external service for transaction validation.
-- **PaymasterHelpers.sol**: A library essential for decoding paymaster data and context.
 
 ## 🛠️ Prerequisites
 
@@ -55,13 +53,13 @@ Below are the commands you can use for various tasks:
 
 ### 🧪 Testing
 
-#### Note if there are issue on paymaster dependencies follow below steps
-i. go to submodule directory: biconomy-paymasters
-ii. run `yarn` followed by `npx hardhat compile`
+#### Note if there are issues with submodules
 
 to init or update submodules
 `git submodule update --remote`
 `git submodule update --init`
+
+you can alternatively also run forge install. 
 
 Run regular tests:
 
@@ -190,6 +188,10 @@ npx hardhat verify --network goerli DEPLOYED_CONTRACT_ADDRESS "Hello, Hardhat!"
 Boost your tests and scripts' speed by setting the `TS_NODE_TRANSPILE_ONLY` environment variable to `1` in Hardhat's environment. More details are available in the [documentation](https://hardhat.org/guides/typescript.html#performance-optimizations).
 
 ---
+
+## 📋 Audit Reports
+
+We have had our contracts audited by reputable firms to ensure their security. You can find the reports in the [audits folder](https://github.com/bcnmy/scw-contracts/tree/main/audits).
 
 ## 🤝 Contributing
 

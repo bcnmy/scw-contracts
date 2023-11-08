@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {BaseSmartAccount, IEntryPoint, UserOperation} from "./BaseSmartAccount.sol";
@@ -15,7 +15,7 @@ import {IModuleManager} from "./interfaces/base/IModuleManager.sol";
 import {IFallbackManager} from "./interfaces/base/IFallbackManager.sol";
 
 /**
- * @title SmartAccount - EIP-4337 compatible smart contract wallet.
+ * @title SmartAccount - EIP-4337 compatible smart account.
  * @dev This contract is the base for the Smart Account functionality.
  *         - It is modular by nature. UserOp and txns validation happens in Authorization Modules.
  *         - It provides the functionality to execute AA (EIP-4337) userOps. Gnosis style txns removed to a module.
