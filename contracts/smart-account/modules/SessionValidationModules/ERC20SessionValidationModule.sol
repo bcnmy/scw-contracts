@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 import "../../interfaces/modules/ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -71,50 +71,59 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
                 bytes4(_op.callData[0:4]) == EXECUTE_SELECTOR,
             "ERC20SV Invalid Selector"
         );
-        (
-            address sessionKey,
-            address token,
-            address recipient,
-            uint256 maxAmount
-        ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
+
+        address sessionKey;
 
         {
-            // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
-            (address tokenAddr, uint256 callValue, ) = abi.decode(
-                _op.callData[4:], // skip selector
-                (address, uint256, bytes)
-            );
-            if (tokenAddr != token) {
-                revert("ERC20SV Wrong Token");
+            (
+                address innerSessionKey,
+                address token,
+                address recipient,
+                uint256 maxAmount
+            ) = abi.decode(
+                    _sessionKeyData,
+                    (address, address, address, uint256)
+                );
+            sessionKey = innerSessionKey;
+
+            {
+                // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
+                (address tokenAddr, uint256 callValue, ) = abi.decode(
+                    _op.callData[4:], // skip selector
+                    (address, uint256, bytes)
+                );
+                if (tokenAddr != token) {
+                    revert("ERC20SV Wrong Token");
+                }
+                if (callValue != 0) {
+                    revert("ERC20SV Non Zero Value");
+                }
             }
-            if (callValue != 0) {
-                revert("ERC20SV Non Zero Value");
+            // working with userOp.callData
+            // check if the call is to the allowed recepient and amount is not more than allowed
+            bytes calldata data;
+
+            {
+                //offset represents where does the inner bytes array start
+                uint256 offset = uint256(bytes32(_op.callData[4 + 64:4 + 96]));
+                uint256 length = uint256(
+                    bytes32(_op.callData[4 + offset:4 + offset + 32])
+                );
+                //we expect data to be the `IERC20.transfer(address, uint256)` calldata
+                data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
             }
-        }
-        // working with userOp.callData
-        // check if the call is to the allowed recepient and amount is not more than allowed
-        bytes calldata data;
 
-        {
-            //offset represents where does the inner bytes array start
-            uint256 offset = uint256(bytes32(_op.callData[4 + 64:4 + 96]));
-            uint256 length = uint256(
-                bytes32(_op.callData[4 + offset:4 + offset + 32])
+            (address recipientCalled, uint256 amount) = abi.decode(
+                data[4:],
+                (address, uint256)
             );
-            //we expect data to be the `IERC20.transfer(address, uint256)` calldata
-            data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
-        }
 
-        (address recipientCalled, uint256 amount) = abi.decode(
-            data[4:],
-            (address, uint256)
-        );
-
-        if (recipientCalled != recipient) {
-            revert("ERC20SV Wrong Recipient");
-        }
-        if (amount > maxAmount) {
-            revert("ERC20SV Max Amount Exceeded");
+            if (recipientCalled != recipient) {
+                revert("ERC20SV Wrong Recipient");
+            }
+            if (amount > maxAmount) {
+                revert("ERC20SV Max Amount Exceeded");
+            }
         }
 
         return

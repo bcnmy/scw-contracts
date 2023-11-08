@@ -187,7 +187,7 @@ describe("SessionKey: Batched Session Router", async () => {
     ]);
 
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
-      "execute",
+      "execute", // not executeBatch
       [mockToken.address, 0, approveCallData],
       userSA.address,
       sessionKey,
@@ -271,11 +271,14 @@ describe("SessionKey: Batched Session Router", async () => {
       "nonce"
     );
 
+    const wrongType = "uint256";
+    const randomValueOfWrongType = 111;
+
     const paddedSig = ethers.utils.defaultAbiCoder.encode(
       [
         "address",
         "tuple(uint48,uint48,address,bytes,bytes32[],bytes)[]",
-        "uint256",
+        wrongType,
       ],
       [
         sessionKeyManager.address,
@@ -297,7 +300,7 @@ describe("SessionKey: Batched Session Router", async () => {
             "0x",
           ],
         ],
-        111,
+        randomValueOfWrongType,
       ]
     );
 
@@ -456,6 +459,17 @@ describe("SessionKey: Batched Session Router", async () => {
       [mockToken.address, tokenAmountToTransfer]
     );
 
+    const incompleteSessionDataArray = [
+      [
+        0,
+        0,
+        erc20SessionModule.address,
+        sessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
+        "0x",
+      ],
+    ];
+
     const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
       "executeBatch_y6U",
       [
@@ -467,16 +481,7 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionKey,
       entryPoint,
       sessionKeyManager.address,
-      [
-        [
-          0,
-          0,
-          erc20SessionModule.address,
-          sessionKeyData,
-          merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
-        ],
-      ],
+      incompleteSessionDataArray, // incomplete session data array
       sessionRouter.address
     );
 
@@ -509,9 +514,11 @@ describe("SessionKey: Batched Session Router", async () => {
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
 
+    const wrongAMount = maxAmount.add(ethers.utils.parseEther("1"));
+
     const approveCallData = IERC20.interface.encodeFunctionData("approve", [
       mockProtocol.address,
-      maxAmount.add(ethers.utils.parseEther("1")),
+      wrongAMount,
     ]);
     const interactCallData = MockProtocol.interface.encodeFunctionData(
       "interact",
@@ -620,6 +627,7 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
+    // second validUntil expires
     await ethers.provider.send("evm_setNextBlockTimestamp", [
       validUntilForMockProtocol + 100,
     ]);
@@ -1165,7 +1173,7 @@ describe("SessionKey: Batched Session Router", async () => {
       expect(validationData).to.equal(SIG_VALIDATION_FAILED);
     });
 
-    it("Should return SIG_VALIDATION_FAILED if the userOp.signature length is less than 65", async () => {
+    it("Should revert if the userOp.signature length is less than 65", async () => {
       const {
         entryPoint,
         userSA,
@@ -1183,7 +1191,6 @@ describe("SessionKey: Batched Session Router", async () => {
         validUntilForMockProtocol,
       } = await setupTests();
 
-      const SIG_VALIDATION_FAILED = 1;
       const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
       const MockProtocol = await ethers.getContractFactory("MockProtocol");

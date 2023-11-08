@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccountV1.sol";
@@ -17,7 +17,7 @@ import {IModule} from "./IModuleV1.sol";
 import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 
 /**
- * @title SmartAccount - EIP-4337 compatible smart contract wallet.
+ * @title SmartAccount - EIP-4337 compatible smart account.
  * @dev This contract is the base for the Smart Account functionality.
  *         - It provides the functionality to execute both gnosis-style txns and AA (EIP-4337) userOps
  *         - It allows to receive and manage assets.
@@ -683,7 +683,7 @@ contract SmartAccountV1 is
 
     /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
-     * @dev If owner is a smart-contract (other smart contract wallet or module, that controls
+     * @dev If owner is a smart-contract (other smart account or module, that controls
      *      signature verifications - like multisig), forward isValidSignature request to it.
      *      In case of multisig, _signature can be several concatenated signatures
      *      If owner is EOA, perform a regular ecrecover.
