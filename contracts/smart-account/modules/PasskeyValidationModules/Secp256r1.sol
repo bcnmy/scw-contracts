@@ -57,12 +57,8 @@ library Secp256r1 {
         if (r == 0 || s == 0 || r >= NN || s >= NN) {
             return false;
         }
-        if (
-            passKey.pubKeyX == 0 ||
-            passKey.pubKeyY == 0 ||
-            passKey.pubKeyX >= PP ||
-            passKey.pubKeyY >= PP
-        ) {
+        // Verify that the public key is not the point at infinity and lies on the secp256r1 curve.
+        if (!isValidPublicKey(passKey.pubKeyX, passKey.pubKeyY)) {
             return false;
         }
 
@@ -76,17 +72,13 @@ library Secp256r1 {
         uint256 s,
         uint256 e
     ) internal view returns (bool) {
-        if (r >= NN || s >= NN) {
-            return false;
-        }
-
         uint256 w = primemod(s, NN);
 
         uint256 u1 = mulmod(e, w, NN);
         uint256 u2 = mulmod(r, w, NN);
 
-        uint256 x;
-        uint256 y;
+        uint256 x = 1;
+        uint256 y = 1;
 
         (x, y) = shamirMultJacobian(points, u1, u2);
         return ((x % NN) == r);
@@ -145,7 +137,7 @@ library Secp256r1 {
         uint256 z
     ) internal view returns (uint256 ax, uint256 ay) {
         if (z == 0) {
-            return (1, 1); // Returns (1, 1) for the point at infinity
+            return (0, 0);
         }
 
         uint256 zinv = primemod(z, PP);
@@ -206,11 +198,28 @@ library Secp256r1 {
         }
     }
 
+    function isValidPublicKey(
+        uint256 x,
+        uint256 y
+    ) internal pure returns (bool) {
+        if (x >= PP || y >= PP) {
+            return false; // (x, y) coordinates should satisfy, 0 <= x,y < p
+        }
+        uint256 lhs = mulmod(y, y, PP); // y^2 mod p
+        uint256 rhs = addmod(
+            addmod(mulmod(mulmod(x, x, PP), x, PP), mulmod(x, A, PP), PP),
+            B,
+            PP
+        ); // (x^3 + ax + b) mod p
+
+        return lhs == rhs; // y^2 = x^3 + ax + b (mod p)
+    }
+
     function preComputeJacobianPoints(
         PassKeyId memory passKey
     ) internal pure returns (JPoint[16] memory points) {
         // JPoint[] memory u1Points = new JPoint[](4);
-        // u1Points[0] = JPoint(1, 1, 0);
+        // u1Points[0] = JPoint(1, 1, 0); // point of infinity in jacobian coordinates
         // u1Points[1] = JPoint(GX, GY, 1); // u1
         // u1Points[2] = jPointDouble(u1Points[1]);
         // u1Points[3] = jPointAdd(u1Points[1], u1Points[2]);
@@ -277,9 +286,6 @@ library Secp256r1 {
             return (q1, q2, q3);
         } else if (q3 == 0) {
             return (p1, p2, p3);
-        } else if ((p3 == 0) && (q3 == 0)) {
-            (r1, r2, r3) = modifiedJacobianDouble(p1, p2, p3); // p == q, so double
-            return (r1, r2, r3);
         }
 
         uint256 u1;
