@@ -191,10 +191,7 @@ contract TestSecp256r1 {
         }
     }
 
-    function isValidPublicKey(
-        uint256 x,
-        uint256 y
-    ) public pure returns (bool) {
+    function isValidPublicKey(uint256 x, uint256 y) public pure returns (bool) {
         if (x >= PP || y >= PP) {
             return false; // (x, y) coordinates should satisfy, 0 <= x,y < p
         }
@@ -252,9 +249,7 @@ contract TestSecp256r1 {
         return JPoint(x, y, z);
     }
 
-    function jPointDouble(
-        JPoint memory p
-    ) public pure returns (JPoint memory) {
+    function jPointDouble(JPoint memory p) public pure returns (JPoint memory) {
         uint256 x;
         uint256 y;
         uint256 z;
@@ -343,7 +338,6 @@ contract TestSecp256r1 {
             }
             r3 := mulmod(sub(j2v, z1z1), h, pd)
         }
-
         if ((u1 == u2) && (s1 == s2)) {
             (r1, r2, r3) = modifiedJacobianDouble(p1, p2, p3);
             return (r1, r2, r3);
