@@ -17,7 +17,7 @@ contract AddressResolver is IAddressResolver {
         0x0000001c5b32F37F5beA87BDD5374eB2aC54eA8e;
 
     // Optional
-    // resolveAddressesV1UpgradedToV2()     
+    // resolveAddressesV1UpgradedToV2()
     // returns address[]
 
     /**
@@ -48,7 +48,7 @@ contract AddressResolver is IAddressResolver {
                     i
                 );
                 unchecked {
-                ++nextArrayElementIndex;
+                    ++nextArrayElementIndex;
                 }
             }
             unchecked {
@@ -98,7 +98,7 @@ contract AddressResolver is IAddressResolver {
                     i
                 );
                 unchecked {
-                ++nextArrayElementIndex;
+                    ++nextArrayElementIndex;
                 }
             }
 
@@ -123,7 +123,7 @@ contract AddressResolver is IAddressResolver {
                     i
                 );
                 unchecked {
-                ++nextArrayElementIndex;
+                    ++nextArrayElementIndex;
                 }
             }
             unchecked {
@@ -177,7 +177,7 @@ contract AddressResolver is IAddressResolver {
                     i
                 );
                 unchecked {
-                ++nextArrayElementIndex;
+                    ++nextArrayElementIndex;
                 }
             }
 
@@ -197,7 +197,7 @@ contract AddressResolver is IAddressResolver {
                     i
                 );
                 unchecked {
-                ++nextArrayElementIndex;
+                    ++nextArrayElementIndex;
                 }
             }
             unchecked {
