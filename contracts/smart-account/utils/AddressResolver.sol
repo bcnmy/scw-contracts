@@ -16,7 +16,58 @@ contract AddressResolver is IAddressResolver {
     address public constant ECDSA_REGISTRY_MODULE_ADDRESS =
         0x0000001c5b32F37F5beA87BDD5374eB2aC54eA8e;
 
-    // Note: Could also add a method to just get V1 accounts upgraded to V2
+    // Optional
+    // resolveAddressesV1UpgradedToV2()     
+    // returns address[]
+
+    /**
+     * @dev Returns the addresses of all the smart accounts deployed by the EOA for any deployment index from 0 to _maxIndex.
+     * @param _eoa Address of the EOA.
+     * @param _maxIndex Maximum index to check.
+     * @notice This function is only for V1 Biconomy smart accounts.
+     */
+    function resolveAddressesV1(
+        address _eoa,
+        uint8 _maxIndex
+    ) external view returns (SmartAccountResult[] memory) {
+        SmartAccountResult[] memory _saInfo = new SmartAccountResult[](
+            _maxIndex
+        );
+        uint256 nextArrayElementIndex = 0; // To keep track of the current index in _saAddresses
+
+        for (uint256 i; i < _maxIndex; ) {
+            address v1Address = ISmartAccountFactoryV1(SA_V1_FACTORY)
+                .getAddressForCounterFactualAccount(_eoa, i);
+            if (v1Address != address(0) && _isSmartContract(v1Address)) {
+                _saInfo[nextArrayElementIndex] = SmartAccountResult(
+                    v1Address,
+                    SA_V1_FACTORY,
+                    ISmartAccount(v1Address).getImplementation(),
+                    ISmartAccount(v1Address).VERSION(),
+                    "v1",
+                    i
+                );
+                unchecked {
+                ++nextArrayElementIndex;
+                }
+            }
+            unchecked {
+                ++i;
+            }
+        }
+
+        // Create a new dynamic array with only the used elements
+        SmartAccountResult[] memory result = new SmartAccountResult[](
+            nextArrayElementIndex
+        );
+        for (uint256 j; j < nextArrayElementIndex; ) {
+            result[j] = _saInfo[j];
+            unchecked {
+                ++j;
+            }
+        }
+        return result;
+    }
 
     /**
      * @dev Returns the addresses of all the smart accounts deployed by the EOA for any deployment index from 0 to _maxIndex.
@@ -32,13 +83,13 @@ contract AddressResolver is IAddressResolver {
         SmartAccountResult[] memory _saInfo = new SmartAccountResult[](
             _maxIndex * 2
         );
-        uint256 saInfoIndex = 0; // To keep track of the current index in _saAddresses
+        uint256 nextArrayElementIndex = 0; // To keep track of the current index in _saAddresses
 
-        for (uint256 i; i < _maxIndex; i++) {
+        for (uint256 i; i < _maxIndex; ) {
             address v1Address = ISmartAccountFactoryV1(SA_V1_FACTORY)
                 .getAddressForCounterFactualAccount(_eoa, i);
             if (v1Address != address(0) && _isSmartContract(v1Address)) {
-                _saInfo[saInfoIndex] = SmartAccountResult(
+                _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v1Address,
                     SA_V1_FACTORY,
                     ISmartAccount(v1Address).getImplementation(),
@@ -46,7 +97,9 @@ contract AddressResolver is IAddressResolver {
                     "v1",
                     i
                 );
-                saInfoIndex++;
+                unchecked {
+                ++nextArrayElementIndex;
+                }
             }
 
             bytes4 selector = IEcdsaOwnershipRegistryModule(
@@ -61,7 +114,7 @@ contract AddressResolver is IAddressResolver {
                     i
                 );
             if (v2Address != address(0) && _isSmartContract(v2Address)) {
-                _saInfo[saInfoIndex] = SmartAccountResult(
+                _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v2Address,
                     SA_V2_FACTORY,
                     ISmartAccount(v2Address).getImplementation(),
@@ -69,16 +122,24 @@ contract AddressResolver is IAddressResolver {
                     "v2",
                     i
                 );
-                saInfoIndex++;
+                unchecked {
+                ++nextArrayElementIndex;
+                }
+            }
+            unchecked {
+                ++i;
             }
         }
 
         // Create a new dynamic array with only the used elements
         SmartAccountResult[] memory result = new SmartAccountResult[](
-            saInfoIndex
+            nextArrayElementIndex
         );
-        for (uint256 j = 0; j < saInfoIndex; j++) {
+        for (uint256 j; j < nextArrayElementIndex; ) {
             result[j] = _saInfo[j];
+            unchecked {
+                ++j;
+            }
         }
         return result;
     }
@@ -101,13 +162,13 @@ contract AddressResolver is IAddressResolver {
         SmartAccountResult[] memory _saInfo = new SmartAccountResult[](
             _maxIndex * 2
         );
-        uint256 saInfoIndex = 0; // To keep track of the current index in _saAddresses
+        uint256 nextArrayElementIndex = 0; // To keep track of the current index in _saAddresses
 
-        for (uint256 i; i < _maxIndex; i++) {
+        for (uint256 i; i < _maxIndex; ) {
             address v1Address = ISmartAccountFactoryV1(SA_V1_FACTORY)
                 .getAddressForCounterFactualAccount(_eoa, i);
             if (v1Address != address(0) && _isSmartContract(v1Address)) {
-                _saInfo[saInfoIndex] = SmartAccountResult(
+                _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v1Address,
                     SA_V1_FACTORY,
                     ISmartAccount(v1Address).getImplementation(),
@@ -115,7 +176,9 @@ contract AddressResolver is IAddressResolver {
                     "v1",
                     i
                 );
-                saInfoIndex++;
+                unchecked {
+                ++nextArrayElementIndex;
+                }
             }
 
             address v2Address = ISmartAccountFactory(SA_V2_FACTORY)
@@ -125,7 +188,7 @@ contract AddressResolver is IAddressResolver {
                     i
                 );
             if (v2Address != address(0) && _isSmartContract(v2Address)) {
-                _saInfo[saInfoIndex] = SmartAccountResult(
+                _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v2Address,
                     SA_V2_FACTORY,
                     ISmartAccount(v2Address).getImplementation(),
@@ -133,16 +196,24 @@ contract AddressResolver is IAddressResolver {
                     "v2",
                     i
                 );
-                saInfoIndex++;
+                unchecked {
+                ++nextArrayElementIndex;
+                }
+            }
+            unchecked {
+                ++i;
             }
         }
 
         // Create a new dynamic array with only the used elements
         SmartAccountResult[] memory result = new SmartAccountResult[](
-            saInfoIndex
+            nextArrayElementIndex
         );
-        for (uint256 j = 0; j < saInfoIndex; j++) {
+        for (uint256 j; j < nextArrayElementIndex; ) {
             result[j] = _saInfo[j];
+            unchecked {
+                ++j;
+            }
         }
         return result;
     }
