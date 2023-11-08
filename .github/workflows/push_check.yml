@@ -10,18 +10,23 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: 'actions/checkout@master'
+        uses: "actions/checkout@master"
       - name: Set Node.js
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
+      - name: Install Foundry
+        uses: foundry-rs/foundry-toolchain@v1
+        with:
+          version: nightly
+      - name: Install foundry dependencies
+        run: forge install
       - name: Create a fake .secret file
         run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
-      - name: Install dependencies and build
+      - name: Install hardhat dependencies
         run: yarn install --frozen-lockfile && yarn build
       - name: Lint sources
-        run:
-          yarn run lint 
+        run: yarn run lint
 
   unit_test:
     name: Unit tests
@@ -32,26 +37,26 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: 'actions/checkout@master'
+        uses: "actions/checkout@master"
 
       - name: Set Node.js
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      
+
       - name: Create a fake .secret file
         run: echo "primary twist rack vendor diagram image used route theme frown either will" > .secret
-
-      - name: Install dependencies and build
-        run: yarn install --frozen-lockfile && yarn build
-
-      - name: Run Hardhat Tests
-        run: yarn test
 
       - name: Install Foundry
         uses: foundry-rs/foundry-toolchain@v1
         with:
           version: nightly
+
+      - name: Install foundry dependencies
+        run: forge install
+
+      - name: Install hardhat dependencies
+        run: yarn install --frozen-lockfile && yarn build
 
       - name: Run Forge build
         run: |
@@ -59,7 +64,10 @@ jobs:
           forge build --sizes
         id: forge-build
 
+      - name: Run Hardhat Tests
+        run: yarn test
+
       - name: Run Forge tests
         run: |
-          forge test -vvv 
+          forge test -vvv
         id: forge-test
