@@ -70,8 +70,8 @@ contract TestSecp256r1 {
         uint256 u1 = mulmod(e, w, NN);
         uint256 u2 = mulmod(r, w, NN);
 
-        uint256 x = 1;
-        uint256 y = 1;
+        uint256 x;
+        uint256 y;
 
         (x, y) = shamirMultJacobian(points, u1, u2);
         return ((x % NN) == r);
@@ -89,8 +89,8 @@ contract TestSecp256r1 {
         uint256 u1,
         uint256 u2
     ) public view returns (uint256, uint256) {
-        uint256 x = 0;
-        uint256 y = 0;
+        uint256 x = 1;
+        uint256 y = 1;
         uint256 z = 0;
         uint256 bits = 128;
         uint256 index = 0;
@@ -197,10 +197,10 @@ contract TestSecp256r1 {
         }
         uint256 lhs = mulmod(y, y, PP); // y^2 mod p
         uint256 rhs = addmod(
-            addmod(mulmod(mulmod(x, x, PP), x, PP), mulmod(x, A, PP), PP),
+            mulmod(addmod(mulmod(x, x, PP), A, PP), x, PP),
             B,
             PP
-        ); // (x^3 + ax + b) mod p
+        ); // (((x^2 + A) * x) + B) mod p https://en.wikipedia.org/wiki/Horner%27s_method
 
         return lhs == rhs; // y^2 = x^3 + ax + b (mod p)
     }
@@ -260,7 +260,7 @@ contract TestSecp256r1 {
     /*
      * jAdd
      * @description performs double Jacobian as defined below:
-     * https://hyperelliptic.org/EFD/g1p/auto-code/shortw/jacobian-3/doubling/mdbl-2007-bl.op3
+     * https://hyperelliptic.org/EFD/g1p/auto-shortw-jacobian.html#addition-add-1998-cmo-2
      */
     function jAdd(
         uint256 p1,
@@ -293,50 +293,41 @@ contract TestSecp256r1 {
             s1 := mulmod(p2, mulmod(z2z2, q3, pd), pd) // S1 = Y1*Z2*Z2Z2
             s2 := mulmod(q2, mulmod(z1z1, p3, pd), pd) // S2 = Y2*Z1*Z1Z1
 
-            let p3q3 := addmod(p3, q3, pd)
-
             if lt(u2, u1) {
                 u2 := add(pd, u2) // u2 = u2+pd
             }
             let h := sub(u2, u1) // H = U2-U1
 
-            let i := mulmod(0x02, h, pd)
-            i := mulmod(i, i, pd) // I = (2*H)^2
+            let i := mulmod(h, h, pd) // I = H^2
 
-            let j := mulmod(h, i, pd) // J = H*I
+            let j := mulmod(h, i, pd) // J = H^3
             if lt(s2, s1) {
                 s2 := add(pd, s2) // u2 = u2+pd
             }
-            let rr := mulmod(0x02, sub(s2, s1), pd) // r = 2*(S2-S1)
-            r1 := mulmod(rr, rr, pd) // X3 = R^2
+            let rr := sub(s2, s1) // R = (S2-S1)
+            r1 := mulmod(rr, rr, pd) // r1 = R^2
 
-            let v := mulmod(u1, i, pd) // V = U1*I
-            let j2v := addmod(j, mulmod(0x02, v, pd), pd)
+            let v := mulmod(u1, i, pd) // V = U1*I = U1*H^2
+            let j2v := addmod(j, mulmod(0x02, v, pd), pd) // j2v = H^3 + 2*U1*H^2
+
             if lt(r1, j2v) {
                 r1 := add(pd, r1) // X3 = X3+pd
             }
             r1 := sub(r1, j2v)
 
-            // Y3 = r*(V-X3)-2*S1*J
-            let s12j := mulmod(mulmod(0x02, s1, pd), j, pd)
+            let s12j := mulmod(s1, j, pd) // s12j = S1*H^3
 
             if lt(v, r1) {
                 v := add(pd, v)
             }
-            r2 := mulmod(rr, sub(v, r1), pd)
+            r2 := mulmod(rr, sub(v, r1), pd) // (U1*H^2 - r1)*R
 
             if lt(r2, s12j) {
                 r2 := add(pd, r2)
             }
             r2 := sub(r2, s12j)
 
-            // Z3 = ((Z1+Z2)^2-Z1Z1-Z2Z2)*H
-            z1z1 := addmod(z1z1, z2z2, pd)
-            j2v := mulmod(p3q3, p3q3, pd)
-            if lt(j2v, z1z1) {
-                j2v := add(pd, j2v)
-            }
-            r3 := mulmod(sub(j2v, z1z1), h, pd)
+            r3 := mulmod(mulmod(p3, q3, pd), h, pd)
         }
         if ((u1 == u2) && (s1 == s2)) {
             (r1, r2, r3) = modifiedJacobianDouble(p1, p2, p3);

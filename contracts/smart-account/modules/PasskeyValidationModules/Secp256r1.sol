@@ -77,8 +77,8 @@ library Secp256r1 {
         uint256 u1 = mulmod(e, w, NN);
         uint256 u2 = mulmod(r, w, NN);
 
-        uint256 x = 1;
-        uint256 y = 1;
+        uint256 x;
+        uint256 y;
 
         (x, y) = shamirMultJacobian(points, u1, u2);
         return ((x % NN) == r);
@@ -96,8 +96,8 @@ library Secp256r1 {
         uint256 u1,
         uint256 u2
     ) internal view returns (uint256, uint256) {
-        uint256 x = 0;
-        uint256 y = 0;
+        uint256 x = 1;
+        uint256 y = 1;
         uint256 z = 0;
         uint256 bits = 128;
         uint256 index = 0;
@@ -207,10 +207,10 @@ library Secp256r1 {
         }
         uint256 lhs = mulmod(y, y, PP); // y^2 mod p
         uint256 rhs = addmod(
-            addmod(mulmod(mulmod(x, x, PP), x, PP), mulmod(x, A, PP), PP),
+            mulmod(addmod(mulmod(x, x, PP), A, PP), x, PP),
             B,
             PP
-        ); // (x^3 + ax + b) mod p
+        ); // (((x^2 + A) * x) + B) mod p https://en.wikipedia.org/wiki/Horner%27s_method
 
         return lhs == rhs; // y^2 = x^3 + ax + b (mod p)
     }

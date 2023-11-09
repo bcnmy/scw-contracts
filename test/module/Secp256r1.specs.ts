@@ -11,9 +11,9 @@ describe("Secp256r1 tests:", function () {
     secp256r1 = secp256rInstance.attach(secp256r1Deployment.address);
   });
 
-  it("Point addition P + Q where P is (1, 1, 0)", async () => {
-    const p1X = BigNumber.from("1"); // P is the point at infinity
-    const p1Y = BigNumber.from("1");
+  it("Point addition P + Q where P is (0) -> (4, 8, 0)", async () => {
+    const p1X = BigNumber.from("4"); // P as the point at infinity
+    const p1Y = BigNumber.from("8");
     const p1Z = BigNumber.from("0");
     const p2X = BigNumber.from("5"); // any point Q
     const p2Y = BigNumber.from("5");
@@ -34,12 +34,13 @@ describe("Secp256r1 tests:", function () {
     expect(resultZ).to.equal(p2Z);
   });
 
-  it("Point addition P + Q where Q is (1, 1, 0)", async () => {
+  // px = c^2 * qx,py = c^3 * qy,andpz = c * qz
+  it("Point addition P + Q where Q is (0) -> (4, 8, 0)", async () => {
     const p1X = BigNumber.from("5"); // P is any point
     const p1Y = BigNumber.from("5");
     const p1Z = BigNumber.from("5");
-    const p2X = BigNumber.from("1"); // Q is the point at infinity
-    const p2Y = BigNumber.from("1");
+    const p2X = BigNumber.from("4"); // Q as the point at infinity
+    const p2Y = BigNumber.from("8");
     const p2Z = BigNumber.from("0");
 
     const [resultX, resultY, resultZ] = await secp256r1.jAdd(
@@ -58,7 +59,7 @@ describe("Secp256r1 tests:", function () {
   });
 
   it("Point addition P + Q where P is equal to Q = point at infinity", async () => {
-    const pX = 1; // P is the point at infinity
+    const pX = 1; // P as the point at infinity same as Jacob cordinates point of infinity
     const pY = 1;
     const pZ = 0;
 
@@ -98,28 +99,86 @@ describe("Secp256r1 tests:", function () {
     expect(resultZ).to.equal(expectedZ);
   });
 
-  // TODO: Add test for point addition where P is equal to -Q
   it("Point addition P + Q where P is equal to -Q", async () => {
-    const px = 1;
+    const p1X = BigNumber.from("5");
+    const p1Y = BigNumber.from("5");
+    const p1Z = BigNumber.from("5");
+    const PP = BigNumber.from(
+      "0xFFFFFFFF00000001000000000000000000000000FFFFFFFFFFFFFFFFFFFFFFFF"
+    );
+
+    // Perform the point addition which should result in the point at infinity
+    // (c^2 mod p, c^3 mod p, 0) for some c > 0
+    const [resultX, resultY, resultZ] = await secp256r1.jAdd(
+      p1X,
+      p1Y,
+      p1Z,
+      p1X,
+      PP.sub(p1Y),
+      p1Z
+    );
+
+    const c = resultY.div(resultX);
+
+    expect(resultX.eq(c.pow(2))).to.equal(true);
+    expect(resultY.eq(c.pow(3))).to.equal(true);
+    expect(resultZ.eq(0)).to.equal(true);
   });
 
-  it("Test Point from valid curve values", async () => {
+  it("Test valid point on curve for jAdd, jDouble and affineFromJacobian", async () => {
     const p1X = BigNumber.from(
-      "102403071235386942129802073633927364745593163841562425802125223486053883419147"
-    ); // P is any point
+      "0x150c79a46d10a0a7b5977ce4b1e7f35dad727095655b33a38bfece87c66b5f07"
+    );
     const p1Y = BigNumber.from(
-      "57238631025539521861381823980215707206878884343005932892622792653151203351216"
+      "0x7165fee1b0b7ff988cef7a9234527b89814cef0f95a4101ecbd98f1e84e086a9"
     );
     const p1Z = BigNumber.from(
-      "57238631025539521861381823980215707206878884343005932892622792653151203351216"
+      "0x67f4336965ac19295a42860c44f2724595138978380e171631046a570fb257d8"
     );
+    const [pAffine1X, pAffine1Y] = await secp256r1.affineFromJacobian(
+      p1X,
+      p1Y,
+      p1Z
+    );
+
+    // Test the affine coordinates conversion
+    expect(
+      BigNumber.from(
+        "0xb0b6840592ad97cd59edadb92373e7a7e1b49a2eb0030096438115ba1b3b61ae"
+      ).eq(pAffine1X)
+    ).to.equal(true);
+    expect(
+      BigNumber.from(
+        "0xc6e581c825ecc3c412ae7246329ac3ba0735a1fb02000e6e1c1b215ea8681d19"
+      ).eq(pAffine1Y)
+    ).to.equal(true);
+
     const p2X = BigNumber.from(
-      "48439561293906451759052585252797914202762949526041747995844080717082404635286"
-    ); // Q is any point
-    const p2Y = BigNumber.from(
-      "36134250956749795798585127919587881956611106672985015071877198253568414405109"
+      "0x2b418610e52cd1cef9d77e3f424cea5733d3a0ec2ad4afdce10afad73ee35dfd"
     );
-    const p2Z = BigNumber.from("1");
+    const p2Y = BigNumber.from(
+      "0x1a78d5f068814dd8d69a28771774329f0c8b84d6cf60d0f909e1f7e25b2979fa"
+    );
+    const p2Z = BigNumber.from(
+      "0x872aba6d3b28a2caa6d390408f733ac1087a4d7a3ebd5f32abf7edaa8c753042"
+    );
+    const [pAffine2X, pAffine2Y] = await secp256r1.affineFromJacobian(
+      p2X,
+      p2Y,
+      p2Z
+    );
+
+    // Test the affine coordinates conversion
+    expect(
+      BigNumber.from(
+        "0x6933b0ee884cd2f1a5c50855246d63d2b6957699c6c8e35ad3ecbbd60257c86c"
+      ).eq(pAffine2X)
+    ).to.equal(true);
+    expect(
+      BigNumber.from(
+        "0x8684f8ed29e5a0d70b1d8e00e15dbea66451209592900098e40c27adac16064d"
+      ).eq(pAffine2Y)
+    ).to.equal(true);
 
     const [resultX, resultY, resultZ] = await secp256r1.jAdd(
       p1X,
@@ -129,16 +188,43 @@ describe("Secp256r1 tests:", function () {
       p2Y,
       p2Z
     );
+    const [resultAffineX, resultAffineY] = await secp256r1.affineFromJacobian(
+      resultX,
+      resultY,
+      resultZ
+    );
+
+    // Test the jacob Add and the affine coordinates conversion
     expect(
-      BigNumber.from(resultX).eq(
-        "7027020423653180680681697977574155747173625120349278496935681089261925327030"
-      )
-    );
-    expect(BigNumber.from(resultY)).to.equal(
-      "62425419119494428131315245342961114824928671318225902107220413968463822604674"
-    );
-    expect(BigNumber.from(resultZ)).to.equal(
-      "82044049783345747209040034123170347486191278889119444798036024344518197942547"
-    );
+      BigNumber.from(
+        "0x59ad9d1c7eb87b186a39d407b3d95f4a82558362d1f22c83341e65aaa04dfded"
+      ).eq(resultAffineX)
+    ).to.equal(true);
+    expect(
+      BigNumber.from(
+        "0x50f755015574b0b972cc4c3e12a216adcb22eeddfd6d190e8c9deffe49cce3ef"
+      ).eq(resultAffineY)
+    ).to.equal(true);
+
+    // Test the jacob double (for first point) and the affine coordinates conversion
+    const [resultDoubleX, resultDoubleY, resultDoubleZ] =
+      await secp256r1.modifiedJacobianDouble(p1X, p1Y, p1Z);
+    const [resultDoubleAffineX, resultDoubleAffineY] =
+      await secp256r1.affineFromJacobian(
+        resultDoubleX,
+        resultDoubleY,
+        resultDoubleZ
+      );
+
+    expect(
+      BigNumber.from(
+        "0x2a7f7ad220dfc864cb904e329b3352316c6fc28cf957f9b49172eed935aa6b8c"
+      ).eq(resultDoubleAffineX)
+    ).to.equal(true);
+    expect(
+      BigNumber.from(
+        "0xebab24f82736e63c11576f8a969f566c0daff09c63e444337acbe20103695a8f"
+      ).eq(resultDoubleAffineY)
+    ).to.equal(true);
   });
 });
