@@ -33,6 +33,12 @@ const smartAccountFactoryOwnerAddress =
   process.env[`SMART_ACCOUNT_FACTORY_OWNER_ADDRESS_${DEPLOYMENT_MODE}`]!;
 const paymasterOwnerAddress =
   process.env[`PAYMASTER_OWNER_ADDRESS_${DEPLOYMENT_MODE}`]!;
+const smartAccountFactoryV1Address =
+  process.env[`SMART_ACCOUNT_FACTORY_ADDRESS_V1_${DEPLOYMENT_MODE}`]!;
+let smartAccountFactoryV2Address =
+  process.env[`SMART_ACCOUNT_FACTORY_ADDRESS_V2_${DEPLOYMENT_MODE}`]!;
+let ecdsaOwnershipModuleAddress =
+  process.env[`ECDSA_REGISTRY_MODULE_ADDRESS_${DEPLOYMENT_MODE}`]!;
 const verifyingSigner =
   process.env[`PAYMASTER_SIGNER_ADDRESS_${DEPLOYMENT_MODE}`]!;
 const DEPLOYER_CONTRACT_ADDRESS =
@@ -151,6 +157,8 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
     [baseImpAddress, signer.address]
   );
 
+  smartAccountFactoryV2Address = smartAccountFactoryAddress;
+
   console.log("Checking if Factory is staked...");
   const { unstakeDelayInSec, stakeInWei } = factoryStakeConfig[chainId];
   const entrypoint = EntryPoint__factory.connect(entryPointAddress, signer);
@@ -204,7 +212,7 @@ async function deployWalletFactoryContract(deployerInstance: Deployer) {
 }
 
 async function deployEcdsaOwnershipRegistryModule(deployerInstance: Deployer) {
-  await deployGeneric(
+  ecdsaOwnershipModuleAddress = await deployGeneric(
     deployerInstance,
     DEPLOYMENT_SALTS.ECDSA_REGISTRY_MODULE,
     `${EcdsaOwnershipRegistryModule__factory.bytecode}`,
@@ -276,12 +284,42 @@ async function deploySmartContractOwnershipRegistryModule(
 }
 
 async function deployAddressResolver(deployerInstance: Deployer) {
+  if (
+    !smartAccountFactoryV1Address ||
+    smartAccountFactoryV1Address.length === 0
+  ) {
+    throw new Error("V1 Factory Address not found");
+  }
+
+  if (
+    !smartAccountFactoryV2Address ||
+    smartAccountFactoryV2Address.length === 0
+  ) {
+    throw new Error("V2 Factory Address not found");
+  }
+
+  if (
+    !ecdsaOwnershipModuleAddress ||
+    ecdsaOwnershipModuleAddress.length === 0
+  ) {
+    throw new Error("ECDSA Module Address not found");
+  }
+
   await deployGeneric(
     deployerInstance,
     DEPLOYMENT_SALTS.ADDRESS_RESOLVER,
-    `${AddressResolver__factory.bytecode}`,
+    `${AddressResolver__factory.bytecode}${encodeParam(
+      "address",
+      smartAccountFactoryV1Address
+    ).slice(2)}${encodeParam("address", smartAccountFactoryV2Address).slice(
+      2
+    )}${encodeParam("address", ecdsaOwnershipModuleAddress).slice(2)}`,
     "AddressResolver",
-    []
+    [
+      smartAccountFactoryV1Address,
+      smartAccountFactoryV2Address,
+      ecdsaOwnershipModuleAddress,
+    ]
   );
 }
 
@@ -355,8 +393,6 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
   console.log("=========================================");
-  await deployVerifySingeltonPaymaster(deployerInstance);
-  console.log("=========================================");
   await deployEcdsaOwnershipRegistryModule(deployerInstance);
   console.log("=========================================");
   await deployMultichainValidatorModule(deployerInstance);
@@ -371,8 +407,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deploySmartContractOwnershipRegistryModule(deployerInstance);
   console.log("=========================================");
-  // await deployAddressResolver(deployerInstance);
-  // console.log("=========================================");
+  await deployAddressResolver(deployerInstance);
+  console.log("=========================================");
 
   console.log(
     "Deployed Contracts: ",

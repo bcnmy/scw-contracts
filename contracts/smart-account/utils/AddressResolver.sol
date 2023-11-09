@@ -9,17 +9,26 @@ import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
 
 /// EOA <-> Smart Account address resolver for Biconomy smart accounts
 contract AddressResolver is IAddressResolver {
-    address public constant SA_V1_FACTORY =
-        0x000000F9eE1842Bb72F6BBDD75E6D3d4e3e9594C;
-    address public constant SA_V2_FACTORY =
-        0x000000a56Aaca3e9a4C479ea6b6CD0DbcB6634F5;
-    address public constant ECDSA_REGISTRY_MODULE_ADDRESS =
-        0x0000001c5b32F37F5beA87BDD5374eB2aC54eA8e;
+    address public immutable smartAccountFactoryV1;
+    address public immutable smartAccountFactoryV2;
+    address public immutable ecdsaOwnershipModule;
 
     // Optional
     // resolveAddressesV1UpgradedToV2()
     // returns address[]
 
+     constructor(
+        address _v1Factory,
+        address _v2Factory,
+        address _ecdsaModule
+        ) {
+        require(_v1Factory != address(0), "Required non-zero address");
+        require(_v2Factory != address(0), "Required non-zero address");
+        require(_ecdsaModule != address(0), "Required non-zero address");    
+        smartAccountFactoryV1 = _v1Factory;
+        smartAccountFactoryV2 = _v2Factory;
+        ecdsaOwnershipModule = _ecdsaModule;
+        }
     /**
      * @dev Returns the addresses of all the smart accounts deployed by the EOA for any deployment index from 0 to _maxIndex.
      * @param _eoa Address of the EOA.
@@ -36,12 +45,12 @@ contract AddressResolver is IAddressResolver {
         uint256 nextArrayElementIndex = 0; // To keep track of the current index in _saAddresses
 
         for (uint256 i; i < _maxIndex; ) {
-            address v1Address = ISmartAccountFactoryV1(SA_V1_FACTORY)
+            address v1Address = ISmartAccountFactoryV1(smartAccountFactoryV1)
                 .getAddressForCounterFactualAccount(_eoa, i);
             if (v1Address != address(0) && _isSmartContract(v1Address)) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v1Address,
-                    SA_V1_FACTORY,
+                    smartAccountFactoryV1,
                     ISmartAccount(v1Address).getImplementation(),
                     ISmartAccount(v1Address).VERSION(),
                     "v1",
@@ -86,12 +95,12 @@ contract AddressResolver is IAddressResolver {
         uint256 nextArrayElementIndex = 0; // To keep track of the current index in _saAddresses
 
         for (uint256 i; i < _maxIndex; ) {
-            address v1Address = ISmartAccountFactoryV1(SA_V1_FACTORY)
+            address v1Address = ISmartAccountFactoryV1(smartAccountFactoryV1)
                 .getAddressForCounterFactualAccount(_eoa, i);
             if (v1Address != address(0) && _isSmartContract(v1Address)) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v1Address,
-                    SA_V1_FACTORY,
+                    smartAccountFactoryV1,
                     ISmartAccount(v1Address).getImplementation(),
                     ISmartAccount(v1Address).VERSION(),
                     "v1",
@@ -103,20 +112,20 @@ contract AddressResolver is IAddressResolver {
             }
 
             bytes4 selector = IEcdsaOwnershipRegistryModule(
-                ECDSA_REGISTRY_MODULE_ADDRESS
+                ecdsaOwnershipModule
             ).initForSmartAccount.selector;
             bytes memory data = abi.encodeWithSelector(selector, _eoa);
 
-            address v2Address = ISmartAccountFactory(SA_V2_FACTORY)
+            address v2Address = ISmartAccountFactory(smartAccountFactoryV2)
                 .getAddressForCounterFactualAccount(
-                    ECDSA_REGISTRY_MODULE_ADDRESS,
+                    ecdsaOwnershipModule,
                     data,
                     i
                 );
             if (v2Address != address(0) && _isSmartContract(v2Address)) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v2Address,
-                    SA_V2_FACTORY,
+                    smartAccountFactoryV2,
                     ISmartAccount(v2Address).getImplementation(),
                     ISmartAccount(v2Address).VERSION(),
                     "v2",
@@ -165,12 +174,12 @@ contract AddressResolver is IAddressResolver {
         uint256 nextArrayElementIndex = 0; // To keep track of the current index in _saAddresses
 
         for (uint256 i; i < _maxIndex; ) {
-            address v1Address = ISmartAccountFactoryV1(SA_V1_FACTORY)
+            address v1Address = ISmartAccountFactoryV1(smartAccountFactoryV1)
                 .getAddressForCounterFactualAccount(_eoa, i);
             if (v1Address != address(0) && _isSmartContract(v1Address)) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v1Address,
-                    SA_V1_FACTORY,
+                    smartAccountFactoryV1,
                     ISmartAccount(v1Address).getImplementation(),
                     ISmartAccount(v1Address).VERSION(),
                     "v1",
@@ -181,7 +190,7 @@ contract AddressResolver is IAddressResolver {
                 }
             }
 
-            address v2Address = ISmartAccountFactory(SA_V2_FACTORY)
+            address v2Address = ISmartAccountFactory(smartAccountFactoryV2)
                 .getAddressForCounterFactualAccount(
                     _moduleAddress,
                     _moduleSetupData,
@@ -190,7 +199,7 @@ contract AddressResolver is IAddressResolver {
             if (v2Address != address(0) && _isSmartContract(v2Address)) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v2Address,
-                    SA_V2_FACTORY,
+                    smartAccountFactoryV2,
                     ISmartAccount(v2Address).getImplementation(),
                     ISmartAccount(v2Address).VERSION(),
                     "v2",
