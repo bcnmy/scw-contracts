@@ -1,9 +1,10 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
-import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../interfaces/ISignatureValidator.sol";
-import {Enum} from "../common/Enum.sol";
-import {ReentrancyGuard} from "../common/ReentrancyGuard.sol";
+import {EIP1271_MAGIC_VALUE, ISignatureValidator} from "../../interfaces/ISignatureValidator.sol";
+import {ISmartAccount} from "../../interfaces/ISmartAccount.sol";
+import {Enum} from "../../common/Enum.sol";
+import {ReentrancyGuard} from "../../common/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 
 struct Transaction {
@@ -237,7 +238,7 @@ contract ForwardFlowModule is ReentrancyGuard {
 
             txHash = keccak256(txHashData);
             if (
-                ISignatureValidator(smartAccount).isValidSignature(
+                ISignatureValidator(smartAccount).isValidSignatureUnsafe(
                     txHash,
                     signatures
                 ) != EIP1271_MAGIC_VALUE

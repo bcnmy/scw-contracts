@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity >=0.8.17;
+pragma solidity ^0.8.20;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
@@ -57,6 +57,15 @@ contract PasskeyRegistryModule is
 
     /// @inheritdoc ISignatureValidator
     function isValidSignature(
+        bytes32 signedDataHash,
+        bytes memory moduleSignature
+    ) public view virtual override returns (bytes4) {
+        // TODO: @amanraj1608 make it safe
+        return isValidSignatureForAddress(signedDataHash, moduleSignature);
+    }
+
+    /// @inheritdoc ISignatureValidator
+    function isValidSignatureUnsafe(
         bytes32 signedDataHash,
         bytes memory moduleSignature
     ) public view virtual override returns (bytes4) {

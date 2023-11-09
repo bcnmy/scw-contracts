@@ -9,14 +9,14 @@ import "hardhat-gas-reporter";
 import "solidity-coverage";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
-import "hardhat-dependency-compiler";
+import "@nomicfoundation/hardhat-foundry";
 import { parseUnits } from "ethers/lib/utils";
 
 const walletUtils = require("./walletUtils");
 
 dotenv.config();
 
-const shouldRunInForkMode = !!process.env.FORK_MODE;
+const shouldRunInForkMode = process.env.FORK_MODE === "true";
 
 // This is a sample Hardhat task. To learn how to create your own go to
 // https://hardhat.org/guides/create-task.html
@@ -50,8 +50,9 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.17",
+        version: "0.8.20",
         settings: {
+          evmVersion: "paris",
           optimizer: { enabled: true, runs: 800 },
           viaIR: true,
         },
@@ -271,10 +272,6 @@ const config: HardhatUserConfig = {
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     onlyCalledMethods: true,
-  },
-
-  dependencyCompiler: {
-    paths: ["@account-abstraction/contracts/core/EntryPoint.sol"],
   },
   etherscan: {
     apiKey: {
