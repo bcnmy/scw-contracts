@@ -17,18 +17,15 @@ contract AddressResolver is IAddressResolver {
     // resolveAddressesV1UpgradedToV2()
     // returns address[]
 
-     constructor(
-        address _v1Factory,
-        address _v2Factory,
-        address _ecdsaModule
-        ) {
+    constructor(address _v1Factory, address _v2Factory, address _ecdsaModule) {
         require(_v1Factory != address(0), "Required non-zero address");
         require(_v2Factory != address(0), "Required non-zero address");
-        require(_ecdsaModule != address(0), "Required non-zero address");    
+        require(_ecdsaModule != address(0), "Required non-zero address");
         smartAccountFactoryV1 = _v1Factory;
         smartAccountFactoryV2 = _v2Factory;
         ecdsaOwnershipModule = _ecdsaModule;
-        }
+    }
+
     /**
      * @dev Returns the addresses of all the smart accounts deployed by the EOA for any deployment index from 0 to _maxIndex.
      * @param _eoa Address of the EOA.
