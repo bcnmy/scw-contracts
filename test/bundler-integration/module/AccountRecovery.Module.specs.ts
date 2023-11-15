@@ -68,7 +68,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
 
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
-      const controlMessage = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
+      const controlMessage = "ACC_RECOVERY_SECURE_MSG";
 
       await deployments.fixture();
       const SmartAccount = await ethers.getContractFactory("SmartAccount");

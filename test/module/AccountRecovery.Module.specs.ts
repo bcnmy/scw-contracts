@@ -38,7 +38,7 @@ describe("Account Recovery Module: ", async () => {
 
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
-      const controlMessage = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
+      const controlMessage = "ACC_RECOVERY_SECURE_MSG";
 
       await deployments.fixture();
 
