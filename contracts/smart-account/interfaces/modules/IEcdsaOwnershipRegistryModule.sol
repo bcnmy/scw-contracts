@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 /**
  * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
@@ -9,7 +9,7 @@ pragma solidity 0.8.17;
  *         - One owner per Smart Account.
  *         - Does not support outdated eth_sign flow for cheaper validations
  *         (see https://support.metamask.io/hc/en-us/articles/14764161421467-What-is-eth-sign-and-why-is-it-a-risk-)
- * !!!!!!! Only EOA owners supported, no Smart Account Owners
+ * !!!!!!! Only EOA owners are supported, no Smart Account Owners
  *         For Smart Contract Owners check SmartContractOwnership module instead
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
@@ -28,7 +28,7 @@ interface IEcdsaOwnershipRegistryModule {
 
     /**
      * @dev Initializes the module for a Smart Account.
-     * Should be used at a time of first enabling the module for a Smart Account.
+     * Should be used at time of first enabling the module for a Smart Account.
      * @param eoaOwner The owner of the Smart Account. Should be EOA!
      */
     function initForSmartAccount(address eoaOwner) external returns (address);
@@ -54,14 +54,28 @@ interface IEcdsaOwnershipRegistryModule {
     function getOwner(address smartAccount) external view returns (address);
 
     /**
-     * @dev Validates a signature for a message signed by address.
-     * @dev Also try dataHash.toEthSignedMessageHash()
+     * @dev Validates an EIP-1271 signature
+     * @dev Appends Smart Account address to the hash to avoid replay attacks
      * @param dataHash hash of the data
      * @param moduleSignature Signature to be validated.
      * @param smartAccount expected signer Smart Account address.
      * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
      */
     function isValidSignatureForAddress(
+        bytes32 dataHash,
+        bytes memory moduleSignature,
+        address smartAccount
+    ) external view returns (bytes4);
+
+    /**
+     * @dev Same as isValidSignatureForAddress but does not append Smart Account address to the hash
+     * @dev Expects the data Hash to already include smart account address information
+     * @param dataHash hash of the data which includes smart account address
+     * @param moduleSignature Signature to be validated.
+     * @param smartAccount expected signer Smart Account address.
+     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
+     */
+    function isValidSignatureForAddressUnsafe(
         bytes32 dataHash,
         bytes memory moduleSignature,
         address smartAccount

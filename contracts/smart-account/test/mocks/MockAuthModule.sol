@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 import {BaseAuthorizationModule} from "../../modules/BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
@@ -22,6 +22,14 @@ contract MockAuthModule is BaseAuthorizationModule {
     }
 
     function isValidSignature(
+        bytes32 _dataHash,
+        bytes memory _signature
+    ) public view virtual override returns (bytes4) {
+        (_dataHash, _signature);
+        return EIP1271_MAGIC_VALUE; //always valid signature
+    }
+
+    function isValidSignatureUnsafe(
         bytes32 _dataHash,
         bytes memory _signature
     ) public view virtual override returns (bytes4) {

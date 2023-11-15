@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 /**
  * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
@@ -86,6 +86,20 @@ interface IMultiOwnedECDSAModule {
      * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
      */
     function isValidSignatureForAddress(
+        bytes32 dataHash,
+        bytes memory moduleSignature,
+        address smartAccount
+    ) external view returns (bytes4);
+
+    /**
+     * @dev Same as isValidSignatureForAddress but does not append Smart Account address to the hash
+     * @dev Expects the data Hash to already include smart account address information
+     * @param dataHash hash of the data which includes smart account address
+     * @param moduleSignature Signature to be validated.
+     * @param smartAccount expected signer Smart Account address.
+     * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
+     */
+    function isValidSignatureForAddressUnsafe(
         bytes32 dataHash,
         bytes memory moduleSignature,
         address smartAccount

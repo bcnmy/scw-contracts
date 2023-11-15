@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {BaseSmartAccount, IEntryPoint, Transaction, FeeRefund, Enum, UserOperation} from "./BaseSmartAccountV1.sol";
@@ -8,7 +8,7 @@ import {FallbackManagerV1} from "./FallbackManagerV1.sol";
 import {SignatureDecoder} from "../../../common/SignatureDecoder.sol";
 import {SecuredTokenTransfer} from "../../../common/SecuredTokenTransfer.sol";
 import {LibAddress} from "../../../libs/LibAddress.sol";
-import {ISignatureValidator} from "../../../interfaces/ISignatureValidator.sol";
+import {ISignatureValidatorV1} from "./ISignatureValidatorV1.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
 import {ReentrancyGuard} from "../../../common/ReentrancyGuard.sol";
 import {SmartAccountErrorsV1} from "./ErrorsV1.sol";
@@ -17,7 +17,7 @@ import {IModule} from "./IModuleV1.sol";
 import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 
 /**
- * @title SmartAccount - EIP-4337 compatible smart contract wallet.
+ * @title SmartAccount - EIP-4337 compatible smart account.
  * @dev This contract is the base for the Smart Account functionality.
  *         - It provides the functionality to execute both gnosis-style txns and AA (EIP-4337) userOps
  *         - It allows to receive and manage assets.
@@ -34,7 +34,7 @@ contract SmartAccountV1 is
     IERC165,
     ReentrancyGuard,
     SmartAccountErrorsV1,
-    ISignatureValidator
+    ISignatureValidatorV1
 {
     using ECDSA for bytes32;
     using LibAddress for address;
@@ -450,7 +450,7 @@ contract SmartAccountV1 is
                 contractSignature := add(add(signatures, s), 0x20)
             }
             if (
-                ISignatureValidator(_signer).isValidSignature(
+                ISignatureValidatorV1(_signer).isValidSignature(
                     dataHash,
                     contractSignature
                 ) != EIP1271_MAGIC_VALUE
@@ -683,7 +683,7 @@ contract SmartAccountV1 is
 
     /**
      * Implementation of ISignatureValidator (see `interfaces/ISignatureValidator.sol`)
-     * @dev If owner is a smart-contract (other smart contract wallet or module, that controls
+     * @dev If owner is a smart-contract (other smart account or module, that controls
      *      signature verifications - like multisig), forward isValidSignature request to it.
      *      In case of multisig, _signature can be several concatenated signatures
      *      If owner is EOA, perform a regular ecrecover.
@@ -697,7 +697,7 @@ contract SmartAccountV1 is
     ) public view override returns (bytes4) {
         if (owner.code.length > 0) {
             return
-                ISignatureValidator(owner).isValidSignature(
+                ISignatureValidatorV1(owner).isValidSignature(
                     _dataHash,
                     _signature
                 );

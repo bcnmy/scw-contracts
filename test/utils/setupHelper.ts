@@ -1,6 +1,9 @@
 import hre, { deployments, ethers } from "hardhat";
 import { Wallet, Contract, BytesLike } from "ethers";
-import { EntryPoint__factory } from "../../typechain-types";
+import {
+  AddressResolver__factory,
+  EntryPoint__factory,
+} from "../../typechain-types";
 import type { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 import solc from "solc";
 
@@ -12,9 +15,25 @@ export const getEntryPoint = async () => {
   );
 };
 
+export const getAddressResolver = async () => {
+  const AddressResolverDeployment = await deployments.get("AddressResolver");
+  return AddressResolver__factory.connect(
+    AddressResolverDeployment.address,
+    ethers.provider.getSigner()
+  );
+};
+
 export const getSmartAccountImplementation = async () => {
   const SmartAccountImplDeployment = await deployments.get("SmartAccount");
   const SmartAccountImpl = await hre.ethers.getContractFactory("SmartAccount");
+  return SmartAccountImpl.attach(SmartAccountImplDeployment.address);
+};
+
+export const getSmartAccountImplementationV1 = async () => {
+  const SmartAccountImplDeployment = await deployments.get("SmartAccountV1");
+  const SmartAccountImpl = await hre.ethers.getContractFactory(
+    "SmartAccountV1"
+  );
   return SmartAccountImpl.attach(SmartAccountImplDeployment.address);
 };
 
@@ -22,6 +41,17 @@ export const getSmartAccountFactory = async () => {
   const SAFactoryDeployment = await deployments.get("SmartAccountFactory");
   const SmartAccountFactory = await hre.ethers.getContractFactory(
     "SmartAccountFactory"
+  );
+  const smartAccountFactory = SmartAccountFactory.attach(
+    SAFactoryDeployment.address
+  );
+  return smartAccountFactory;
+};
+
+export const getSmartAccountFactoryV1 = async () => {
+  const SAFactoryDeployment = await deployments.get("SmartAccountFactoryV1");
+  const SmartAccountFactory = await hre.ethers.getContractFactory(
+    "SmartAccountFactoryV1"
   );
   const smartAccountFactory = SmartAccountFactory.attach(
     SAFactoryDeployment.address
@@ -62,6 +92,16 @@ export const getEcdsaOwnershipRegistryModule = async () => {
   return EcdsaOwnershipRegistryModule.attach(
     EcdsaOwnershipRegistryModuleDeployment.address
   );
+};
+
+export const getMultiChainModule = async () => {
+  const MultiChainValidatorDeployment = await deployments.get(
+    "MultichainECDSAValidator"
+  );
+  const MultiChainValidator = await hre.ethers.getContractFactory(
+    "MultichainECDSAValidator"
+  );
+  return MultiChainValidator.attach(MultiChainValidatorDeployment.address);
 };
 
 export const getSmartContractOwnershipRegistryModule = async () => {

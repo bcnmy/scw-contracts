@@ -15,5 +15,5 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 };
 
-deploy.tags = ["mock-token", "mocks", "main-suite"];
+deploy.tags = ["ecdsa-module", "main-suite"];
 export default deploy;

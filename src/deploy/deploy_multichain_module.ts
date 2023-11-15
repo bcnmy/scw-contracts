@@ -6,7 +6,7 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   const { deploy } = deployments;
   const { deployer } = await getNamedAccounts();
 
-  await deploy("SmartContractOwnershipRegistryModule", {
+  await deploy("MultichainECDSAValidator", {
     from: deployer,
     args: [],
     log: true,
@@ -15,5 +15,5 @@ const deploy: DeployFunction = async function (hre: HardhatRuntimeEnvironment) {
   });
 };
 
-deploy.tags = ["mock-token", "mocks", "main-suite"];
+deploy.tags = ["multichain-validator", "main-suite"];
 export default deploy;

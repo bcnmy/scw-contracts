@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -119,6 +119,15 @@ contract SessionKeyManager is
 
     /// @inheritdoc ISignatureValidator
     function isValidSignature(
+        bytes32 _dataHash,
+        bytes memory _signature
+    ) public pure override returns (bytes4) {
+        (_dataHash, _signature);
+        return 0xffffffff; // do not support it here
+    }
+
+    /// @inheritdoc ISignatureValidator
+    function isValidSignatureUnsafe(
         bytes32 _dataHash,
         bytes memory _signature
     ) public pure override returns (bytes4) {

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
 /* solhint-disable no-unused-import */
 
@@ -87,8 +87,9 @@ contract EcdsaOwnershipRegistryModule is
     /**
      * @inheritdoc ISignatureValidator
      * @dev Validates a signature for a message.
+     * @dev Appends smart account address to the hash to avoid replay attacks
      * To be called from a Smart Account.
-     * @param dataHash Exact hash of the data that was signed.
+     * @param dataHash Hash of the message that was signed.
      * @param moduleSignature Signature to be validated.
      * @return EIP1271_MAGIC_VALUE if signature is valid, 0xffffffff otherwise.
      */
@@ -106,6 +107,43 @@ contract EcdsaOwnershipRegistryModule is
         bytes memory moduleSignature,
         address smartAccount
     ) public view virtual override returns (bytes4) {
+        if (
+            _verifySignature(
+                keccak256(
+                    abi.encodePacked(
+                        "\x19Ethereum Signed Message:\n52",
+                        dataHash,
+                        smartAccount
+                    )
+                ),
+                moduleSignature,
+                smartAccount
+            )
+        ) {
+            return EIP1271_MAGIC_VALUE;
+        }
+        return bytes4(0xffffffff);
+    }
+
+    /// @inheritdoc ISignatureValidator
+    function isValidSignatureUnsafe(
+        bytes32 dataHash,
+        bytes memory moduleSignature
+    ) public view virtual returns (bytes4) {
+        return
+            isValidSignatureForAddressUnsafe(
+                dataHash,
+                moduleSignature,
+                msg.sender
+            );
+    }
+
+    /// @inheritdoc IEcdsaOwnershipRegistryModule
+    function isValidSignatureForAddressUnsafe(
+        bytes32 dataHash,
+        bytes memory moduleSignature,
+        address smartAccount
+    ) public view virtual returns (bytes4) {
         if (_verifySignature(dataHash, moduleSignature, smartAccount)) {
             return EIP1271_MAGIC_VALUE;
         }

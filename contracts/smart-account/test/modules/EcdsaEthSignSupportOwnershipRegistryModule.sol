@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
-pragma solidity 0.8.17;
+pragma solidity ^0.8.20;
 
-import {BaseAuthorizationModule} from "../BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule} from "../../modules/BaseAuthorizationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
@@ -95,6 +95,14 @@ contract EcdsaWithEthSignSupportOwnershipRegistryModule is
         bytes32 dataHash,
         bytes memory moduleSignature
     ) public view virtual override returns (bytes4) {
+        return
+            isValidSignatureForAddress(dataHash, moduleSignature, msg.sender);
+    }
+
+    function isValidSignatureUnsafe(
+        bytes32 dataHash,
+        bytes memory moduleSignature
+    ) public view virtual returns (bytes4) {
         return
             isValidSignatureForAddress(dataHash, moduleSignature, msg.sender);
     }
