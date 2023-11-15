@@ -39,8 +39,7 @@ contract AccountRecoveryModule is
     // execute_ncC(address,uint256,bytes)
     bytes4 public immutable EXECUTE_OPTIMIZED_SELECTOR;
     // Hash to be signed by guardians to make a guardianId
-    string public constant CONTROL_MESSAGE =
-        "ACC_RECOVERY_SECURE_MSG";
+    string public constant CONTROL_MESSAGE = "ACC_RECOVERY_SECURE_MSG";
 
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
