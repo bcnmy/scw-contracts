@@ -133,17 +133,19 @@ describe("OrgUserAdmin PoC (with Bundler):", async () => {
     );
     await environment.sendUserOperation(enableModuleUserOp, entryPoint.address);
 
-    expect(await userSA.isModuleEnabled(orgUserAdminModule.address)).to.equal(true);
+    expect(await userSA.isModuleEnabled(orgUserAdminModule.address)).to.equal(
+      true
+    );
 
-    //get the function selector of mockToken.transfer(address,uint256)
+    // get the function selector of mockToken.transfer(address,uint256)
     const initOrgUserAdminModuleUserOp = await makeEcdsaModuleUserOp(
       "execute",
       [
-        orgUserAdminModule.address, 
-        0, 
+        orgUserAdminModule.address,
+        0,
         orgUserAdminModule.interface.encodeFunctionData("initMappings", [
           mockToken.address,
-          ethers.utils.id('transfer(address,uint256)').substring(0, 10),
+          ethers.utils.id("transfer(address,uint256)").substring(0, 10),
         ]),
       ],
       userSA.address,
@@ -154,7 +156,10 @@ describe("OrgUserAdmin PoC (with Bundler):", async () => {
         preVerificationGas: 50000,
       }
     );
-    await environment.sendUserOperation(initOrgUserAdminModuleUserOp, entryPoint.address);
+    await environment.sendUserOperation(
+      initOrgUserAdminModuleUserOp,
+      entryPoint.address
+    );
 
     return {
       entryPoint: entryPoint,
@@ -167,40 +172,44 @@ describe("OrgUserAdmin PoC (with Bundler):", async () => {
     };
   });
 
-    describe("validateUserOp(): ", async () => {
-      it("Returns SIG_VALIDATION_SUCCESS for a valid UserOp and valid userOpHash ", async () => {
-        const { ecdsaRegistryModule, entryPoint, userSA, mockToken, orgUserAdminModule } =
-          await setupTests();
-        const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
-        const bobBalanceBefore = await mockToken.balanceOf(bob.address);
-        const tokenAmountToTransfer = ethers.utils.parseEther("3.5672");
+  describe("validateUserOp(): ", async () => {
+    it("Returns SIG_VALIDATION_SUCCESS for a valid UserOp and valid userOpHash ", async () => {
+      const {
+        ecdsaRegistryModule,
+        entryPoint,
+        userSA,
+        mockToken,
+        orgUserAdminModule,
+      } = await setupTests();
+      const userSABalanceBefore = await mockToken.balanceOf(userSA.address);
+      const bobBalanceBefore = await mockToken.balanceOf(bob.address);
+      const tokenAmountToTransfer = ethers.utils.parseEther("3.5672");
 
-        const txnData = mockToken.interface.encodeFunctionData("transfer", [
-          bob.address,
-          tokenAmountToTransfer.toString(),
-        ]);
+      const txnData = mockToken.interface.encodeFunctionData("transfer", [
+        bob.address,
+        tokenAmountToTransfer.toString(),
+      ]);
 
-        const userOp = await makeEcdsaModuleUserOp(
-          "execute_ncC",
-          [mockToken.address, 0, txnData],
-          userSA.address,
-          smartAccountOwner,
-          entryPoint,
-          orgUserAdminModule.address,
-          {
-            preVerificationGas: 50000,
-          }
-        );
+      const userOp = await makeEcdsaModuleUserOp(
+        "execute_ncC",
+        [mockToken.address, 0, txnData],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        orgUserAdminModule.address,
+        {
+          preVerificationGas: 50000,
+        }
+      );
 
-        await environment.sendUserOperation(userOp, entryPoint.address);
+      await environment.sendUserOperation(userOp, entryPoint.address);
 
-        expect(await mockToken.balanceOf(bob.address)).to.equal(
-          bobBalanceBefore.add(tokenAmountToTransfer)
-        );
-        expect(await mockToken.balanceOf(userSA.address)).to.equal(
-          userSABalanceBefore.sub(tokenAmountToTransfer)
-        );
-      });
+      expect(await mockToken.balanceOf(bob.address)).to.equal(
+        bobBalanceBefore.add(tokenAmountToTransfer)
+      );
+      expect(await mockToken.balanceOf(userSA.address)).to.equal(
+        userSABalanceBefore.sub(tokenAmountToTransfer)
+      );
     });
   });
-
+});

@@ -173,9 +173,9 @@ contract AccountRecoveryModule is
                     i +
                     2) * 65];
 
-            currentGuardianAddress = keccak256(
-                abi.encodePacked(CONTROL_MESSAGE, userOp.sender)
-            ).toEthSignedMessageHash().recover(currentGuardianSig);
+                currentGuardianAddress = keccak256(
+                    abi.encodePacked(CONTROL_MESSAGE, userOp.sender)
+                ).toEthSignedMessageHash().recover(currentGuardianSig);
 
                 if (currentUserOpSignerAddress != currentGuardianAddress) {
                     return SIG_VALIDATION_FAILED;
