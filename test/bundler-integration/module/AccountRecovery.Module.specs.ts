@@ -103,7 +103,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
       // deploy Social Recovery Module
       const accountRecoveryModule = await (
         await ethers.getContractFactory("AccountRecoveryModule")
-      ).deploy();
+      ).deploy("0xb61d27f6", "0x0000189a");
 
       const defaultSecurityDelay = 15;
 

@@ -35,9 +35,9 @@ contract AccountRecoveryModule is
     string public constant VERSION = "0.1.0";
 
     // execute(address,uint256,bytes)
-    bytes4 public constant EXECUTE_SELECTOR = 0xb61d27f6;
+    bytes4 public immutable EXECUTE_SELECTOR;
     // execute_ncC(address,uint256,bytes)
-    bytes4 public constant EXECUTE_OPTIMIZED_SELECTOR = 0x0000189a;
+    bytes4 public immutable EXECUTE_OPTIMIZED_SELECTOR;
     // Hash to be signed by guardians to make a guardianId
     string public constant CONTROL_MESSAGE =
         "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
@@ -52,6 +52,11 @@ contract AccountRecoveryModule is
     mapping(address => SaSettings) internal _smartAccountSettings;
 
     mapping(address => RecoveryRequest) internal _smartAccountRequests;
+
+    constructor(bytes4 executeSelector, bytes4 executeOptimizedSelector) {
+        EXECUTE_SELECTOR = executeSelector;
+        EXECUTE_OPTIMIZED_SELECTOR = executeOptimizedSelector;
+    }
 
     /**
      * @dev Initializes the module for a Smart Account.
