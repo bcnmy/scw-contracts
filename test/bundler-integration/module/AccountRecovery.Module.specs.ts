@@ -1,7 +1,10 @@
 import { expect } from "chai";
 import { ethers, deployments } from "hardhat";
 import { makeEcdsaModuleUserOp, makeUnsignedUserOp } from "../../utils/userOp";
-import { makeMultiSignedUserOpWithGuardiansList } from "../../utils/accountRecovery";
+import {
+  makeMultiSignedUserOpWithGuardiansList,
+  makeHashToGetGuardianId,
+} from "../../utils/accountRecovery";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -65,7 +68,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
 
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
-      const controlMessage = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
+      const controlMessage = "ACC_RECOVERY_SECURE_MSG";
 
       await deployments.fixture();
       const SmartAccount = await ethers.getContractFactory("SmartAccount");
@@ -100,12 +103,13 @@ describe("Account Recovery Module (via Bundler)", async () => {
       // deploy Social Recovery Module
       const accountRecoveryModule = await (
         await ethers.getContractFactory("AccountRecoveryModule")
-      ).deploy();
+      ).deploy("0xb61d27f6", "0x0000189a");
 
       const defaultSecurityDelay = 15;
 
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       const guardians = await Promise.all(
         [alice, bob, charlie].map(

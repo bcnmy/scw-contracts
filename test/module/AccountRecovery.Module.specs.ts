@@ -17,6 +17,8 @@ import {
 import {
   makeMultiSignedUserOpWithGuardiansList,
   makeMultisignedSubmitRecoveryRequestUserOp,
+  makeMultiSignedUserOpWithGuardiansListArbitraryCalldata,
+  makeHashToGetGuardianId,
 } from "../utils/accountRecovery";
 import { arrayify } from "ethers/lib/utils";
 import { Contract } from "ethers";
@@ -28,7 +30,6 @@ describe("Account Recovery Module: ", async () => {
     alice,
     bob,
     charlie,
-    verifiedSigner,
     eve,
     fox,
     newOwner,
@@ -37,7 +38,7 @@ describe("Account Recovery Module: ", async () => {
 
   const setupTests = deployments.createFixture(
     async ({ deployments, getNamedAccounts }) => {
-      const controlMessage = "ACCOUNT RECOVERY GUARDIAN SECURE MESSAGE";
+      const controlMessage = "ACC_RECOVERY_SECURE_MSG";
 
       await deployments.fixture();
 
@@ -73,12 +74,13 @@ describe("Account Recovery Module: ", async () => {
       // deploy Account Recovery Module
       const accountRecoveryModule = await (
         await ethers.getContractFactory("AccountRecoveryModule")
-      ).deploy();
+      ).deploy("0xb61d27f6", "0x0000189a");
 
       const defaultSecurityDelay = 150;
 
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       const guardians = await Promise.all(
         [alice, bob, charlie].map(
@@ -192,8 +194,9 @@ describe("Account Recovery Module: ", async () => {
       const securityDelayBefore = userSASettingsBefore.securityDelay;
 
       const recoveryThreshold = 3;
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -279,8 +282,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 2;
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -344,8 +348,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 5;
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -406,8 +411,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -499,8 +505,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve].map(
@@ -561,8 +568,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, eve].map(
@@ -622,8 +630,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -684,8 +693,9 @@ describe("Account Recovery Module: ", async () => {
       } = await setupTests();
 
       const recoveryThreshold = 3;
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash); // same should happen when signing with guardian private key
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, aliceSA.address)
+      );
 
       const guardians = await Promise.all(
         [bob, eve, fox].map(
@@ -808,7 +818,7 @@ describe("Account Recovery Module: ", async () => {
       );
     });
 
-    it("Should revert if such a request already exists", async () => {
+    it("Should revert if there's already a request for this SA", async () => {
       const { accountRecoveryModule, ecdsaModule } = await setupTests();
 
       const recoveryRequestCallData = ecdsaModule.interface.encodeFunctionData(
@@ -819,8 +829,13 @@ describe("Account Recovery Module: ", async () => {
         recoveryRequestCallData
       );
 
+      const recoveryRequestCallData2 = ecdsaModule.interface.encodeFunctionData(
+        "transferOwnership",
+        [charlie.address]
+      );
+
       await expect(
-        accountRecoveryModule.submitRecoveryRequest(recoveryRequestCallData)
+        accountRecoveryModule.submitRecoveryRequest(recoveryRequestCallData2)
       )
         .to.be.revertedWith("RecoveryRequestAlreadyExists")
         .withArgs(
@@ -1302,6 +1317,42 @@ describe("Account Recovery Module: ", async () => {
   });
 
   describe("validateUserOp", async () => {
+    it("Should revert if there has been no request and userOp.callData is not for SA.execute()", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        controlMessage,
+        arrayOfSigners,
+      } = await setupTests();
+
+      const calldata =
+        userSA.interface.encodeFunctionData("updateImplementation", [
+          accountRecoveryModule.address,
+        ]) +
+        "0000000000000000000000000000000000000000000000000000000000000000" + // value
+        "0000000000000000000000000000000000000000000000000000000000000060" + // offset
+        "0000000000000000000000000000000000000000000000000000000000000004" + // 0x60   length
+        "0fe0128700000000000000000000000000000000000000000000000000000000"; // 0x80   selector, padded for convenience
+      const arbitraryCalldataUserOp =
+        await makeMultiSignedUserOpWithGuardiansListArbitraryCalldata(
+          calldata,
+          userSA.address,
+          arrayOfSigners,
+          controlMessage,
+          entryPoint,
+          accountRecoveryModule.address
+        );
+
+      await expect(
+        entryPoint.handleOps([arbitraryCalldataUserOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: AccRecovery: Wrong selector");
+    });
+
     it("Should revert if the delay is >0 and the calldata is NOT for submitting request", async () => {
       const {
         entryPoint,
@@ -1754,8 +1805,9 @@ describe("Account Recovery Module: ", async () => {
       const messageUserOp = arrayify(
         getUserOpHash(userOp, entryPoint!.address, chainId)
       );
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash);
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       let signatures = "0x";
 
@@ -2115,10 +2167,11 @@ describe("Account Recovery Module: ", async () => {
     let newGuardian: string;
 
     before(async () => {
-      const { controlMessage } = await setupTests();
+      const { controlMessage, userSA } = await setupTests();
 
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash);
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       newGuardian = ethers.utils.keccak256(
         await eve.signMessage(messageHashBytes)
@@ -2320,10 +2373,11 @@ describe("Account Recovery Module: ", async () => {
     let newGuardian: string;
 
     before(async () => {
-      const { controlMessage } = await setupTests();
+      const { controlMessage, userSA } = await setupTests();
 
-      const messageHash = ethers.utils.id(controlMessage);
-      const messageHashBytes = ethers.utils.arrayify(messageHash);
+      const messageHashBytes = ethers.utils.arrayify(
+        makeHashToGetGuardianId(controlMessage, userSA.address)
+      );
 
       newGuardian = ethers.utils.keccak256(
         await eve.signMessage(messageHashBytes)
