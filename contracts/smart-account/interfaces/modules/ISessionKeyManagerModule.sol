@@ -18,6 +18,12 @@ interface ISessionKeyManagerModule {
     }
 
     /**
+     * @dev Emitted when the merkle root is updated for the Smart Account
+     * It happens when there's a need to add\remove\replace session (leaves) in the Merkle Tree
+     */
+    event MerkleRootUpdated(address smartAccount, bytes32 newRoot);
+
+    /**
      * @dev validates that Session Key + parameters are enabled
      * by being included into the merkle tree
      * @param userOpSender smartAccount for which session key is being validated

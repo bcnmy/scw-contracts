@@ -35,7 +35,7 @@ contract SessionKeyManager is
     /// @inheritdoc ISessionKeyManagerModule
     function setMerkleRoot(bytes32 _merkleRoot) external override {
         _userSessions[msg.sender].merkleRoot = _merkleRoot;
-        // TODO:should we add an event here? which emits the new merkle root
+        emit MerkleRootUpdated(msg.sender, _merkleRoot);
     }
 
     /// @inheritdoc IAuthorizationModule
