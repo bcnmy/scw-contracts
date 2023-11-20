@@ -328,7 +328,12 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const calldataCost = callDataCost(packUserOp(transferUserOp, false));
       console.log("calldataCost", calldataCost);
 
-      await entryPoint.handleOps([transferUserOp], alice.address);
+      const { wait } = await entryPoint.handleOps(
+        [transferUserOp],
+        alice.address
+      );
+      const { gasUsed } = await wait();
+      console.log("Full op gasUsed", gasUsed.toString());
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore.add(tokenAmountToTransfer)
@@ -470,9 +475,15 @@ describe("SessionKey: SessionKey Manager Module", async () => {
     let calldataCost = callDataCost(packUserOp(transferUserOp, false));
     console.log("Hybrid validation 1st txn calldataCost", calldataCost);
 
-    await entryPoint.handleOps([transferUserOp], alice.address, {
-      gasLimit: 30000000,
-    });
+    const { wait } = await entryPoint.handleOps(
+      [transferUserOp],
+      alice.address,
+      {
+        gasLimit: 30000000,
+      }
+    );
+    const { gasUsed } = await wait();
+    console.log("Hybrid validation 1st txn gasUsed", gasUsed.toString());
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore.add(tokenAmountToTransfer)
