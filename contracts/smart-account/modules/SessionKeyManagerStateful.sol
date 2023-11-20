@@ -30,7 +30,7 @@ contract SessionKeyManagerStatefull is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256 rv) {
-        // uint256 gas = gasleft();
+        uint256 gas = gasleft();
 
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
@@ -59,7 +59,7 @@ contract SessionKeyManagerStatefull is
             sessionData.validAfter
         );
 
-        // console.log("Statefull Validation Gas: ", gas - gasleft());
+        console.log("Statefull Validation Gas: ", gas - gasleft());
     }
 
     /// @inheritdoc ISessionKeyManagerModuleStatefull

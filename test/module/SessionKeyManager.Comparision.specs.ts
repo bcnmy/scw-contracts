@@ -8,6 +8,8 @@ import {
   addLeavesForSmartAccountViaEcdsa,
   makeSessionEnableData,
   makeStatefullEcdsaSessionKeySignedUserOp,
+  makeHybridEcdsaSessionKeyEnableSignedUserOp,
+  makeHybridEcdsaPreEnabledSessionKeySignedUserOp,
 } from "../utils/sessionKey";
 import { callDataCost, encodeTransfer } from "../utils/testUtils";
 import { hexZeroPad, hexConcat, keccak256 } from "ethers/lib/utils";
@@ -20,6 +22,7 @@ import {
   getSmartAccountWithModule,
 } from "../utils/setupHelper";
 import {
+  SessionKeyManagerHybrid__factory,
   SessionKeyManagerStatefull__factory,
   SessionKeyManagerStateless__factory,
 } from "../../typechain-types";
@@ -93,6 +96,19 @@ describe("SessionKey: SessionKey Manager Module", async () => {
     );
     await entryPoint.handleOps([userOp], alice.address);
 
+    const hybridSessionKeyManager = await new SessionKeyManagerHybrid__factory(
+      alice
+    ).deploy();
+    userOp = await makeEcdsaModuleUserOp(
+      "enableModule",
+      [hybridSessionKeyManager.address],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address
+    );
+    await entryPoint.handleOps([userOp], alice.address);
+
     const mockSessionValidationModule = await (
       await ethers.getContractFactory("MockSessionValidationModule")
     ).deploy();
@@ -135,6 +151,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       statelessSessionKeyMananger: statelessSessionKeyMananger,
       statefullSessionKeyMananger: statefullSessionKeyMananger,
       mockSessionValidationModule: mockSessionValidationModule,
+      hybridSessionKeyManager: hybridSessionKeyManager,
       sessionKeyData: sessionKeyData,
       leafData: leafData,
       leafDataRaw,
@@ -241,75 +258,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       );
 
       const calldataCost = callDataCost(packUserOp(transferUserOp, false));
-      console.log("calldataCost", calldataCost);
-
-      await entryPoint.handleOps([transferUserOp], alice.address);
-
-      expect(await mockToken.balanceOf(charlie.address)).to.equal(
-        charlieTokenBalanceBefore.add(tokenAmountToTransfer)
-      );
-    });
-
-    it("Stateless Session Key Manager Module", async () => {
-      const {
-        entryPoint,
-        userSA,
-        statelessSessionKeyMananger,
-        mockSessionValidationModule,
-        mockToken,
-        sessionKeyData,
-        leafData,
-        ecdsaModule,
-      } = await setupTests();
-      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
-
-      const chainId = (await ethers.provider.getNetwork()).chainId;
-
-      const sessionEnableData = makeSessionEnableData([chainId], [leafData]);
-
-      const messageHashAndAddress = ethers.utils.arrayify(
-        ethers.utils.hexConcat([keccak256(sessionEnableData), userSA.address])
-      );
-      const signature = await smartAccountOwner.signMessage(
-        messageHashAndAddress
-      );
-
-      const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-        ["bytes", "address"],
-        [signature, ecdsaModule.address]
-      );
-
-      const sessionKeyIndex = 0;
-
-      const transferUserOp = await makeStatelessEcdsaSessionKeySignedUserOp(
-        "execute_ncC",
-        [
-          mockToken.address,
-          ethers.utils.parseEther("0"),
-          encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
-        ],
-        userSA.address,
-        sessionKey,
-        entryPoint,
-        statelessSessionKeyMananger.address,
-        0,
-        0,
-        sessionKeyIndex,
-        mockSessionValidationModule.address,
-        sessionKeyData,
-        sessionEnableData,
-        signatureWithModuleAddress,
-        {
-          preVerificationGas: 50000,
-        }
-      );
-
-      const charlieTokenBalanceBefore = await mockToken.balanceOf(
-        charlie.address
-      );
-
-      const calldataCost = callDataCost(packUserOp(transferUserOp, false));
-      console.log("calldataCost", calldataCost);
+      console.log("Merkle Tree Validation Calldata Cost", calldataCost);
 
       await entryPoint.handleOps([transferUserOp], alice.address);
 
@@ -423,6 +372,8 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         alice.address
       );
       const { gasUsed } = await wait();
+      let calldataCost = callDataCost(packUserOp(enableUserOp, false));
+      console.log("Enable Session Key calldataCost", calldataCost);
       console.log("enableSessionKey gasUsed", gasUsed.toString());
 
       const transferUserOp = await makeStatefullEcdsaSessionKeySignedUserOp(
@@ -449,7 +400,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         charlie.address
       );
 
-      const calldataCost = callDataCost(packUserOp(transferUserOp, false));
+      calldataCost = callDataCost(packUserOp(transferUserOp, false));
       console.log("calldataCost", calldataCost);
 
       await entryPoint.handleOps([transferUserOp], alice.address);
@@ -458,5 +409,105 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         charlieTokenBalanceBefore.add(tokenAmountToTransfer)
       );
     });
+  });
+
+  it("Hybrid Session Key Manager Module", async () => {
+    const {
+      entryPoint,
+      userSA,
+      hybridSessionKeyManager,
+      mockSessionValidationModule,
+      mockToken,
+      sessionKeyData,
+      leafData,
+      ecdsaModule,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+
+    const sessionEnableData = makeSessionEnableData([chainId], [leafData]);
+
+    const messageHashAndAddress = ethers.utils.arrayify(
+      ethers.utils.hexConcat([keccak256(sessionEnableData), userSA.address])
+    );
+    const signature = await smartAccountOwner.signMessage(
+      messageHashAndAddress
+    );
+
+    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [signature, ecdsaModule.address]
+    );
+
+    const sessionKeyIndex = 0;
+
+    let transferUserOp = await makeHybridEcdsaSessionKeyEnableSignedUserOp(
+      "execute_ncC",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      hybridSessionKeyManager.address,
+      0,
+      0,
+      sessionKeyIndex,
+      mockSessionValidationModule.address,
+      sessionKeyData,
+      sessionEnableData,
+      signatureWithModuleAddress,
+      {
+        preVerificationGas: 50000,
+      }
+    );
+
+    let charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+
+    let calldataCost = callDataCost(packUserOp(transferUserOp, false));
+    console.log("Hybrid validation 1st txn calldataCost", calldataCost);
+
+    await entryPoint.handleOps([transferUserOp], alice.address, {
+      gasLimit: 30000000,
+    });
+
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(
+      charlieTokenBalanceBefore.add(tokenAmountToTransfer)
+    );
+
+    // 2nd transfer
+    transferUserOp = await makeHybridEcdsaPreEnabledSessionKeySignedUserOp(
+      "execute_ncC",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      hybridSessionKeyManager.address,
+      0,
+      0,
+      mockSessionValidationModule.address,
+      sessionKeyData,
+      {
+        preVerificationGas: 50000,
+      }
+    );
+
+    charlieTokenBalanceBefore = await mockToken.balanceOf(charlie.address);
+
+    calldataCost = callDataCost(packUserOp(transferUserOp, false));
+    console.log("Hybrid validation 2nd txn calldataCost", calldataCost);
+
+    await entryPoint.handleOps([transferUserOp], alice.address);
+
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(
+      charlieTokenBalanceBefore.add(tokenAmountToTransfer)
+    );
   });
 });
