@@ -10,6 +10,7 @@ import "solidity-coverage";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
 import "@nomicfoundation/hardhat-foundry";
+import "hardhat-tracer";
 import { parseUnits } from "ethers/lib/utils";
 
 const walletUtils = require("./walletUtils");
@@ -401,6 +402,9 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+  },
+  tracer: {
+    gasCost: true,
   },
 };
 

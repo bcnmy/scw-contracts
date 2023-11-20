@@ -2,43 +2,25 @@
 pragma solidity ^0.8.20;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
-import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
-import {ISessionKeyManagerModule} from "../interfaces/modules/ISessionKeyManagerModule.sol";
+import {ISessionKeyManagerModuleStateless} from "../interfaces/modules/ISessionKeyManagerModuleStateless.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
-import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
+import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../interfaces/ISignatureValidator.sol";
 import "hardhat/console.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
- * @dev Performs basic verifications for every session key signed userOp.
- * Checks if the session key has been enabled, that it is not due and has not yet expired
- * Then passes the validation flow to appropriate Session Validation module
- *         - For the sake of efficiency and flexibility, doesn't limit what operations
- *           Session Validation modules can perform
- *         - Should be used with carefully verified and audited Session Validation Modules only
- *         - Compatible with Biconomy Modular Interface v 0.1
+ * @dev TODO
+ * @author Ankur Dubey - <ankur@biconomy.io>
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SessionKeyManager is
+contract SessionKeyManagerStateless is
     BaseAuthorizationModule,
-    ISessionKeyManagerModule
+    ISessionKeyManagerModuleStateless
 {
-    /**
-     * @dev mapping of Smart Account to a SessionStorage
-     * Info about session keys is stored as root of the merkle tree built over the session keys
-     */
-    mapping(address => SessionStorage) internal _userSessions;
-
-    /// @inheritdoc ISessionKeyManagerModule
-    function setMerkleRoot(bytes32 _merkleRoot) external override {
-        _userSessions[msg.sender].merkleRoot = _merkleRoot;
-        // TODO:should we add an event here? which emits the new merkle root
-    }
-
     /// @inheritdoc IAuthorizationModule
     function validateUserOp(
         UserOperation calldata userOp,
@@ -53,22 +35,26 @@ contract SessionKeyManager is
         (
             uint48 validUntil,
             uint48 validAfter,
+            uint256 sessionKeyIndex,
             address sessionValidationModule,
             bytes memory sessionKeyData,
-            bytes32[] memory merkleProof,
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature,
             bytes memory sessionKeySignature
         ) = abi.decode(
                 moduleSignature,
-                (uint48, uint48, address, bytes, bytes32[], bytes)
+                (uint48, uint48, uint256, address, bytes, bytes, bytes, bytes)
             );
 
         validateSessionKey(
             userOp.sender,
             validUntil,
             validAfter,
+            sessionKeyIndex,
             sessionValidationModule,
             sessionKeyData,
-            merkleProof
+            sessionEnableData,
+            sessionEnableSignature
         );
 
         rv = _packValidationData(
@@ -84,29 +70,69 @@ contract SessionKeyManager is
             validAfter
         );
 
-        console.log("Merkle Tree Validation Gas: ", gas - gasleft());
+        console.log("Stateless Validation Gas: ", gas - gasleft());
     }
 
-    /// @inheritdoc ISessionKeyManagerModule
-    function getSessionKeys(
-        address smartAccount
-    ) external view override returns (SessionStorage memory) {
-        return _userSessions[smartAccount];
-    }
-
-    /// @inheritdoc ISessionKeyManagerModule
+    /// @inheritdoc ISessionKeyManagerModuleStateless
     function validateSessionKey(
         address smartAccount,
         uint48 validUntil,
         uint48 validAfter,
+        uint256 sessionKeyIndex,
         address sessionValidationModule,
         bytes memory sessionKeyData,
-        bytes32[] memory merkleProof
+        bytes memory sessionEnableData,
+        bytes memory sessionEnableSignature
     ) public virtual override {
-        SessionStorage storage sessionKeyStorage = _getSessionData(
-            smartAccount
-        );
-        bytes32 leaf = keccak256(
+        // Verify the signature on the session enable data
+        bytes32 sessionEnableDataDigest = keccak256(sessionEnableData);
+        if (
+            ISignatureValidator(smartAccount).isValidSignature(
+                sessionEnableDataDigest,
+                sessionEnableSignature
+            ) != EIP1271_MAGIC_VALUE
+        ) {
+            revert("SessionNotApproved");
+        }
+
+        /*
+         * Session Enable Data Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | No of session keys enabled
+         * 0x1                  | 0x8 x count       | Chain IDs
+         * 0x1 + 0x8 x count    | 0x20 x count      | Session Data Hash
+         */
+        uint8 enabledKeysCount;
+        uint64 sessionChainId;
+        bytes32 sessionDigest;
+
+        assembly ("memory-safe") {
+            let offset := add(sessionEnableData, 0x20)
+
+            enabledKeysCount := shr(248, mload(offset))
+
+            sessionChainId := shr(
+                192,
+                mload(add(add(offset, 0x1), mul(0x8, sessionKeyIndex)))
+            )
+
+            sessionDigest := mload(
+                add(
+                    add(add(offset, 0x1), mul(0x8, enabledKeysCount)),
+                    mul(0x20, sessionKeyIndex)
+                )
+            )
+        }
+
+        if (sessionKeyIndex >= enabledKeysCount) {
+            revert("SessionKeyIndexInvalid");
+        }
+
+        if (sessionChainId != block.chainid) {
+            revert("SessionChainIdMismatch");
+        }
+
+        bytes32 computedDigest = keccak256(
             abi.encodePacked(
                 validUntil,
                 validAfter,
@@ -114,10 +140,9 @@ contract SessionKeyManager is
                 sessionKeyData
             )
         );
-        if (
-            !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
-        ) {
-            revert("SessionNotApproved");
+
+        if (sessionDigest != computedDigest) {
+            revert("SessionKeyDataHashMismatch");
         }
     }
 
@@ -137,16 +162,5 @@ contract SessionKeyManager is
     ) public pure override returns (bytes4) {
         (_dataHash, _signature);
         return 0xffffffff; // do not support it here
-    }
-
-    /**
-     * @dev returns the SessionStorage object for a given smartAccount
-     * @param _account Smart Account address
-     * @return sessionKeyStorage SessionStorage object at storage
-     */
-    function _getSessionData(
-        address _account
-    ) internal view returns (SessionStorage storage sessionKeyStorage) {
-        sessionKeyStorage = _userSessions[_account];
     }
 }

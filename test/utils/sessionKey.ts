@@ -3,7 +3,12 @@ import { ethers } from "hardhat";
 import { EntryPoint } from "../../typechain-types";
 import { UserOperation } from "./userOperation";
 import { fillAndSign, makeEcdsaModuleUserOp } from "./userOp";
-import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
+import {
+  hexZeroPad,
+  hexConcat,
+  defaultAbiCoder,
+  solidityPack,
+} from "ethers/lib/utils";
 import MerkleTree from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
 
@@ -123,6 +128,75 @@ export async function makeEcdsaSessionKeySignedUserOp(
   return userOp;
 }
 
+export async function makeStatelessEcdsaSessionKeySignedUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  sessionKey: Signer,
+  entryPoint: EntryPoint,
+  sessionKeyManagerAddress: string,
+  validUntil: number,
+  validAfter: number,
+  sessionKeyIndex: number,
+  sessionValidationModuleAddress: string,
+  sessionKeyParamsData: BytesLike,
+  sessionEnableData: BytesLike,
+  erc1271EnableSignature: BytesLike,
+  options?: {
+    preVerificationGas?: number;
+  }
+): Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      ...options,
+    },
+    sessionKey,
+    entryPoint,
+    "nonce",
+    true
+  );
+
+  const paddedSig = defaultAbiCoder.encode(
+    [
+      "uint48",
+      "uint48",
+      "uint256",
+      "address",
+      "bytes",
+      "bytes",
+      "bytes",
+      "bytes",
+    ],
+    [
+      validUntil,
+      validAfter,
+      sessionKeyIndex,
+      sessionValidationModuleAddress,
+      sessionKeyParamsData,
+      sessionEnableData,
+      erc1271EnableSignature,
+      userOp.signature,
+    ]
+  );
+
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [paddedSig, sessionKeyManagerAddress]
+  );
+  userOp.signature = signatureWithModuleAddress;
+
+  return userOp;
+}
+
 export async function enableNewTreeForSmartAccountViaEcdsa(
   leaves: BytesLike[],
   sessionKeyManager: Contract,
@@ -153,7 +227,9 @@ export async function enableNewTreeForSmartAccountViaEcdsa(
     [addMerkleRootUserOp],
     await smartAccountOwner.getAddress()
   );
-  await tx.wait();
+  const { gasUsed } = await tx.wait();
+
+  console.log("gasUsed in new merkle tree user op", gasUsed.toString());
 
   return merkleTree;
 }
@@ -194,7 +270,9 @@ export async function addLeavesForSmartAccountViaEcdsa(
     [addMerkleRootUserOp],
     await smartAccountOwner.getAddress()
   );
-  await tx.wait();
+  const { gasUsed } = await tx.wait();
+
+  console.log("gasUsed in update merkle tree user op", gasUsed.toString());
 
   return newMerkleTree;
 }
@@ -230,4 +308,28 @@ export async function getERC20SessionKeyParams(
     leafData: leafData,
   };
   return params;
+}
+
+export function makeSessionEnableData(
+  chainIds: number[],
+  sessionData: BytesLike[]
+): BytesLike {
+  if (chainIds.length !== sessionData.length) {
+    throw new Error("chainIds and sessionData must be of same length");
+  }
+
+  return solidityPack(
+    [
+      "uint8",
+      ...(new Array(chainIds.length).fill(0).map(() => "uint64") as string[]),
+      ...(new Array(sessionData.length)
+        .fill(0)
+        .map(() => "bytes32") as string[]),
+    ],
+    [
+      chainIds.length,
+      ...chainIds,
+      ...sessionData.map((data) => ethers.utils.keccak256(data)),
+    ]
+  );
 }
