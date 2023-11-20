@@ -44,7 +44,7 @@ contract SessionKeyManager is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256 rv) {
-        uint256 gas = gasleft();
+        // uint256 gas = gasleft();
 
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
@@ -84,7 +84,7 @@ contract SessionKeyManager is
             validAfter
         );
 
-        console.log("Merkle Tree Validation Gas: ", gas - gasleft());
+        // console.log("Merkle Tree Validation Gas: ", gas - gasleft());
     }
 
     /// @inheritdoc ISessionKeyManagerModule

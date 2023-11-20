@@ -8,6 +8,7 @@ import {
   hexConcat,
   defaultAbiCoder,
   solidityPack,
+  solidityKeccak256,
 } from "ethers/lib/utils";
 import MerkleTree from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
@@ -191,6 +192,63 @@ export async function makeStatelessEcdsaSessionKeySignedUserOp(
   const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
     ["bytes", "address"],
     [paddedSig, sessionKeyManagerAddress]
+  );
+  userOp.signature = signatureWithModuleAddress;
+
+  return userOp;
+}
+
+export async function makeStatefullEcdsaSessionKeySignedUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  sessionKey: Signer,
+  entryPoint: EntryPoint,
+  sessionKeyManagerAddress: string,
+  validUntil: number,
+  validAfter: number,
+  sessionValidationModuleAddress: string,
+  sessionKeyParamsData: BytesLike,
+  options?: {
+    preVerificationGas?: number;
+  }
+): Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillAndSign(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      ...options,
+    },
+    sessionKey,
+    entryPoint,
+    "nonce",
+    true
+  );
+
+  const sessionDataDigest = solidityKeccak256(
+    ["uint48", "uint48", "address", "bytes"],
+    [
+      validUntil,
+      validAfter,
+      sessionValidationModuleAddress,
+      sessionKeyParamsData,
+    ]
+  );
+  const moduleSignature = ethers.utils.defaultAbiCoder.encode(
+    ["bytes32", "bytes"],
+    [sessionDataDigest, userOp.signature]
+  );
+
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [moduleSignature, sessionKeyManagerAddress]
   );
   userOp.signature = signatureWithModuleAddress;
 

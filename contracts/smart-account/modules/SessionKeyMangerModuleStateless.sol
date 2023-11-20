@@ -26,7 +26,7 @@ contract SessionKeyManagerStateless is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256 rv) {
-        uint256 gas = gasleft();
+        // uint256 gas = gasleft();
 
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
@@ -70,7 +70,7 @@ contract SessionKeyManagerStateless is
             validAfter
         );
 
-        console.log("Stateless Validation Gas: ", gas - gasleft());
+        // console.log("Stateless Validation Gas: ", gas - gasleft());
     }
 
     /// @inheritdoc ISessionKeyManagerModuleStateless

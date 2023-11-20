@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { ethers, deployments, waffle } from "hardhat";
-import { makeEcdsaModuleUserOp, packUserOp } from "../utils/userOp";
+import { makeEcdsaModuleUserOp, packUserOp } from "../../utils/userOp";
 import {
   makeEcdsaSessionKeySignedUserOp,
   enableNewTreeForSmartAccountViaEcdsa,
@@ -8,8 +8,8 @@ import {
   addLeavesForSmartAccountViaEcdsa,
   makeSessionEnableData,
   makeStatefullEcdsaSessionKeySignedUserOp,
-} from "../utils/sessionKey";
-import { callDataCost, encodeTransfer } from "../utils/testUtils";
+} from "../../utils/sessionKey";
+import { callDataCost, encodeTransfer } from "../../utils/testUtils";
 import { hexZeroPad, hexConcat, keccak256 } from "ethers/lib/utils";
 import {
   getEntryPoint,
@@ -18,15 +18,51 @@ import {
   getMockToken,
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
-} from "../utils/setupHelper";
+} from "../../utils/setupHelper";
 import {
   SessionKeyManagerStatefull__factory,
   SessionKeyManagerStateless__factory,
-} from "../../typechain-types";
+} from "../../../typechain-types";
+import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
+import { BundlerTestEnvironment } from "../environment/bundlerEnvironment";
 
-describe("SessionKey: SessionKey Manager Module", async () => {
-  const [deployer, smartAccountOwner, alice, charlie, sessionKey] =
-    waffle.provider.getWallets();
+describe("SessionKey: Comparision", async () => {
+  let [
+    deployer,
+    smartAccountOwner,
+    charlie,
+    verifiedSigner,
+    sessionKey,
+    alice,
+  ] = [] as SignerWithAddress[];
+
+  let environment: BundlerTestEnvironment;
+
+  before(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
+    environment = await BundlerTestEnvironment.getDefaultInstance();
+  });
+
+  beforeEach(async function () {
+    [deployer, smartAccountOwner, charlie, verifiedSigner, sessionKey, alice] =
+      await ethers.getSigners();
+  });
+
+  afterEach(async function () {
+    const chainId = (await ethers.provider.getNetwork()).chainId;
+    if (chainId !== BundlerTestEnvironment.BUNDLER_ENVIRONMENT_CHAIN_ID) {
+      this.skip();
+    }
+
+    await Promise.all([
+      environment.revert(environment.defaultSnapshot!),
+      environment.resetBundler(),
+    ]);
+  });
 
   const setupTests = deployments.createFixture(async ({ deployments }) => {
     await deployments.fixture();
@@ -173,7 +209,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         sessionKeyData,
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         {
-          preVerificationGas: 50000,
+          preVerificationGas: 51000,
         }
       );
 
@@ -184,7 +220,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const calldataCost = callDataCost(packUserOp(transferUserOp, false));
       console.log("calldataCost", calldataCost);
 
-      await entryPoint.handleOps([transferUserOp], alice.address);
+      await environment.sendUserOperation(transferUserOp, entryPoint.address);
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore.add(tokenAmountToTransfer)
@@ -232,7 +268,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         sessionKeyData,
         newMerkleTree.getHexProof(ethers.utils.keccak256(leafData)),
         {
-          preVerificationGas: 50000,
+          preVerificationGas: 51000,
         }
       );
 
@@ -243,7 +279,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const calldataCost = callDataCost(packUserOp(transferUserOp, false));
       console.log("calldataCost", calldataCost);
 
-      await entryPoint.handleOps([transferUserOp], alice.address);
+      await environment.sendUserOperation(transferUserOp, entryPoint.address);
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore.add(tokenAmountToTransfer)
@@ -300,7 +336,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         sessionEnableData,
         signatureWithModuleAddress,
         {
-          preVerificationGas: 50000,
+          preVerificationGas: 51000,
         }
       );
 
@@ -311,7 +347,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const calldataCost = callDataCost(packUserOp(transferUserOp, false));
       console.log("calldataCost", calldataCost);
 
-      await entryPoint.handleOps([transferUserOp], alice.address);
+      await environment.sendUserOperation(transferUserOp, entryPoint.address);
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore.add(tokenAmountToTransfer)
@@ -368,7 +404,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         sessionEnableData,
         signatureWithModuleAddress,
         {
-          preVerificationGas: 50000,
+          preVerificationGas: 51000,
         }
       );
 
@@ -379,7 +415,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const calldataCost = callDataCost(packUserOp(transferUserOp, false));
       console.log("calldataCost", calldataCost);
 
-      await entryPoint.handleOps([transferUserOp], alice.address);
+      await environment.sendUserOperation(transferUserOp, entryPoint.address);
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore.add(tokenAmountToTransfer)
@@ -441,7 +477,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
         mockSessionValidationModule.address,
         sessionKeyData,
         {
-          preVerificationGas: 50000,
+          preVerificationGas: 51000,
         }
       );
 
@@ -452,7 +488,7 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const calldataCost = callDataCost(packUserOp(transferUserOp, false));
       console.log("calldataCost", calldataCost);
 
-      await entryPoint.handleOps([transferUserOp], alice.address);
+      await environment.sendUserOperation(transferUserOp, entryPoint.address);
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore.add(tokenAmountToTransfer)
