@@ -39,6 +39,7 @@ type DeploymentSaltsType = {
   BATCHED_SESSION_ROUTER_MODULE: string;
   ERC20_SESSION_VALIDATION_MODULE: string;
   SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE: string;
+  ADDRESS_RESOLVER: string;
 };
 
 // Dev Salts
@@ -56,6 +57,7 @@ export const DEPLOYMENT_SALTS_DEV: DeploymentSaltsType = {
     "DEVX_ERC20_SESSION_VALIDATION_MODULE_V1_05092023",
   SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE:
     "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_21082023",
+  ADDRESS_RESOLVER: "DEVX_ADDRESS_RESOLVER_V1_08112023",
 };
 
 // Prod Salts
@@ -77,6 +79,7 @@ export const DEPLOYMENT_SALTS_PROD: DeploymentSaltsType = {
     "PROD_ERC20_SESSION_VALIDATION_MODULE_V2_05092023NdquNFM",
   SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE:
     "PROD_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V1_22082023_6X7yarN",
+  ADDRESS_RESOLVER: "PROD_ADDRESS_RESOLVER_V1_08112023_DZKffkv", // 0x00000e81673606e07fc79ce5f1b3b26957844468
 };
 
 export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
@@ -95,7 +98,7 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
     gasPrice: parseUnits("0.1", "gwei"),
   },
   420: {
-    gasPrice: parseUnits("0.1", "gwei"),
+    gasPrice: parseUnits("0.3", "gwei"),
   },
   43113: {
     gasPrice: parseUnits("30", "gwei"),
@@ -146,13 +149,14 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   10: { gasPrice: parseUnits("1", "gwei") },
   43114: { gasPrice: parseUnits("30", "gwei") },
   1101: {
-    //gasPrice: parseUnits("1", "gwei")
+    // gasPrice: parseUnits("1", "gwei")
   },
   59144: { gasPrice: parseUnits("2", "gwei") },
   8453: { gasPrice: parseUnits("1.5", "gwei") },
   204: { gasPrice: parseUnits("0.1", "gwei") },
   5000: { gasPrice: parseUnits("1", "gwei") },
   1284: { gasPrice: parseUnits("200", "gwei") },
+  1287: { gasPrice: parseUnits("200", "gwei") },
   592: {
     maxPriorityFeePerGas: parseUnits("2", "gwei"),
     maxFeePerGas: parseUnits("1000", "gwei"),

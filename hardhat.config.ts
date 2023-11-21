@@ -396,7 +396,7 @@ const config: HardhatUserConfig = {
         network: "lineaGoerli",
         chainId: 59140,
         urls: {
-          apiURL: "https://explorer.goerli.linea.build/api",
+          apiURL: "https://api-testnet.lineascan.build/api",
           browserURL: "https://goerli.lineascan.build",
         },
       },
@@ -404,8 +404,8 @@ const config: HardhatUserConfig = {
         network: "lineaMainnet",
         chainId: 59144,
         urls: {
-          apiURL: "https://explorer.linea.build/api",
-          browserURL: "https://explorer.lineascan.build",
+          apiURL: "https://api.lineascan.build/api",
+          browserURL: "https://lineascan.build/",
         },
       },
       {
