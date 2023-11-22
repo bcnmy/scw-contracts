@@ -284,7 +284,7 @@ const config: HardhatUserConfig = {
     capxTestnet: {
       url: process.env.CAPX_TESTNET_URL || "",
       accounts: hardhatAccounts,
-      chainId: 7116,
+      chainId: 1001,
     },
     chillizTestnet: {
       url: process.env.CHILLIZ_TESTNET_URL || "",
