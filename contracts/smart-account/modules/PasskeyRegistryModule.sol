@@ -52,7 +52,14 @@ contract PasskeyRegistryModule is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view virtual returns (uint256) {
-        return _validateSignature(userOp, userOpHash);
+        (bytes memory passkeySignature, ) = abi.decode(
+            userOp.signature,
+            (bytes, address)
+        );
+        if (_verifySignature(userOpHash, passkeySignature)) {
+            return VALIDATION_SUCCESS;
+        }
+        return SIG_VALIDATION_FAILED;
     }
 
     /// @inheritdoc ISignatureValidator
