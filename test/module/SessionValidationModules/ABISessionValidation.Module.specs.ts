@@ -146,12 +146,12 @@ describe("SessionKey: ABI Session Validation Module", async () => {
     const approveUserOp = await makeEcdsaSessionKeySignedUserOp(
       "execute_ncC",
       [
-        mockToken.address, 
-        0, 
+        mockToken.address,
+        0,
         IERC20.interface.encodeFunctionData("approve", [
           charlie.address,
           tokenAmountToApprove,
-        ])
+        ]),
       ],
       userSA.address,
       sessionKey,
