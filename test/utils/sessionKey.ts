@@ -231,3 +231,32 @@ export async function getERC20SessionKeyParams(
   };
   return params;
 }
+
+export async function getABISessionKeyParams(
+  sessionKey: string,
+  permission: any,
+  validUntil: number,
+  validAfter: number,
+  sessionValidationModuleAddress: string
+): Promise<SessionKeyParams> {
+  const sessionKeyData = defaultAbiCoder.encode(
+    ["address", "tuple(address, bytes4, uint256, tuple(uint256, bytes32, uint8)[])"],
+    [
+      sessionKey,
+      permission,
+    ]
+  );
+
+  const leafData = hexConcat([
+    hexZeroPad(ethers.utils.hexlify(validUntil), 6),
+    hexZeroPad(ethers.utils.hexlify(validAfter), 6),
+    hexZeroPad(sessionValidationModuleAddress, 20),
+    sessionKeyData,
+  ]);
+
+  const params: SessionKeyParams = {
+    sessionKeyData: sessionKeyData,
+    leafData: leafData,
+  };
+  return params;
+}
