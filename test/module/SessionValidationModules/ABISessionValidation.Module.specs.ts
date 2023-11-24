@@ -192,7 +192,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
     });
 
     const receipt = await tx.wait();
-    //log gas usage
+    // log gas usage
     console.log(
       `Gas used for Session Key signed userOp: ${receipt.gasUsed.toString()}`
     );

@@ -3,8 +3,6 @@ pragma solidity ^0.8.20;
 import "../../interfaces/modules/ISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title ABI Session Validation Module for Biconomy Smart Accounts.
  * @dev Validates userOps for any contract / method / params.
@@ -58,35 +56,11 @@ contract ABISessionValidationModule is ISessionValidationModule {
             "ABISV Invalid Selector"
         );
 
-        console.log("SVM 1");
-        //address sessionKey;
-        //Permission calldata permission = _getPermission(_sessionKeyData[32:]);
-
-        (address sessionKey, Permission memory permission) = abi
-            .decode(_sessionKeyData, (address, Permission));
-
-        console.log("SVM 2");
-        console.logBytes(_sessionKeyData);
-
-        console.log(
-            permission.destinationContract,
-            permission.valueLimit,
-            permission.rules.length
+        // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
+        (address destinationContract, uint256 callValue, ) = abi.decode(
+            _op.callData[4:], // skip selector
+            (address, uint256, bytes)
         );
-
-        {
-            // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
-            (address destinationContract, uint256 callValue, ) = abi.decode(
-                _op.callData[4:], // skip selector
-                (address, uint256, bytes)
-            );
-            if (destinationContract != permission.destinationContract) {
-                revert("ABISV Wrong Destination");
-            }
-            if (callValue > permission.valueLimit) {
-                revert("ABISV Value exceeded");
-            }
-        }
 
         bytes calldata data;
         {
@@ -98,14 +72,17 @@ contract ABISessionValidationModule is ISessionValidationModule {
             data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
         }
 
-        if (!checkPermission(data, permission))
-            revert("ABISV: Permission violated");
-        
         return
-            ECDSA.recover(
+            validateSessionParams(
+                destinationContract, 
+                callValue, 
+                data, 
+                _sessionKeyData, 
+                new bytes(0)
+            ) == ECDSA.recover(
                 ECDSA.toEthSignedMessageHash(_userOpHash),
                 _sessionKeySignature
-            ) == sessionKey;
+            );
     }
 
     /**
@@ -123,23 +100,25 @@ contract ABISessionValidationModule is ISessionValidationModule {
         uint256 callValue,
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData,
-        bytes calldata /*_callSpecificData*/
-    ) public virtual override returns (address) {
-        Permission calldata permission = _getPermission(_sessionKeyData[20:]);
+        bytes memory /*_callSpecificData*/
+    ) public virtual pure override returns (address) {
+        (address sessionKey, Permission memory permission) = abi.decode(
+            _sessionKeyData,
+            (address, Permission)
+        );
 
         if (destinationContract != permission.destinationContract) {
             revert("ABISV Wrong Destination");
         }
-        if (callValue <= permission.valueLimit) {
+        if (callValue > permission.valueLimit) {
             revert("ABISV Value exceeded");
         }
 
         if (!checkPermission(_funcCallData, permission))
             revert("ABISV: Permission violated");
 
-        return address(bytes20(_sessionKeyData[0:20]));
+        return sessionKey;
     }
-
 
     function checkPermission(
         bytes calldata data,
