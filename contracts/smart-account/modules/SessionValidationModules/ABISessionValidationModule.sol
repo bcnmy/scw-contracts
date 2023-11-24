@@ -74,12 +74,13 @@ contract ABISessionValidationModule is ISessionValidationModule {
 
         return
             validateSessionParams(
-                destinationContract, 
-                callValue, 
-                data, 
-                _sessionKeyData, 
+                destinationContract,
+                callValue,
+                data,
+                _sessionKeyData,
                 new bytes(0)
-            ) == ECDSA.recover(
+            ) ==
+            ECDSA.recover(
                 ECDSA.toEthSignedMessageHash(_userOpHash),
                 _sessionKeySignature
             );
@@ -101,7 +102,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData,
         bytes memory /*_callSpecificData*/
-    ) public virtual pure override returns (address) {
+    ) public pure virtual override returns (address) {
         (address sessionKey, Permission memory permission) = abi.decode(
             _sessionKeyData,
             (address, Permission)

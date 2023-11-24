@@ -129,32 +129,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
     };
   });
 
-  const makeErc20TransferUserOp = async function (
-    token: string,
-    amount: BigNumber,
-    recipient: string,
-    txnValue: BigNumber,
-    testParams: any = {}
-  ): Promise<UserOperation> {
-    const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
-      "execute_ncC",
-      [token, txnValue, encodeTransfer(recipient, amount.toString())],
-      testParams.userSA.address,
-      sessionKey,
-      testParams.entryPoint,
-      testParams.sessionKeyManager.address,
-      0,
-      0,
-      testParams.abiSVM.address,
-      testParams.sessionKeyData,
-      testParams.merkleTree.getHexProof(
-        ethers.utils.keccak256(testParams.leafData)
-      )
-    );
-    return transferUserOp;
-  };
-
-  it("Should be able to process Session Key signed userOp", async () => {
+  it("Should revert if the selector is wrong", async () => {
     const {
       entryPoint,
       userSA,
@@ -165,40 +140,44 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       merkleTree,
       mockToken,
     } = await setupTests();
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+    const IERC20 = await ethers.getContractFactory("ERC20");
+    const tokenAmountToApprove = ethers.utils.parseEther("0.7534");
 
-    const transferUserOp = await makeErc20TransferUserOp(
-      mockToken.address,
-      tokenAmountToTransfer,
-      charlie.address,
-      ethers.utils.parseEther("0"),
-      {
-        entryPoint,
-        userSA,
-        sessionKeyManager,
-        abiSVM,
-        sessionKeyData,
-        leafData,
-        merkleTree,
-      }
+    const approveUserOp = await makeEcdsaSessionKeySignedUserOp(
+      "execute_ncC",
+      [
+        mockToken.address, 
+        0, 
+        IERC20.interface.encodeFunctionData("approve", [
+          charlie.address,
+          tokenAmountToApprove,
+        ])
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      0,
+      0,
+      abiSVM.address,
+      sessionKeyData,
+      merkleTree.getHexProof(ethers.utils.keccak256(leafData))
     );
 
     const charlieTokenBalanceBefore = await mockToken.balanceOf(
       charlie.address
     );
 
-    const tx = await entryPoint.handleOps([transferUserOp], alice.address, {
-      gasLimit: 10000000,
-    });
-
-    const receipt = await tx.wait();
-    // log gas usage
-    console.log(
-      `Gas used for Session Key signed userOp: ${receipt.gasUsed.toString()}`
-    );
+    await expect(
+      entryPoint.handleOps([approveUserOp], alice.address, {
+        gasLimit: 10000000,
+      })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: ABISV: Permission violated");
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
-      charlieTokenBalanceBefore.add(tokenAmountToTransfer)
+      charlieTokenBalanceBefore
     );
   });
 });
