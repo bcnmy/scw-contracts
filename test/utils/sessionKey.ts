@@ -240,11 +240,11 @@ export async function getABISessionKeyParams(
   sessionValidationModuleAddress: string
 ): Promise<SessionKeyParams> {
   const sessionKeyData = defaultAbiCoder.encode(
-    ["address", "tuple(address, bytes4, uint256, tuple(uint256, bytes32, uint8)[])"],
     [
-      sessionKey,
-      permission,
-    ]
+      "address",
+      "tuple(address, bytes4, uint256, tuple(uint256, bytes32, uint8)[])",
+    ],
+    [sessionKey, permission]
   );
 
   const leafData = hexConcat([

@@ -10,8 +10,6 @@ import {ISessionKeyManagerModule} from "../interfaces/modules/ISessionKeyManager
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
  * @dev Performs basic verifications for every session key signed userOp.
@@ -60,8 +58,6 @@ contract SessionKeyManager is
                 moduleSignature,
                 (uint48, uint48, address, bytes, bytes32[], bytes)
             );
-
-        console.log("SKM 1");
 
         validateSessionKey(
             userOp.sender,

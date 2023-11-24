@@ -86,14 +86,14 @@ describe("SessionKey: ABI Session Validation Module", async () => {
           ethers.utils.id("transfer(address,uint256)"),
           0,
           4
-        ), //transfer function selector
+        ), // transfer function selector
         ethers.utils.parseEther("1"),
-        //array of offsets, values, and conditions
+        // array of offsets, values, and conditions
         [
-          [0, ethers.utils.hexZeroPad(charlie.address, 32), 0], //equal
-          [32, ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32), 1] //less than or equal
-        ] 
-      ], 
+          [0, ethers.utils.hexZeroPad(charlie.address, 32), 0], // equal
+          [32, ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32), 1], // less than or equal
+        ],
+      ],
       0,
       0,
       abiSVM.address
@@ -186,12 +186,19 @@ describe("SessionKey: ABI Session Validation Module", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(
       charlie.address
     );
-    
-    await entryPoint.handleOps([transferUserOp], alice.address, {gasLimit: 10000000});
-    
+
+    const tx = await entryPoint.handleOps([transferUserOp], alice.address, {
+      gasLimit: 10000000,
+    });
+
+    const receipt = await tx.wait();
+    //log gas usage
+    console.log(
+      `Gas used for Session Key signed userOp: ${receipt.gasUsed.toString()}`
+    );
+
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore.add(tokenAmountToTransfer)
     );
   });
-
 });

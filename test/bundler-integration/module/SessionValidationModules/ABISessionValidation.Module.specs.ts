@@ -117,18 +117,19 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
           ethers.utils.id("transfer(address,uint256)"),
           0,
           4
-        ), //transfer function selector
+        ), // transfer function selector
         ethers.utils.parseEther("0"),
-        //array of offsets, values, and conditions
+        // array of offsets, values, and conditions
         [
-          [0, ethers.utils.hexZeroPad(charlie.address, 32), 0], //equal
-          [32, ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32), 1]] //less than or equal
+          [0, ethers.utils.hexZeroPad(charlie.address, 32), 0], // equal
+          [32, ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32), 1],
+        ], // less than or equal
       ]
     );
 
     const { sessionKeyData, leafData } = await getABISessionKeyParams(
       sessionKey.address,
-      permissionObject, 
+      permissionObject,
       0,
       0,
       abiSVM.address
