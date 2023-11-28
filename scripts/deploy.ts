@@ -367,6 +367,7 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("Deployer Contract Address: ", DEPLOYER_CONTRACT_ADDRESS);
 
   const [deployer] = await ethers.getSigners();
+
   const deployerBalanceBefore = await deployer.getBalance();
   console.log(
     `Deployer ${deployer.address} initial balance: ${formatEther(
@@ -376,6 +377,7 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
 
   const deployerInstance = await getPredeployedDeployerContractInstance();
+
   console.log("=========================================");
   await deployBaseWalletImpContract(deployerInstance);
   console.log("=========================================");
@@ -395,8 +397,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deploySmartContractOwnershipRegistryModule(deployerInstance);
   console.log("=========================================");
-  // await deployAddressResolver(deployerInstance);
-  // console.log("=========================================");
+  await deployAddressResolver(deployerInstance);
+  console.log("=========================================");
 
   console.log(
     "Deployed Contracts: ",

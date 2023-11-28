@@ -343,6 +343,14 @@ const config: HardhatUserConfig = {
     },
     customChains: [
       {
+        network: "capxTestnet",
+        chainId: 1001,
+        urls: {
+          apiURL: "http://148.113.163.123:4010/api",
+          browserURL: "http://148.113.163.123:4010",
+        },
+      },
+      {
         network: "arbitrumNova",
         chainId: 42170,
         urls: {
