@@ -217,6 +217,8 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         if (module == address(0) || module == SENTINEL_MODULES) {
             revert ModuleCannotBeZeroOrSentinel(module);
         }
+        if (_modules[module] == SENTINEL_MODULES && _modules[SENTINEL_MODULES] == module)
+            revert CanNotDisableOnlyModule(module);
         if (_modules[prevModule] != module) {
             revert ModuleAndPrevModuleMismatch(
                 module,

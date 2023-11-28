@@ -8,7 +8,7 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
 } from "../utils/setupHelper";
-import { makeEcdsaModuleUserOp } from "../utils/userOp";
+import { makeEcdsaModuleUserOp, getUserOpHash } from "../utils/userOp";
 
 describe("Modular Smart Account Modules: ", async () => {
   const [deployer, smartAccountOwner, alice, bob, charlie, verifiedSigner] =
@@ -19,6 +19,8 @@ describe("Modular Smart Account Modules: ", async () => {
     await deployments.fixture();
 
     const mockToken = await getMockToken();
+    const entryPoint = await getEntryPoint();
+    const { chainId } = await entryPoint.provider.getNetwork();
 
     const ecdsaModule = await getEcdsaOwnershipRegistryModule();
     const EcdsaOwnershipRegistryModule = await ethers.getContractFactory(
@@ -47,12 +49,13 @@ describe("Modular Smart Account Modules: ", async () => {
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
     return {
-      entryPoint: await getEntryPoint(),
+      entryPoint: entryPoint,
       smartAccountImplementation: await getSmartAccountImplementation(),
       smartAccountFactory: await getSmartAccountFactory(),
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
+      chainId: chainId, 
     };
   });
 
@@ -266,6 +269,36 @@ describe("Modular Smart Account Modules: ", async () => {
   describe("disableModule: ", async () => {
     it("MOVED: Can disable module and it is disabled", async () => {
       // moved to test/bundler-integration/smart-account/SA.Modules.specs.ts
+    });
+
+    it("Can not disable the only module", async () => {
+      const { ecdsaModule, userSA, entryPoint, chainId } = await setupTests();
+
+      const userOp = await makeEcdsaModuleUserOp(
+        "disableModule",
+        [sentinelAddress, ecdsaModule.address],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("CanNotDisableOnlyModule(address)").slice(0, 10),
+        ethers.utils.hexZeroPad(ecdsaModule.address, 32),
+      ]);
+
+      const tx = await entryPoint.handleOps([userOp], alice.address);
+      await expect(tx).to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(userOp, entryPoint.address, chainId),
+          userOp.sender,
+          userOp.nonce,
+          errorData
+        );
+      expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(
+        true
+      );
     });
   });
 

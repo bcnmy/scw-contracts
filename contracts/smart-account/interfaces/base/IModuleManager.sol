@@ -77,6 +77,12 @@ interface IModuleManager {
     );
 
     /**
+     * @notice Throws when trying to remove the only enabled module
+     * @param module Module address provided
+     */
+    error CanNotDisableOnlyModule(address module);
+
+    /**
      * @dev Adds a module to the allowlist.
      * @notice This SHOULD only be done via userOp or a selfcall.
      */
