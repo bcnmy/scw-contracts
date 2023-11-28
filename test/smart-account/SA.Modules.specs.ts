@@ -55,7 +55,7 @@ describe("Modular Smart Account Modules: ", async () => {
       mockToken: mockToken,
       ecdsaModule: ecdsaModule,
       userSA: userSA,
-      chainId: chainId, 
+      chainId: chainId,
     };
   });
 
@@ -289,16 +289,15 @@ describe("Modular Smart Account Modules: ", async () => {
       ]);
 
       const tx = await entryPoint.handleOps([userOp], alice.address);
-      await expect(tx).to.emit(entryPoint, "UserOperationRevertReason")
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
         .withArgs(
           getUserOpHash(userOp, entryPoint.address, chainId),
           userOp.sender,
           userOp.nonce,
           errorData
         );
-      expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(
-        true
-      );
+      expect(await userSA.isModuleEnabled(ecdsaModule.address)).to.equal(true);
     });
   });
 
