@@ -93,7 +93,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
      * @param callValue value to be sent with the call
      * @param _funcCallData the data for the call. is parsed inside the SVM
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
-     * param _callSpecificData additional data, for example some proofs if the SVM utilizes merkle trees itself
+     * @return sessionKey address of the sessionKey that signed the userOp
      * for example to store a list of allowed tokens or receivers
      */
     function validateSessionParams(
