@@ -265,71 +265,71 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
   // Mainnets
   137: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 MATIC = $0.5788
+    stakeInWei: parseEther("0.001"), // 1 MATIC = $0.5788
   },
   56: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 BNB = $217.43
+    stakeInWei: parseEther("0.001"), // 1 BNB = $217.43
   },
   1: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.001"), // 1 ETH = $1,674.88
   },
   42161: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.001"), // 1 ETH = $1,674.88
   },
   42170: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.001"), // 1 ETH = $1,674.88
   },
   10: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.001"), // 1 ETH = $1,674.88
   },
   43114: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 AVAX = $10.71
+    stakeInWei: parseEther("0.001"), // 1 AVAX = $10.71
   },
   1101: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.001"), // 1 ETH = $1,674.88
   },
   59144: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.001"), // 1 ETH = $1,674.88
   },
   8453: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+    stakeInWei: parseEther("0.001"), // 1 ETH = $1,674.88
   },
   204: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 BNB = $217.43
+    stakeInWei: parseEther("0.001"), // 1 BNB = $217.43
   },
   5000: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 MNT = $0.444
+    stakeInWei: parseEther("0.001"), // 1 MNT = $0.444
   },
   1284: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 GLMR = $0.18
+    stakeInWei: parseEther("0.001"), // 1 GLMR = $0.18
   },
   592: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"), // 1 GLMR = $0.18
+    stakeInWei: parseEther("0.001"), // 1 GLMR = $0.18
   },
   88888: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"),
+    stakeInWei: parseEther("0.001"),
   },
   1116: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"),
+    stakeInWei: parseEther("0.001"),
   },
   169: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"),
+    stakeInWei: parseEther("0.001"),
   },
 };
 

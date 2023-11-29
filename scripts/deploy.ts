@@ -407,7 +407,7 @@ export async function mainDeploy(): Promise<Record<string, string>> {
 
   const deployerBalanceAfter = await deployer.getBalance();
   console.log(
-    `Deployer ${deployer.address} initial balance: ${formatEther(
+    `Deployer ${deployer.address} final balance: ${formatEther(
       deployerBalanceAfter
     )}`
   );
