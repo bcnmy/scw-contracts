@@ -5,7 +5,7 @@ import { DEPLOYMENT_CHAIN_GAS_PRICES } from "./utils";
 
 export async function mainDeployDeployer() {
   try {
-    const DEPLOYMENT_FEE = parseEther("0.1");
+    const DEPLOYMENT_FEE = parseEther("0.001");
 
     console.log(
       " DEPLOYMENT_FEE %i : %f",

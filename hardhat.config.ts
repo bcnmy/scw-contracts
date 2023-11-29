@@ -306,6 +306,16 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 1116,
     },
+    mantaTestnet: {
+      url: process.env.MANTA_TESTNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 3441005,
+    },
+    mantaMainnet: {
+      url: process.env.MANTA_MAINNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 169,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -351,8 +361,26 @@ const config: HardhatUserConfig = {
       arbitrumNova: process.env.ARBITRUM_NOVA_API_KEY || "",
       coreDaoTestnet: process.env.COREDAO_TESTNET_API_KEY || "",
       coreDaoMainnet: process.env.COREDAO_MAINNET_API_KEY || "",
+      mantaMainnet: "PLACEHOLDER_STRING",
+      mantaTestnet: "PLACEHOLDER_STRING",
     },
     customChains: [
+      {
+        network: "mantaMainnet",
+        chainId: 169,
+        urls: {
+          apiURL: "https://manta-pacific.calderaexplorer.xyz/api",
+          browserURL: "https://manta-pacific.calderaexplorer.xyz",
+        },
+      },
+      {
+        network: "mantaTestnet",
+        chainId: 3441005,
+        urls: {
+          apiURL: "https://pacific-explorer.testnet.manta.network/api/",
+          browserURL: "https://pacific-explorer.testnet.manta.network/",
+        },
+      },
       {
         network: "coreDaoTestnet",
         chainId: 1115,
