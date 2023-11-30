@@ -87,8 +87,10 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
 
             switch success
             case 0x1 {
-                moduleInstallationSuccess := mload(ptr)
-                module := mload(add(ptr, 0x60))
+                if eq(size, 0x80) {
+                    moduleInstallationSuccess := mload(ptr)
+                    module := mload(add(ptr, 0x60))
+                }
             }
             case 0x0 {
                 revert(ptr, size)
