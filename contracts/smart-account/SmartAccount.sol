@@ -22,7 +22,7 @@ import {IFallbackManager} from "./interfaces/base/IFallbackManager.sol";
  *         - It allows to receive and manage assets.
  *         - It is responsible for managing the modules and fallbacks.
  *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
- * @author Chirag Titiya - <chirag@biconomy.io>, Filipp Makarov - <filipp.makarov@biconomy.io>
+ * @author Chirag Titiya - <chirag@biconomy.io>, Filipp Makarov - <filipp.makarov@biconomy.io>, Ankur Dubey - <ankur@biconomy.io>
  */
 contract SmartAccount is
     BaseSmartAccount,
@@ -127,10 +127,19 @@ contract SmartAccount is
             revert CallerIsNotAnEntryPoint(msg.sender);
         }
 
-        (, address validationModule) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
+        address validationModule;
+        {
+            /*
+             *  userOp.signature = abi.encode(moduleSignature, validationModule)
+             *  Extract validationModule from userOp.signature without copying
+             *  moduleSignature to memory
+             */
+            bytes memory signature = userOp.signature;
+            assembly ("memory-safe") {
+                validationModule := mload(add(signature, 0x40))
+            }
+        }
+
         if (address(_modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
@@ -289,7 +298,7 @@ contract SmartAccount is
     /// @inheritdoc ISignatureValidator
     function isValidSignature(
         bytes32 dataHash,
-        bytes memory signature
+        bytes calldata signature
     ) public view override returns (bytes4) {
         (bytes memory moduleSignature, address validationModule) = abi.decode(
             signature,
@@ -309,7 +318,7 @@ contract SmartAccount is
     /// @inheritdoc ISignatureValidator
     function isValidSignatureUnsafe(
         bytes32 dataHash,
-        bytes memory signature
+        bytes calldata signature
     ) public view returns (bytes4) {
         (bytes memory moduleSignature, address validationModule) = abi.decode(
             signature,
