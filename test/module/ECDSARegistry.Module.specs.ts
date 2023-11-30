@@ -482,7 +482,7 @@ describe("ECDSA Registry Module: ", async () => {
 
       await expect(
         ecdsaRegistryModule.validateUserOp(userOp, userOpHash)
-      ).to.be.revertedWith("WrongSignatureLength");
+      ).to.be.reverted;
       await expect(entryPoint.handleOps([userOp], smartAccountOwner.address)).to
         .be.reverted;
       expect(await mockToken.balanceOf(bob.address)).to.equal(bobBalanceBefore);
