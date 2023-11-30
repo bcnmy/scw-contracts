@@ -74,7 +74,13 @@ contract EcdsaOwnershipRegistryModule is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view virtual override returns (uint256) {
-        if (_verifySignature(userOpHash, userOp.signature[96:161], userOp.sender)) {
+        if (
+            _verifySignature(
+                userOpHash,
+                userOp.signature[96:161],
+                userOp.sender
+            )
+        ) {
             return VALIDATION_SUCCESS;
         }
         return SIG_VALIDATION_FAILED;
