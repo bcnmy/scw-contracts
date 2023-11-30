@@ -56,7 +56,10 @@ contract BatchedSessionRouter is
             {
                 // parse the signature to get the array of required parameters
                 (sessionKeyManager, sessionData, sessionKeySignature) = abi
-                    .decode(userOp.signature[96:], (address, SessionData[], bytes));
+                    .decode(
+                        userOp.signature[96:],
+                        (address, SessionData[], bytes)
+                    );
             }
 
             if (

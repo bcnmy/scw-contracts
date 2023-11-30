@@ -127,17 +127,20 @@ contract SmartAccount is
             revert CallerIsNotAnEntryPoint(msg.sender);
         }
 
+        // gas efficient way to get the validation module address
         address validationModule;
-        {
-            /*
-             *  userOp.signature = abi.encode(moduleSignature, validationModule)
-             *  Extract validationModule from userOp.signature without copying
-             *  moduleSignature to memory
-             */
-            bytes memory signature = userOp.signature;
-            assembly ("memory-safe") {
-                validationModule := mload(add(signature, 0x40))
-            }
+        uint256 userOpEndOffset;
+        assembly {
+            userOpEndOffset := add(calldataload(0x04), 0x24)
+            validationModule := calldataload(
+                add(
+                    add(
+                        calldataload(add(userOpEndOffset, 0x120)),
+                        userOpEndOffset
+                    ),
+                    0x20
+                )
+            )
         }
 
         if (address(_modules[validationModule]) != address(0)) {
