@@ -54,14 +54,9 @@ contract BatchedSessionRouter is
             bytes memory sessionKeySignature;
 
             {
-                (bytes memory moduleSignature, ) = abi.decode(
-                    userOp.signature,
-                    (bytes, address)
-                );
-
                 // parse the signature to get the array of required parameters
                 (sessionKeyManager, sessionData, sessionKeySignature) = abi
-                    .decode(moduleSignature, (address, SessionData[], bytes));
+                    .decode(userOp.signature[96:], (address, SessionData[], bytes));
             }
 
             if (

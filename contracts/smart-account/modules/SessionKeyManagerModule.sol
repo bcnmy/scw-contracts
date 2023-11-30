@@ -42,7 +42,7 @@ contract SessionKeyManager is
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-     ) external virtual returns (uint256) {
+    ) external virtual returns (uint256) {
         (
             uint48 validUntil,
             uint48 validAfter,
