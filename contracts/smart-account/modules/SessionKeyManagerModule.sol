@@ -42,11 +42,7 @@ contract SessionKeyManager is
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual returns (uint256) {
-        (bytes memory moduleSignature, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
+     ) external virtual returns (uint256) {
         (
             uint48 validUntil,
             uint48 validAfter,
@@ -55,7 +51,7 @@ contract SessionKeyManager is
             bytes32[] memory merkleProof,
             bytes memory sessionKeySignature
         ) = abi.decode(
-                moduleSignature,
+                userOp.signature[96:],
                 (uint48, uint48, address, bytes, bytes32[], bytes)
             );
 
