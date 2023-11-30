@@ -12,15 +12,14 @@ import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 
 /**
- * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
+ * @title ECDSA Multi Ownership Authorization Module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
  *         - It allows to validate user operations signed by EOA private key.
  *         - EIP-1271 compatible (ensures Smart Account can validate signed messages).
- *         - One owner per Smart Account.
+ *         - Multiple owners per Smart Account.
  *         - Does not support outdated eth_sign flow for cheaper validations
  *         (see https://support.metamask.io/hc/en-us/articles/14764161421467-What-is-eth-sign-and-why-is-it-a-risk-)
  * !!!!!!! Only EOA owners supported, no Smart Account Owners
- *         For Smart Contract Owners check SmartContractOwnership module instead
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
