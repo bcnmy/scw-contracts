@@ -1,20 +1,16 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import {IStatefulSessionKeyManagerBase} from "./IStatefulSessionKeyManagerBase.sol";
+
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
- * @dev TODO
+ * @dev Similar to the Stateful Session Key Manager module, but the session enable transaction
+ *      is batched with the first transaction that uses the session key.
+ *      Session creation is offline and completely free.
  * @author Ankur Dubey - <ankur@biconomy.io>
- * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
-interface ISessionKeyManagerModuleHybrid {
-    struct SessionData {
-        uint48 validUntil;
-        uint48 validAfter;
-        address sessionValidationModule;
-        bytes sessionKeyData;
-    }
-
+interface ISessionKeyManagerModuleHybrid is IStatefulSessionKeyManagerBase {
     /**
      * @dev validates that Session Key + parameters are enabled
      * by being included into the merkle tree

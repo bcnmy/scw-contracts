@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
-import {ISessionKeyManagerModuleStateful} from "../interfaces/modules/ISessionKeyManagerModuleStateful.sol";
-import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
-import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
+import {ISessionValidationModule} from "../../interfaces/modules/ISessionValidationModule.sol";
+import {ISessionKeyManagerModuleStateful} from "../../interfaces/modules/SessionKeyManagers/ISessionKeyManagerModuleStateful.sol";
+import {StatefulSessionKeyManagerBase} from "./StatefulSessionKeyManagerBase.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -17,18 +15,14 @@ import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
  */
 
 contract SessionKeyManagerStateful is
-    BaseAuthorizationModule,
+    StatefulSessionKeyManagerBase,
     ISessionKeyManagerModuleStateful
 {
-    // Inverting the order of the mapping seems to make it non-compliant with the bundlers
-    mapping(bytes32 sessionDataDigest => mapping(address sa => SessionData data))
-        public enabledSessions;
-
-    /// @inheritdoc IAuthorizationModule
+    /// @inheritdoc StatefulSessionKeyManagerBase
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual returns (uint256 rv) {
+    ) external virtual override returns (uint256 rv) {
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -39,9 +33,9 @@ contract SessionKeyManagerStateful is
 
         validateSessionKey(userOp.sender, sessionDataDigest);
 
-        SessionData storage sessionData = enabledSessions[sessionDataDigest][
-            userOp.sender
-        ];
+        SessionData storage sessionData = _enabledSessionsData[
+            sessionDataDigest
+        ][userOp.sender];
 
         rv = _packValidationData(
             //_packValidationData expects true if sig validation has failed, false otherwise
@@ -58,9 +52,7 @@ contract SessionKeyManagerStateful is
     }
 
     /// @inheritdoc ISessionKeyManagerModuleStateful
-    function enableSessionKey(
-        SessionData calldata sessionData
-    ) external override {
+    function enableSession(SessionData calldata sessionData) external override {
         bytes32 sessionDataDigest = keccak256(
             abi.encodePacked(
                 sessionData.validUntil,
@@ -69,7 +61,8 @@ contract SessionKeyManagerStateful is
                 sessionData.sessionKeyData
             )
         );
-        enabledSessions[sessionDataDigest][msg.sender] = sessionData;
+        _enabledSessionsData[sessionDataDigest][msg.sender] = sessionData;
+        emit SessionCreated(msg.sender, sessionDataDigest, sessionData);
     }
 
     /// @inheritdoc ISessionKeyManagerModuleStateful
@@ -78,27 +71,9 @@ contract SessionKeyManagerStateful is
         bytes32 sessionKeyDataDigest
     ) public virtual override {
         require(
-            enabledSessions[sessionKeyDataDigest][smartAccount]
+            _enabledSessionsData[sessionKeyDataDigest][smartAccount]
                 .sessionValidationModule != address(0),
             "SKM: Session Key is not enabled"
         );
-    }
-
-    /// @inheritdoc ISignatureValidator
-    function isValidSignature(
-        bytes32 _dataHash,
-        bytes memory _signature
-    ) public pure override returns (bytes4) {
-        (_dataHash, _signature);
-        return 0xffffffff; // do not support it here
-    }
-
-    /// @inheritdoc ISignatureValidator
-    function isValidSignatureUnsafe(
-        bytes32 _dataHash,
-        bytes memory _signature
-    ) public pure override returns (bytes4) {
-        (_dataHash, _signature);
-        return 0xffffffff; // do not support it here
     }
 }

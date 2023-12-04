@@ -1,20 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/**
- * @title Session Key Manager module for Biconomy Modular Smart Accounts.
- * @dev TODO
- * @author Ankur Dubey - <ankur@biconomy.io>
- * @author Fil Makarov - <filipp.makarov@biconomy.io>
- */
-interface ISessionKeyManagerModuleStateful {
-    struct SessionData {
-        uint48 validUntil;
-        uint48 validAfter;
-        address sessionValidationModule;
-        bytes sessionKeyData;
-    }
+import {IStatefulSessionKeyManagerBase} from "./IStatefulSessionKeyManagerBase.sol";
 
+/**
+ * @title Stateful Session Key Manager module for Biconomy Modular Smart Accounts.
+ * @dev Stores the session key data on-chain to save calldata costs in subsequent transactions.
+ *      This module is optimised for L2s where calldata is expensive and hence session key data is stored on-chain.
+ * @author Ankur Dubey - <ankur@biconomy.io>
+ */
+interface ISessionKeyManagerModuleStateful is IStatefulSessionKeyManagerBase {
     /**
      * @dev validates that Session Key + parameters are enabled
      * by being included into the merkle tree
@@ -28,8 +23,8 @@ interface ISessionKeyManagerModuleStateful {
     ) external;
 
     /**
-     * @dev enables session key for a smart account
+     * @dev creates a session for a smart account
      * @param sessionData session data
      */
-    function enableSessionKey(SessionData calldata sessionData) external;
+    function enableSession(SessionData calldata sessionData) external;
 }

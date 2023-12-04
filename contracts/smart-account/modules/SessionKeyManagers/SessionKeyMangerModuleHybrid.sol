@@ -3,32 +3,30 @@ pragma solidity ^0.8.20;
 
 /* solhint-disable function-max-lines */
 
-import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
-import {ISessionKeyManagerModuleHybrid} from "../interfaces/modules/ISessionKeyManagerModuleHybrid.sol";
-import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
-import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../interfaces/ISignatureValidator.sol";
+import {ISessionValidationModule} from "../../interfaces/modules/ISessionValidationModule.sol";
+import {ISessionKeyManagerModuleHybrid} from "../../interfaces/modules/SessionKeyManagers/ISessionKeyManagerModuleHybrid.sol";
+import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../../interfaces/ISignatureValidator.sol";
+import {StatefulSessionKeyManagerBase} from "./StatefulSessionKeyManagerBase.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
- * @dev TODO
+ * @dev Similar to the Stateful Session Key Manager module, but the session enable transaction
+ *      is batched with the first transaction that uses the session key.
+ *      Session creation is offline and completely free.
  * @author Ankur Dubey - <ankur@biconomy.io>
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 contract SessionKeyManagerHybrid is
-    BaseAuthorizationModule,
+    StatefulSessionKeyManagerBase,
     ISessionKeyManagerModuleHybrid
 {
-    mapping(bytes32 sessionDataDigest => mapping(address sa => SessionData data))
-        public enabledSessions;
-
-    /// @inheritdoc IAuthorizationModule
+    /// @inheritdoc StatefulSessionKeyManagerBase
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual returns (uint256 rv) {
+    ) external virtual override returns (uint256 rv) {
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -97,7 +95,7 @@ contract SessionKeyManagerHybrid is
 
             validateSessionKeyPreEnabled(userOp.sender, sessionDataDigest);
 
-            SessionData storage sessionData = enabledSessions[
+            SessionData storage sessionData = _enabledSessionsData[
                 sessionDataDigest
             ][userOp.sender];
 
@@ -197,12 +195,14 @@ contract SessionKeyManagerHybrid is
                 sessionKeyData
             )
         );
-        enabledSessions[sessionDataDigest][msg.sender] = SessionData({
+        SessionData memory sessionData = SessionData({
             validUntil: validUntil,
             validAfter: validAfter,
             sessionValidationModule: sessionValidationModule,
             sessionKeyData: sessionKeyData
         });
+        _enabledSessionsData[sessionDataDigest][msg.sender] = sessionData;
+        emit SessionCreated(msg.sender, sessionDataDigest, sessionData);
     }
 
     /// @inheritdoc ISessionKeyManagerModuleHybrid
@@ -211,27 +211,9 @@ contract SessionKeyManagerHybrid is
         bytes32 sessionKeyDataDigest
     ) public virtual override {
         require(
-            enabledSessions[sessionKeyDataDigest][smartAccount]
+            _enabledSessionsData[sessionKeyDataDigest][smartAccount]
                 .sessionValidationModule != address(0),
             "SKM: Session key is not enabled"
         );
-    }
-
-    /// @inheritdoc ISignatureValidator
-    function isValidSignature(
-        bytes32 _dataHash,
-        bytes memory _signature
-    ) public pure override returns (bytes4) {
-        (_dataHash, _signature);
-        return 0xffffffff; // do not support it here
-    }
-
-    /// @inheritdoc ISignatureValidator
-    function isValidSignatureUnsafe(
-        bytes32 _dataHash,
-        bytes memory _signature
-    ) public pure override returns (bytes4) {
-        (_dataHash, _signature);
-        return 0xffffffff; // do not support it here
     }
 }
