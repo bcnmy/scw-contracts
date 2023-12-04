@@ -1,15 +1,8 @@
+// TEST Secp256r1 EXPSOING OTHER METHODS THAN VERIFY
+
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.20;
-//
-// Initial Implementation by
-// https://github.com/itsobvioustech/aa-passkeys-wallet/blob/main/src/Secp256r1.sol
-// Heavily inspired from
-// https://github.com/maxrobot/elliptic-solidity/blob/master/contracts/Secp256r1.sol
-// https://github.com/tdrerup/elliptic-curve-solidity/blob/master/contracts/curves/EllipticCurve.sol
-// modified to use precompile 0x05 modexp
-// and modified jacobian double
-// optimisations to avoid to an from from affine and jacobian coordinates
-//
+pragma solidity >=0.8.17;
+
 struct PassKeyId {
     uint256 pubKeyX;
     uint256 pubKeyY;
@@ -22,7 +15,7 @@ struct JPoint {
     uint256 z;
 }
 
-library Secp256r1 {
+contract TestSecp256r1 {
     uint256 private constant GX =
         0x6B17D1F2E12C4247F8BCE6E563A440F277037D812DEB33A0F4A13945D898C296;
     uint256 private constant GY =
@@ -53,7 +46,7 @@ library Secp256r1 {
         uint256 r,
         uint256 s,
         uint256 e
-    ) internal view returns (bool) {
+    ) public view returns (bool) {
         if (r == 0 || s == 0 || r >= NN || s >= NN) {
             return false;
         }
@@ -71,7 +64,7 @@ library Secp256r1 {
         uint256 r,
         uint256 s,
         uint256 e
-    ) internal view returns (bool) {
+    ) public view returns (bool) {
         uint256 w = primemod(s, NN);
 
         uint256 u1 = mulmod(e, w, NN);
@@ -95,7 +88,7 @@ library Secp256r1 {
         JPoint[16] memory points,
         uint256 u1,
         uint256 u2
-    ) internal view returns (uint256, uint256) {
+    ) public view returns (uint256, uint256) {
         uint256 x = 1;
         uint256 y = 1;
         uint256 z = 0;
@@ -135,7 +128,7 @@ library Secp256r1 {
         uint256 x,
         uint256 y,
         uint256 z
-    ) internal view returns (uint256 ax, uint256 ay) {
+    ) public view returns (uint256 ax, uint256 ay) {
         if (z == 0) {
             return (0, 0);
         }
@@ -157,7 +150,7 @@ library Secp256r1 {
     function primemod(
         uint256 value,
         uint256 p
-    ) internal view returns (uint256 ret) {
+    ) public view returns (uint256 ret) {
         ret = modexp(value, p - 2, p);
         return ret;
     }
@@ -170,7 +163,7 @@ library Secp256r1 {
         uint256 _base,
         uint256 _exp,
         uint256 _mod
-    ) internal view returns (uint256 ret) {
+    ) public view returns (uint256 ret) {
         // bigModExp(_base, _exp, _mod);
         assembly {
             if gt(_base, _mod) {
@@ -198,10 +191,7 @@ library Secp256r1 {
         }
     }
 
-    function isValidPublicKey(
-        uint256 x,
-        uint256 y
-    ) internal pure returns (bool) {
+    function isValidPublicKey(uint256 x, uint256 y) public pure returns (bool) {
         if (x >= PP || y >= PP) {
             return false; // (x, y) coordinates should satisfy, 0 <= x,y < p
         }
@@ -217,7 +207,7 @@ library Secp256r1 {
 
     function preComputeJacobianPoints(
         PassKeyId memory passKey
-    ) internal pure returns (JPoint[16] memory points) {
+    ) public pure returns (JPoint[16] memory points) {
         // JPoint[] memory u1Points = new JPoint[](4);
         // u1Points[0] = JPoint(1, 1, 0); // point of infinity in jacobian coordinates
         // u1Points[1] = JPoint(GX, GY, 1); // u1
@@ -251,7 +241,7 @@ library Secp256r1 {
     function jPointAdd(
         JPoint memory p1,
         JPoint memory p2
-    ) internal pure returns (JPoint memory) {
+    ) public pure returns (JPoint memory) {
         uint256 x;
         uint256 y;
         uint256 z;
@@ -259,9 +249,7 @@ library Secp256r1 {
         return JPoint(x, y, z);
     }
 
-    function jPointDouble(
-        JPoint memory p
-    ) internal pure returns (JPoint memory) {
+    function jPointDouble(JPoint memory p) public pure returns (JPoint memory) {
         uint256 x;
         uint256 y;
         uint256 z;
@@ -281,7 +269,7 @@ library Secp256r1 {
         uint256 q1,
         uint256 q2,
         uint256 q3
-    ) internal pure returns (uint256 r1, uint256 r2, uint256 r3) {
+    ) public pure returns (uint256 r1, uint256 r2, uint256 r3) {
         if (p3 == 0) {
             return (q1, q2, q3);
         } else if (q3 == 0) {
@@ -354,7 +342,7 @@ library Secp256r1 {
         uint256 x,
         uint256 y,
         uint256 z
-    ) internal pure returns (uint256 x3, uint256 y3, uint256 z3) {
+    ) public pure returns (uint256 x3, uint256 y3, uint256 z3) {
         assembly {
             let
                 pd

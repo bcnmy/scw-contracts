@@ -36,7 +36,7 @@ interface IModuleManager {
      * @notice Throws when address(0) or SENTINEL_MODULES constant has been provided as a module address
      * @param module Module address provided
      */
-    error ModuleCannotBeZeroOrSentinel(address module);
+    error ModuleCanNotBeZeroOrSentinel(address module);
 
     /**
      * @notice Throws when trying to enable module that has already been enabled
@@ -75,6 +75,12 @@ interface IModuleManager {
         uint256 funcLength,
         uint256 operationLength
     );
+
+    /**
+     * @notice Throws when trying to remove the only enabled module
+     * @param module Module address provided
+     */
+    error CanNotDisableOnlyModule(address module);
 
     /**
      * @dev Adds a module to the allowlist.
