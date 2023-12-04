@@ -21,7 +21,6 @@ contract SessionKeyManagerHybrid is
     BaseAuthorizationModule,
     ISessionKeyManagerModuleHybrid
 {
-    // Inverting the order of the mapping seems to make it non-compliant with the bundlers
     mapping(bytes32 sessionDataDigest => mapping(address sa => SessionData data))
         public enabledSessions;
 
