@@ -9,7 +9,6 @@ import {ISessionValidationModule} from "../interfaces/modules/ISessionValidation
 import {ISessionKeyManagerModule} from "../interfaces/modules/ISessionKeyManagerModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -36,16 +35,14 @@ contract SessionKeyManager is
     /// @inheritdoc ISessionKeyManagerModule
     function setMerkleRoot(bytes32 _merkleRoot) external override {
         _userSessions[msg.sender].merkleRoot = _merkleRoot;
-        // TODO:should we add an event here? which emits the new merkle root
+        emit MerkleRootUpdated(msg.sender, _merkleRoot);
     }
 
     /// @inheritdoc IAuthorizationModule
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual returns (uint256 rv) {
-        uint256 gas = gasleft();
-
+    ) external virtual returns (uint256) {
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -71,20 +68,19 @@ contract SessionKeyManager is
             merkleProof
         );
 
-        rv = _packValidationData(
-            //_packValidationData expects true if sig validation has failed, false otherwise
-            !ISessionValidationModule(sessionValidationModule)
-                .validateSessionUserOp(
-                    userOp,
-                    userOpHash,
-                    sessionKeyData,
-                    sessionKeySignature
-                ),
-            validUntil,
-            validAfter
-        );
-
-        console.log("Merkle Tree Validation Gas: ", gas - gasleft());
+        return
+            _packValidationData(
+                //_packValidationData expects true if sig validation has failed, false otherwise
+                !ISessionValidationModule(sessionValidationModule)
+                    .validateSessionUserOp(
+                        userOp,
+                        userOpHash,
+                        sessionKeyData,
+                        sessionKeySignature
+                    ),
+                validUntil,
+                validAfter
+            );
     }
 
     /// @inheritdoc ISessionKeyManagerModule

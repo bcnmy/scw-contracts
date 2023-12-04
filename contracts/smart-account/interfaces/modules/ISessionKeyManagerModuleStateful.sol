@@ -7,7 +7,7 @@ pragma solidity ^0.8.20;
  * @author Ankur Dubey - <ankur@biconomy.io>
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
-interface ISessionKeyManagerModuleStatefull {
+interface ISessionKeyManagerModuleStateful {
     struct SessionData {
         uint48 validUntil;
         uint48 validAfter;

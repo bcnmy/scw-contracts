@@ -5,10 +5,9 @@ import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
-import {ISessionKeyManagerModuleStatefull} from "../interfaces/modules/ISessionKeyManagerModuleStatefull.sol";
+import {ISessionKeyManagerModuleStateful} from "../interfaces/modules/ISessionKeyManagerModuleStateful.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -17,9 +16,9 @@ import "hardhat/console.sol";
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract SessionKeyManagerStatefull is
+contract SessionKeyManagerStateful is
     BaseAuthorizationModule,
-    ISessionKeyManagerModuleStatefull
+    ISessionKeyManagerModuleStateful
 {
     // Inverting the order of the mapping seems to make it non-compliant with the bundlers
     mapping(bytes32 sessionDataDigest => mapping(address sa => SessionData data))
@@ -30,8 +29,6 @@ contract SessionKeyManagerStatefull is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256 rv) {
-        uint256 gas = gasleft();
-
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -58,23 +55,9 @@ contract SessionKeyManagerStatefull is
             sessionData.validUntil,
             sessionData.validAfter
         );
-
-        console.log("Statefull Validation Gas: ", gas - gasleft());
     }
 
-    /// @inheritdoc ISessionKeyManagerModuleStatefull
-    function validateSessionKey(
-        address smartAccount,
-        bytes32 sessionKeyDataDigest
-    ) public virtual override {
-        require(
-            enabledSessions[sessionKeyDataDigest][smartAccount]
-                .sessionValidationModule != address(0),
-            "SessionKeyManager: session key is not enabled"
-        );
-    }
-
-    /// @inheritdoc ISessionKeyManagerModuleStatefull
+    /// @inheritdoc ISessionKeyManagerModuleStateful
     function enableSessionKey(
         SessionData calldata sessionData
     ) external override {
@@ -87,6 +70,18 @@ contract SessionKeyManagerStatefull is
             )
         );
         enabledSessions[sessionDataDigest][msg.sender] = sessionData;
+    }
+
+    /// @inheritdoc ISessionKeyManagerModuleStateful
+    function validateSessionKey(
+        address smartAccount,
+        bytes32 sessionKeyDataDigest
+    ) public virtual override {
+        require(
+            enabledSessions[sessionKeyDataDigest][smartAccount]
+                .sessionValidationModule != address(0),
+            "SKM: Session Key is not enabled"
+        );
     }
 
     /// @inheritdoc ISignatureValidator

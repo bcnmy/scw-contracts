@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+/* solhint-disable function-max-lines */
+
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
@@ -8,7 +10,6 @@ import {ISessionValidationModule} from "../interfaces/modules/ISessionValidation
 import {ISessionKeyManagerModuleHybrid} from "../interfaces/modules/ISessionKeyManagerModuleHybrid.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../interfaces/ISignatureValidator.sol";
-import "hardhat/console.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -29,8 +30,6 @@ contract SessionKeyManagerHybrid is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256 rv) {
-        uint256 gas = gasleft();
-
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -116,8 +115,6 @@ contract SessionKeyManagerHybrid is
                 sessionData.validAfter
             );
         }
-
-        console.log("Hybrid Validation Gas: ", gas - gasleft());
     }
 
     /// @inheritdoc ISessionKeyManagerModuleHybrid
@@ -217,7 +214,7 @@ contract SessionKeyManagerHybrid is
         require(
             enabledSessions[sessionKeyDataDigest][smartAccount]
                 .sessionValidationModule != address(0),
-            "SessionKeyManager: session key is not enabled"
+            "SKM: Session key is not enabled"
         );
     }
 
