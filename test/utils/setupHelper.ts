@@ -127,6 +127,7 @@ export const getSmartAccountWithModule = async (
       moduleSetupData,
       index
     );
+  console.log("expectedSmartAccountAddress", expectedSmartAccountAddress);
   await factory.deployCounterFactualAccount(
     moduleSetupContract,
     moduleSetupData,

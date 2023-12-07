@@ -15,6 +15,7 @@ import {
   Deployer__factory,
   ERC20SessionValidationModule__factory,
   EcdsaOwnershipRegistryModule__factory,
+  MockValidationModule__factory,
   MultichainECDSAValidator__factory,
   PasskeyRegistryModule__factory,
   SessionKeyManager__factory,
@@ -283,6 +284,16 @@ async function deploySmartContractOwnershipRegistryModule(
   );
 }
 
+async function deployMockValidationModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.MOCK_VALIDATION_MODULE,
+    `${MockValidationModule__factory.bytecode}`,
+    "MockValidationModule",
+    []
+  );
+}
+
 async function deployAddressResolver(deployerInstance: Deployer) {
   if (
     !smartAccountFactoryV1Address ||
@@ -387,27 +398,29 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
 
   const deployerInstance = await getPredeployedDeployerContractInstance();
-  await deployEntryPointContract(deployerInstance);
-  console.log("=========================================");
-  await deployBaseWalletImpContract(deployerInstance);
-  console.log("=========================================");
-  await deployWalletFactoryContract(deployerInstance);
-  console.log("=========================================");
-  await deployEcdsaOwnershipRegistryModule(deployerInstance);
-  console.log("=========================================");
-  await deployMultichainValidatorModule(deployerInstance);
-  console.log("=========================================");
-  await deployPasskeyModule(deployerInstance);
-  console.log("=========================================");
-  await deploySessionKeyManagerModule(deployerInstance);
-  console.log("=========================================");
-  await deployBatchedSessionRouterModule(deployerInstance);
-  console.log("=========================================");
-  await deployErc20SessionValidationModule(deployerInstance);
-  console.log("=========================================");
-  await deploySmartContractOwnershipRegistryModule(deployerInstance);
-  console.log("=========================================");
-  await deployAddressResolver(deployerInstance);
+  // await deployEntryPointContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployBaseWalletImpContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployWalletFactoryContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployEcdsaOwnershipRegistryModule(deployerInstance);
+  // console.log("=========================================");
+  // await deployMultichainValidatorModule(deployerInstance);
+  // console.log("=========================================");
+  // await deployPasskeyModule(deployerInstance);
+  // console.log("=========================================");
+  // await deploySessionKeyManagerModule(deployerInstance);
+  // console.log("=========================================");
+  // await deployBatchedSessionRouterModule(deployerInstance);
+  // console.log("=========================================");
+  // await deployErc20SessionValidationModule(deployerInstance);
+  // console.log("=========================================");
+  // await deploySmartContractOwnershipRegistryModule(deployerInstance);
+  // console.log("=========================================");
+  // await deployAddressResolver(deployerInstance);
+  // console.log("=========================================");
+  await deployMockValidationModule(deployerInstance);
   console.log("=========================================");
 
   console.log(
