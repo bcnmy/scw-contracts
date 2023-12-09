@@ -11,27 +11,10 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  * Inspired by https://github.com/zerodevapp/kernel/blob/main/src/validator/SessionKeyValidator.sol
  */
-contract ABISessionValidationModule is ISessionValidationModule {
-    enum Condition {
-        EQUAL,
-        LESS_THAN_OR_EQUAL,
-        LESS_THAN,
-        GREATER_THAN_OR_EQUAL,
-        GREATER_THAN,
-        NOT_EQUAL
-    }
-
-    struct Rule {
-        uint256 offset;
-        bytes32 value;
-        Condition condition;
-    }
-
+contract ContractCallSessionValidationModule is ISessionValidationModule {
     struct Permission {
         address destinationContract;
         bytes4 selector;
-        uint256 valueLimit;
-        Rule[] rules;
     }
 
     /**
@@ -53,7 +36,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
         require(
             bytes4(_op.callData[0:4]) == EXECUTE_OPTIMIZED_SELECTOR ||
                 bytes4(_op.callData[0:4]) == EXECUTE_SELECTOR,
-            "ABISV Invalid Selector"
+            "Contract Call SVM Invalid Selector"
         );
 
         // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
@@ -109,14 +92,11 @@ contract ABISessionValidationModule is ISessionValidationModule {
         );
 
         if (destinationContract != permission.destinationContract) {
-            revert("ABISV Wrong Destination");
-        }
-        if (callValue > permission.valueLimit) {
-            revert("ABISV Value exceeded");
+            revert("Contract Call SV Wrong Destination");
         }
 
         if (!checkPermission(_funcCallData, permission))
-            revert("ABISV: Permission violated");
+            revert("Contract Call SV: func selector violated");
 
         return sessionKey;
     }
@@ -126,39 +106,6 @@ contract ABISessionValidationModule is ISessionValidationModule {
         Permission memory permission
     ) internal pure returns (bool) {
         if (bytes4(data[0:4]) != permission.selector) return false;
-        uint256 length = permission.rules.length;
-        for (uint256 i; i < length; ) {
-            Rule memory rule = permission.rules[i];
-            bytes32 param = bytes32(data[4 + rule.offset:4 + rule.offset + 32]);
-            if (rule.condition == Condition.EQUAL && param != rule.value) {
-                return false;
-            } else if (
-                rule.condition == Condition.LESS_THAN_OR_EQUAL &&
-                param > rule.value
-            ) {
-                return false;
-            } else if (
-                rule.condition == Condition.LESS_THAN && param >= rule.value
-            ) {
-                return false;
-            } else if (
-                rule.condition == Condition.GREATER_THAN_OR_EQUAL &&
-                param < rule.value
-            ) {
-                return false;
-            } else if (
-                rule.condition == Condition.GREATER_THAN && param <= rule.value
-            ) {
-                return false;
-            } else if (
-                rule.condition == Condition.NOT_EQUAL && param == rule.value
-            ) {
-                return false;
-            }
-            unchecked {
-                ++i;
-            }
-        }
         return true;
     }
 }

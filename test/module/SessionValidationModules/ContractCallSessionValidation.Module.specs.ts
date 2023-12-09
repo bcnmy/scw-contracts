@@ -3,8 +3,8 @@ import {
   makeEcdsaSessionKeySignedUserOp,
   enableNewTreeForSmartAccountViaEcdsa,
   getERC20SessionKeyParams,
-  getABISessionKeyParams,
   addLeavesForSmartAccountViaEcdsa,
+  getContractCallSessionKeyParams,
 } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
@@ -20,7 +20,7 @@ import {
 import { BigNumber } from "ethers";
 import { UserOperation } from "../../utils/userOperation";
 
-describe("SessionKey: ABI Session Validation Module", async () => {
+describe("SessionKey: Contract Call Session Validation Module", async () => {
   const [
     deployer,
     smartAccountOwner,
@@ -74,11 +74,11 @@ describe("SessionKey: ABI Session Validation Module", async () => {
     );
     await entryPoint.handleOps([userOp], alice.address);
 
-    const abiSVM = await (
-      await ethers.getContractFactory("ABISessionValidationModule")
+    const ccSVM = await (
+      await ethers.getContractFactory("ContractCallSessionValidationModule")
     ).deploy();
 
-    const { sessionKeyData, leafData } = await getABISessionKeyParams(
+    const { sessionKeyData, leafData } = await getContractCallSessionKeyParams(
       sessionKey.address,
       [
         mockToken.address,
@@ -86,17 +86,11 @@ describe("SessionKey: ABI Session Validation Module", async () => {
           ethers.utils.id("transfer(address,uint256)"),
           0,
           4
-        ), // transfer function selector
-        ethers.utils.parseEther("1"),
-        // array of offsets, values, and conditions
-        [
-          [0, ethers.utils.hexZeroPad(charlie.address, 32), 0], // equal
-          [32, ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32), 1], // less than or equal
-        ],
+        ),
       ],
       0,
       0,
-      abiSVM.address
+      ccSVM.address
     );
 
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
@@ -120,7 +114,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       userSA: userSA,
       mockToken: mockToken,
       sessionKeyManager: sessionKeyManager,
-      abiSVM: abiSVM,
+      ccSVM: ccSVM,
       sessionKeyData: sessionKeyData,
       leafData: leafData,
       merkleTree: merkleTree,
@@ -134,7 +128,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       entryPoint,
       userSA,
       sessionKeyManager,
-      abiSVM,
+      ccSVM,
       sessionKeyData,
       leafData,
       merkleTree,
@@ -159,7 +153,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       sessionKeyManager.address,
       0,
       0,
-      abiSVM.address,
+      ccSVM.address,
       sessionKeyData,
       merkleTree.getHexProof(ethers.utils.keccak256(leafData))
     );
@@ -174,7 +168,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       })
     )
       .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: ABISV: Permission violated");
+      .withArgs(0, "AA23 reverted: Contract Call SV: func selector violated");
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore

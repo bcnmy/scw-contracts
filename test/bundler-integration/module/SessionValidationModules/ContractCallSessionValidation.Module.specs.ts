@@ -2,8 +2,8 @@ import { expect } from "chai";
 import {
   makeEcdsaSessionKeySignedUserOp,
   enableNewTreeForSmartAccountViaEcdsa,
-  getABISessionKeyParams,
   addLeavesForSmartAccountViaEcdsa,
+  getContractCallSessionKeyParams,
 } from "../../../utils/sessionKey";
 import { ethers, deployments } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../../../utils/userOp";
@@ -21,7 +21,7 @@ import { UserOperation } from "../../../utils/userOperation";
 import { BundlerTestEnvironment } from "../../environment/bundlerEnvironment";
 import { SignerWithAddress } from "@nomiclabs/hardhat-ethers/signers";
 
-describe("SessionKey: ABI Session Validation Module (with Bundler)", async () => {
+describe("SessionKey: Contract call Session Validation Module (with Bundler)", async () => {
   let [
     deployer,
     smartAccountOwner,
@@ -105,11 +105,11 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
 
     await environment.sendUserOperation(userOp, entryPoint.address);
 
-    const abiSVM = await (
-      await ethers.getContractFactory("ABISessionValidationModule")
+    const ccSVM = await (
+      await ethers.getContractFactory("ContractCallSessionValidationModule")
     ).deploy();
 
-    const { sessionKeyData, leafData } = await getABISessionKeyParams(
+    const { sessionKeyData, leafData } = await getContractCallSessionKeyParams(
       sessionKey.address,
       [
         mockToken.address,
@@ -117,17 +117,11 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
           ethers.utils.id("transfer(address,uint256)"),
           0,
           4
-        ), // transfer function selector
-        ethers.utils.parseEther("1"),
-        // array of offsets, values, and conditions
-        [
-          [0, ethers.utils.hexZeroPad(charlie.address, 32), 0], // equal
-          [32, ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32), 1], // less than or equal
-        ],
+        ),
       ],
       0,
       0,
-      abiSVM.address
+      ccSVM.address
     );
 
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
@@ -147,7 +141,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
       userSA: userSA,
       mockToken: mockToken,
       sessionKeyManager: sessionKeyManager,
-      abiSVM: abiSVM,
+      ccSVM: ccSVM,
       sessionKeyData: sessionKeyData,
       leafData: leafData,
       merkleTree: merkleTree,
@@ -171,7 +165,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
       testParams.sessionKeyManager.address,
       0,
       0,
-      testParams.abiSVM.address,
+      testParams.ccSVM.address,
       testParams.sessionKeyData,
       testParams.merkleTree.getHexProof(
         ethers.utils.keccak256(testParams.leafData)
@@ -188,7 +182,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
       entryPoint,
       userSA,
       sessionKeyManager,
-      abiSVM,
+      ccSVM,
       sessionKeyData,
       leafData,
       merkleTree,
@@ -205,7 +199,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
         entryPoint,
         userSA,
         sessionKeyManager,
-        abiSVM,
+        ccSVM,
         sessionKeyData,
         leafData,
         merkleTree,
