@@ -366,6 +366,8 @@ contract AccountRecoveryModule is
         uint48 validUntil,
         uint48 validAfter
     ) external {
+        if (_guardians[guardian][msg.sender].validUntil == 0)
+            revert GuardianNotSet(guardian, msg.sender);
         (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(
             validUntil,
             validAfter
