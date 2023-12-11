@@ -20,6 +20,7 @@ interface IMultiOwnedECDSAModule {
     );
 
     error AlreadyInitedForSmartAccount(address smartAccount);
+    error NoOwnersToAdd();
     error WrongSignatureLength();
     error NotEOA(address account);
     error ZeroAddressNotAllowedAsOwner();

@@ -44,6 +44,8 @@ contract MultiOwnedECDSAModule is
             revert AlreadyInitedForSmartAccount(msg.sender);
         }
         uint256 ownersToAdd = eoaOwners.length;
+        if (ownersToAdd == 0)
+            revert NoOwnersToAdd();
         for (uint256 i; i < ownersToAdd; ) {
             if (eoaOwners[i] == address(0))
                 revert ZeroAddressNotAllowedAsOwner();
