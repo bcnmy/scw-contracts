@@ -132,11 +132,10 @@ contract SmartAccount is
         address validationModule;
         assembly {
             userOpEndOffset := add(calldataload(0x04), 0x24)
-            moduleSignature.offset :=
-                add (
-                    add(calldataload(add(userOpEndOffset, 0x120)), userOpEndOffset),
-                    0x14
-                )
+            moduleSignature.offset := add(
+                add(calldataload(add(userOpEndOffset, 0x120)), userOpEndOffset),
+                0x14
+            )
             moduleSignature.length := sub(
                 calldataload(sub(moduleSignature.offset, 0x34)),
                 0x14

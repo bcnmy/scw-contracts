@@ -107,8 +107,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
     */
 
     const signatureWithModuleAddress = ethers.utils.solidityPack(
-      [ "address", "bytes" ], 
-      [ ecdsaModule.address, deploymentUserOp.signature ]
+      ["address", "bytes"],
+      [ecdsaModule.address, deploymentUserOp.signature]
     );
 
     deploymentUserOp.signature = signatureWithModuleAddress;
@@ -300,14 +300,14 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
 
     // add validator module address to the signature
-/*     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    /*     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
       ["bytes", "address"],
       [userOp.signature, ecdsaModule.address]
     ); */
 
     const signatureWithModuleAddress = ethers.utils.solidityPack(
-      [ "address", "bytes" ], 
-      [ ecdsaModule.address, userOp.signature ]
+      ["address", "bytes"],
+      [ecdsaModule.address, userOp.signature]
     );
 
     userOp.signature = signatureWithModuleAddress;

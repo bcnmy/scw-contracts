@@ -471,8 +471,8 @@ export async function makeEcdsaModuleUserOp(
 
   // add validator module address to the signature
   const signatureWithModuleAddress = ethers.utils.solidityPack(
-    [ "address", "bytes" ], 
-    [ moduleAddress, userOp.signature ]
+    ["address", "bytes"],
+    [moduleAddress, userOp.signature]
   );
 
   userOp.signature = signatureWithModuleAddress;
