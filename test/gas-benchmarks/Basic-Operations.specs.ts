@@ -103,9 +103,12 @@ describe("Gas Benchmarking. Basic operations", async () => {
       key
     );
 
-    const nonceWithValidator = await entryPoint.getNonce(expectedSmartAccountAddress2, key);
+    const nonceWithValidator = await entryPoint.getNonce(
+      expectedSmartAccountAddress2,
+      key
+    );
     console.log("nonceWithValidator is:", nonceWithValidator.toHexString());
-    
+
     /* const key = ethers.utils.hexConcat([ecdsaModule.address, "0x00000000"]);
     console.log("key is:", key);
     const nonceWithValidator = await entryPoint.getNonce(expectedSmartAccountAddress2, key);
@@ -287,7 +290,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
     );
 
     const key = ethers.utils.hexConcat([ecdsaModule.address, "0x00000000"]);
-    
+
     const userOp = await fillAndSign(
       {
         sender: expectedSmartAccountAddress,

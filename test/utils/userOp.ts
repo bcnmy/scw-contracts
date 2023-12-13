@@ -204,7 +204,7 @@ export async function fillUserOp(
   useNonceKey = true,
   nonceKey = "0x0"
 ): Promise<UserOperation> {
-  console.log("nonce key in helper is" , nonceKey);
+  console.log("nonce key in helper is", nonceKey);
   const op1 = { ...op };
   const provider = entryPoint?.provider;
   if (op.initCode != null) {
@@ -229,11 +229,8 @@ export async function fillUserOp(
     }
     if (op1.nonce == null) {
       if (useNonceKey) {
-        op1.nonce = ethers.utils.hexConcat([
-          nonceKey,
-          "0x0000000000000000",
-        ]);
-        console.log("nonce in helper is", op1.nonce)
+        op1.nonce = ethers.utils.hexConcat([nonceKey, "0x0000000000000000"]);
+        console.log("nonce in helper is", op1.nonce);
       } else {
         op1.nonce = 0;
       }
@@ -457,7 +454,7 @@ export async function makeEcdsaModuleUserOp(
   moduleAddress: string,
   options?: {
     preVerificationGas?: number;
-  },
+  }
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 

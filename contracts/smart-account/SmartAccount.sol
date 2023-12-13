@@ -128,7 +128,7 @@ contract SmartAccount is
         }
 
         address validationModule = address(uint160(userOp.nonce >> 96));
-        
+
         if (address(_modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
