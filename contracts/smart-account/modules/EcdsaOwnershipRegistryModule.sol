@@ -74,11 +74,7 @@ contract EcdsaOwnershipRegistryModule is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view virtual override returns (uint256) {
-        (bytes memory cleanEcdsaSignature, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
-        if (_verifySignature(userOpHash, cleanEcdsaSignature, userOp.sender)) {
+        if (_verifySignature(userOpHash, userOp.signature, userOp.sender)) {
             return VALIDATION_SUCCESS;
         }
         return SIG_VALIDATION_FAILED;
