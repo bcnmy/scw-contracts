@@ -202,14 +202,15 @@ export async function fillUserOp(
   entryPoint?: EntryPoint,
   getNonceFunction = "nonce",
   useNonceKey = true,
-  nonceKey = 0
+  nonceKey = "0x0"
 ): Promise<UserOperation> {
+  console.log("nonce key in helper is" , nonceKey);
   const op1 = { ...op };
   const provider = entryPoint?.provider;
   if (op.initCode != null) {
+    console.log("deployment branch");
     const initAddr = hexDataSlice(op1.initCode!, 0, 20);
     const initCallData = hexDataSlice(op1.initCode!, 20);
-    if (op1.nonce == null) op1.nonce = 0;
     if (op1.sender == null) {
       // hack: if the init contract is our known deployer, then we know what the address would be, without a view call
       if (
@@ -224,6 +225,17 @@ export async function fillUserOp(
         op1.sender = await entryPoint!.callStatic
           .getSenderAddress(op1.initCode!)
           .catch((e) => e.errorArgs.sender);
+      }
+    }
+    if (op1.nonce == null) {
+      if (useNonceKey) {
+        op1.nonce = ethers.utils.hexConcat([
+          nonceKey,
+          "0x0000000000000000",
+        ]);
+        console.log("nonce in helper is", op1.nonce)
+      } else {
+        op1.nonce = 0;
       }
     }
     if (op1.verificationGasLimit == null) {
@@ -312,7 +324,7 @@ export async function fillAndSign(
   entryPoint?: EntryPoint,
   getNonceFunction = "nonce",
   useNonceKey = true,
-  nonceKey = 0,
+  nonceKey = "0x0",
   extraPreVerificationGas = 0
 ): Promise<UserOperation> {
   const provider = entryPoint?.provider;
@@ -446,7 +458,6 @@ export async function makeEcdsaModuleUserOp(
   options?: {
     preVerificationGas?: number;
   },
-  nonceKey = 0
 ): Promise<UserOperation> {
   const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
@@ -454,6 +465,8 @@ export async function makeEcdsaModuleUserOp(
     functionName,
     functionParams
   );
+
+  const nonceKey = ethers.utils.hexConcat([moduleAddress, "0x00000000"]);
 
   const userOp = await fillAndSign(
     {
@@ -469,13 +482,6 @@ export async function makeEcdsaModuleUserOp(
     0
   );
 
-  // add validator module address to the signature
-  const signatureWithModuleAddress = ethers.utils.solidityPack(
-    ["address", "bytes"],
-    [moduleAddress, userOp.signature]
-  );
-
-  userOp.signature = signatureWithModuleAddress;
   return userOp;
 }
 

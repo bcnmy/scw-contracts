@@ -83,6 +83,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
       ethers.utils.parseEther("1000000")
     );
 
+    const key = ethers.utils.hexConcat([ecdsaModule.address, "0x00000000"]);
+
     // deployment userOp
     const deploymentUserOp = await fillAndSign(
       {
@@ -96,22 +98,22 @@ describe("Gas Benchmarking. Basic operations", async () => {
       },
       smartAccountOwner,
       entryPoint,
-      "nonce"
+      "nonce",
+      true,
+      key
     );
 
-    /*
-    const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-      ["bytes", "address"],
-      [deploymentUserOp.signature, ecdsaModule.address]
-    );
-    */
+    const nonceWithValidator = await entryPoint.getNonce(expectedSmartAccountAddress2, key);
+    console.log("nonceWithValidator is:", nonceWithValidator.toHexString());
+    
+    /* const key = ethers.utils.hexConcat([ecdsaModule.address, "0x00000000"]);
+    console.log("key is:", key);
+    const nonceWithValidator = await entryPoint.getNonce(expectedSmartAccountAddress2, key);
 
-    const signatureWithModuleAddress = ethers.utils.solidityPack(
-      ["address", "bytes"],
-      [ecdsaModule.address, deploymentUserOp.signature]
-    );
+    deploymentUserOp.nonce = nonceWithValidator;
+ */
 
-    deploymentUserOp.signature = signatureWithModuleAddress;
+    console.log("nonce in userOp is ", deploymentUserOp.nonce);
 
     const handleOpsTxn = await entryPoint.handleOps(
       [deploymentUserOp],
@@ -284,6 +286,8 @@ describe("Gas Benchmarking. Basic operations", async () => {
       [charlie.address, tokenAmountToTransfer, "0x"]
     );
 
+    const key = ethers.utils.hexConcat([ecdsaModule.address, "0x00000000"]);
+    
     const userOp = await fillAndSign(
       {
         sender: expectedSmartAccountAddress,
@@ -296,21 +300,10 @@ describe("Gas Benchmarking. Basic operations", async () => {
       },
       alice,
       entryPoint,
-      "nonce"
+      "nonce",
+      true,
+      key
     );
-
-    // add validator module address to the signature
-    /*     const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-      ["bytes", "address"],
-      [userOp.signature, ecdsaModule.address]
-    ); */
-
-    const signatureWithModuleAddress = ethers.utils.solidityPack(
-      ["address", "bytes"],
-      [ecdsaModule.address, userOp.signature]
-    );
-
-    userOp.signature = signatureWithModuleAddress;
 
     const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
       gasLimit: 10000000,
