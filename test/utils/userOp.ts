@@ -204,11 +204,9 @@ export async function fillUserOp(
   useNonceKey = true,
   nonceKey = "0x0"
 ): Promise<UserOperation> {
-  console.log("nonce key in helper is", nonceKey);
   const op1 = { ...op };
   const provider = entryPoint?.provider;
   if (op.initCode != null) {
-    console.log("deployment branch");
     const initAddr = hexDataSlice(op1.initCode!, 0, 20);
     const initCallData = hexDataSlice(op1.initCode!, 20);
     if (op1.sender == null) {
@@ -230,7 +228,6 @@ export async function fillUserOp(
     if (op1.nonce == null) {
       if (useNonceKey) {
         op1.nonce = ethers.utils.hexConcat([nonceKey, "0x0000000000000000"]);
-        console.log("nonce in helper is", op1.nonce);
       } else {
         op1.nonce = 0;
       }

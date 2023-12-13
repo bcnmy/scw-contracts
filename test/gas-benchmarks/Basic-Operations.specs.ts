@@ -107,16 +107,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
       expectedSmartAccountAddress2,
       key
     );
-    console.log("nonceWithValidator is:", nonceWithValidator.toHexString());
-
-    /* const key = ethers.utils.hexConcat([ecdsaModule.address, "0x00000000"]);
-    console.log("key is:", key);
-    const nonceWithValidator = await entryPoint.getNonce(expectedSmartAccountAddress2, key);
-
-    deploymentUserOp.nonce = nonceWithValidator;
- */
-
-    console.log("nonce in userOp is ", deploymentUserOp.nonce);
+    //console.log("nonceWithValidator is:", nonceWithValidator.toHexString());
 
     const handleOpsTxn = await entryPoint.handleOps(
       [deploymentUserOp],
@@ -181,10 +172,10 @@ describe("Gas Benchmarking. Basic operations", async () => {
     await tx.wait();
 
     const charlieTokenBalanceBefore = await charlie.getBalance();
-    console.log(
+    /* console.log(
       "Charlie balance before: ",
       charlieTokenBalanceBefore.toString()
-    );
+    ); */
     const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const userOp = await makeEcdsaModuleUserOp(
@@ -213,10 +204,10 @@ describe("Gas Benchmarking. Basic operations", async () => {
     const charlieTokenBalanceBefore = await mockToken.balanceOf(
       charlie.address
     );
-    console.log(
+    /* console.log(
       "Charlie balance before: ",
       charlieTokenBalanceBefore.toString()
-    );
+    ); */
     const tokenAmountToTransfer = ethers.utils.parseEther("10");
 
     const userOp = await makeEcdsaModuleUserOp(
