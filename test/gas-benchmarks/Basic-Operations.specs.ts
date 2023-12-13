@@ -107,7 +107,7 @@ describe("Gas Benchmarking. Basic operations", async () => {
       expectedSmartAccountAddress2,
       key
     );
-    //console.log("nonceWithValidator is:", nonceWithValidator.toHexString());
+    // console.log("nonceWithValidator is:", nonceWithValidator.toHexString());
 
     const handleOpsTxn = await entryPoint.handleOps(
       [deploymentUserOp],
