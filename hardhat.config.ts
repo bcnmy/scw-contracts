@@ -1,7 +1,6 @@
 import * as dotenv from "dotenv";
 
 import { HardhatUserConfig, task } from "hardhat/config";
-
 import "@nomiclabs/hardhat-etherscan";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
@@ -315,6 +314,16 @@ const config: HardhatUserConfig = {
       url: process.env.MANTA_MAINNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 169,
+    },
+    meterTestnet: {
+      url: process.env.METER_TESTNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 83,
+    },
+    meterMainnet: {
+      url: process.env.METER_MAINNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 82,
     },
   },
   gasReporter: {
