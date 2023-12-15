@@ -105,4 +105,29 @@ describe("Modular Smart Account Basics: ", async () => {
     );
     expect(returnedValue).to.be.equal(eip1271MagicValue);
   });
+
+  it("Can receive native token with 2300 gas", async () => {
+    const { userSA, ecdsaModule, entryPoint } = await setupTests();
+
+    const amountToSend = ethers.utils.parseEther("0.1");
+
+    //deploy MockEthSender
+    const mockEthSender = await (
+      await ethers.getContractFactory("MockEthSender")
+    ).deploy();
+
+    // send funds to it
+    await deployer.sendTransaction({
+      to: mockEthSender.address,
+      value: ethers.utils.parseEther("10"),
+    });
+
+    const provider = entryPoint?.provider;
+    const userSABalanceBefore = await provider.getBalance(userSA.address);
+
+    const gasStipend = 0;
+    await mockEthSender.send(userSA.address, amountToSend, gasStipend);
+    expect(await provider.getBalance(userSA.address)).to.equal(userSABalanceBefore.add(amountToSend));
+  });
+
 });

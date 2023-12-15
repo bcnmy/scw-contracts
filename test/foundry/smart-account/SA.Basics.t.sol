@@ -5,6 +5,7 @@ import {SATestBase} from "../base/SATestBase.sol";
 import {SmartAccount} from "sa/SmartAccount.sol";
 import {EcdsaOwnershipRegistryModule} from "modules/EcdsaOwnershipRegistryModule.sol";
 import {UserOperation} from "aa-core/EntryPoint.sol";
+import {MockEthSender} from "sa/test/mocks/MockEthSender.sol";
 
 contract Test {
     event Log(string message);
@@ -96,5 +97,28 @@ contract SABasicsTest is SATestBase {
         );
         vm.breakpoint("a");
         entryPoint.handleOps(arraifyOps(op), owner.addr);
+    }
+
+    function testReceiveEtherWithGasLimit() external {
+        // Deploy Smart Account with default module
+        uint256 smartAccountDeploymentIndex = 0;
+        bytes memory moduleSetupData = getEcdsaOwnershipRegistryModuleSetupData(
+            alice.addr
+        );
+        SmartAccount sa = getSmartAccountWithModule(
+            address(ecdsaOwnershipRegistryModule),
+            moduleSetupData,
+            smartAccountDeploymentIndex,
+            "aliceSA"
+        );
+
+        MockEthSender mockEthSender = new MockEthSender();
+        vm.deal(address(mockEthSender), 100 ether);
+        
+        uint256 gasStipend = 0;
+        // by some reason it passes even if there's extra gas consumed by receive()
+        // same doesn't pass with Hardhat
+        // see SA.Basics.specs.ts for reference
+        mockEthSender.send(address(sa), 1 ether, gasStipend);
     }
 }

@@ -2,13 +2,13 @@ import { expect } from "chai";
 import { ethers, waffle } from "hardhat";
 import { AddressZero } from "@ethersproject/constants";
 
-describe("Proxy ", async () => {
+describe("BiconomyMSAProxy ", async () => {
   const [randomAddress] = waffle.provider.getWallets();
 
   describe("constructor", async () => {
     it("should revert with invalid implementation address", async () => {
       const Proxy = await ethers.getContractFactory(
-        "contracts/smart-account/Proxy.sol:Proxy"
+        "contracts/smart-account/BiconomyMSAProxy.sol:BiconomyMSAProxy"
       );
       await expect(Proxy.deploy(AddressZero)).to.be.revertedWith(
         "Invalid implementation address"
@@ -18,7 +18,7 @@ describe("Proxy ", async () => {
     it("should store implementation at the slot with address encoded as proxy address", async () => {
       const implementationAddress = randomAddress.address;
       const Proxy = await ethers.getContractFactory(
-        "contracts/smart-account/Proxy.sol:Proxy"
+        "contracts/smart-account/BiconomyMSAProxy.sol:BiconomyMSAProxy"
       );
       const proxy = await Proxy.deploy(implementationAddress);
       await proxy.deployed();
@@ -35,7 +35,7 @@ describe("Proxy ", async () => {
     it("reverts when trying to delegatecall to the EOA implementation", async () => {
       const implementationAddress = randomAddress.address;
       const Proxy = await ethers.getContractFactory(
-        "contracts/smart-account/Proxy.sol:Proxy"
+        "contracts/smart-account/BiconomyMSAProxy.sol:BiconomyMSAProxy"
       );
       let proxy = await Proxy.deploy(implementationAddress);
       await proxy.deployed();

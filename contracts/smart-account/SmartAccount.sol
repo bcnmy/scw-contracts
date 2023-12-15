@@ -65,14 +65,11 @@ contract SmartAccount is
     }
 
     /**
-     * @dev This function is a special fallback function that is triggered when the contract receives Ether.
-     * It logs an event indicating the amount of Ether received and the sender's address.
-     * @notice This function is marked as external and payable, meaning it can be called from external
-     * sources and accepts Ether as payment.
+     *  Left for v1 compatibility reasons 
+     *  Otherwise SAs upgraded from v1 won't be able to receive native tokens
+     *  As v1 Proxy doesn't have receive()
      */
     receive() external payable {
-        if (address(this) == SELF) revert DelegateCallsOnly();
-        emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
 
     /// @inheritdoc ISmartAccount
