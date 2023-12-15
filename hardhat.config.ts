@@ -325,6 +325,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 82,
     },
+    arbitrumSepoliaTestnet: {
+      url: process.env.ARBITRUM_SEPOLIA_TESTNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 421614,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -372,8 +377,17 @@ const config: HardhatUserConfig = {
       coreDaoMainnet: process.env.COREDAO_MAINNET_API_KEY || "",
       mantaMainnet: "PLACEHOLDER_STRING",
       mantaTestnet: "PLACEHOLDER_STRING",
+      arbitrumSepolia: process.env.ARBITRUM_API_KEY || "",
     },
     customChains: [
+      {
+        network: "arbitrumSepolia",
+        chainId: 421614,
+        urls: {
+          apiURL: "https://api-sepolia.arbiscan.io/api",
+          browserURL: "https://sepolia.arbiscan.io",
+        },
+      },
       {
         network: "mantaMainnet",
         chainId: 169,
