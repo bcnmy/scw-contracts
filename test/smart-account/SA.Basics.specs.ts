@@ -111,7 +111,7 @@ describe("Modular Smart Account Basics: ", async () => {
 
     const amountToSend = ethers.utils.parseEther("0.1");
 
-    //deploy MockEthSender
+    // deploy MockEthSender
     const mockEthSender = await (
       await ethers.getContractFactory("MockEthSender")
     ).deploy();
@@ -127,7 +127,8 @@ describe("Modular Smart Account Basics: ", async () => {
 
     const gasStipend = 0;
     await mockEthSender.send(userSA.address, amountToSend, gasStipend);
-    expect(await provider.getBalance(userSA.address)).to.equal(userSABalanceBefore.add(amountToSend));
+    expect(await provider.getBalance(userSA.address)).to.equal(
+      userSABalanceBefore.add(amountToSend)
+    );
   });
-
 });

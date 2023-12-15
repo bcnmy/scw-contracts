@@ -65,12 +65,11 @@ contract SmartAccount is
     }
 
     /**
-     *  Left for v1 compatibility reasons 
+     *  Left for v1 compatibility reasons
      *  Otherwise SAs upgraded from v1 won't be able to receive native tokens
      *  As v1 Proxy doesn't have receive()
      */
-    receive() external payable {
-    }
+    receive() external payable {}
 
     /// @inheritdoc ISmartAccount
     function init(
