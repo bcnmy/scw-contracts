@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
-import "../../interfaces/modules/ISessionValidationModule.sol";
+import "../../interfaces/modules/SessionValidationModules/IABISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 /**
@@ -8,31 +8,9 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @dev Validates userOps for any contract / method / params.
  *         -
  *
- * @author Fil Makarov - <filipp.makarov@biconomy.io>
  * Inspired by https://github.com/zerodevapp/kernel/blob/main/src/validator/SessionKeyValidator.sol
  */
-contract ABISessionValidationModule is ISessionValidationModule {
-    enum Condition {
-        EQUAL,
-        LESS_THAN_OR_EQUAL,
-        LESS_THAN,
-        GREATER_THAN_OR_EQUAL,
-        GREATER_THAN,
-        NOT_EQUAL
-    }
-
-    struct Rule {
-        uint256 offset;
-        bytes32 value;
-        Condition condition;
-    }
-
-    struct Permission {
-        address destinationContract;
-        bytes4 selector;
-        uint256 valueLimit;
-        Rule[] rules;
-    }
+contract ABISessionValidationModule is IABISessionValidationModule {
 
     /**
      * @dev validates if the _op (UserOperation) matches the SessionKey permissions

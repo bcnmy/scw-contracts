@@ -155,7 +155,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     };
   });
 
-  const makeErc20TransferUserOp = async function (
+  const makeErc20TransferUserOpViaABISVM = async function (
     token: string,
     amount: BigNumber,
     recipient: string,
@@ -196,7 +196,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
 
-    const transferUserOp = await makeErc20TransferUserOp(
+    const transferUserOp = await makeErc20TransferUserOpViaABISVM(
       mockToken.address,
       tokenAmountToTransfer,
       charlie.address,
