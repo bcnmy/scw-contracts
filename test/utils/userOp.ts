@@ -7,6 +7,7 @@ import {
   keccak256,
   hexZeroPad,
 } from "ethers/lib/utils";
+import { getAggregateSig } from "../utils/stealthUtil";
 import { BigNumber, Contract, Signer, Wallet } from "ethers";
 import { ethers } from "hardhat";
 import {
@@ -678,6 +679,68 @@ export async function makeMultichainEcdsaModuleUserOp(
   );
 
   // =================== put signature into userOp and execute ===================
+  userOp.signature = signatureWithModuleAddress;
+
+  return userOp;
+}
+
+export async function makeStealthAddressModuleUserOp(
+  functionName: string,
+  functionParams: any,
+  userOpSender: string,
+  userOpSigner: Signer,
+  entryPoint: EntryPoint,
+  moduleAddress: string,
+  sharedSecret: string,
+  mode: number,
+  options?: {
+    preVerificationGas?: number;
+  },
+  nonceKey = 0
+): Promise<UserOperation> {
+  const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
+    functionName,
+    functionParams
+  );
+
+  const userOp = await fillUserOp(
+    {
+      sender: userOpSender,
+      callData: txnDataAA1,
+      verificationGasLimit: 3_000_000,
+      ...options,
+    },
+    entryPoint,
+    "nonce",
+    true,
+    nonceKey
+  );
+
+  const provider = entryPoint?.provider;
+  const chainId = await provider!.getNetwork().then((net) => net.chainId);
+  const userOpHash = getUserOpHash(userOp, entryPoint.address, chainId);
+  let signature;
+
+  if (mode === 0) {
+    const sig = await userOpSigner.signMessage(arrayify(userOpHash));
+    signature = ethers.utils.hexConcat(["0x00", sig]);
+  } else if (mode === 1) {
+    const sig = await getAggregateSig(
+      userOpSigner,
+      sharedSecret,
+      ethers.utils.arrayify(userOpHash)
+    );
+    signature = ethers.utils.hexConcat(["0x01", sig]);
+  }
+
+  // add validator module address to the signature
+  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+    ["bytes", "address"],
+    [signature, moduleAddress]
+  );
+
   userOp.signature = signatureWithModuleAddress;
 
   return userOp;
