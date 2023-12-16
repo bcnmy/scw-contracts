@@ -11,7 +11,6 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * Inspired by https://github.com/zerodevapp/kernel/blob/main/src/validator/SessionKeyValidator.sol
  */
 contract ABISessionValidationModule is IABISessionValidationModule {
-
     /**
      * @dev validates if the _op (UserOperation) matches the SessionKey permissions
      * and that _op has been signed by this SessionKey
@@ -34,26 +33,19 @@ contract ABISessionValidationModule is IABISessionValidationModule {
             "ABISV Invalid Selector"
         );
 
-        // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
-        (address destinationContract, uint256 callValue, ) = abi.decode(
-            _op.callData[4:], // skip selector
-            (address, uint256, bytes)
-        );
-
+        bytes calldata callData = _op.callData;
         bytes calldata data;
-        {
-            //offset represents where does the inner bytes array start
-            uint256 offset = uint256(bytes32(_op.callData[4 + 64:4 + 96]));
-            uint256 length = uint256(
-                bytes32(_op.callData[4 + offset:4 + offset + 32])
-            );
-            data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
+        assembly {
+            let dataOffset := add(add(callData.offset, 0x04), calldataload(add(callData.offset, 0x44)))
+            let length := calldataload(dataOffset)
+            data.offset := add(dataOffset, 32)
+            data.length := length
         }
 
         return
             validateSessionParams(
-                destinationContract,
-                callValue,
+                address(bytes20(callData[16:36])),
+                uint256(bytes32(callData[36:68])),
                 data,
                 _sessionKeyData,
                 new bytes(0)
