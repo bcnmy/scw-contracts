@@ -183,7 +183,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     return transferUserOp;
   };
 
-  it("should be able to process Session Key signed userOp", async () => {
+  it("should be able to process Session Key signed userOp with execute method in calldata", async () => {
     const {
       entryPoint,
       userSA,
@@ -220,4 +220,12 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
       charlieTokenBalanceBefore.add(tokenAmountToTransfer)
     );
   });
+
+  it("should be able to process Batched userOp via Batched Session Router", async () => {
+
+    // make batched userOp to check how changes in the module influence batched flow
+    // as it is expected it will be widely used for the abi svm
+
+  });
+
 });

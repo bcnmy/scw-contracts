@@ -36,19 +36,21 @@ contract ABISessionValidationModule is IABISessionValidationModule {
         bytes calldata callData = _op.callData;
         bytes calldata data;
         assembly {
-            let dataOffset := add(add(callData.offset, 0x04), calldataload(add(callData.offset, 0x44)))
+            let dataOffset := add(
+                add(callData.offset, 0x04),
+                calldataload(add(callData.offset, 0x44))
+            )
             let length := calldataload(dataOffset)
             data.offset := add(dataOffset, 32)
             data.length := length
         }
 
         return
-            validateSessionParams(
+            _validateSessionParams(
                 address(bytes20(callData[16:36])),
                 uint256(bytes32(callData[36:68])),
                 data,
-                _sessionKeyData,
-                new bytes(0)
+                _sessionKeyData
             ) ==
             ECDSA.recover(
                 ECDSA.toEthSignedMessageHash(_userOpHash),
@@ -73,6 +75,35 @@ contract ABISessionValidationModule is IABISessionValidationModule {
         bytes calldata _sessionKeyData,
         bytes memory /*_callSpecificData*/
     ) public pure virtual override returns (address) {
+
+        // TODO optimize this, maybe make permission calldata and get it with assembly
+        (address sessionKey, Permission memory permission) = abi.decode(
+            _sessionKeyData,
+            (address, Permission)
+        );
+
+        if (destinationContract != permission.destinationContract) {
+            revert("ABISV Wrong Destination");
+        }
+        if (callValue > permission.valueLimit) {
+            revert("ABISV Value exceeded");
+        }
+
+        if (!checkPermission(_funcCallData, permission))
+            revert("ABISV: Permission violated");
+
+        return sessionKey;
+    }
+
+    // CHECK IF THIS MAKES IT CHEAPER VIA BATCHED SESSION ROUTER
+    function _validateSessionParams(
+        address destinationContract,
+        uint256 callValue,
+        bytes calldata _funcCallData,
+        bytes calldata _sessionKeyData
+    ) internal pure virtual returns (address) {
+
+        // TODO optimize this, maybe make permission calldata and get it with assembly
         (address sessionKey, Permission memory permission) = abi.decode(
             _sessionKeyData,
             (address, Permission)
