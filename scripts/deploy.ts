@@ -60,7 +60,7 @@ const entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
   "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
-let baseImpAddress = "";
+let baseImpAddress = "0x0000002512019Dafb59528B82CB92D3c5D2423aC";
 const provider = ethers.provider;
 const contractsDeployed: Record<string, string> = {};
 
@@ -87,6 +87,10 @@ export async function deployGeneric(
         deployerInstance
       );
     } else {
+      /*await run("verify:verify", {
+        address: computedAddress,
+        constructorArguments,
+      });*/
       console.log(
         `${contractName} is Already deployed with address ${computedAddress}`
       );
