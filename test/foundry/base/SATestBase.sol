@@ -47,29 +47,30 @@ abstract contract SATestBase is Test {
         uint256 privateKey;
     }
 
-    TestAccount[] testAccounts;
-    TestAccount alice;
-    TestAccount bob;
-    TestAccount charlie;
-    TestAccount dan;
-    TestAccount emma;
-    TestAccount frank;
-    TestAccount george;
-    TestAccount henry;
-    TestAccount ida;
+    TestAccount[] internal testAccounts;
+    mapping(address account => TestAccount) internal testAccountsByAddress;
+    TestAccount internal alice;
+    TestAccount internal bob;
+    TestAccount internal charlie;
+    TestAccount internal dan;
+    TestAccount internal emma;
+    TestAccount internal frank;
+    TestAccount internal george;
+    TestAccount internal henry;
+    TestAccount internal ida;
 
-    TestAccount owner;
+    TestAccount internal owner;
 
     // Test Tokens
-    MockToken token;
+    MockToken internal token;
 
     // ERC4337 Contracts
-    EntryPoint entryPoint;
-    SmartAccount saImplementation;
-    SmartAccountFactory factory;
+    EntryPoint internal entryPoint;
+    SmartAccount internal saImplementation;
+    SmartAccountFactory internal factory;
 
     // Modules
-    EcdsaOwnershipRegistryModule ecdsaOwnershipRegistryModule;
+    EcdsaOwnershipRegistryModule internal ecdsaOwnershipRegistryModule;
 
     function getNextPrivateKey() internal returns (uint256) {
         return vm.deriveKey(mnemonic, ++nextKeyIndex);
@@ -82,6 +83,7 @@ abstract contract SATestBase is Test {
             testAccounts.push(
                 TestAccount(payable(vm.addr(privateKey)), privateKey)
             );
+            testAccountsByAddress[testAccounts[i].addr] = testAccounts[i];
 
             deal(testAccounts[i].addr, initialMainAccountFunds);
         }

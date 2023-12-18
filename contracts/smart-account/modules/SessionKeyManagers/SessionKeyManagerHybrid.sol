@@ -14,7 +14,7 @@ import {StatefulSessionKeyManagerBase} from "./StatefulSessionKeyManagerBase.sol
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
  * @dev Similar to the Stateful Session Key Manager module, but the session enable transaction
  *      is batched with the first transaction that uses the session key.
- *      Session creation is offline and completely free.
+ *      Session creation is offline.
  * @author Ankur Dubey - <ankur@biconomy.io>
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
@@ -27,6 +27,8 @@ contract SessionKeyManagerHybrid is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual override returns (uint256 rv) {
+        // TODO: Optimize
+        // TODO use calldata references wherever possible
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -40,9 +42,9 @@ contract SessionKeyManagerHybrid is
         if (isSessionEnableTransaction == 1) {
             (
                 ,
+                uint256 sessionKeyIndex,
                 uint48 validUntil,
                 uint48 validAfter,
-                uint256 sessionKeyIndex,
                 address sessionValidationModule,
                 bytes memory sessionKeyData,
                 bytes memory sessionEnableData,
@@ -52,9 +54,9 @@ contract SessionKeyManagerHybrid is
                     moduleSignature,
                     (
                         uint256,
-                        uint48,
-                        uint48,
                         uint256,
+                        uint48,
+                        uint48,
                         address,
                         bytes,
                         bytes,
@@ -179,6 +181,7 @@ contract SessionKeyManagerHybrid is
             sessionValidationModule,
             sessionKeyData
         );
+
         if (sessionDigest != computedDigest) {
             revert("SessionKeyDataHashMismatch");
         }

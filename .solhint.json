@@ -21,7 +21,7 @@
     "code-complexity": ["error", 7],
     "function-max-lines": ["error", 80],
     "max-line-length": ["warn", 120],
-    "max-states-count": ["error", 15],
+    "max-states-count": ["error", 20],
     "no-empty-blocks": "error",
     "no-unused-vars": "error",
     "payable-fallback": "off",

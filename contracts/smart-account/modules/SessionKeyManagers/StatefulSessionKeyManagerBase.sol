@@ -74,8 +74,8 @@ abstract contract StatefulSessionKeyManagerBase is
     }
 
     function _sessionDataDigestUnpacked(
-        uint256 _validUntil,
-        uint256 _validAfter,
+        uint48 _validUntil,
+        uint48 _validAfter,
         address _sessionValidationModule,
         bytes memory _sessionKeyData
     ) internal pure returns (bytes32) {
