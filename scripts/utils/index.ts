@@ -118,6 +118,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   91715: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
+  9980: {
+    gasPrice: parseUnits("0.01", "gwei"),
+  },
   5001: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
