@@ -265,6 +265,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 91715,
     },
+    comboMainnet: {
+      url: process.env.COMBO_MAINNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 9980,
+    },
     astarShibuyaTestnet: {
       url: process.env.ASTAR_SHIBUYA_URL || "https://evm.shibuya.astar.network",
       accounts: hardhatAccounts,
@@ -329,7 +334,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARBITRUM_SEPOLIA_TESTNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 421614,
-    },
+    }    
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -367,6 +372,7 @@ const config: HardhatUserConfig = {
       mantleTestnet: "PLACEHOLDER_STRING",
       mantleMainnet: "PLACEHOLDER_STRING",
       comboTestnet: process.env.COMBO_API_KEY || "",
+      comboMainnet: process.env.COMBO_API_KEY || "",
       astarShibuyaTestnet: process.env.ASTAR_SHIBUYA_API_KEY || "",
       astarMainnet: process.env.ASTAR_MAINNET_API_KEY || "",
       capxTestnet: "PLACEHOLDER_STRING",
@@ -564,6 +570,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: `https://open-platform.nodereal.io/${process.env.COMBO_API_KEY}/combotrace-testnet/contract/`,
           browserURL: "https://combotrace-testnet.nodereal.io",
+        },
+      },
+      {
+        network: "comboMainnet",
+        chainId: 9980,
+        urls: {
+          apiURL: `https://open-platform.nodereal.io/${process.env.COMBO_API_KEY}/combotrace/contract/`,
+          browserURL: "https://combotrace.nodereal.io/",
         },
       },
     ],
