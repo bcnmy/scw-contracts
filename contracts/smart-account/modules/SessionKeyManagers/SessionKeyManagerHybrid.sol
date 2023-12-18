@@ -27,43 +27,33 @@ contract SessionKeyManagerHybrid is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual override returns (uint256 rv) {
-        // TODO: Optimize
-        // TODO use calldata references wherever possible
-        (bytes memory moduleSignature, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
+        /*
+         * Module Signature Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | 0x01 if sessionEnableTransaction, 0x00 otherwise
+         * 0x1                  | --                | Data depending on the above flag
+         */
+        bytes calldata moduleSignature = userOp.signature[96:];
 
         uint256 isSessionEnableTransaction;
-        assembly {
-            isSessionEnableTransaction := mload(add(moduleSignature, 0x20))
+        assembly ("memory-safe") {
+            isSessionEnableTransaction := shr(
+                248,
+                calldataload(moduleSignature.offset)
+            )
         }
 
         if (isSessionEnableTransaction == 1) {
             (
-                ,
                 uint256 sessionKeyIndex,
                 uint48 validUntil,
                 uint48 validAfter,
                 address sessionValidationModule,
-                bytes memory sessionKeyData,
-                bytes memory sessionEnableData,
-                bytes memory sessionEnableSignature,
-                bytes memory sessionKeySignature
-            ) = abi.decode(
-                    moduleSignature,
-                    (
-                        uint256,
-                        uint256,
-                        uint48,
-                        uint48,
-                        address,
-                        bytes,
-                        bytes,
-                        bytes,
-                        bytes
-                    )
-                );
+                bytes calldata sessionKeyData,
+                bytes calldata sessionEnableData,
+                bytes calldata sessionEnableSignature,
+                bytes calldata sessionKeySignature
+            ) = _parseSessionEnableSignature(moduleSignature);
 
             validateSessionKeySessionEnableTransaction(
                 userOp.sender,
@@ -90,10 +80,9 @@ contract SessionKeyManagerHybrid is
             );
         } else {
             (
-                ,
                 bytes32 sessionDataDigest,
-                bytes memory sessionKeySignature
-            ) = abi.decode(moduleSignature, (uint256, bytes32, bytes));
+                bytes calldata sessionKeySignature
+            ) = _parseSessionDataPreEnabledSignature(moduleSignature);
 
             validateSessionKeyPreEnabled(userOp.sender, sessionDataDigest);
 
@@ -123,9 +112,9 @@ contract SessionKeyManagerHybrid is
         uint48 validAfter,
         uint256 sessionKeyIndex,
         address sessionValidationModule,
-        bytes memory sessionKeyData,
-        bytes memory sessionEnableData,
-        bytes memory sessionEnableSignature
+        bytes calldata sessionKeyData,
+        bytes calldata sessionEnableData,
+        bytes calldata sessionEnableSignature
     ) public virtual override {
         // Verify the signature on the session enable data
         bytes32 sessionEnableDataDigest = keccak256(sessionEnableData);
@@ -138,38 +127,13 @@ contract SessionKeyManagerHybrid is
             revert("SessionNotApproved");
         }
 
-        /*
-         * Session Enable Data Layout
-         * Offset (in bytes)    | Length (in bytes) | Contents
-         * 0x0                  | 0x1               | No of session keys enabled
-         * 0x1                  | 0x8 x count       | Chain IDs
-         * 0x1 + 0x8 x count    | 0x20 x count      | Session Data Hash
-         */
-        uint8 enabledKeysCount;
-        uint64 sessionChainId;
-        bytes32 sessionDigest;
-
-        assembly ("memory-safe") {
-            let offset := add(sessionEnableData, 0x20)
-
-            enabledKeysCount := shr(248, mload(offset))
-
-            sessionChainId := shr(
-                192,
-                mload(add(add(offset, 0x1), mul(0x8, sessionKeyIndex)))
-            )
-
-            sessionDigest := mload(
-                add(
-                    add(add(offset, 0x1), mul(0x8, enabledKeysCount)),
-                    mul(0x20, sessionKeyIndex)
-                )
-            )
-        }
-
-        if (sessionKeyIndex >= enabledKeysCount) {
-            revert("SessionKeyIndexInvalid");
-        }
+        (
+            uint64 sessionChainId,
+            bytes32 sessionDigest
+        ) = _parseSessionFromSessionEnableData(
+                sessionEnableData,
+                sessionKeyIndex
+            );
 
         if (sessionChainId != block.chainid) {
             revert("SessionChainIdMismatch");
@@ -207,5 +171,133 @@ contract SessionKeyManagerHybrid is
                 .sessionValidationModule != address(0),
             "SKM: Session key is not enabled"
         );
+    }
+
+    function _parseSessionEnableSignature(
+        bytes calldata _moduleSignature
+    )
+        internal
+        pure
+        returns (
+            uint256 sessionKeyIndex,
+            uint48 validUntil,
+            uint48 validAfter,
+            address sessionValidationModule,
+            bytes calldata sessionKeyData,
+            bytes calldata sessionEnableData,
+            bytes calldata sessionEnableSignature,
+            bytes calldata sessionKeySignature
+        )
+    {
+        /*
+         * Session Enable Signature Layout
+         * abi.encode(
+         *  uint256 sessionKeyIndex,
+         *  uint48 validUntil,
+         *  uint48 validAfter,
+         *  address sessionValidationModule,
+         *  bytes calldata sessionKeyData,
+         *  bytes calldata sessionEnableData,
+         *  bytes calldata sessionEnableSignature,
+         *  bytes calldata sessionKeySignature
+         * )
+         */
+        assembly ("memory-safe") {
+            let offset := add(_moduleSignature.offset, 0x1)
+            let baseOffset := offset
+
+            sessionKeyIndex := calldataload(offset)
+            offset := add(offset, 0x20)
+
+            validUntil := calldataload(offset)
+            offset := add(offset, 0x20)
+
+            validAfter := calldataload(offset)
+            offset := add(offset, 0x20)
+
+            sessionValidationModule := calldataload(offset)
+            offset := add(offset, 0x20)
+
+            let dataPointer := add(baseOffset, calldataload(offset))
+            sessionKeyData.offset := add(dataPointer, 0x20)
+            sessionKeyData.length := calldataload(dataPointer)
+            offset := add(offset, 0x20)
+
+            dataPointer := add(baseOffset, calldataload(offset))
+            sessionEnableData.offset := add(dataPointer, 0x20)
+            sessionEnableData.length := calldataload(dataPointer)
+            offset := add(offset, 0x20)
+
+            dataPointer := add(baseOffset, calldataload(offset))
+            sessionEnableSignature.offset := add(dataPointer, 0x20)
+            sessionEnableSignature.length := calldataload(dataPointer)
+            offset := add(offset, 0x20)
+
+            dataPointer := add(baseOffset, calldataload(offset))
+            sessionKeySignature.offset := add(dataPointer, 0x20)
+            sessionKeySignature.length := calldataload(dataPointer)
+        }
+    }
+
+    function _parseSessionDataPreEnabledSignature(
+        bytes calldata _moduleSignature
+    )
+        internal
+        pure
+        returns (bytes32 sessionDataDigest, bytes calldata sessionKeySignature)
+    {
+        /*
+         * Session Data Pre Enabled Signature Layout
+         * abi.encode(
+         *  bytes32 sessionDataDigest,
+         *  bytes calldata sessionKeySignature
+         * )
+         */
+        assembly ("memory-safe") {
+            let offset := add(_moduleSignature.offset, 0x1)
+            let baseOffset := offset
+
+            sessionDataDigest := calldataload(offset)
+            offset := add(offset, 0x20)
+
+            let dataPointer := add(baseOffset, calldataload(offset))
+            sessionKeySignature.offset := add(dataPointer, 0x20)
+            sessionKeySignature.length := calldataload(dataPointer)
+        }
+    }
+
+    function _parseSessionFromSessionEnableData(
+        bytes calldata _sessionEnableData,
+        uint256 _sessionKeyIndex
+    ) internal pure returns (uint64 sessionChainId, bytes32 sessionDigest) {
+        uint8 enabledKeysCount;
+
+        /*
+         * Session Enable Data Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | No of session keys enabled
+         * 0x1                  | 0x8 x count       | Chain IDs
+         * 0x1 + 0x8 x count    | 0x20 x count      | Session Data Hash
+         */
+        assembly ("memory-safe") {
+            let offset := _sessionEnableData.offset
+
+            enabledKeysCount := shr(248, calldataload(offset))
+            offset := add(offset, 0x1)
+
+            sessionChainId := shr(
+                192,
+                calldataload(add(offset, mul(0x8, _sessionKeyIndex)))
+            )
+            offset := add(offset, mul(0x8, enabledKeysCount))
+
+            sessionDigest := calldataload(
+                add(offset, mul(0x20, _sessionKeyIndex))
+            )
+        }
+
+        if (_sessionKeyIndex >= enabledKeysCount) {
+            revert("SessionKeyIndexInvalid");
+        }
     }
 }

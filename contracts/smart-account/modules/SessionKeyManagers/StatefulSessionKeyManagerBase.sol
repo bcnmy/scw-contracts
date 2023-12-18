@@ -77,7 +77,7 @@ abstract contract StatefulSessionKeyManagerBase is
         uint48 _validUntil,
         uint48 _validAfter,
         address _sessionValidationModule,
-        bytes memory _sessionKeyData
+        bytes calldata _sessionKeyData
     ) internal pure returns (bytes32) {
         return
             keccak256(

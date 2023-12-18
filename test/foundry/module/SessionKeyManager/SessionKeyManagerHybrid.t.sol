@@ -801,16 +801,18 @@ contract SessionKeyManagerHybridTest is SATestBase {
         }
 
         // Generate Module Signature
-        bytes memory moduleSignature = abi.encode(
-            1,
-            _sessionKeyIndex,
-            _sessionData.validUntil,
-            _sessionData.validAfter,
-            _sessionData.sessionValidationModule,
-            _sessionData.sessionKeyData,
-            _sessionEnableData,
-            _sessionEnableSignature,
-            sessionKeySignature
+        bytes memory moduleSignature = abi.encodePacked(
+            uint8(0x01),
+            abi.encode(
+                _sessionKeyIndex,
+                _sessionData.validUntil,
+                _sessionData.validAfter,
+                _sessionData.sessionValidationModule,
+                _sessionData.sessionKeyData,
+                _sessionEnableData,
+                _sessionEnableSignature,
+                sessionKeySignature
+            )
         );
         op.signature = abi.encode(moduleSignature, _skm);
     }
@@ -846,10 +848,12 @@ contract SessionKeyManagerHybridTest is SATestBase {
         bytes memory sessionKeySignature = abi.encodePacked(r, s, v);
 
         // Generate Module Signature
-        bytes memory moduleSignature = abi.encode(
-            0,
-            sessionKeyManagerHybrid.sessionDataDigest(_sessionData),
-            sessionKeySignature
+        bytes memory moduleSignature = abi.encodePacked(
+            uint8(0x00),
+            abi.encode(
+                sessionKeyManagerHybrid.sessionDataDigest(_sessionData),
+                sessionKeySignature
+            )
         );
         op.signature = abi.encode(moduleSignature, _skm);
     }
