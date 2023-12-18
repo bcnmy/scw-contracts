@@ -8,8 +8,9 @@ import {ISessionKeyManagerModuleStateful} from "../../interfaces/modules/Session
 import {StatefulSessionKeyManagerBase} from "./StatefulSessionKeyManagerBase.sol";
 
 /**
- * @title Session Key Manager module for Biconomy Modular Smart Accounts.
- * @dev TODO
+ * @title Stateful Session Key Manager module for Biconomy Modular Smart Accounts.
+ * @dev Stores the session key data on-chain to save calldata costs in subsequent transactions.
+ *      This module is optimised for L2s where calldata is expensive and hence session key data is stored on-chain.
  * @author Ankur Dubey - <ankur@biconomy.io>
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
@@ -23,6 +24,7 @@ contract SessionKeyManagerStateful is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual override returns (uint256 rv) {
+        // TODO: optimise
         (bytes memory moduleSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -53,14 +55,7 @@ contract SessionKeyManagerStateful is
 
     /// @inheritdoc ISessionKeyManagerModuleStateful
     function enableSession(SessionData calldata sessionData) external override {
-        bytes32 sessionDataDigest = keccak256(
-            abi.encodePacked(
-                sessionData.validUntil,
-                sessionData.validAfter,
-                sessionData.sessionValidationModule,
-                sessionData.sessionKeyData
-            )
-        );
+        bytes32 sessionDataDigest = sessionDataDigest(sessionData);
         _enabledSessionsData[sessionDataDigest][msg.sender] = sessionData;
         emit SessionCreated(msg.sender, sessionDataDigest, sessionData);
     }

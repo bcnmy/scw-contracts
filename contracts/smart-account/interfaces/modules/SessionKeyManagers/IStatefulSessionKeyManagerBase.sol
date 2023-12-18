@@ -31,10 +31,9 @@ interface IStatefulSessionKeyManagerBase {
     /**
      * @notice Explicity disable a session. Can be useful is situations where a session
      *         needs to be disabled before it expires.
-     * @param _sa smart account for which session key is being disabled
      * @param _sessionDigest digest of session key data
      */
-    function disableSession(address _sa, bytes32 _sessionDigest) external;
+    function disableSession(bytes32 _sessionDigest) external;
 
     /**
      * @notice Returns session data for a given session digest and smart account
@@ -46,4 +45,13 @@ interface IStatefulSessionKeyManagerBase {
         bytes32 _sessionDataDigest,
         address _sa
     ) external view returns (SessionData memory data);
+
+    /**
+     * @dev Returns session data digest
+     * @param _data session data
+     * @return digest of session data
+     */
+    function sessionDataDigest(
+        SessionData calldata _data
+    ) external pure returns (bytes32);
 }

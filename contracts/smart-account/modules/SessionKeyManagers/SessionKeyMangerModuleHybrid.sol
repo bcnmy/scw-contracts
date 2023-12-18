@@ -173,36 +173,25 @@ contract SessionKeyManagerHybrid is
             revert("SessionChainIdMismatch");
         }
 
-        bytes32 computedDigest = keccak256(
-            abi.encodePacked(
-                validUntil,
-                validAfter,
-                sessionValidationModule,
-                sessionKeyData
-            )
+        bytes32 computedDigest = _sessionDataDigestUnpacked(
+            validUntil,
+            validAfter,
+            sessionValidationModule,
+            sessionKeyData
         );
-
         if (sessionDigest != computedDigest) {
             revert("SessionKeyDataHashMismatch");
         }
 
         // Cache the session key data in the smart account storage for next validation
-        bytes32 sessionDataDigest = keccak256(
-            abi.encodePacked(
-                validUntil,
-                validAfter,
-                sessionValidationModule,
-                sessionKeyData
-            )
-        );
         SessionData memory sessionData = SessionData({
             validUntil: validUntil,
             validAfter: validAfter,
             sessionValidationModule: sessionValidationModule,
             sessionKeyData: sessionKeyData
         });
-        _enabledSessionsData[sessionDataDigest][msg.sender] = sessionData;
-        emit SessionCreated(msg.sender, sessionDataDigest, sessionData);
+        _enabledSessionsData[computedDigest][msg.sender] = sessionData;
+        emit SessionCreated(msg.sender, computedDigest, sessionData);
     }
 
     /// @inheritdoc ISessionKeyManagerModuleHybrid

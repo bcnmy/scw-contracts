@@ -29,9 +29,9 @@ abstract contract StatefulSessionKeyManagerBase is
     ) external virtual returns (uint256);
 
     /// @inheritdoc IStatefulSessionKeyManagerBase
-    function disableSession(address _sa, bytes32 _sessionDigest) external {
-        delete _enabledSessionsData[_sessionDigest][_sa];
-        emit SessionDisabled(_sa, _sessionDigest);
+    function disableSession(bytes32 _sessionDigest) external override {
+        delete _enabledSessionsData[_sessionDigest][msg.sender];
+        emit SessionDisabled(msg.sender, _sessionDigest);
     }
 
     /// @inheritdoc IStatefulSessionKeyManagerBase
@@ -42,21 +42,51 @@ abstract contract StatefulSessionKeyManagerBase is
         data = _enabledSessionsData[_sessionDataDigest][_sa];
     }
 
+    /// @inheritdoc IStatefulSessionKeyManagerBase
+    function sessionDataDigest(
+        SessionData calldata _data
+    ) public pure override returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _data.validUntil,
+                    _data.validAfter,
+                    _data.sessionValidationModule,
+                    _data.sessionKeyData
+                )
+            );
+    }
+
     /// @inheritdoc ISignatureValidator
     function isValidSignature(
-        bytes32 _dataHash,
-        bytes memory _signature
+        bytes32,
+        bytes memory
     ) public pure virtual override returns (bytes4) {
-        (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }
 
     /// @inheritdoc ISignatureValidator
     function isValidSignatureUnsafe(
-        bytes32 _dataHash,
-        bytes memory _signature
+        bytes32,
+        bytes memory
     ) public pure virtual override returns (bytes4) {
-        (_dataHash, _signature);
         return 0xffffffff; // do not support it here
+    }
+
+    function _sessionDataDigestUnpacked(
+        uint256 _validUntil,
+        uint256 _validAfter,
+        address _sessionValidationModule,
+        bytes memory _sessionKeyData
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _validUntil,
+                    _validAfter,
+                    _sessionValidationModule,
+                    _sessionKeyData
+                )
+            );
     }
 }
