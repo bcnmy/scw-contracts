@@ -336,6 +336,65 @@ contract SessionKeyManagerHybridTest is SATestBase {
     }
 
     function testShouldNotValidateTransactionFromNonEnabledSession() public {
+        // Generate Session Data
+        uint64[] memory chainIds = new uint64[](5);
+        SessionKeyManagerHybrid.SessionData[]
+            memory sessionDatas = new SessionKeyManagerHybrid.SessionData[](5);
+
+        for (uint256 i = 0; i < chainIds.length; ++i) {
+            sessionDatas[i] = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: uint48(block.timestamp + i),
+                validAfter: uint48(block.timestamp),
+                sessionValidationModule: address(mockSessionValidationModule),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+            chainIds[i] = uint64(block.chainid);
+        }
+
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(chainIds, sessionDatas, sa);
+
+        // Use session not in session enable data
+        sessionDatas[0].validUntil *= 2;
+        UserOperation memory op = makeEnableAndUseSessionUserOp(
+            getSmartAccountExecuteCalldata(
+                address(stub),
+                0,
+                abi.encodeCall(
+                    stub.emitMessage,
+                    ("shouldProcessTransactionFromSessionKey")
+                )
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            sessionDatas[0],
+            bob,
+            0,
+            sessionEnableData,
+            sessionEnableSignature
+        );
+
+        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SessionKeyDataHashMismatch"
+                )
+            );
+        }
+    }
+
+    function testShouldNotValidateTransactionFromNonEnabledSessionWithPostCacheFlow()
+        public
+    {
         SessionKeyManagerHybrid.SessionData
             memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
                 validUntil: 0,
@@ -429,6 +488,117 @@ contract SessionKeyManagerHybridTest is SATestBase {
                     IEntryPoint.FailedOp.selector,
                     0,
                     "AA24 signature error"
+                )
+            );
+        }
+    }
+
+    function testShouldNotValidateTransactionWithInvalidSessionIndex() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Data
+        uint64[] memory chainIds = new uint64[](1);
+        chainIds[0] = uint64(block.chainid);
+
+        SessionKeyManagerHybrid.SessionData[]
+            memory sessionDatas = new SessionKeyManagerHybrid.SessionData[](1);
+        sessionDatas[0] = sessionData;
+
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(chainIds, sessionDatas, sa);
+
+        // Enable and Use session
+        UserOperation memory op = makeEnableAndUseSessionUserOp(
+            getSmartAccountExecuteCalldata(
+                address(stub),
+                0,
+                abi.encodeCall(
+                    stub.emitMessage,
+                    ("shouldProcessTransactionFromSessionKey")
+                )
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            sessionData,
+            bob,
+            chainIds.length,
+            sessionEnableData,
+            sessionEnableSignature
+        );
+        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SessionKeyIndexInvalid"
+                )
+            );
+        }
+    }
+
+    function testShouldNotValidateTransactionWithInvalidChainId() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Data
+        uint64[] memory chainIds = new uint64[](1);
+        chainIds[0] = uint64(block.chainid);
+        chainIds[0] += 1;
+
+        SessionKeyManagerHybrid.SessionData[]
+            memory sessionDatas = new SessionKeyManagerHybrid.SessionData[](1);
+        sessionDatas[0] = sessionData;
+
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(chainIds, sessionDatas, sa);
+
+        // Enable and Use session
+        UserOperation memory op = makeEnableAndUseSessionUserOp(
+            getSmartAccountExecuteCalldata(
+                address(stub),
+                0,
+                abi.encodeCall(
+                    stub.emitMessage,
+                    ("shouldProcessTransactionFromSessionKey")
+                )
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            sessionData,
+            bob,
+            0,
+            sessionEnableData,
+            sessionEnableSignature
+        );
+        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SessionChainIdMismatch"
                 )
             );
         }
@@ -619,13 +789,16 @@ contract SessionKeyManagerHybridTest is SATestBase {
             signature: bytes("")
         });
 
-        // Sign the UserOp
-        bytes32 userOpHash = entryPoint.getUserOpHash(op);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _sessionSigner.privateKey,
-            ECDSA.toEthSignedMessageHash(userOpHash)
-        );
-        bytes memory sessionKeySignature = abi.encodePacked(r, s, v);
+        bytes memory sessionKeySignature;
+        {
+            // Sign the UserOp
+            bytes32 userOpHash = entryPoint.getUserOpHash(op);
+            (uint8 v, bytes32 r, bytes32 s) = vm.sign(
+                _sessionSigner.privateKey,
+                ECDSA.toEthSignedMessageHash(userOpHash)
+            );
+            sessionKeySignature = abi.encodePacked(r, s, v);
+        }
 
         // Generate Module Signature
         bytes memory moduleSignature = abi.encode(
