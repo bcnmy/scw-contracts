@@ -84,11 +84,10 @@ contract SessionKeyManagerHybrid is
                 bytes calldata sessionKeySignature
             ) = _parseSessionDataPreEnabledSignature(moduleSignature);
 
-            validateSessionKeyPreEnabled(userOp.sender, sessionDataDigest);
-
-            SessionData storage sessionData = _enabledSessionsData[
+            SessionData storage sessionData = _validateSessionKeyPreEnabled(
+                userOp.sender,
                 sessionDataDigest
-            ][userOp.sender];
+            );
 
             rv = _packValidationData(
                 //_packValidationData expects true if sig validation has failed, false otherwise
@@ -166,9 +165,16 @@ contract SessionKeyManagerHybrid is
         address smartAccount,
         bytes32 sessionKeyDataDigest
     ) public virtual override {
+        _validateSessionKeyPreEnabled(smartAccount, sessionKeyDataDigest);
+    }
+
+    function _validateSessionKeyPreEnabled(
+        address smartAccount,
+        bytes32 sessionKeyDataDigest
+    ) internal view returns (SessionData storage sessionData) {
+        sessionData = _enabledSessionsData[sessionKeyDataDigest][smartAccount];
         require(
-            _enabledSessionsData[sessionKeyDataDigest][smartAccount]
-                .sessionValidationModule != address(0),
+            sessionData.sessionValidationModule != address(0),
             "SKM: Session key is not enabled"
         );
     }

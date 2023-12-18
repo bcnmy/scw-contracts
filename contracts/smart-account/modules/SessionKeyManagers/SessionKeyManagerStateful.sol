@@ -14,7 +14,6 @@ import {StatefulSessionKeyManagerBase} from "./StatefulSessionKeyManagerBase.sol
  * @author Ankur Dubey - <ankur@biconomy.io>
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
-
 contract SessionKeyManagerStateful is
     StatefulSessionKeyManagerBase,
     ISessionKeyManagerModuleStateful
@@ -24,20 +23,17 @@ contract SessionKeyManagerStateful is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual override returns (uint256 rv) {
-        // TODO: optimise
-        (bytes memory moduleSignature, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
+        bytes calldata moduleSignature = userOp.signature[96:];
 
-        (bytes32 sessionDataDigest, bytes memory sessionKeySignature) = abi
-            .decode(moduleSignature, (bytes32, bytes));
+        (
+            bytes32 sessionDataDigest,
+            bytes calldata sessionKeySignature
+        ) = _parseModuleSignature(moduleSignature);
 
-        validateSessionKey(userOp.sender, sessionDataDigest);
-
-        SessionData storage sessionData = _enabledSessionsData[
+        SessionData storage sessionData = _validateSessionKey(
+            userOp.sender,
             sessionDataDigest
-        ][userOp.sender];
+        );
 
         rv = _packValidationData(
             //_packValidationData expects true if sig validation has failed, false otherwise
@@ -65,10 +61,44 @@ contract SessionKeyManagerStateful is
         address smartAccount,
         bytes32 sessionKeyDataDigest
     ) public virtual override {
+        _validateSessionKey(smartAccount, sessionKeyDataDigest);
+    }
+
+    function _validateSessionKey(
+        address smartAccount,
+        bytes32 sessionKeyDataDigest
+    ) internal view returns (SessionData storage sessionData) {
+        sessionData = _enabledSessionsData[sessionKeyDataDigest][smartAccount];
         require(
-            _enabledSessionsData[sessionKeyDataDigest][smartAccount]
-                .sessionValidationModule != address(0),
+            sessionData.sessionValidationModule != address(0),
             "SKM: Session Key is not enabled"
         );
+    }
+
+    function _parseModuleSignature(
+        bytes calldata _moduleSignature
+    )
+        internal
+        pure
+        returns (bytes32 sessionDataDigest, bytes calldata sessionKeySignature)
+    {
+        /*
+         * Session Data Pre Enabled Signature Layout
+         * abi.encode(
+         *  bytes32 sessionDataDigest,
+         *  bytes calldata sessionKeySignature
+         * )
+         */
+        assembly ("memory-safe") {
+            let offset := _moduleSignature.offset
+            let baseOffset := offset
+
+            sessionDataDigest := calldataload(offset)
+            offset := add(offset, 0x20)
+
+            let dataPointer := add(baseOffset, calldataload(offset))
+            sessionKeySignature.offset := add(dataPointer, 0x20)
+            sessionKeySignature.length := calldataload(dataPointer)
+        }
     }
 }
