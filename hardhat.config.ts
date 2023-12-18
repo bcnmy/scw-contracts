@@ -334,7 +334,7 @@ const config: HardhatUserConfig = {
       url: process.env.ARBITRUM_SEPOLIA_TESTNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 421614,
-    }    
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
