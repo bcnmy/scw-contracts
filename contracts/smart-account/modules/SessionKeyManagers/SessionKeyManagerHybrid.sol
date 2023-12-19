@@ -4,11 +4,14 @@ pragma solidity ^0.8.20;
 /* solhint-disable function-max-lines */
 
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
-import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ISessionValidationModule} from "../../interfaces/modules/ISessionValidationModule.sol";
+import {ISmartAccount} from "../../interfaces/ISmartAccount.sol";
 import {ISessionKeyManagerModuleHybrid} from "../../interfaces/modules/SessionKeyManagers/ISessionKeyManagerModuleHybrid.sol";
 import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../../interfaces/ISignatureValidator.sol";
 import {StatefulSessionKeyManagerBase} from "./StatefulSessionKeyManagerBase.sol";
+
+// import "forge-std/console2.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -22,86 +25,22 @@ contract SessionKeyManagerHybrid is
     StatefulSessionKeyManagerBase,
     ISessionKeyManagerModuleHybrid
 {
+    using UserOperationLib for UserOperation;
+
     /// @inheritdoc StatefulSessionKeyManagerBase
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual override returns (uint256 rv) {
-        /*
-         * Module Signature Layout
-         * Offset (in bytes)    | Length (in bytes) | Contents
-         * 0x0                  | 0x1               | 0x01 if sessionEnableTransaction, 0x00 otherwise
-         * 0x1                  | --                | Data depending on the above flag
-         */
-        bytes calldata moduleSignature = userOp.signature[96:];
+        // uint256 gas = gasleft();
 
-        uint256 isSessionEnableTransaction;
-        assembly ("memory-safe") {
-            isSessionEnableTransaction := shr(
-                248,
-                calldataload(moduleSignature.offset)
-            )
-        }
-
-        if (isSessionEnableTransaction == 1) {
-            (
-                uint256 sessionKeyIndex,
-                uint48 validUntil,
-                uint48 validAfter,
-                address sessionValidationModule,
-                bytes calldata sessionKeyData,
-                bytes calldata sessionEnableData,
-                bytes calldata sessionEnableSignature,
-                bytes calldata sessionKeySignature
-            ) = _parseSessionEnableSignature(moduleSignature);
-
-            validateSessionKeySessionEnableTransaction(
-                userOp.sender,
-                validUntil,
-                validAfter,
-                sessionKeyIndex,
-                sessionValidationModule,
-                sessionKeyData,
-                sessionEnableData,
-                sessionEnableSignature
-            );
-
-            rv = _packValidationData(
-                //_packValidationData expects true if sig validation has failed, false otherwise
-                !ISessionValidationModule(sessionValidationModule)
-                    .validateSessionUserOp(
-                        userOp,
-                        userOpHash,
-                        sessionKeyData,
-                        sessionKeySignature
-                    ),
-                validUntil,
-                validAfter
-            );
+        if (_isBatchExecuteCall(userOp)) {
+            rv = _validateUserOpBatchExecute(userOp, userOpHash);
         } else {
-            (
-                bytes32 sessionDataDigest,
-                bytes calldata sessionKeySignature
-            ) = _parseSessionDataPreEnabledSignature(moduleSignature);
-
-            SessionData storage sessionData = _validateSessionKeyPreEnabled(
-                userOp.sender,
-                sessionDataDigest
-            );
-
-            rv = _packValidationData(
-                //_packValidationData expects true if sig validation has failed, false otherwise
-                !ISessionValidationModule(sessionData.sessionValidationModule)
-                    .validateSessionUserOp(
-                        userOp,
-                        userOpHash,
-                        sessionData.sessionKeyData,
-                        sessionKeySignature
-                    ),
-                sessionData.validUntil,
-                sessionData.validAfter
-            );
+            rv = _validateUserOpSingleExecute(userOp, userOpHash);
         }
+
+        // console2.log("SessionKeyManagerHybrid.validateUserOp", gas - gasleft());
     }
 
     /// @inheritdoc ISessionKeyManagerModuleHybrid
@@ -168,6 +107,92 @@ contract SessionKeyManagerHybrid is
         _validateSessionKeyPreEnabled(smartAccount, sessionKeyDataDigest);
     }
 
+    function _validateUserOpBatchExecute(
+        UserOperation calldata userOp,
+        bytes32
+    ) internal returns (uint256 rv) {
+        /*
+         * Module Signature Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | 0x01 if sessionEnableTransaction, 0x00 otherwise
+         * 0x1                  | --                | Data depending on the above flag
+         */
+        bytes calldata moduleSignature = userOp.signature[96:];
+    }
+
+    function _validateUserOpSingleExecute(
+        UserOperation calldata userOp,
+        bytes32 userOpHash
+    ) internal returns (uint256 rv) {
+        /*
+         * Module Signature Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | 0x01 if sessionEnableTransaction, 0x00 otherwise
+         * 0x1                  | --                | Data depending on the above flag
+         */
+        bytes calldata moduleSignature = userOp.signature[96:];
+
+        if (_isSessionEnableTransaction(moduleSignature)) {
+            (
+                uint256 sessionKeyIndex,
+                uint48 validUntil,
+                uint48 validAfter,
+                address sessionValidationModule,
+                bytes calldata sessionKeyData,
+                bytes calldata sessionEnableData,
+                bytes calldata sessionEnableSignature,
+                bytes calldata sessionKeySignature
+            ) = _parseSessionEnableSignature(moduleSignature);
+
+            validateSessionKeySessionEnableTransaction(
+                userOp.getSender(),
+                validUntil,
+                validAfter,
+                sessionKeyIndex,
+                sessionValidationModule,
+                sessionKeyData,
+                sessionEnableData,
+                sessionEnableSignature
+            );
+
+            rv = _packValidationData(
+                //_packValidationData expects true if sig validation has failed, false otherwise
+                !ISessionValidationModule(sessionValidationModule)
+                    .validateSessionUserOp(
+                        userOp,
+                        userOpHash,
+                        sessionKeyData,
+                        sessionKeySignature
+                    ),
+                validUntil,
+                validAfter
+            );
+        } else {
+            (
+                bytes32 sessionDataDigest,
+                bytes calldata sessionKeySignature
+            ) = _parseSessionDataPreEnabledSignature(moduleSignature);
+
+            SessionData storage sessionData = _validateSessionKeyPreEnabled(
+                userOp.getSender(),
+                sessionDataDigest
+            );
+
+            rv = _packValidationData(
+                //_packValidationData expects true if sig validation has failed, false otherwise
+                !ISessionValidationModule(sessionData.sessionValidationModule)
+                    .validateSessionUserOp(
+                        userOp,
+                        userOpHash,
+                        sessionData.sessionKeyData,
+                        sessionKeySignature
+                    ),
+                sessionData.validUntil,
+                sessionData.validAfter
+            );
+        }
+    }
+
     function _validateSessionKeyPreEnabled(
         address smartAccount,
         bytes32 sessionKeyDataDigest
@@ -177,6 +202,26 @@ contract SessionKeyManagerHybrid is
             sessionData.sessionValidationModule != address(0),
             "SKM: Session key is not enabled"
         );
+    }
+
+    function _isSessionEnableTransaction(
+        bytes calldata _moduleSignature
+    ) internal pure returns (bool isSessionEnableTransaction) {
+        assembly ("memory-safe") {
+            isSessionEnableTransaction := shr(
+                248,
+                calldataload(_moduleSignature.offset)
+            )
+        }
+    }
+
+    function _isBatchExecuteCall(
+        UserOperation calldata _userOp
+    ) internal pure returns (bool isBatchExecuteCall) {
+        bytes4 selector = bytes4(_userOp.callData[0:4]);
+        isBatchExecuteCall =
+            selector == ISmartAccount.executeBatch_y6U.selector ||
+            selector == ISmartAccount.executeBatch.selector;
     }
 
     function _parseSessionEnableSignature(
@@ -197,34 +242,31 @@ contract SessionKeyManagerHybrid is
     {
         /*
          * Session Enable Signature Layout
-         * abi.encode(
-         *  uint256 sessionKeyIndex,
-         *  uint48 validUntil,
-         *  uint48 validAfter,
-         *  address sessionValidationModule,
-         *  bytes calldata sessionKeyData,
-         *  bytes calldata sessionEnableData,
-         *  bytes calldata sessionEnableSignature,
-         *  bytes calldata sessionKeySignature
-         * )
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | Is Session Enable Transaction Flag
+         * 0x1                  | 0x1               | Index of Session Key in Session Enable Data
+         * 0x2                  | 0x6               | Valid Until
+         * 0xe                  | 0x14              | Session VAidation Module Address
+         * 0x22                 | --                | abi.encode(sessionKeyData, sessionEnableData, sessionEnableSignature, sessionKeySignature)
          */
         assembly ("memory-safe") {
             let offset := add(_moduleSignature.offset, 0x1)
+
+            sessionKeyIndex := shr(248, calldataload(offset))
+            offset := add(offset, 0x1)
+
+            validUntil := shr(208, calldataload(offset))
+            offset := add(offset, 0x6)
+
+            validAfter := shr(208, calldataload(offset))
+            offset := add(offset, 0x6)
+
+            sessionValidationModule := shr(96, calldataload(offset))
+            offset := add(offset, 0x14)
+
             let baseOffset := offset
-
-            sessionKeyIndex := calldataload(offset)
-            offset := add(offset, 0x20)
-
-            validUntil := calldataload(offset)
-            offset := add(offset, 0x20)
-
-            validAfter := calldataload(offset)
-            offset := add(offset, 0x20)
-
-            sessionValidationModule := calldataload(offset)
-            offset := add(offset, 0x20)
-
             let dataPointer := add(baseOffset, calldataload(offset))
+
             sessionKeyData.offset := add(dataPointer, 0x20)
             sessionKeyData.length := calldataload(dataPointer)
             offset := add(offset, 0x20)

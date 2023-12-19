@@ -803,11 +803,11 @@ contract SessionKeyManagerHybridTest is SATestBase {
         // Generate Module Signature
         bytes memory moduleSignature = abi.encodePacked(
             uint8(0x01),
+            uint8(_sessionKeyIndex),
+            _sessionData.validUntil,
+            _sessionData.validAfter,
+            _sessionData.sessionValidationModule,
             abi.encode(
-                _sessionKeyIndex,
-                _sessionData.validUntil,
-                _sessionData.validAfter,
-                _sessionData.sessionValidationModule,
                 _sessionData.sessionKeyData,
                 _sessionEnableData,
                 _sessionEnableSignature,
