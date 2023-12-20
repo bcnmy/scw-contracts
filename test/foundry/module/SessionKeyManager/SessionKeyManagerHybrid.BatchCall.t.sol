@@ -15,7 +15,8 @@ import "forge-std/console2.sol";
 contract SessionKeyManagerHybridBatchCallTest is SATestBase {
     SmartAccount private sa;
     SessionKeyManagerHybrid private sessionKeyManagerHybrid;
-    MockSessionValidationModule private mockSessionValidationModule;
+    MockSessionValidationModule private mockSessionValidationModule1;
+    MockSessionValidationModule private mockSessionValidationModule2;
     Stub private stub = new Stub();
     SKMParserStub private skmParserStub = new SKMParserStub();
 
@@ -56,10 +57,15 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
         // Deploy Session Key Modules
         sessionKeyManagerHybrid = new SessionKeyManagerHybrid();
         vm.label(address(sessionKeyManagerHybrid), "sessionKeyManagerHybrid");
-        mockSessionValidationModule = new MockSessionValidationModule();
+        mockSessionValidationModule1 = new MockSessionValidationModule();
         vm.label(
-            address(mockSessionValidationModule),
-            "mockSessionValidationModule"
+            address(mockSessionValidationModule1),
+            "mockSessionValidationModule1"
+        );
+        mockSessionValidationModule2 = new MockSessionValidationModule();
+        vm.label(
+            address(mockSessionValidationModule1),
+            "mockSessionValidationModule2"
         );
 
         // Enable Session Key Manager Module
@@ -84,7 +90,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
             memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
                 validUntil: 0,
                 validAfter: 0,
-                sessionValidationModule: address(mockSessionValidationModule),
+                sessionValidationModule: address(mockSessionValidationModule1),
                 sessionKeyData: abi.encodePacked(bob.addr)
             });
         bytes32 sessionDataDigest = sessionKeyManagerHybrid.sessionDataDigest(
@@ -151,6 +157,371 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
             memory enabledSessionData = sessionKeyManagerHybrid
                 .enabledSessionsData(sessionDataDigest, address(sa));
         assertEq(enabledSessionData, sessionData);
+    }
+
+    function testEnableAndUseSessionTwoBatchItems() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData1 = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+        bytes32 sessionDataDigest1 = sessionKeyManagerHybrid.sessionDataDigest(
+            sessionData1
+        );
+
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData2 = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule2),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+        bytes32 sessionDataDigest2 = sessionKeyManagerHybrid.sessionDataDigest(
+            sessionData2
+        );
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid), uint64(block.chainid)),
+                toArray(sessionData1, sessionData2),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData1 = abi.encode("hello world");
+        bytes memory sessionInfo1 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            0, // sessionEnableData[0][0]
+            sessionData1,
+            callSpecificData1
+        );
+        bytes memory callSpecificData2 = abi.encode("hello world 2");
+        bytes memory sessionInfo2 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            1, // sessionEnableData[0][1]
+            sessionData2,
+            callSpecificData2
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData1 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey1")
+        );
+        bytes memory callData2 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey2")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to, to),
+                toArray(value, value),
+                toArray(callData1, callData2)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo1, sessionInfo2)
+        );
+
+        vm.expectEmit();
+        emit SessionCreated(address(sa), sessionDataDigest1, sessionData1);
+        vm.expectEmit();
+        emit ValidateSessionParams(
+            to,
+            value,
+            callData1,
+            sessionData1.sessionKeyData,
+            callSpecificData1
+        );
+
+        vm.expectEmit();
+        emit SessionCreated(address(sa), sessionDataDigest2, sessionData2);
+        vm.expectEmit();
+        emit ValidateSessionParams(
+            to,
+            value,
+            callData2,
+            sessionData2.sessionKeyData,
+            callSpecificData2
+        );
+
+        vm.expectEmit();
+        emit Log("shouldProcessTransactionFromSessionKey1");
+        vm.expectEmit();
+        emit Log("shouldProcessTransactionFromSessionKey2");
+
+        entryPoint.handleOps(toArray(op), owner.addr);
+
+        // Check sessions are enabled
+        IStatefulSessionKeyManagerBase.SessionData
+            memory enabledSessionData = sessionKeyManagerHybrid
+                .enabledSessionsData(sessionDataDigest1, address(sa));
+        assertEq(enabledSessionData, sessionData1);
+
+        enabledSessionData = sessionKeyManagerHybrid.enabledSessionsData(
+            sessionDataDigest2,
+            address(sa)
+        );
+        assertEq(enabledSessionData, sessionData2);
+    }
+
+    function testUseSessionTwoBatchItemsPostEnable() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData1 = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData2 = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule2),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid), uint64(block.chainid)),
+                toArray(sessionData1, sessionData2),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData1 = abi.encode("hello world");
+        bytes memory sessionInfo1 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            0, // sessionEnableData[0][0]
+            sessionData1,
+            callSpecificData1
+        );
+        bytes memory callSpecificData2 = abi.encode("hello world 2");
+        bytes memory sessionInfo2 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            1, // sessionEnableData[0][1]
+            sessionData2,
+            callSpecificData2
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData1 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey1")
+        );
+        bytes memory callData2 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey2")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to, to),
+                toArray(value, value),
+                toArray(callData1, callData2)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo1, sessionInfo2)
+        );
+        entryPoint.handleOps(toArray(op), owner.addr);
+
+        // Use the sessions again, but this time with the session data pre-enabled
+        op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to, to),
+                toArray(value, value),
+                toArray(callData1, callData2)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            new bytes[](0), // no need for sessionEnableData
+            new bytes[](0), // no need for sessionEnableSignature
+            toArray(
+                makeSessionPreEnabledSessionInfo(
+                    sessionData1,
+                    sessionKeyManagerHybrid,
+                    callSpecificData1
+                ),
+                makeSessionPreEnabledSessionInfo(
+                    sessionData2,
+                    sessionKeyManagerHybrid,
+                    callSpecificData2
+                )
+            )
+        );
+
+        vm.expectEmit();
+        emit ValidateSessionParams(
+            to,
+            value,
+            callData1,
+            sessionData1.sessionKeyData,
+            callSpecificData1
+        );
+
+        vm.expectEmit();
+        emit ValidateSessionParams(
+            to,
+            value,
+            callData2,
+            sessionData2.sessionKeyData,
+            callSpecificData2
+        );
+
+        vm.expectEmit();
+        emit Log("shouldProcessTransactionFromSessionKey1");
+        vm.expectEmit();
+        emit Log("shouldProcessTransactionFromSessionKey2");
+        entryPoint.handleOps(toArray(op), owner.addr);
+    }
+
+    function testUseSessionTwoBatchItemsOneFreshAndOtherPostEnable() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData1 = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData2 = IStatefulSessionKeyManagerBase.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule2),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid), uint64(block.chainid)),
+                toArray(sessionData1, sessionData2),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData1 = abi.encode("hello world");
+        bytes memory sessionInfo1 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            0, // sessionEnableData[0][0]
+            sessionData1,
+            callSpecificData1
+        );
+        bytes memory callSpecificData2 = abi.encode("hello world 2");
+        bytes memory sessionInfo2 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            1, // sessionEnableData[0][1]
+            sessionData2,
+            callSpecificData2
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData1 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey1")
+        );
+        bytes memory callData2 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey2")
+        );
+        // Use only one session
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData1)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo1)
+        );
+        entryPoint.handleOps(toArray(op), owner.addr);
+
+        // Use the sessions again, but this time the first with the session data pre-enabled
+        // and the second with a freshly enabled session
+        op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to, to),
+                toArray(value, value),
+                toArray(callData1, callData2)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(
+                makeSessionPreEnabledSessionInfo(
+                    sessionData1,
+                    sessionKeyManagerHybrid,
+                    callSpecificData1
+                ),
+                sessionInfo2
+            )
+        );
+
+        vm.expectEmit();
+        emit ValidateSessionParams(
+            to,
+            value,
+            callData1,
+            sessionData1.sessionKeyData,
+            callSpecificData1
+        );
+
+        vm.expectEmit();
+        emit SessionCreated(
+            address(sa),
+            sessionKeyManagerHybrid.sessionDataDigest(sessionData2),
+            sessionData2
+        );
+        vm.expectEmit();
+        emit ValidateSessionParams(
+            to,
+            value,
+            callData2,
+            sessionData2.sessionKeyData,
+            callSpecificData2
+        );
+
+        vm.expectEmit();
+        emit Log("shouldProcessTransactionFromSessionKey1");
+        vm.expectEmit();
+        emit Log("shouldProcessTransactionFromSessionKey2");
+        entryPoint.handleOps(toArray(op), owner.addr);
     }
 
     function testShouldNotSupportERC1271SignatureValidation(
