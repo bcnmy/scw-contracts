@@ -230,7 +230,8 @@ contract SessionKeyManagerHybrid is
                     uint48 _validUntil,
                     uint48 _validAfter,
                     address sessionValidationModule,
-                    bytes calldata sessionKeyData
+                    bytes calldata sessionKeyData,
+                    bytes calldata callSpecificData
                 ) = _parseSessionEnableSignatureBatchCall(sessionInfo);
 
                 validUntil = _validUntil;
@@ -261,13 +262,13 @@ contract SessionKeyManagerHybrid is
                         callValues[i],
                         operationCalldatas[i],
                         sessionKeyData,
-                        // TODO: Check if this is needed, if yes then HOW?
-                        bytes("")
+                        callSpecificData
                     );
             } else {
-                bytes32 sessionDataDigest = _parseSessionDataPreEnabledSignatureBatchCall(
-                        sessionInfo
-                    );
+                (
+                    bytes32 sessionDataDigest,
+                    bytes calldata callSpecificData
+                ) = _parseSessionDataPreEnabledSignatureBatchCall(sessionInfo);
 
                 SessionData storage sessionData = _validateSessionKeyPreEnabled(
                     sender,
@@ -284,8 +285,7 @@ contract SessionKeyManagerHybrid is
                         callValues[i],
                         operationCalldatas[i],
                         sessionData.sessionKeyData,
-                        // TODO: Check if this is needed, if yes then HOW?
-                        bytes("")
+                        callSpecificData
                     );
             }
 
@@ -491,15 +491,28 @@ contract SessionKeyManagerHybrid is
 
     function _parseSessionDataPreEnabledSignatureBatchCall(
         bytes calldata _moduleSignature
-    ) internal pure returns (bytes32 sessionDataDigest) {
+    )
+        internal
+        pure
+        returns (bytes32 sessionDataDigest, bytes calldata callSpecificData)
+    {
         /*
          * Session Data Pre Enabled Signature Layout
          * Offset (in bytes)    | Length (in bytes) | Contents
          * 0x0                  | 0x1               | Is Session Enable Transaction Flag
+         * 0x1                  | 0x20              | bytes32 sessionDataDigest
+         * 0x21                 | ---               | abi.encode(callSpecificData)
          */
         assembly ("memory-safe") {
             let offset := add(_moduleSignature.offset, 0x1)
+            let baseOffset := offset
+
             sessionDataDigest := calldataload(offset)
+            offset := add(offset, 0x20)
+
+            let dataPointer := add(baseOffset, calldataload(offset))
+            callSpecificData.offset := add(dataPointer, 0x20)
+            callSpecificData.length := calldataload(dataPointer)
         }
     }
 
@@ -549,7 +562,8 @@ contract SessionKeyManagerHybrid is
             uint48 validUntil,
             uint48 validAfter,
             address sessionValidationModule,
-            bytes calldata sessionKeyData
+            bytes calldata sessionKeyData,
+            bytes calldata callSpecificData
         )
     {
         /*
@@ -561,7 +575,7 @@ contract SessionKeyManagerHybrid is
          * 0x3                  | 0x6               | Valid Until
          * 0x9                  | 0x6               | Valid After
          * 0xf                  | 0x14              | Session Validation Module Address
-         * 0x23                 | --                | abi.encode(sessionKeyData)
+         * 0x23                 | --                | abi.encode(sessionKeyData, callSpecificData)
          */
         assembly ("memory-safe") {
             let offset := add(_moduleSignature.offset, 0x1)
@@ -587,6 +601,10 @@ contract SessionKeyManagerHybrid is
             sessionKeyData.offset := add(dataPointer, 0x20)
             sessionKeyData.length := calldataload(dataPointer)
             offset := add(offset, 0x20)
+
+            dataPointer := add(baseOffset, calldataload(offset))
+            callSpecificData.offset := add(dataPointer, 0x20)
+            callSpecificData.length := calldataload(dataPointer)
         }
     }
 
