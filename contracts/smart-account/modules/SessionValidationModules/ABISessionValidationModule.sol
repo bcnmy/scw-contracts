@@ -75,7 +75,6 @@ contract ABISessionValidationModule is IABISessionValidationModule {
         bytes calldata _sessionKeyData,
         bytes memory /*_callSpecificData*/
     ) public pure virtual override returns (address) {
-
         // TODO optimize this, maybe make permission calldata and get it with assembly
         (address sessionKey, Permission memory permission) = abi.decode(
             _sessionKeyData,
@@ -102,7 +101,6 @@ contract ABISessionValidationModule is IABISessionValidationModule {
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData
     ) internal pure virtual returns (address) {
-
         // TODO optimize this, maybe make permission calldata and get it with assembly
         (address sessionKey, Permission memory permission) = abi.decode(
             _sessionKeyData,

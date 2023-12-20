@@ -222,10 +222,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
   });
 
   it("should be able to process Batched userOp via Batched Session Router", async () => {
-
     // make batched userOp to check how changes in the module influence batched flow
     // as it is expected it will be widely used for the abi svm
-
   });
-
 });
