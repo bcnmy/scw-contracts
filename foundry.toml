@@ -20,3 +20,6 @@ evm_version = "paris"
 
 [profile.coverage]
 src = 'test/foundry'
+
+[fuzz]
+runs = 256

@@ -11,7 +11,7 @@ contract MockSessionValidationModule is ISessionValidationModule {
         bytes32 _userOpHash,
         bytes calldata _data,
         bytes calldata _sig
-    ) external view override returns (bool) {
+    ) external pure override returns (bool) {
         (_op);
         address sessionKey = address(bytes20(_data[0:20]));
         return
@@ -20,11 +20,11 @@ contract MockSessionValidationModule is ISessionValidationModule {
     }
 
     function validateSessionParams(
-        address destinationContract,
-        uint256 callValue,
-        bytes calldata funcCallData,
+        address,
+        uint256,
+        bytes calldata,
         bytes calldata sessionKeyData,
-        bytes calldata callSpecificData
+        bytes calldata
     ) external pure override returns (address) {
         address sessionKey = address(bytes20(sessionKeyData[0:20]));
         return sessionKey;

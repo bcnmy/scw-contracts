@@ -11,7 +11,7 @@ import {MockSessionValidationModule} from "sa/test/mocks/MockSessionValidationMo
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Vm} from "forge-std/Test.sol";
 
-contract SessionKeyManagerStatefulTest is SATestBase {
+contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
     SmartAccount private sa;
     SessionKeyManagerStateful private sessionKeyManagerStateful;
     MockSessionValidationModule private mockSessionValidationModule;

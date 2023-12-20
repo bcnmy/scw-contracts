@@ -6,6 +6,7 @@ import {IStatefulSessionKeyManagerBase} from "../../interfaces/modules/SessionKe
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {IAuthorizationModule} from "../../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../../interfaces/ISignatureValidator.sol";
+import {ISmartAccount} from "../../interfaces/ISmartAccount.sol";
 
 /**
  * @title StatefulSessionKeyManagerBase
@@ -88,5 +89,14 @@ abstract contract StatefulSessionKeyManagerBase is
                     _sessionKeyData
                 )
             );
+    }
+
+    function _isBatchExecuteCall(
+        UserOperation calldata _userOp
+    ) internal pure returns (bool isBatchExecuteCall) {
+        bytes4 selector = bytes4(_userOp.callData[0:4]);
+        isBatchExecuteCall =
+            selector == ISmartAccount.executeBatch_y6U.selector ||
+            selector == ISmartAccount.executeBatch.selector;
     }
 }
