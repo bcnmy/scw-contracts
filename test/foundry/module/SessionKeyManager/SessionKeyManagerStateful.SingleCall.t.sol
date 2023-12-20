@@ -16,6 +16,7 @@ contract SessionKeyManagerStatefulTest is SATestBase {
     SessionKeyManagerStateful private sessionKeyManagerStateful;
     MockSessionValidationModule private mockSessionValidationModule;
     Stub private stub = new Stub();
+    SKMParserStub private skmParserStub = new SKMParserStub();
 
     // Events
     event SessionCreated(
@@ -341,6 +342,32 @@ contract SessionKeyManagerStatefulTest is SATestBase {
         );
     }
 
+    function testShouldParseModuleSignatureCorrectly(
+        bytes32 _sessionDataDigest,
+        bytes calldata _sessionKeySignature
+    ) public {
+        bytes memory encoded = abi.encode(
+            _sessionDataDigest,
+            _sessionKeySignature
+        );
+
+        (
+            bytes32 sessionDataDigest,
+            bytes memory sessionKeySignature
+        ) = skmParserStub.parseModuleSignature(encoded);
+
+        assertEq(
+            sessionDataDigest,
+            _sessionDataDigest,
+            "mismatched sessionDataDigest"
+        );
+        assertEq(
+            sessionKeySignature,
+            _sessionKeySignature,
+            "mismatched sessionKeySignature"
+        );
+    }
+
     function assertEq(
         SessionKeyManagerStateful.SessionData memory _a,
         SessionKeyManagerStateful.SessionData memory _b
@@ -400,5 +427,17 @@ contract Stub {
 
     function emitMessage(string calldata _message) public {
         emit Log(_message);
+    }
+}
+
+contract SKMParserStub is SessionKeyManagerStateful {
+    function parseModuleSignature(
+        bytes calldata _moduleSignature
+    )
+        public
+        pure
+        returns (bytes32 sessionDataDigest, bytes calldata sessionKeySignature)
+    {
+        return _parseModuleSignature(_moduleSignature);
     }
 }
