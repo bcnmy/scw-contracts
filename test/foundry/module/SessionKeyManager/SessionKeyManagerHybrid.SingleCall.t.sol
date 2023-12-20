@@ -68,7 +68,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
     }
 
     function testEnableAndUseSession() public {
@@ -120,7 +120,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         emit SessionCreated(address(sa), sessionDataDigest, sessionData);
         vm.expectEmit();
         emit Log("shouldProcessTransactionFromSessionKey");
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is enabled
         IStatefulSessionKeyManagerBase.SessionData
@@ -170,7 +170,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             sessionEnableData,
             sessionEnableSignature
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Use session with just digest
         op = makeUseExistingSessionUserOp(
@@ -190,7 +190,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         );
         vm.expectEmit();
         emit Log("shouldProcessTransactionFromSessionKey");
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
     }
 
     function testEnableAndUseSessionMultiSessionEnable() public {
@@ -243,7 +243,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         emit SessionCreated(address(sa), sessionDataDigest, sessionDatas[0]);
         vm.expectEmit();
         emit Log("shouldProcessTransactionFromSessionKey");
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is enabled
         IStatefulSessionKeyManagerBase.SessionData
@@ -306,7 +306,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             sessionEnableData,
             sessionEnableSignature
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable session
         op = makeEcdsaModuleUserOp(
@@ -325,7 +325,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         vm.expectEmit();
         emit SessionDisabled(address(sa), sessionDataDigest);
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is disabled
         IStatefulSessionKeyManagerBase.SessionData
@@ -379,7 +379,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             sessionEnableSignature
         );
 
-        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+        try entryPoint.handleOps(toArray(op), owner.addr) {
             fail("should have reverted");
         } catch (bytes memory reason) {
             assertEq(
@@ -423,7 +423,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             bob
         );
 
-        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+        try entryPoint.handleOps(toArray(op), owner.addr) {
             fail("should have reverted");
         } catch (bytes memory reason) {
             assertEq(
@@ -480,7 +480,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             sessionEnableData,
             sessionEnableSignature
         );
-        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+        try entryPoint.handleOps(toArray(op), owner.addr) {
             fail("should have reverted");
         } catch (bytes memory reason) {
             assertEq(
@@ -535,7 +535,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             sessionEnableData,
             sessionEnableSignature
         );
-        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+        try entryPoint.handleOps(toArray(op), owner.addr) {
             fail("should have reverted");
         } catch (bytes memory reason) {
             assertEq(
@@ -591,7 +591,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             sessionEnableData,
             sessionEnableSignature
         );
-        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+        try entryPoint.handleOps(toArray(op), owner.addr) {
             fail("should have reverted");
         } catch (bytes memory reason) {
             assertEq(
@@ -648,7 +648,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             sessionEnableData,
             sessionEnableSignature
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Use session with just digest but wrong signer
         op = makeUseExistingSessionUserOp(
@@ -666,7 +666,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             sessionData,
             charlie
         );
-        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+        try entryPoint.handleOps(toArray(op), owner.addr) {
             fail("should have reverted");
         } catch (bytes memory reason) {
             assertEq(

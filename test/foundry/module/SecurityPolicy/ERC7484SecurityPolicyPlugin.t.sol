@@ -58,7 +58,7 @@ contract ERC7484SecurityPolicyPluginTest is
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Deploy ERC7484SecurityPolicyPlugin
         erc7484SecurityPolicyPlugin = new ERC7484SecurityPolicyPlugin(
@@ -79,7 +79,7 @@ contract ERC7484SecurityPolicyPluginTest is
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Prepare and set the default configuration
         defaultConfig.threshold = 3;
@@ -103,7 +103,7 @@ contract ERC7484SecurityPolicyPluginTest is
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Deploy and register MultichainValidator with registry
         validator = MultichainECDSAValidator(
@@ -217,7 +217,7 @@ contract ERC7484SecurityPolicyPluginTest is
         emit ModuleValidated(address(sa), address(validator));
 
         vm.breakpoint("a");
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         assertTrue(sa.isModuleEnabled(address(validator)));
     }
@@ -286,7 +286,7 @@ contract ERC7484SecurityPolicyPluginTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -357,7 +357,7 @@ contract ERC7484SecurityPolicyPluginTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -440,7 +440,7 @@ contract ERC7484SecurityPolicyPluginTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs

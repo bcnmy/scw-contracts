@@ -11,7 +11,6 @@ import {ISessionKeyManagerModuleHybrid} from "../../interfaces/modules/SessionKe
 import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../../interfaces/ISignatureValidator.sol";
 import {StatefulSessionKeyManagerBase} from "./StatefulSessionKeyManagerBase.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import "forge-std/console2.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -32,15 +31,11 @@ contract SessionKeyManagerHybrid is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual override returns (uint256 rv) {
-        uint256 gas = gasleft();
-
         if (_isBatchExecuteCall(userOp)) {
             rv = _validateUserOpBatchExecute(userOp, userOpHash);
         } else {
             rv = _validateUserOpSingleExecute(userOp, userOpHash);
         }
-
-        console2.log("SessionKeyManagerHybrid.validateUserOp", gas - gasleft());
     }
 
     /***************************** Single Call Handler ***********************************/
@@ -389,7 +384,8 @@ contract SessionKeyManagerHybrid is
         {
             /*
              * Module Signature Layout
-             * abi.encode(bytes[] sessionEnableDataList, bytes[] sessionEnableSignatureList, bytes[] sessionInfo, bytes sessionKeySignature)
+             * abi.encode(bytes[] sessionEnableDataList, bytes[] sessionEnableSignatureList,
+             *   bytes[] sessionInfo, bytes sessionKeySignature)
              */
             assembly ("memory-safe") {
                 let offset := _moduleSignature.offset
@@ -513,6 +509,12 @@ contract SessionKeyManagerHybrid is
             bytes[] calldata operationCalldatas
         )
     {
+        /*
+         * Batch Call Calldata Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x4               | bytes4 function selector
+         * 0x4                  | -                 | abi.encode(destinations, callValues, operationCalldatas)
+         */
         assembly ("memory-safe") {
             let offset := add(_userOpCalldata.offset, 0x4)
             let baseOffset := offset

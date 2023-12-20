@@ -29,6 +29,13 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
         address indexed sa,
         bytes32 indexed sessionDataDigest
     );
+    event ValidateSessionParams(
+        address destinationContract,
+        uint256 callValue,
+        bytes funcCallData,
+        bytes sessionKeyData,
+        bytes callSpecificData
+    );
     event Log(string message);
 
     function setUp() public virtual override {
@@ -69,10 +76,10 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
     }
 
-    function testEnableAndUseSession() public {
+    function testEnableAndUseSessionSingleBatchItem() public {
         SessionKeyManagerHybrid.SessionData
             memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
                 validUntil: 0,
@@ -84,44 +91,60 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
             sessionData
         );
 
-        // Generate Session Data
-        uint64[] memory chainIds = new uint64[](1);
-        chainIds[0] = uint64(block.chainid);
-
-        SessionKeyManagerHybrid.SessionData[]
-            memory sessionDatas = new SessionKeyManagerHybrid.SessionData[](1);
-        sessionDatas[0] = sessionData;
-
+        // Generate Session Enable Data
         (
             bytes memory sessionEnableData,
             bytes memory sessionEnableSignature
-        ) = makeSessionEnableData(chainIds, sessionDatas, sa);
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            0,
+            0,
+            sessionData,
+            callSpecificData
+        );
 
         // Enable and Use session
-        UserOperation memory op = makeEnableAndUseSessionUserOp(
-            getSmartAccountExecuteCalldata(
-                address(stub),
-                0,
-                abi.encodeCall(
-                    stub.emitMessage,
-                    ("shouldProcessTransactionFromSessionKey")
-                )
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
             ),
             sa,
             0,
             sessionKeyManagerHybrid,
-            sessionData,
             bob,
-            0,
-            sessionEnableData,
-            sessionEnableSignature
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
         );
 
         vm.expectEmit();
         emit SessionCreated(address(sa), sessionDataDigest, sessionData);
         vm.expectEmit();
+        emit ValidateSessionParams(
+            to,
+            value,
+            callData,
+            sessionData.sessionKeyData,
+            callSpecificData
+        );
+        vm.expectEmit();
         emit Log("shouldProcessTransactionFromSessionKey");
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is enabled
         IStatefulSessionKeyManagerBase.SessionData
@@ -353,16 +376,15 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
         return (sessionEnableData, erc1271Signature);
     }
 
-    function makeEnableAndUseSessionUserOp(
+    function makeSessionUserOp(
         bytes memory _calldata,
         SmartAccount _sa,
         uint192 _nonceKey,
         SessionKeyManagerHybrid _skm,
-        SessionKeyManagerHybrid.SessionData memory _sessionData,
         TestAccount memory _sessionSigner,
-        uint256 _sessionKeyIndex,
-        bytes memory _sessionEnableData,
-        bytes memory _sessionEnableSignature
+        bytes[] memory _sessionEnableDataList,
+        bytes[] memory _sessionEnableSignatureList,
+        bytes[] memory _sessionInfos
     ) internal view returns (UserOperation memory op) {
         op = UserOperation({
             sender: address(_sa),
@@ -390,61 +412,42 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
         }
 
         // Generate Module Signature
-        bytes memory moduleSignature = abi.encodePacked(
-            uint8(0x01),
-            uint8(_sessionKeyIndex),
-            _sessionData.validUntil,
-            _sessionData.validAfter,
-            _sessionData.sessionValidationModule,
-            abi.encode(
-                _sessionData.sessionKeyData,
-                _sessionEnableData,
-                _sessionEnableSignature,
-                sessionKeySignature
-            )
+        bytes memory moduleSignature = abi.encode(
+            _sessionEnableDataList,
+            _sessionEnableSignatureList,
+            _sessionInfos,
+            sessionKeySignature
         );
         op.signature = abi.encode(moduleSignature, _skm);
     }
 
-    function makeUseExistingSessionUserOp(
-        bytes memory _calldata,
-        SmartAccount _sa,
-        uint192 _nonceKey,
-        SessionKeyManagerHybrid _skm,
+    function makeSessionEnableSessionInfo(
+        uint8 _sessionEnableDataIndex,
+        uint8 _sessionKeyIndex,
         SessionKeyManagerHybrid.SessionData memory _sessionData,
-        TestAccount memory _sessionSigner
-    ) internal view returns (UserOperation memory op) {
-        op = UserOperation({
-            sender: address(_sa),
-            nonce: entryPoint.getNonce(address(_sa), _nonceKey),
-            initCode: bytes(""),
-            callData: _calldata,
-            callGasLimit: gasleft() / 100,
-            verificationGasLimit: gasleft() / 100,
-            preVerificationGas: defaultPreVerificationGas,
-            maxFeePerGas: tx.gasprice,
-            maxPriorityFeePerGas: tx.gasprice - block.basefee,
-            paymasterAndData: bytes(""),
-            signature: bytes("")
-        });
-
-        // Sign the UserOp
-        bytes32 userOpHash = entryPoint.getUserOpHash(op);
-        (uint8 v, bytes32 r, bytes32 s) = vm.sign(
-            _sessionSigner.privateKey,
-            ECDSA.toEthSignedMessageHash(userOpHash)
+        bytes memory _callSpecificData
+    ) internal pure returns (bytes memory info) {
+        info = abi.encodePacked(
+            uint8(0x1),
+            _sessionEnableDataIndex,
+            _sessionKeyIndex,
+            _sessionData.validUntil,
+            _sessionData.validAfter,
+            _sessionData.sessionValidationModule,
+            abi.encode(_sessionData.sessionKeyData, _callSpecificData)
         );
-        bytes memory sessionKeySignature = abi.encodePacked(r, s, v);
+    }
 
-        // Generate Module Signature
-        bytes memory moduleSignature = abi.encodePacked(
-            uint8(0x00),
-            abi.encode(
-                sessionKeyManagerHybrid.sessionDataDigest(_sessionData),
-                sessionKeySignature
-            )
+    function makeSessionPreEnabledSessionInfo(
+        SessionKeyManagerHybrid.SessionData memory _sessionData,
+        SessionKeyManagerHybrid _skm,
+        bytes memory _callSpecificData
+    ) internal pure returns (bytes memory info) {
+        info = abi.encodePacked(
+            uint8(0x0),
+            _skm.sessionDataDigest(_sessionData),
+            abi.encode(_callSpecificData)
         );
-        op.signature = abi.encode(moduleSignature, _skm);
     }
 }
 

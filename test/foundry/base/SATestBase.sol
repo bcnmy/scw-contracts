@@ -8,8 +8,9 @@ import {EntryPoint, IEntryPoint, UserOperation} from "aa-core/EntryPoint.sol";
 import {SmartAccountFactory} from "factory/SmartAccountFactory.sol";
 import {SmartAccount} from "sa/SmartAccount.sol";
 import {EcdsaOwnershipRegistryModule} from "modules/EcdsaOwnershipRegistryModule.sol";
+import {ToArrayUtils} from "./utils/ToArrayUtils.sol";
 
-abstract contract SATestBase is Test {
+abstract contract SATestBase is Test, ToArrayUtils {
     // Test Environment Configuration
     string constant mnemonic =
         "test test test test test test test test test test test junk";
@@ -175,6 +176,18 @@ abstract contract SATestBase is Test {
         return abi.encodeCall(SmartAccount.execute, (_dest, _value, _calldata));
     }
 
+    function getSmartAccountBatchExecuteCalldata(
+        address[] memory _dest,
+        uint256[] memory _value,
+        bytes[] memory _calldata
+    ) internal pure returns (bytes memory) {
+        return
+            abi.encodeCall(
+                SmartAccount.executeBatch,
+                (_dest, _value, _calldata)
+            );
+    }
+
     function getUserOperationEventData(
         Vm.Log[] memory _entries
     ) internal returns (UserOperationEventData memory data) {
@@ -212,36 +225,6 @@ abstract contract SATestBase is Test {
             return data;
         }
         fail("entries does not contain UserOperationRevertReasonEvent");
-    }
-
-    function arraifyOps(
-        UserOperation memory _op
-    ) internal pure returns (UserOperation[] memory) {
-        UserOperation[] memory ops = new UserOperation[](1);
-        ops[0] = _op;
-        return ops;
-    }
-
-    function arraifyOps(
-        UserOperation memory _op1,
-        UserOperation memory _op2
-    ) internal pure returns (UserOperation[] memory) {
-        UserOperation[] memory ops = new UserOperation[](2);
-        ops[0] = _op1;
-        ops[1] = _op2;
-        return ops;
-    }
-
-    function arraifyOps(
-        UserOperation memory _op1,
-        UserOperation memory _op2,
-        UserOperation memory _op3
-    ) internal pure returns (UserOperation[] memory) {
-        UserOperation[] memory ops = new UserOperation[](3);
-        ops[0] = _op1;
-        ops[1] = _op2;
-        ops[2] = _op3;
-        return ops;
     }
 
     // Module Setup Data Helpers

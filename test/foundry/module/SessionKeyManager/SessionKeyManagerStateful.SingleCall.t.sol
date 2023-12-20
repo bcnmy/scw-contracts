@@ -71,7 +71,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
     }
 
     function testEnableSession() public {
@@ -104,7 +104,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
         vm.expectEmit();
         emit SessionCreated(address(sa), sessionDataDigest, sessionData);
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is enabled
         IStatefulSessionKeyManagerBase.SessionData
@@ -139,7 +139,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable session
         op = makeEcdsaModuleUserOp(
@@ -158,7 +158,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
         vm.expectEmit();
         emit SessionDisabled(address(sa), sessionDataDigest);
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is disabled
         IStatefulSessionKeyManagerBase.SessionData
@@ -192,7 +192,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Use session
         vm.expectEmit();
@@ -212,7 +212,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
             sessionData,
             bob
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
     }
 
     function testShouldNotValidateTransactionFromNonEnabledSession() public {
@@ -243,7 +243,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
             bob
         );
 
-        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+        try entryPoint.handleOps(toArray(op), owner.addr) {
             fail("should have reverted");
         } catch (bytes memory reason) {
             assertEq(
@@ -282,7 +282,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Use session
         op = makeSessionModuleUserOp(
@@ -301,7 +301,7 @@ contract SessionKeyManagerStatefulSingleCallTest is SATestBase {
             alice
         );
 
-        try entryPoint.handleOps(arraifyOps(op), owner.addr) {
+        try entryPoint.handleOps(toArray(op), owner.addr) {
             fail("should have reverted");
         } catch (bytes memory reason) {
             assertEq(
