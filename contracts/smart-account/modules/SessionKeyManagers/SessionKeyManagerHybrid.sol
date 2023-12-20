@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/* solhint-disable function-max-lines */
+/* solhint-disable function-max-lines*/
+/* solhint-disable ordering*/
 
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
@@ -43,47 +44,7 @@ contract SessionKeyManagerHybrid is
         console2.log("SessionKeyManagerHybrid.validateUserOp", gas - gasleft());
     }
 
-    function _validateSessionKeySessionEnableTransaction(
-        uint48 validUntil,
-        uint48 validAfter,
-        uint256 sessionKeyIndex,
-        address sessionValidationModule,
-        bytes calldata sessionKeyData,
-        bytes calldata sessionEnableData
-    ) internal {
-        (
-            uint64 sessionChainId,
-            bytes32 sessionDigest
-        ) = _parseSessionFromSessionEnableData(
-                sessionEnableData,
-                sessionKeyIndex
-            );
-
-        if (sessionChainId != block.chainid) {
-            revert("SessionChainIdMismatch");
-        }
-
-        bytes32 computedDigest = _sessionDataDigestUnpacked(
-            validUntil,
-            validAfter,
-            sessionValidationModule,
-            sessionKeyData
-        );
-
-        if (sessionDigest != computedDigest) {
-            revert("SessionKeyDataHashMismatch");
-        }
-
-        // Cache the session key data in the smart account storage for next validation
-        SessionData memory sessionData = SessionData({
-            validUntil: validUntil,
-            validAfter: validAfter,
-            sessionValidationModule: sessionValidationModule,
-            sessionKeyData: sessionKeyData
-        });
-        _enabledSessionsData[computedDigest][msg.sender] = sessionData;
-        emit SessionCreated(msg.sender, computedDigest, sessionData);
-    }
+    /***************************** Single Call Handler ***********************************/
 
     function _validateUserOpSingleExecute(
         UserOperation calldata userOp,
@@ -161,6 +122,100 @@ contract SessionKeyManagerHybrid is
             );
         }
     }
+
+    /***************************** Single Call Parsers ***********************************/
+
+    function _parseSessionEnableSignatureSingleCall(
+        bytes calldata _moduleSignature
+    )
+        internal
+        pure
+        returns (
+            uint256 sessionKeyIndex,
+            uint48 validUntil,
+            uint48 validAfter,
+            address sessionValidationModule,
+            bytes calldata sessionKeyData,
+            bytes calldata sessionEnableData,
+            bytes calldata sessionEnableSignature,
+            bytes calldata sessionKeySignature
+        )
+    {
+        /*
+         * Session Enable Signature Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | Is Session Enable Transaction Flag
+         * 0x1                  | 0x1               | Index of Session Key in Session Enable Data
+         * 0x2                  | 0x6               | Valid Until
+         * 0x8                  | 0x6               | Valid After
+         * 0xe                  | 0x14              | Session Validation Module Address
+         * 0x22                 | --                | abi.encode(sessionKeyData, sessionEnableData, sessionEnableSignature, sessionKeySignature)
+         */
+        assembly ("memory-safe") {
+            let offset := add(_moduleSignature.offset, 0x1)
+
+            sessionKeyIndex := shr(248, calldataload(offset))
+            offset := add(offset, 0x1)
+
+            validUntil := shr(208, calldataload(offset))
+            offset := add(offset, 0x6)
+
+            validAfter := shr(208, calldataload(offset))
+            offset := add(offset, 0x6)
+
+            sessionValidationModule := shr(96, calldataload(offset))
+            offset := add(offset, 0x14)
+
+            let baseOffset := offset
+            let dataPointer := add(baseOffset, calldataload(offset))
+
+            sessionKeyData.offset := add(dataPointer, 0x20)
+            sessionKeyData.length := calldataload(dataPointer)
+            offset := add(offset, 0x20)
+
+            dataPointer := add(baseOffset, calldataload(offset))
+            sessionEnableData.offset := add(dataPointer, 0x20)
+            sessionEnableData.length := calldataload(dataPointer)
+            offset := add(offset, 0x20)
+
+            dataPointer := add(baseOffset, calldataload(offset))
+            sessionEnableSignature.offset := add(dataPointer, 0x20)
+            sessionEnableSignature.length := calldataload(dataPointer)
+            offset := add(offset, 0x20)
+
+            dataPointer := add(baseOffset, calldataload(offset))
+            sessionKeySignature.offset := add(dataPointer, 0x20)
+            sessionKeySignature.length := calldataload(dataPointer)
+        }
+    }
+
+    function _parseSessionDataPreEnabledSignatureSingleCall(
+        bytes calldata _moduleSignature
+    )
+        internal
+        pure
+        returns (bytes32 sessionDataDigest, bytes calldata sessionKeySignature)
+    {
+        /*
+         * Session Data Pre Enabled Signature Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | Is Session Enable Transaction Flag
+         * 0x1                  | --                | abi.encode(bytes32 sessionDataDigest, sessionKeySignature)
+         */
+        assembly ("memory-safe") {
+            let offset := add(_moduleSignature.offset, 0x1)
+            let baseOffset := offset
+
+            sessionDataDigest := calldataload(offset)
+            offset := add(offset, 0x20)
+
+            let dataPointer := add(baseOffset, calldataload(offset))
+            sessionKeySignature.offset := add(dataPointer, 0x20)
+            sessionKeySignature.length := calldataload(dataPointer)
+        }
+    }
+
+    /***************************** Batch Call Handler ***********************************/
 
     function _validateUserOpBatchExecute(
         UserOperation calldata userOp,
@@ -313,117 +368,7 @@ contract SessionKeyManagerHybrid is
             );
     }
 
-    function _verifySessionEnableDataSignature(
-        bytes calldata _sessionEnableData,
-        bytes calldata _sessionEnableSignature,
-        address _smartAccount
-    ) internal view {
-        // Verify the signature on the session enable data
-        bytes32 sessionEnableDataDigest = keccak256(_sessionEnableData);
-        if (
-            ISignatureValidator(_smartAccount).isValidSignature(
-                sessionEnableDataDigest,
-                _sessionEnableSignature
-            ) != EIP1271_MAGIC_VALUE
-        ) {
-            revert("SessionNotApproved");
-        }
-    }
-
-    function _validateSessionKeyPreEnabled(
-        address smartAccount,
-        bytes32 sessionKeyDataDigest
-    ) internal view returns (SessionData storage sessionData) {
-        sessionData = _enabledSessionsData[sessionKeyDataDigest][smartAccount];
-        require(
-            sessionData.sessionValidationModule != address(0),
-            "SKM: Session key is not enabled"
-        );
-    }
-
-    function _isSessionEnableTransaction(
-        bytes calldata _moduleSignature
-    ) internal pure returns (bool isSessionEnableTransaction) {
-        assembly ("memory-safe") {
-            isSessionEnableTransaction := shr(
-                248,
-                calldataload(_moduleSignature.offset)
-            )
-        }
-    }
-
-    function _isBatchExecuteCall(
-        UserOperation calldata _userOp
-    ) internal pure returns (bool isBatchExecuteCall) {
-        bytes4 selector = bytes4(_userOp.callData[0:4]);
-        isBatchExecuteCall =
-            selector == ISmartAccount.executeBatch_y6U.selector ||
-            selector == ISmartAccount.executeBatch.selector;
-    }
-
-    function _parseSessionEnableSignatureSingleCall(
-        bytes calldata _moduleSignature
-    )
-        internal
-        pure
-        returns (
-            uint256 sessionKeyIndex,
-            uint48 validUntil,
-            uint48 validAfter,
-            address sessionValidationModule,
-            bytes calldata sessionKeyData,
-            bytes calldata sessionEnableData,
-            bytes calldata sessionEnableSignature,
-            bytes calldata sessionKeySignature
-        )
-    {
-        /*
-         * Session Enable Signature Layout
-         * Offset (in bytes)    | Length (in bytes) | Contents
-         * 0x0                  | 0x1               | Is Session Enable Transaction Flag
-         * 0x1                  | 0x1               | Index of Session Key in Session Enable Data
-         * 0x2                  | 0x6               | Valid Until
-         * 0x8                  | 0x6               | Valid After
-         * 0xe                  | 0x14              | Session Validation Module Address
-         * 0x22                 | --                | abi.encode(sessionKeyData, sessionEnableData, sessionEnableSignature, sessionKeySignature)
-         */
-        assembly ("memory-safe") {
-            let offset := add(_moduleSignature.offset, 0x1)
-
-            sessionKeyIndex := shr(248, calldataload(offset))
-            offset := add(offset, 0x1)
-
-            validUntil := shr(208, calldataload(offset))
-            offset := add(offset, 0x6)
-
-            validAfter := shr(208, calldataload(offset))
-            offset := add(offset, 0x6)
-
-            sessionValidationModule := shr(96, calldataload(offset))
-            offset := add(offset, 0x14)
-
-            let baseOffset := offset
-            let dataPointer := add(baseOffset, calldataload(offset))
-
-            sessionKeyData.offset := add(dataPointer, 0x20)
-            sessionKeyData.length := calldataload(dataPointer)
-            offset := add(offset, 0x20)
-
-            dataPointer := add(baseOffset, calldataload(offset))
-            sessionEnableData.offset := add(dataPointer, 0x20)
-            sessionEnableData.length := calldataload(dataPointer)
-            offset := add(offset, 0x20)
-
-            dataPointer := add(baseOffset, calldataload(offset))
-            sessionEnableSignature.offset := add(dataPointer, 0x20)
-            sessionEnableSignature.length := calldataload(dataPointer)
-            offset := add(offset, 0x20)
-
-            dataPointer := add(baseOffset, calldataload(offset))
-            sessionKeySignature.offset := add(dataPointer, 0x20)
-            sessionKeySignature.length := calldataload(dataPointer)
-        }
-    }
+    /***************************** Batch Call Parsers ***********************************/
 
     function _parseValidateUserOpBatchSignature(
         bytes calldata _moduleSignature
@@ -463,32 +408,6 @@ contract SessionKeyManagerHybrid is
         }
     }
 
-    function _parseSessionDataPreEnabledSignatureSingleCall(
-        bytes calldata _moduleSignature
-    )
-        internal
-        pure
-        returns (bytes32 sessionDataDigest, bytes calldata sessionKeySignature)
-    {
-        /*
-         * Session Data Pre Enabled Signature Layout
-         * Offset (in bytes)    | Length (in bytes) | Contents
-         * 0x0                  | 0x1               | Is Session Enable Transaction Flag
-         * 0x1                  | --                | abi.encode(bytes32 sessionDataDigest, sessionKeySignature)
-         */
-        assembly ("memory-safe") {
-            let offset := add(_moduleSignature.offset, 0x1)
-            let baseOffset := offset
-
-            sessionDataDigest := calldataload(offset)
-            offset := add(offset, 0x20)
-
-            let dataPointer := add(baseOffset, calldataload(offset))
-            sessionKeySignature.offset := add(dataPointer, 0x20)
-            sessionKeySignature.length := calldataload(dataPointer)
-        }
-    }
-
     function _parseSessionDataPreEnabledSignatureBatchCall(
         bytes calldata _moduleSignature
     )
@@ -513,41 +432,6 @@ contract SessionKeyManagerHybrid is
             let dataPointer := add(baseOffset, calldataload(offset))
             callSpecificData.offset := add(dataPointer, 0x20)
             callSpecificData.length := calldataload(dataPointer)
-        }
-    }
-
-    function _parseSessionFromSessionEnableData(
-        bytes calldata _sessionEnableData,
-        uint256 _sessionKeyIndex
-    ) internal pure returns (uint64 sessionChainId, bytes32 sessionDigest) {
-        uint8 enabledKeysCount;
-
-        /*
-         * Session Enable Data Layout
-         * Offset (in bytes)    | Length (in bytes) | Contents
-         * 0x0                  | 0x1               | No of session keys enabled
-         * 0x1                  | 0x8 x count       | Chain IDs
-         * 0x1 + 0x8 x count    | 0x20 x count      | Session Data Hash
-         */
-        assembly ("memory-safe") {
-            let offset := _sessionEnableData.offset
-
-            enabledKeysCount := shr(248, calldataload(offset))
-            offset := add(offset, 0x1)
-
-            sessionChainId := shr(
-                192,
-                calldataload(add(offset, mul(0x8, _sessionKeyIndex)))
-            )
-            offset := add(offset, mul(0x8, enabledKeysCount))
-
-            sessionDigest := calldataload(
-                add(offset, mul(0x20, _sessionKeyIndex))
-            )
-        }
-
-        if (_sessionKeyIndex >= enabledKeysCount) {
-            revert("SessionKeyIndexInvalid");
         }
     }
 
@@ -636,6 +520,133 @@ contract SessionKeyManagerHybrid is
             dataPointer := add(baseOffset, calldataload(offset))
             operationCalldatas.offset := add(dataPointer, 0x20)
             operationCalldatas.length := calldataload(dataPointer)
+        }
+    }
+
+    /***************************** Common ***********************************/
+
+    function _verifySessionEnableDataSignature(
+        bytes calldata _sessionEnableData,
+        bytes calldata _sessionEnableSignature,
+        address _smartAccount
+    ) internal view {
+        // Verify the signature on the session enable data
+        bytes32 sessionEnableDataDigest = keccak256(_sessionEnableData);
+        if (
+            ISignatureValidator(_smartAccount).isValidSignature(
+                sessionEnableDataDigest,
+                _sessionEnableSignature
+            ) != EIP1271_MAGIC_VALUE
+        ) {
+            revert("SessionNotApproved");
+        }
+    }
+
+    function _validateSessionKeySessionEnableTransaction(
+        uint48 validUntil,
+        uint48 validAfter,
+        uint256 sessionKeyIndex,
+        address sessionValidationModule,
+        bytes calldata sessionKeyData,
+        bytes calldata sessionEnableData
+    ) internal {
+        (
+            uint64 sessionChainId,
+            bytes32 sessionDigest
+        ) = _parseSessionFromSessionEnableData(
+                sessionEnableData,
+                sessionKeyIndex
+            );
+
+        if (sessionChainId != block.chainid) {
+            revert("SessionChainIdMismatch");
+        }
+
+        bytes32 computedDigest = _sessionDataDigestUnpacked(
+            validUntil,
+            validAfter,
+            sessionValidationModule,
+            sessionKeyData
+        );
+
+        if (sessionDigest != computedDigest) {
+            revert("SessionKeyDataHashMismatch");
+        }
+
+        // Cache the session key data in the smart account storage for next validation
+        SessionData memory sessionData = SessionData({
+            validUntil: validUntil,
+            validAfter: validAfter,
+            sessionValidationModule: sessionValidationModule,
+            sessionKeyData: sessionKeyData
+        });
+        _enabledSessionsData[computedDigest][msg.sender] = sessionData;
+        emit SessionCreated(msg.sender, computedDigest, sessionData);
+    }
+
+    function _validateSessionKeyPreEnabled(
+        address smartAccount,
+        bytes32 sessionKeyDataDigest
+    ) internal view returns (SessionData storage sessionData) {
+        sessionData = _enabledSessionsData[sessionKeyDataDigest][smartAccount];
+        require(
+            sessionData.sessionValidationModule != address(0),
+            "SKM: Session key is not enabled"
+        );
+    }
+
+    function _isSessionEnableTransaction(
+        bytes calldata _moduleSignature
+    ) internal pure returns (bool isSessionEnableTransaction) {
+        assembly ("memory-safe") {
+            isSessionEnableTransaction := shr(
+                248,
+                calldataload(_moduleSignature.offset)
+            )
+        }
+    }
+
+    function _isBatchExecuteCall(
+        UserOperation calldata _userOp
+    ) internal pure returns (bool isBatchExecuteCall) {
+        bytes4 selector = bytes4(_userOp.callData[0:4]);
+        isBatchExecuteCall =
+            selector == ISmartAccount.executeBatch_y6U.selector ||
+            selector == ISmartAccount.executeBatch.selector;
+    }
+
+    function _parseSessionFromSessionEnableData(
+        bytes calldata _sessionEnableData,
+        uint256 _sessionKeyIndex
+    ) internal pure returns (uint64 sessionChainId, bytes32 sessionDigest) {
+        uint8 enabledKeysCount;
+
+        /*
+         * Session Enable Data Layout
+         * Offset (in bytes)    | Length (in bytes) | Contents
+         * 0x0                  | 0x1               | No of session keys enabled
+         * 0x1                  | 0x8 x count       | Chain IDs
+         * 0x1 + 0x8 x count    | 0x20 x count      | Session Data Hash
+         */
+        assembly ("memory-safe") {
+            let offset := _sessionEnableData.offset
+
+            enabledKeysCount := shr(248, calldataload(offset))
+            offset := add(offset, 0x1)
+
+            sessionChainId := shr(
+                192,
+                calldataload(add(offset, mul(0x8, _sessionKeyIndex)))
+            )
+            offset := add(offset, mul(0x8, enabledKeysCount))
+
+            sessionDigest := calldataload(
+                add(offset, mul(0x20, _sessionKeyIndex))
+            )
+        }
+
+        if (_sessionKeyIndex >= enabledKeysCount) {
+            revert("SessionKeyIndexInvalid");
         }
     }
 }

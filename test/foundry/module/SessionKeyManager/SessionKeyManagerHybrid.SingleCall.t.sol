@@ -16,6 +16,7 @@ contract SessionKeyManagerHybridTest is SATestBase {
     SessionKeyManagerHybrid private sessionKeyManagerHybrid;
     MockSessionValidationModule private mockSessionValidationModule;
     Stub private stub = new Stub();
+    SKMParserStub private skmParserStub = new SKMParserStub();
 
     // Events
     event SessionCreated(
@@ -706,6 +707,99 @@ contract SessionKeyManagerHybridTest is SATestBase {
         );
     }
 
+    function testShouldParseEnableSessionSignatureCorrectly(
+        uint8 _isSessionEnableTransaction,
+        uint8 _sessionKeyIndex,
+        uint48 _validUntil,
+        uint48 _validAfter,
+        address _sessionValidationModule,
+        bytes calldata _sessionKeyData,
+        bytes calldata _sessionEnableData,
+        bytes calldata _sessionEnableSignature,
+        bytes calldata _sessionKeySignature
+    ) public {
+        bytes memory encoded = abi.encodePacked(
+            _isSessionEnableTransaction,
+            _sessionKeyIndex,
+            _validUntil,
+            _validAfter,
+            _sessionValidationModule,
+            abi.encode(
+                _sessionKeyData,
+                _sessionEnableData,
+                _sessionEnableSignature,
+                _sessionKeySignature
+            )
+        );
+        (
+            uint256 sessionKeyIndex,
+            uint48 validUntil,
+            uint48 validAfter,
+            address sessionValidationModule,
+            bytes memory sessionKeyData,
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature,
+            bytes memory sessionKeySignature
+        ) = skmParserStub.parseSessionEnableSignatureSingleCall(encoded);
+
+        assertEq(
+            sessionKeyIndex,
+            _sessionKeyIndex,
+            "mismatched sessionKeyIndex"
+        );
+        assertEq(validUntil, _validUntil, "mismatched validUntil");
+        assertEq(validAfter, _validAfter, "mismatched validAfter");
+        assertEq(
+            sessionValidationModule,
+            _sessionValidationModule,
+            "mismatched sessionValidationModule"
+        );
+        assertEq(sessionKeyData, _sessionKeyData, "mismatched sessionKeyData");
+        assertEq(
+            sessionEnableData,
+            _sessionEnableData,
+            "mismatched sessionEnableData"
+        );
+        assertEq(
+            sessionEnableSignature,
+            _sessionEnableSignature,
+            "mismatched sessionEnableSignature"
+        );
+        assertEq(
+            sessionKeySignature,
+            _sessionKeySignature,
+            "mismatched sessionKeySignature"
+        );
+    }
+
+    function testShouldParsePreEnabledSignatureCorrectly(
+        uint8 _isSessionEnableTransaction,
+        bytes32 _sessionDataDigest,
+        bytes calldata _sessionKeySignature
+    ) public {
+        bytes memory encoded = abi.encodePacked(
+            _isSessionEnableTransaction,
+            abi.encode(_sessionDataDigest, _sessionKeySignature)
+        );
+        (
+            bytes32 sessionDataDigest,
+            bytes memory sessionKeySignature
+        ) = skmParserStub.parseSessionDataPreEnabledSignatureSingleCall(
+                encoded
+            );
+
+        assertEq(
+            sessionDataDigest,
+            _sessionDataDigest,
+            "mismatched sessionDataDigest"
+        );
+        assertEq(
+            sessionKeySignature,
+            _sessionKeySignature,
+            "mismatched sessionKeySignature"
+        );
+    }
+
     function assertEq(
         SessionKeyManagerHybrid.SessionData memory _a,
         SessionKeyManagerHybrid.SessionData memory _b
@@ -864,5 +958,36 @@ contract Stub {
 
     function emitMessage(string calldata _message) public {
         emit Log(_message);
+    }
+}
+
+contract SKMParserStub is SessionKeyManagerHybrid {
+    function parseSessionEnableSignatureSingleCall(
+        bytes calldata _moduleSignature
+    )
+        public
+        pure
+        returns (
+            uint256 sessionKeyIndex,
+            uint48 validUntil,
+            uint48 validAfter,
+            address sessionValidationModule,
+            bytes calldata sessionKeyData,
+            bytes calldata sessionEnableData,
+            bytes calldata sessionEnableSignature,
+            bytes calldata sessionKeySignature
+        )
+    {
+        return _parseSessionEnableSignatureSingleCall(_moduleSignature);
+    }
+
+    function parseSessionDataPreEnabledSignatureSingleCall(
+        bytes calldata _moduleSignature
+    )
+        public
+        pure
+        returns (bytes32 sessionDataDigest, bytes calldata sessionKeySignature)
+    {
+        return _parseSessionDataPreEnabledSignatureSingleCall(_moduleSignature);
     }
 }
