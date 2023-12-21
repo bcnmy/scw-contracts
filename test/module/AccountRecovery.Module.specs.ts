@@ -943,7 +943,9 @@ describe("Account Recovery Module: ", async () => {
       const recoveryRequestAfter =
         await accountRecoveryModule.getRecoveryRequest(deployer.address);
 
-      expect(recoveryRequestAfter.callDataHash).to.equal(ethers.constants.HashZero);
+      expect(recoveryRequestAfter.callDataHash).to.equal(
+        ethers.constants.HashZero
+      );
     });
 
     it("Does not revert even if the request for the caller is empty", async () => {
@@ -3397,7 +3399,7 @@ describe("Account Recovery Module: ", async () => {
         userSA,
         accountRecoveryModule,
         ecdsaModule,
-        guardians
+        guardians,
       } = await setupTests();
 
       const resetUserOp = await makeEcdsaModuleUserOp(
@@ -3416,15 +3418,20 @@ describe("Account Recovery Module: ", async () => {
         ecdsaModule.address
       );
 
-      const handleOpsTxn = await entryPoint.handleOps([resetUserOp], alice.address, {
-        gasLimit: 10000000,
-      });
+      const handleOpsTxn = await entryPoint.handleOps(
+        [resetUserOp],
+        alice.address,
+        {
+          gasLimit: 10000000,
+        }
+      );
 
       expect(handleOpsTxn)
         .to.emit(accountRecoveryModule, "ModuleReset")
         .withArgs(userSA.address);
-      
-      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(userSA.address);
+
+      const userSASettings =
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address);
       expect(userSASettings.guardiansCount).to.equal(0);
       expect(userSASettings.recoveryThreshold).to.equal(0);
       expect(userSASettings.securityDelay).to.equal(0);
@@ -3439,7 +3446,9 @@ describe("Account Recovery Module: ", async () => {
         expect(guardianTimeFrame.validAfter).to.equal(0);
       }
 
-      const recoveryRequest = await accountRecoveryModule.getRecoveryRequest(userSA.address);
+      const recoveryRequest = await accountRecoveryModule.getRecoveryRequest(
+        userSA.address
+      );
       expect(recoveryRequest.callDataHash).to.equal(ethers.constants.HashZero);
     });
 
@@ -3450,7 +3459,7 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         guardians,
-        chainId
+        chainId,
       } = await setupTests();
 
       const resetUserOp = await makeEcdsaModuleUserOp(
@@ -3478,7 +3487,7 @@ describe("Account Recovery Module: ", async () => {
       const tx = await entryPoint.handleOps([resetUserOp], alice.address, {
         gasLimit: 10000000,
       });
-      
+
       await expect(tx)
         .to.emit(entryPoint, "UserOperationRevertReason")
         .withArgs(
@@ -3489,9 +3498,10 @@ describe("Account Recovery Module: ", async () => {
         );
 
       // the whole reset request is reverted
-      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(userSA.address);
+      const userSASettings =
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address);
       expect(userSASettings.guardiansCount).to.equal(guardians.length);
-      
+
       for (const guardian of guardians) {
         const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
           guardian,
@@ -3508,10 +3518,10 @@ describe("Account Recovery Module: ", async () => {
         accountRecoveryModule,
         ecdsaModule,
         guardians,
-        chainId
+        chainId,
       } = await setupTests();
 
-      const fakeGuardian= ethers.utils.keccak256(
+      const fakeGuardian = ethers.utils.keccak256(
         await eve.signMessage(ethers.utils.arrayify("0xdeadbeef"))
       );
 
@@ -3522,13 +3532,7 @@ describe("Account Recovery Module: ", async () => {
           ethers.utils.parseEther("0"),
           accountRecoveryModule.interface.encodeFunctionData(
             "resetModuleForCaller",
-            [
-              [
-                fakeGuardian,
-                guardians[1],
-                guardians[2]
-              ],
-            ]
+            [[fakeGuardian, guardians[1], guardians[2]]]
           ),
         ],
         userSA.address,
@@ -3546,7 +3550,7 @@ describe("Account Recovery Module: ", async () => {
       const tx = await entryPoint.handleOps([resetUserOp], alice.address, {
         gasLimit: 10000000,
       });
-      
+
       await expect(tx)
         .to.emit(entryPoint, "UserOperationRevertReason")
         .withArgs(
@@ -3557,9 +3561,10 @@ describe("Account Recovery Module: ", async () => {
         );
 
       // the whole reset request is reverted
-      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(userSA.address);
+      const userSASettings =
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address);
       expect(userSASettings.guardiansCount).to.equal(guardians.length);
-      
+
       for (const guardian of guardians) {
         const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
           guardian,
@@ -3569,5 +3574,4 @@ describe("Account Recovery Module: ", async () => {
       }
     });
   });
-
 });

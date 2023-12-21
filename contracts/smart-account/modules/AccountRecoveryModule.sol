@@ -454,7 +454,10 @@ contract AccountRecoveryModule is
             }
         }
         if (_smartAccountSettings[msg.sender].guardiansCount > 0)
-            revert ResetFailed(msg.sender, _smartAccountSettings[msg.sender].guardiansCount);
+            revert ResetFailed(
+                msg.sender,
+                _smartAccountSettings[msg.sender].guardiansCount
+            );
         delete _smartAccountSettings[msg.sender];
         delete _smartAccountRequests[msg.sender];
         emit ModuleReset(msg.sender);
@@ -558,11 +561,11 @@ contract AccountRecoveryModule is
      * SA.execute => AccRecovery.executeRecovery
      * Decrements recoveries left, and if 0 left, no userOps will be validated by this module
      * It forces user to perform an explicit action:
-     *      - If user wants same guardians to be able to recover the account again, 
+     *      - If user wants same guardians to be able to recover the account again,
      *      they have to call setAllowedRecoveries() => NOT RECOMMENDED
-     *     - If user wants to change guardians, they have to 
+     *     - If user wants to change guardians, they have to
      *          -- remove/replace guardians + adjust threshold + setAllowedRecoveries()
-     *          or 
+     *          or
      *          -- clear all guardians + re-init the module => RECOMMENDED
      * @param to destination address
      * @param value value to send
@@ -574,7 +577,10 @@ contract AccountRecoveryModule is
         bytes calldata data
     ) public {
         delete _smartAccountRequests[msg.sender];
-        emit RecoveriesLeft(msg.sender, --_smartAccountSettings[msg.sender].recoveriesLeft);
+        emit RecoveriesLeft(
+            msg.sender,
+            --_smartAccountSettings[msg.sender].recoveriesLeft
+        );
         (bool success, bytes memory retData) = ISmartAccount(msg.sender)
             .execTransactionFromModuleReturnData(
                 to,
