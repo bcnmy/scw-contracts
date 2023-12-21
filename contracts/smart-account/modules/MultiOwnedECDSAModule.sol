@@ -44,6 +44,7 @@ contract MultiOwnedECDSAModule is
             revert AlreadyInitedForSmartAccount(msg.sender);
         }
         uint256 ownersToAdd = eoaOwners.length;
+        if (ownersToAdd == 0) revert NoOwnersToAdd();
         for (uint256 i; i < ownersToAdd; ) {
             if (eoaOwners[i] == address(0))
                 revert ZeroAddressNotAllowedAsOwner();
@@ -67,7 +68,7 @@ contract MultiOwnedECDSAModule is
         address owner,
         address newOwner
     ) external override {
-        if (_isSmartContract(newOwner)) revert NotEOA(owner);
+        if (_isSmartContract(newOwner)) revert NotEOA(newOwner);
         if (newOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == newOwner)
@@ -96,7 +97,7 @@ contract MultiOwnedECDSAModule is
     function removeOwner(address owner) external override {
         if (!_smartAccountOwners[owner][msg.sender])
             revert NotAnOwner(owner, msg.sender);
-        _transferOwnership(msg.sender, owner, address(0));
+        _smartAccountOwners[owner][msg.sender] = false;
         unchecked {
             --numberOfOwners[msg.sender];
         }
