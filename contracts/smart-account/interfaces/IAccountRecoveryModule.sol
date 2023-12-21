@@ -114,7 +114,18 @@ interface IAccountRecoveryModule {
         uint48 securityDelay
     );
 
+    /**
+     * @dev Emitted when recoveries left have been changed
+     * @param smartAccount address of the Smart Account
+     * @param recoveriesLeft new recoveries allowed
+     */
     event RecoveriesLeft(address indexed smartAccount, uint8 recoveriesLeft);
+
+    /**
+     * @dev Emitted when all the guardians and setting have been reset for the Smart Account
+     * @param smartAccount address of the Smart Account
+     */
+    event ModuleReset(address indexed smartAccount);
 
     /**
      * @dev Thrown if trying to init module for the Smart Account
@@ -212,6 +223,12 @@ interface IAccountRecoveryModule {
      * @param returnData error data
      */
     error RecoveryExecutionFailed(address smartAccount, bytes returnData);
+
+    /**
+     * @dev Thrown if trying to reset module with an incomplete list of guardians
+     * @param guardiansLeft number of guardians that are still set for the Smart Account
+     */
+    error ResetFailed(address smartAccount, uint256 guardiansLeft);
 
     /**
      * @dev Initializes the module for a Smart Account.

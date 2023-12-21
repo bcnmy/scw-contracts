@@ -442,6 +442,24 @@ contract AccountRecoveryModule is
         );
     }
 
+    function resetModuleForCaller(bytes32[] memory guardians) external {
+        uint256 length = guardians.length;
+        for (uint256 i; i < length; ) {
+            bytes32 guardian = guardians[i];
+            if (_guardians[guardian][msg.sender].validUntil == 0)
+                revert GuardianNotSet(guardian, msg.sender);
+            _removeGuardianAndChangeTresholdIfNeeded(guardian, msg.sender);
+            unchecked {
+                ++i;
+            }
+        }
+        if (_smartAccountSettings[msg.sender].guardiansCount > 0)
+            revert ResetFailed(msg.sender, _smartAccountSettings[msg.sender].guardiansCount);
+        delete _smartAccountSettings[msg.sender];
+        delete _smartAccountRequests[msg.sender];
+        emit ModuleReset(msg.sender);
+    }
+
     /**
      * @dev Changes recovery threshold for a Smart Account (msg.sender)
      * Should be called by the Smart Account
@@ -538,6 +556,14 @@ contract AccountRecoveryModule is
      * @dev Executes recovery request for a Smart Account (msg.sender)
      * Should be called by the Smart Account
      * SA.execute => AccRecovery.executeRecovery
+     * Decrements recoveries left, and if 0 left, no userOps will be validated by this module
+     * It forces user to perform an explicit action:
+     *      - If user wants same guardians to be able to recover the account again, 
+     *      they have to call setAllowedRecoveries() => NOT RECOMMENDED
+     *     - If user wants to change guardians, they have to 
+     *          -- remove/replace guardians + adjust threshold + setAllowedRecoveries()
+     *          or 
+     *          -- clear all guardians + re-init the module => RECOMMENDED
      * @param to destination address
      * @param value value to send
      * @param data callData to execute
@@ -548,8 +574,7 @@ contract AccountRecoveryModule is
         bytes calldata data
     ) public {
         delete _smartAccountRequests[msg.sender];
-        _smartAccountSettings[msg.sender].recoveriesLeft--;
-        // if recoveriesLeft == 0, clear all guardians and settings
+        emit RecoveriesLeft(msg.sender, --_smartAccountSettings[msg.sender].recoveriesLeft);
         (bool success, bytes memory retData) = ISmartAccount(msg.sender)
             .execTransactionFromModuleReturnData(
                 to,

@@ -293,5 +293,13 @@ describe("Account Recovery Module (via Bundler)", async () => {
       (await accountRecoveryModule.getSmartAccountSettings(userSA.address))
         .recoveriesLeft
     ).to.equal(defaultRecoveriesAllowed - 1);
+
+    // request should be deleted
+    const recoveryRequestAfter = await accountRecoveryModule.getRecoveryRequest(
+      userSA.address
+    );
+    expect(recoveryRequestAfter.callDataHash).to.equal(
+      ethers.constants.HashZero
+    );
   });
 });

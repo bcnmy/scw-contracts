@@ -22,6 +22,7 @@ import {
 } from "../utils/accountRecovery";
 import { arrayify } from "ethers/lib/utils";
 import { Contract } from "ethers";
+import { error } from "console";
 
 describe("Account Recovery Module: ", async () => {
   const [
@@ -941,11 +942,8 @@ describe("Account Recovery Module: ", async () => {
 
       const recoveryRequestAfter =
         await accountRecoveryModule.getRecoveryRequest(deployer.address);
-      const emptyGuardian = ethers.utils.hexlify(
-        ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32)
-      );
 
-      expect(recoveryRequestAfter.callDataHash).to.equal(emptyGuardian);
+      expect(recoveryRequestAfter.callDataHash).to.equal(ethers.constants.HashZero);
     });
 
     it("Does not revert even if the request for the caller is empty", async () => {
@@ -2021,7 +2019,7 @@ describe("Account Recovery Module: ", async () => {
             [
               // this is wrong calldata btw, as it doesn't use executeRecovery, but it doesn't matter for this test
               ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-                newOwner.address, 
+                newOwner.address,
               ]),
             ]
           ),
@@ -2414,7 +2412,6 @@ describe("Account Recovery Module: ", async () => {
         entryPoint,
         userSA,
         accountRecoveryModule,
-        ecdsaModule,
         controlMessage,
         arrayOfSigners,
         defaultSecurityDelay,
@@ -2427,22 +2424,16 @@ describe("Account Recovery Module: ", async () => {
       const recoveryRequestExecuteParams = [
         accountRecoveryModule.address,
         ethers.utils.parseEther("0"),
-        accountRecoveryModule.interface.encodeFunctionData(
-          "executeRecovery",
-          [
-            userSA.address,
-            ethers.utils.parseEther("0"),
-            userSA.interface.encodeFunctionData(
-              "setupAndEnableModule",
-              [
-                mockValidationModule.address,
-                mockValidationModule.interface.encodeFunctionData("init", [
-                  0xdecaf,
-                ]),
-              ]
-            ),
-          ]
-        ),
+        accountRecoveryModule.interface.encodeFunctionData("executeRecovery", [
+          userSA.address,
+          ethers.utils.parseEther("0"),
+          userSA.interface.encodeFunctionData("setupAndEnableModule", [
+            mockValidationModule.address,
+            mockValidationModule.interface.encodeFunctionData("init", [
+              0xdecaf,
+            ]),
+          ]),
+        ]),
       ];
 
       const recoveryRequestCallData = userSA.interface.encodeFunctionData(
@@ -2489,7 +2480,7 @@ describe("Account Recovery Module: ", async () => {
         alice.address,
         { gasLimit: 10000000 }
       );
-  
+
       expect(
         await userSA.isModuleEnabled(mockValidationModule.address)
       ).to.equal(true);
@@ -2505,7 +2496,7 @@ describe("Account Recovery Module: ", async () => {
         defaultRecoveriesAllowed,
         controlMessage,
         arrayOfSigners,
-        chainId
+        chainId,
       } = await setupTests();
 
       expect(
@@ -2520,7 +2511,7 @@ describe("Account Recovery Module: ", async () => {
         arrayOfSigners,
         controlMessage,
         entryPoint,
-        accountRecoveryModule,
+        accountRecoveryModule
       );
 
       const handleOpsTxn = await entryPoint.handleOps([userOp], alice.address, {
@@ -2565,8 +2556,7 @@ describe("Account Recovery Module: ", async () => {
         refundReceiver.address
       );
 
-      const errorDataInner = 
-      ethers.utils.hexConcat([
+      const errorDataInner = ethers.utils.hexConcat([
         ethers.utils.id("NotEOA(address)").slice(0, 10),
         ethers.utils.hexZeroPad(accountRecoveryModule.address, 32), // add zeros
         ethers.utils.hexZeroPad("0x", 28), // add zeros as bytes are 32*n
@@ -2575,33 +2565,43 @@ describe("Account Recovery Module: ", async () => {
       const errorDataOuter = ethers.utils.hexConcat([
         ethers.utils.id("RecoveryExecutionFailed(address,bytes)").slice(0, 10),
         ethers.utils.hexZeroPad(userSA.address, 32),
-        ethers.utils.hexZeroPad(ethers.utils.hexlify(64), 32), //offset of bytes argument is 64 = 32 bytes for padded address + 32 bytes for offset itself
-        ethers.utils.hexZeroPad(ethers.utils.hexlify(36), 32), //length of inner error Data is 36 = 4 bytes sig + 1 argument padded to 32 bytes
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(64), 32), // offset of bytes argument is 64 = 32 bytes for padded address + 32 bytes for offset itself
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(36), 32), // length of inner error Data is 36 = 4 bytes sig + 1 argument padded to 32 bytes
         errorDataInner,
       ]);
-      
-      //user Op execution is reverted
+
+      // user Op execution is reverted
       await expect(tx)
         .to.emit(entryPoint, "UserOperationRevertReason")
         .withArgs(
-          getUserOpHash(executeRecoveryRequestUserOp, entryPoint.address, chainId),
+          getUserOpHash(
+            executeRecoveryRequestUserOp,
+            entryPoint.address,
+            chainId
+          ),
           executeRecoveryRequestUserOp.sender,
           executeRecoveryRequestUserOp.nonce,
           errorDataOuter
         );
 
-      //request was not executed => owner has not changed
+      // request was not executed => owner has not changed
       expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
         smartAccountOwner.address
       );
-      
-      //recoveries left has not changed
-      const recoveriesLeft = (await accountRecoveryModule.getSmartAccountSettings(userSA.address)).recoveriesLeft;
+
+      // recoveries left has not changed
+      const recoveriesLeft = (
+        await accountRecoveryModule.getSmartAccountSettings(userSA.address)
+      ).recoveriesLeft;
       expect(recoveriesLeft).to.equal(defaultRecoveriesAllowed);
 
-      //request is still there
-      const request = await accountRecoveryModule.getRecoveryRequest(userSA.address);
-      expect(request.callDataHash).to.equal(ethers.utils.keccak256(executeRecoveryRequestUserOp.callData));
+      // request is still there
+      const request = await accountRecoveryModule.getRecoveryRequest(
+        userSA.address
+      );
+      expect(request.callDataHash).to.equal(
+        ethers.utils.keccak256(executeRecoveryRequestUserOp.callData)
+      );
     });
 
     it("The request with invalid calldata for the module reverts userOp execution", async () => {
@@ -2613,7 +2613,7 @@ describe("Account Recovery Module: ", async () => {
         controlMessage,
         arrayOfSigners,
         defaultSecurityDelay,
-        chainId
+        chainId,
       } = await setupTests();
 
       const invalidCallData = "0xdecafdecaf";
@@ -2681,18 +2681,22 @@ describe("Account Recovery Module: ", async () => {
       const errorData = ethers.utils.hexConcat([
         ethers.utils.id("RecoveryExecutionFailed(address,bytes)").slice(0, 10),
         ethers.utils.hexZeroPad(userSA.address, 32),
-        ethers.utils.hexZeroPad(ethers.utils.hexlify(64), 32), //offset of bytes argument is 64 = 32 bytes for padded address + 32 bytes for offset itself
-        ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32), //length of inner error Data is 0 as calldata for the recoverer is completely damaged
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(64), 32), // offset of bytes argument is 64 = 32 bytes for padded address + 32 bytes for offset itself
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 32), // length of inner error Data is 0 as calldata for the recoverer is completely damaged
       ]);
 
       await expect(tx)
-      .to.emit(entryPoint, "UserOperationRevertReason")
-      .withArgs(
-        getUserOpHash(executeRecoveryRequestUserOp, entryPoint.address, chainId),
-        executeRecoveryRequestUserOp.sender,
-        executeRecoveryRequestUserOp.nonce,
-        errorData
-      );
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(
+            executeRecoveryRequestUserOp,
+            entryPoint.address,
+            chainId
+          ),
+          executeRecoveryRequestUserOp.sender,
+          executeRecoveryRequestUserOp.nonce,
+          errorData
+        );
 
       expect(await ecdsaModule.getOwner(userSA.address)).to.equal(
         smartAccountOwner.address
@@ -3368,6 +3372,202 @@ describe("Account Recovery Module: ", async () => {
     });
   });
 
-  // for the execution stage (all methods not related to validateUserOp) custom errors can be used
-  // make the according explanation in the smart contract header
+  describe("setRecoveriesAllowed", async () => {
+    it("Can set recoveries allowed and event is emitted", async () => {
+      const { accountRecoveryModule, defaultRecoveriesAllowed } =
+        await setupTests();
+
+      const newRecoveriesAllowed = defaultRecoveriesAllowed + 1;
+      const setRecoveriesAllowedTxn =
+        await accountRecoveryModule.setAllowedRecoveries(newRecoveriesAllowed);
+      expect(setRecoveriesAllowedTxn)
+        .to.emit(accountRecoveryModule, "RecoveriesLeft")
+        .withArgs(deployer.address, newRecoveriesAllowed);
+      const newRecoveriesAllowedAfter = (
+        await accountRecoveryModule.getSmartAccountSettings(deployer.address)
+      ).recoveriesLeft;
+      expect(newRecoveriesAllowedAfter).to.equal(newRecoveriesAllowed);
+    });
+  });
+
+  describe("resetModuleForCaller", async () => {
+    it("Can reset module for caller and event is emitted", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        guardians
+      } = await setupTests();
+
+      const resetUserOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData(
+            "resetModuleForCaller",
+            [guardians]
+          ),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const handleOpsTxn = await entryPoint.handleOps([resetUserOp], alice.address, {
+        gasLimit: 10000000,
+      });
+
+      expect(handleOpsTxn)
+        .to.emit(accountRecoveryModule, "ModuleReset")
+        .withArgs(userSA.address);
+      
+      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(userSA.address);
+      expect(userSASettings.guardiansCount).to.equal(0);
+      expect(userSASettings.recoveryThreshold).to.equal(0);
+      expect(userSASettings.securityDelay).to.equal(0);
+      expect(userSASettings.recoveriesLeft).to.equal(0);
+
+      for (const guardian of guardians) {
+        const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
+          guardian,
+          userSA.address
+        );
+        expect(guardianTimeFrame.validUntil).to.equal(0);
+        expect(guardianTimeFrame.validAfter).to.equal(0);
+      }
+
+      const recoveryRequest = await accountRecoveryModule.getRecoveryRequest(userSA.address);
+      expect(recoveryRequest.callDataHash).to.equal(ethers.constants.HashZero);
+    });
+
+    it("Reverts if not a complete list of guardians provided", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        guardians,
+        chainId
+      } = await setupTests();
+
+      const resetUserOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData(
+            "resetModuleForCaller",
+            [guardians.slice(1)]
+          ),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("ResetFailed(address,uint256)").slice(0, 10),
+        ethers.utils.hexZeroPad(userSA.address, 32),
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(1), 32),
+      ]);
+
+      const tx = await entryPoint.handleOps([resetUserOp], alice.address, {
+        gasLimit: 10000000,
+      });
+      
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(resetUserOp, entryPoint.address, chainId),
+          resetUserOp.sender,
+          resetUserOp.nonce,
+          errorData
+        );
+
+      // the whole reset request is reverted
+      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(userSA.address);
+      expect(userSASettings.guardiansCount).to.equal(guardians.length);
+      
+      for (const guardian of guardians) {
+        const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
+          guardian,
+          userSA.address
+        );
+        expect(guardianTimeFrame.validUntil).to.not.equal(0);
+      }
+    });
+
+    it("Reverts if one of the guardians provided is not a guardian", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        guardians,
+        chainId
+      } = await setupTests();
+
+      const fakeGuardian= ethers.utils.keccak256(
+        await eve.signMessage(ethers.utils.arrayify("0xdeadbeef"))
+      );
+
+      const resetUserOp = await makeEcdsaModuleUserOp(
+        "execute",
+        [
+          accountRecoveryModule.address,
+          ethers.utils.parseEther("0"),
+          accountRecoveryModule.interface.encodeFunctionData(
+            "resetModuleForCaller",
+            [
+              [
+                fakeGuardian,
+                guardians[1],
+                guardians[2]
+              ],
+            ]
+          ),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address
+      );
+
+      const errorData = ethers.utils.hexConcat([
+        ethers.utils.id("GuardianNotSet(bytes32,address)").slice(0, 10),
+        ethers.utils.hexZeroPad(fakeGuardian, 32),
+        ethers.utils.hexZeroPad(userSA.address, 32),
+      ]);
+
+      const tx = await entryPoint.handleOps([resetUserOp], alice.address, {
+        gasLimit: 10000000,
+      });
+      
+      await expect(tx)
+        .to.emit(entryPoint, "UserOperationRevertReason")
+        .withArgs(
+          getUserOpHash(resetUserOp, entryPoint.address, chainId),
+          resetUserOp.sender,
+          resetUserOp.nonce,
+          errorData
+        );
+
+      // the whole reset request is reverted
+      const userSASettings = await accountRecoveryModule.getSmartAccountSettings(userSA.address);
+      expect(userSASettings.guardiansCount).to.equal(guardians.length);
+      
+      for (const guardian of guardians) {
+        const guardianTimeFrame = await accountRecoveryModule.getGuardianParams(
+          guardian,
+          userSA.address
+        );
+        expect(guardianTimeFrame.validUntil).to.not.equal(0);
+      }
+    });
+  });
+
 });
