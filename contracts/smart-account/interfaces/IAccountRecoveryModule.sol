@@ -114,10 +114,7 @@ interface IAccountRecoveryModule {
         uint48 securityDelay
     );
 
-    event RecoveriesLeft(
-        address indexed smartAccount,
-        uint8 recoveriesLeft
-    );
+    event RecoveriesLeft(address indexed smartAccount, uint8 recoveriesLeft);
 
     /**
      * @dev Thrown if trying to init module for the Smart Account
@@ -214,10 +211,7 @@ interface IAccountRecoveryModule {
      * @param smartAccount address of the Smart Account
      * @param returnData error data
      */
-    error RecoveryExecutionFailed(
-        address smartAccount,
-        bytes returnData
-    );
+    error RecoveryExecutionFailed(address smartAccount, bytes returnData);
 
     /**
      * @dev Initializes the module for a Smart Account.

@@ -132,7 +132,8 @@ contract AccountRecoveryModule is
     ) external virtual returns (uint256) {
         address smartAccount = userOp.sender;
         // even validating userOps not allowed for smartAccounts with 0 recoveries left
-        if(_smartAccountSettings[smartAccount].recoveriesLeft == 0) revert ("AccRecovery: No recoveries left");
+        if (_smartAccountSettings[smartAccount].recoveriesLeft == 0)
+            revert("AccRecovery: No recoveries left");
         // if there is already a request added for this userOp.callData, return validation success
         // to procced with executing the request
         // with validAfter set to the timestamp of the request + securityDelay
@@ -194,8 +195,10 @@ contract AccountRecoveryModule is
             //address sender = userOp.sender;
             bytes32 currentGuardian = keccak256(currentGuardianSig);
 
-            uint48 validAfter = _guardians[currentGuardian][smartAccount].validAfter;
-            uint48 validUntil = _guardians[currentGuardian][smartAccount].validUntil;
+            uint48 validAfter = _guardians[currentGuardian][smartAccount]
+                .validAfter;
+            uint48 validUntil = _guardians[currentGuardian][smartAccount]
+                .validUntil;
 
             // validUntil == 0 means the `currentGuardian` has not been set as guardian
             // for the smartAccount
@@ -246,33 +249,32 @@ contract AccountRecoveryModule is
         assembly {
             innerSelector := mload(add(innerCallData, 0x20))
         }
-        
+
         bool isValidAddingRequestUserOp = (innerSelector ==
             this.submitRecoveryRequest.selector) &&
             (dest == address(this)) &&
             callValue == 0;
-        if(isValidAddingRequestUserOp) {
-            //check this is a request thru executeRecovery
+        if (isValidAddingRequestUserOp) {
+            //check this is a request through SA.execute => this.executeRecovery
             bytes4 expectedExecuteSelector;
             address expectedThisAddress;
             assembly {
                 //32(memory bytes array length) + 4(submitRecoveryRequest selector) + 32(offset) + 32(length)
-                expectedExecuteSelector := mload(add(innerCallData, 0x64)) 
+                expectedExecuteSelector := mload(add(innerCallData, 0x64))
                 expectedThisAddress := mload(add(innerCallData, 0x68))
             }
-            //console.logBytes4(expectedExecuteSelector);
-            //console.logBytes4(this.executeRecovery.selector);
-            //console.log(expectedThisAddress);
-            //console.log(address(this));
-            if(expectedExecuteSelector != EXECUTE_SELECTOR && expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR) {
+            if (
+                expectedExecuteSelector != EXECUTE_SELECTOR &&
+                expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR
+            ) {
                 revert("AccRecovery: WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
             }
-            if(expectedThisAddress != address(this)) {
+            if (expectedThisAddress != address(this)) {
                 revert("AccRecovery: WRR02"); //Wrong Recovery Request 02 = call should be to this contract
             }
             bytes4 expectedExecuteRecoverySelector;
             uint256 executeRecoveryCallDataOffset;
-            
+
             assembly {
                 executeRecoveryCallDataOffset := mload(add(innerCallData, 0xa8))
                 expectedExecuteRecoverySelector := mload(
@@ -285,26 +287,25 @@ contract AccountRecoveryModule is
                                 executeRecoveryCallDataOffset //offset where executeRecovery callData bytes array start
                             ),
                             //skip length
-                            0x20 
-                        ) 
-                        
+                            0x20
+                        )
                     )
-                ) 
+                )
             }
-
-            //console.logBytes4(expectedExecuteRecoverySelector);
-            if(expectedExecuteRecoverySelector != this.executeRecovery.selector) {
+            if (
+                expectedExecuteRecoverySelector != this.executeRecovery.selector
+            ) {
                 revert("AccRecovery: WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
             }
         }
 
-        bool isValidRecoveryExecutionUserOp = (
-            innerSelector == this.executeRecovery.selector &&
+        bool isValidRecoveryExecutionUserOp = (innerSelector ==
+            this.executeRecovery.selector &&
             dest == address(this) &&
-            _smartAccountSettings[smartAccount].securityDelay == 0
-        );
+            _smartAccountSettings[smartAccount].securityDelay == 0);
 
-        if (isValidAddingRequestUserOp != isValidRecoveryExecutionUserOp) {  //exactly one should be true
+        if (isValidAddingRequestUserOp != isValidRecoveryExecutionUserOp) {
+            //exactly one should be true
             return
                 VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
                 (uint256(earliestValidUntil) << 160) |
@@ -541,18 +542,29 @@ contract AccountRecoveryModule is
      * @param value value to send
      * @param data callData to execute
      */
-    function executeRecovery(address to, uint256 value, bytes calldata data) public {
+    function executeRecovery(
+        address to,
+        uint256 value,
+        bytes calldata data
+    ) public {
         delete _smartAccountRequests[msg.sender];
         _smartAccountSettings[msg.sender].recoveriesLeft--;
         // if recoveriesLeft == 0, clear all guardians and settings
-        (bool success, bytes memory retData) = ISmartAccount(msg.sender).execTransactionFromModuleReturnData(
+        (bool success, bytes memory retData) = ISmartAccount(msg.sender)
+            .execTransactionFromModuleReturnData(
+                to,
+                value,
+                data,
+                Enum.Operation.Call
+            );
+        if (!success) revert RecoveryExecutionFailed(msg.sender, retData);
+        emit RecoveryExecuted(
+            msg.sender,
             to,
             value,
             data,
-            Enum.Operation.Call
+            _smartAccountSettings[msg.sender].recoveriesLeft
         );
-        if(!success) revert RecoveryExecutionFailed(msg.sender, retData);
-        emit RecoveryExecuted(msg.sender, to, value, data, _smartAccountSettings[msg.sender].recoveriesLeft);
     }
 
     /**

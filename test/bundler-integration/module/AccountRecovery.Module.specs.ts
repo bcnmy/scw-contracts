@@ -132,7 +132,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
             ],
             3,
             defaultSecurityDelay,
-            defaultRecoveriesAllowed
+            defaultRecoveriesAllowed,
           ]
         );
       const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
@@ -195,16 +195,13 @@ describe("Account Recovery Module (via Bundler)", async () => {
       [
         accountRecoveryModule.address,
         ethers.utils.parseEther("0"),
-        accountRecoveryModule.interface.encodeFunctionData(
-          "executeRecovery",
-          [
-            ecdsaModule.address,
-            ethers.utils.parseEther("0"),
-            ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-              newOwner.address,
-            ]),
-          ]
-        ),
+        accountRecoveryModule.interface.encodeFunctionData("executeRecovery", [
+          ecdsaModule.address,
+          ethers.utils.parseEther("0"),
+          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+            newOwner.address,
+          ]),
+        ]),
       ]
     );
 
@@ -263,16 +260,13 @@ describe("Account Recovery Module (via Bundler)", async () => {
       [
         accountRecoveryModule.address,
         ethers.utils.parseEther("0"),
-        accountRecoveryModule.interface.encodeFunctionData(
-          "executeRecovery",
-          [
-            ecdsaModule.address,
-            ethers.utils.parseEther("0"),
-            ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-              newOwner.address,
-            ]),
-          ]
-        ),
+        accountRecoveryModule.interface.encodeFunctionData("executeRecovery", [
+          ecdsaModule.address,
+          ethers.utils.parseEther("0"),
+          ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+            newOwner.address,
+          ]),
+        ]),
       ],
       userSA.address,
       entryPoint,
@@ -294,6 +288,10 @@ describe("Account Recovery Module (via Bundler)", async () => {
     expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(
       smartAccountOwner.address
     );
-    expect((await accountRecoveryModule.getSmartAccountSettings(userSA.address)).recoveriesLeft).to.equal(defaultRecoveriesAllowed-1);
+    // recovery attempts should be decremented
+    expect(
+      (await accountRecoveryModule.getSmartAccountSettings(userSA.address))
+        .recoveriesLeft
+    ).to.equal(defaultRecoveriesAllowed - 1);
   });
 });

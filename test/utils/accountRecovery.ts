@@ -83,16 +83,14 @@ export async function makeMultisignedSubmitRecoveryRequestUserOp(
     [
       recoveryModule.address,
       ethers.utils.parseEther("0"),
-      recoveryModule.interface.encodeFunctionData("executeRecovery", 
-        [
-          ownershipModule.address,
-          ethers.utils.parseEther("0"),
-          ownershipModule.interface.encodeFunctionData(
-            recoveryMethodName,
-            recoveryMethodParams
-          )
-        ]
-      ),
+      recoveryModule.interface.encodeFunctionData("executeRecovery", [
+        ownershipModule.address,
+        ethers.utils.parseEther("0"),
+        ownershipModule.interface.encodeFunctionData(
+          recoveryMethodName,
+          recoveryMethodParams
+        ),
+      ]),
     ]
   );
 
