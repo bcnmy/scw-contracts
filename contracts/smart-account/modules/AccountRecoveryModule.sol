@@ -5,6 +5,10 @@ import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IAccountRecoveryModule} from "../interfaces/IAccountRecoveryModule.sol";
+import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
+import {Enum} from "../common/Enum.sol";
+
+import "hardhat/console.sol";
 
 /**
  * @title Account Recovery module for Biconomy Smart Accounts.
@@ -72,7 +76,8 @@ contract AccountRecoveryModule is
         bytes32[] calldata guardians,
         TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
-        uint24 securityDelay
+        uint24 securityDelay,
+        uint8 recoveriesAllowed
     ) external returns (address) {
         uint256 length = guardians.length;
         if (_smartAccountSettings[msg.sender].guardiansCount > 0)
@@ -80,11 +85,13 @@ contract AccountRecoveryModule is
         if (recoveryThreshold > length)
             revert ThresholdTooHigh(recoveryThreshold, length);
         if (recoveryThreshold == 0) revert ZeroThreshold();
+        if (recoveriesAllowed == 0) revert ZeroAllowedRecoveries();
         if (length != timeFrames.length) revert InvalidAmountOfGuardianParams();
         _smartAccountSettings[msg.sender] = SaSettings(
             uint8(length),
             recoveryThreshold,
-            securityDelay
+            securityDelay,
+            recoveriesAllowed
         );
         for (uint256 i; i < length; ) {
             if (guardians[i] == bytes32(0)) revert ZeroGuardian();
@@ -123,18 +130,20 @@ contract AccountRecoveryModule is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256) {
+        address smartAccount = userOp.sender;
+        // even validating userOps not allowed for smartAccounts with 0 recoveries left
+        if(_smartAccountSettings[smartAccount].recoveriesLeft == 0) revert ("AccRecovery: No recoveries left");
         // if there is already a request added for this userOp.callData, return validation success
         // to procced with executing the request
         // with validAfter set to the timestamp of the request + securityDelay
         // so that the request execution userOp can be validated only after the delay
         if (
             keccak256(userOp.callData) ==
-            _smartAccountRequests[msg.sender].callDataHash
+            _smartAccountRequests[smartAccount].callDataHash
         ) {
-            uint48 reqValidAfter = _smartAccountRequests[msg.sender]
+            uint48 reqValidAfter = _smartAccountRequests[smartAccount]
                 .requestTimestamp +
-                _smartAccountSettings[msg.sender].securityDelay;
-            delete _smartAccountRequests[msg.sender];
+                _smartAccountSettings[smartAccount].securityDelay;
             return
                 VALIDATION_SUCCESS |
                 (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
@@ -142,7 +151,7 @@ contract AccountRecoveryModule is
         }
 
         // otherwise we need to check all the signatures first
-        uint256 requiredSignatures = _smartAccountSettings[userOp.sender]
+        uint256 requiredSignatures = _smartAccountSettings[smartAccount]
             .recoveryThreshold;
         if (requiredSignatures == 0) revert("AccRecovery: Threshold not set");
 
@@ -174,7 +183,7 @@ contract AccountRecoveryModule is
                     2) * 65];
 
                 currentGuardianAddress = keccak256(
-                    abi.encodePacked(CONTROL_MESSAGE, userOp.sender)
+                    abi.encodePacked(CONTROL_MESSAGE, smartAccount)
                 ).toEthSignedMessageHash().recover(currentGuardianSig);
 
                 if (currentUserOpSignerAddress != currentGuardianAddress) {
@@ -182,14 +191,14 @@ contract AccountRecoveryModule is
                 }
             }
 
-            address sender = userOp.sender;
+            //address sender = userOp.sender;
             bytes32 currentGuardian = keccak256(currentGuardianSig);
 
-            uint48 validAfter = _guardians[currentGuardian][sender].validAfter;
-            uint48 validUntil = _guardians[currentGuardian][sender].validUntil;
+            uint48 validAfter = _guardians[currentGuardian][smartAccount].validAfter;
+            uint48 validUntil = _guardians[currentGuardian][smartAccount].validUntil;
 
             // validUntil == 0 means the `currentGuardian` has not been set as guardian
-            // for the userOp.sender smartAccount
+            // for the smartAccount
             // validUntil can never be 0 as it is set to type(uint48).max in initForSmartAccount
             if (validUntil == 0) {
                 return SIG_VALIDATION_FAILED;
@@ -232,18 +241,70 @@ contract AccountRecoveryModule is
                 userOp.callData[4:], // skip selector
                 (address, uint256, bytes)
             );
+        //console.logBytes(innerCallData);
         bytes4 innerSelector;
         assembly {
             innerSelector := mload(add(innerCallData, 0x20))
         }
+        
         bool isValidAddingRequestUserOp = (innerSelector ==
             this.submitRecoveryRequest.selector) &&
             (dest == address(this)) &&
             callValue == 0;
-        if (
-            isValidAddingRequestUserOp != //this a userOp to submit Recovery Request
-            (_smartAccountSettings[msg.sender].securityDelay == 0) //securityDelay is 0,
-        ) {
+        if(isValidAddingRequestUserOp) {
+            //check this is a request thru executeRecovery
+            bytes4 expectedExecuteSelector;
+            address expectedThisAddress;
+            assembly {
+                //32(memory bytes array length) + 4(submitRecoveryRequest selector) + 32(offset) + 32(length)
+                expectedExecuteSelector := mload(add(innerCallData, 0x64)) 
+                expectedThisAddress := mload(add(innerCallData, 0x68))
+            }
+            //console.logBytes4(expectedExecuteSelector);
+            //console.logBytes4(this.executeRecovery.selector);
+            //console.log(expectedThisAddress);
+            //console.log(address(this));
+            if(expectedExecuteSelector != EXECUTE_SELECTOR && expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR) {
+                revert("AccRecovery: WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
+            }
+            if(expectedThisAddress != address(this)) {
+                revert("AccRecovery: WRR02"); //Wrong Recovery Request 02 = call should be to this contract
+            }
+            bytes4 expectedExecuteRecoverySelector;
+            uint256 executeRecoveryCallDataOffset;
+            
+            assembly {
+                executeRecoveryCallDataOffset := mload(add(innerCallData, 0xa8))
+                expectedExecuteRecoverySelector := mload(
+                    add(
+                        innerCallData,
+                        add(
+                            //executeRecovery callData start position
+                            add(
+                                0x68, //position where execute() arguments start
+                                executeRecoveryCallDataOffset //offset where executeRecovery callData bytes array start
+                            ),
+                            //skip length
+                            0x20 
+                        ) 
+                        
+                    )
+                ) 
+            }
+
+            //console.logBytes4(expectedExecuteRecoverySelector);
+            if(expectedExecuteRecoverySelector != this.executeRecovery.selector) {
+                revert("AccRecovery: WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
+            }
+        }
+
+        bool isValidRecoveryExecutionUserOp = (
+            innerSelector == this.executeRecovery.selector &&
+            dest == address(this) &&
+            _smartAccountSettings[smartAccount].securityDelay == 0
+        );
+
+        if (isValidAddingRequestUserOp != isValidRecoveryExecutionUserOp) {  //exactly one should be true
             return
                 VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
                 (uint256(earliestValidUntil) << 160) |
@@ -251,8 +312,8 @@ contract AccountRecoveryModule is
         } else {
             // a) if both conditions are true, it makes no sense, as with the 0 delay, there's no need to submit a
             // request, as request can be immediately executed in the execution phase of userOp handling
-            // b) if non of the conditions are met, this means userOp is not for submitting a new request which is
-            // only allowed with when the securityDelay is non 0
+            // b) if none of the conditions are met, this means userOp is not for submitting a new request which only makes sense for
+            // immediate executions
             // not using custom error here because of how EntryPoint handles the revert data for the validation failure
             revert("AccRecovery: Wrong userOp");
         }
@@ -407,6 +468,16 @@ contract AccountRecoveryModule is
     }
 
     /**
+     * @dev Changes how many allowed recoveries left for a Smart Account (msg.sender)
+     * Should be called by the Smart Account
+     * @param allowedRecoveries new security delay
+     */
+    function setAllowedRecoveries(uint8 allowedRecoveries) external {
+        _smartAccountSettings[msg.sender].recoveriesLeft = allowedRecoveries;
+        emit RecoveriesLeft(msg.sender, allowedRecoveries);
+    }
+
+    /**
      * @dev Returns guardian validity timeframes for the Smart Account
      * @param guardian guardian to get params for
      * @param smartAccount smartAccount to get params for
@@ -460,6 +531,28 @@ contract AccountRecoveryModule is
             uint48(block.timestamp)
         );
         emit RecoveryRequestSubmitted(msg.sender, recoveryCallData);
+    }
+
+    /**
+     * @dev Executes recovery request for a Smart Account (msg.sender)
+     * Should be called by the Smart Account
+     * SA.execute => AccRecovery.executeRecovery
+     * @param to destination address
+     * @param value value to send
+     * @param data callData to execute
+     */
+    function executeRecovery(address to, uint256 value, bytes calldata data) public {
+        delete _smartAccountRequests[msg.sender];
+        _smartAccountSettings[msg.sender].recoveriesLeft--;
+        // if recoveriesLeft == 0, clear all guardians and settings
+        (bool success, bytes memory retData) = ISmartAccount(msg.sender).execTransactionFromModuleReturnData(
+            to,
+            value,
+            data,
+            Enum.Operation.Call
+        );
+        if(!success) revert RecoveryExecutionFailed(msg.sender, retData);
+        emit RecoveryExecuted(msg.sender, to, value, data, _smartAccountSettings[msg.sender].recoveriesLeft);
     }
 
     /**

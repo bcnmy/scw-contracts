@@ -100,12 +100,13 @@ describe("Account Recovery Module (via Bundler)", async () => {
       });
       await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-      // deploy Social Recovery Module
+      // deploy Recovery Module
       const accountRecoveryModule = await (
         await ethers.getContractFactory("AccountRecoveryModule")
       ).deploy("0xb61d27f6", "0x0000189a");
 
       const defaultSecurityDelay = 15;
+      const defaultRecoveriesAllowed = 5;
 
       const messageHashBytes = ethers.utils.arrayify(
         makeHashToGetGuardianId(controlMessage, userSA.address)
@@ -131,6 +132,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
             ],
             3,
             defaultSecurityDelay,
+            defaultRecoveriesAllowed
           ]
         );
       const setupAndEnableUserOp = await makeEcdsaModuleUserOp(
@@ -160,6 +162,7 @@ describe("Account Recovery Module (via Bundler)", async () => {
         userSA: userSA,
         accountRecoveryModule: accountRecoveryModule,
         defaultSecurityDelay: defaultSecurityDelay,
+        defaultRecoveriesAllowed: defaultRecoveriesAllowed,
         controlMessage: controlMessage,
       };
     }
@@ -172,18 +175,13 @@ describe("Account Recovery Module (via Bundler)", async () => {
   it("Can submit a recovery request and execute it after a proper delay", async () => {
     const {
       entryPoint,
-      mockToken,
       userSA,
       accountRecoveryModule,
       ecdsaModule,
       defaultSecurityDelay,
+      defaultRecoveriesAllowed,
       controlMessage,
     } = await setupTests();
-
-    const charlieTokenBalanceBefore = await mockToken.balanceOf(
-      charlie.address
-    );
-    const tokenAmountToTransfer = ethers.utils.parseEther("0.5345");
 
     const arrayOfSigners = [alice, bob, charlie];
     arrayOfSigners.sort((a, b) => a.address.localeCompare(b.address));
@@ -195,11 +193,18 @@ describe("Account Recovery Module (via Bundler)", async () => {
     const recoveryRequestCallData = userSA.interface.encodeFunctionData(
       "execute",
       [
-        ecdsaModule.address,
+        accountRecoveryModule.address,
         ethers.utils.parseEther("0"),
-        ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-          newOwner.address,
-        ]),
+        accountRecoveryModule.interface.encodeFunctionData(
+          "executeRecovery",
+          [
+            ecdsaModule.address,
+            ethers.utils.parseEther("0"),
+            ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+              newOwner.address,
+            ]),
+          ]
+        ),
       ]
     );
 
@@ -239,7 +244,9 @@ describe("Account Recovery Module (via Bundler)", async () => {
       smartAccountOwner.address
     );
 
-    // THIS IS NOT POSSIBLE YET
+    console.log("Recovery Request Submitted");
+
+    // THIS IS NOT POSSIBLE YET IN A BUNDLER ENVIRONMENT
     // await ethers.provider.send("evm_increaseTime", [defaultSecurityDelay + 12]);
     // await ethers.provider.send("evm_mine", []);
 
@@ -254,11 +261,18 @@ describe("Account Recovery Module (via Bundler)", async () => {
     const executeRecoveryRequestUserOp = await makeUnsignedUserOp(
       "execute",
       [
-        ecdsaModule.address,
+        accountRecoveryModule.address,
         ethers.utils.parseEther("0"),
-        ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-          newOwner.address,
-        ]),
+        accountRecoveryModule.interface.encodeFunctionData(
+          "executeRecovery",
+          [
+            ecdsaModule.address,
+            ethers.utils.parseEther("0"),
+            ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+              newOwner.address,
+            ]),
+          ]
+        ),
       ],
       userSA.address,
       entryPoint,
@@ -280,5 +294,6 @@ describe("Account Recovery Module (via Bundler)", async () => {
     expect(await ecdsaModule.getOwner(userSA.address)).to.not.equal(
       smartAccountOwner.address
     );
+    expect((await accountRecoveryModule.getSmartAccountSettings(userSA.address)).recoveriesLeft).to.equal(defaultRecoveriesAllowed-1);
   });
 });

@@ -21,6 +21,7 @@ interface IAccountRecoveryModule {
         uint8 guardiansCount;
         uint8 recoveryThreshold;
         uint24 securityDelay;
+        uint8 recoveriesLeft;
     }
 
     /**
@@ -32,6 +33,22 @@ interface IAccountRecoveryModule {
         bytes32 callDataHash;
         uint48 requestTimestamp;
     }
+
+    /**
+     * @dev Emitted when a recovery request is executed
+     * @param smartAccount address of the Smart Account
+     * @param recoverer module address that executed the recovery request
+     * @param recoveryCallValue value that was sent with the recovery request
+     * @param recoveryCallData calldata that was executed to recover the account
+     * @param recoveriesLeft number of recoveries left
+     */
+    event RecoveryExecuted(
+        address indexed smartAccount,
+        address recoverer,
+        uint256 recoveryCallValue,
+        bytes recoveryCallData,
+        uint8 recoveriesLeft
+    );
 
     /**
      * @dev Emitted when a recovery request is submitted
@@ -97,6 +114,11 @@ interface IAccountRecoveryModule {
         uint48 securityDelay
     );
 
+    event RecoveriesLeft(
+        address indexed smartAccount,
+        uint8 recoveriesLeft
+    );
+
     /**
      * @dev Thrown if trying to init module for the Smart Account
      * but it has already been initialized
@@ -150,6 +172,11 @@ interface IAccountRecoveryModule {
     error ZeroThreshold();
 
     /**
+     * @dev Thrown if trying to set zero allowed recoveries
+     */
+    error ZeroAllowedRecoveries();
+
+    /**
      * @dev Thrown if not enough or too many params provided
      */
     error InvalidAmountOfGuardianParams();
@@ -183,6 +210,16 @@ interface IAccountRecoveryModule {
     );
 
     /**
+     * @dev Thrown when recovery execution failed
+     * @param smartAccount address of the Smart Account
+     * @param returnData error data
+     */
+    error RecoveryExecutionFailed(
+        address smartAccount,
+        bytes returnData
+    );
+
+    /**
      * @dev Initializes the module for a Smart Account.
      * Can only be used at a time of first enabling the module for a Smart Account.
      * @param guardians the list of guardians
@@ -197,7 +234,8 @@ interface IAccountRecoveryModule {
         bytes32[] calldata guardians,
         TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
-        uint24 securityDelay
+        uint24 securityDelay,
+        uint8 recoveriesAllowed
     ) external returns (address);
 
     /**

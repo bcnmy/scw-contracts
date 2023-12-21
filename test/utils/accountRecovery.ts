@@ -81,11 +81,17 @@ export async function makeMultisignedSubmitRecoveryRequestUserOp(
   const recoveryRequestCallData = SmartAccount.interface.encodeFunctionData(
     "execute",
     [
-      ownershipModule.address,
+      recoveryModule.address,
       ethers.utils.parseEther("0"),
-      ownershipModule.interface.encodeFunctionData(
-        recoveryMethodName,
-        recoveryMethodParams
+      recoveryModule.interface.encodeFunctionData("executeRecovery", 
+        [
+          ownershipModule.address,
+          ethers.utils.parseEther("0"),
+          ownershipModule.interface.encodeFunctionData(
+            recoveryMethodName,
+            recoveryMethodParams
+          )
+        ]
       ),
     ]
   );
