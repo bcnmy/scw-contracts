@@ -115,6 +115,11 @@ const config: HardhatUserConfig = {
       chainId: 5,
       accounts: hardhatAccounts,
     },
+    sepolia: {
+      url: process.env.SEPOLIA_URL || "",
+      chainId: 11155111,
+      accounts: hardhatAccounts,
+    },
     polygon_mainnet: {
       url: process.env.POLYGON_URL || "",
       chainId: 137,
@@ -348,6 +353,7 @@ const config: HardhatUserConfig = {
     apiKey: {
       mainnet: process.env.ETHERSCAN_API_KEY || "",
       goerli: process.env.ETHERSCAN_API_KEY || "",
+      sepolia: process.env.ETHERSCAN_API_KEY || "",
       polygonMumbai: process.env.POLYGONSCAN_API_KEY || "",
       polygon: process.env.POLYGONSCAN_API_KEY || "",
       bscTestnet: process.env.BSCSCAN_API_KEY || "",

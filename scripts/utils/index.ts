@@ -94,6 +94,10 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
     maxPriorityFeePerGas: parseUnits("1", "gwei"),
     maxFeePerGas: parseUnits("100", "gwei"),
   },
+  11155111: {
+    maxPriorityFeePerGas: parseUnits("2", "gwei"),
+    maxFeePerGas: parseUnits("10", "gwei"),
+  },
   421613: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
@@ -198,6 +202,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   5: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  11155111: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -357,6 +365,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   5: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  11155111: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },

@@ -87,10 +87,10 @@ export async function deployGeneric(
         deployerInstance
       );
     } else {
-      /*await run("verify:verify", {
+      /* await run("verify:verify", {
         address: computedAddress,
         constructorArguments,
-      });*/
+      }); */
       console.log(
         `${contractName} is Already deployed with address ${computedAddress}`
       );
