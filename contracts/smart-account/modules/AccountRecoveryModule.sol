@@ -114,6 +114,18 @@ contract AccountRecoveryModule is
         return address(this);
     }
 
+    function _validatePreSubmittedRequestExecution(
+        address smartAccount
+    ) internal view returns (uint256) {
+        uint48 reqValidAfter = _smartAccountRequests[smartAccount]
+            .requestTimestamp +
+            _smartAccountSettings[smartAccount].securityDelay;
+        return
+            VALIDATION_SUCCESS |
+            (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
+            (uint256(reqValidAfter) << (160 + 48));
+    }
+
     /**
      * @dev validates userOps to submit and execute recovery requests
      *     - if securityDelay is 0, it allows to execute the request immediately
@@ -139,15 +151,7 @@ contract AccountRecoveryModule is
         if (
             keccak256(userOp.callData) ==
             _smartAccountRequests[smartAccount].callDataHash
-        ) {
-            uint48 reqValidAfter = _smartAccountRequests[smartAccount]
-                .requestTimestamp +
-                _smartAccountSettings[smartAccount].securityDelay;
-            return
-                VALIDATION_SUCCESS |
-                (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
-                (uint256(reqValidAfter) << (160 + 48));
-        }
+        ) return _validatePreSubmittedRequestExecution(smartAccount);
 
         // otherwise we need to check all the signatures first
         uint256 requiredSignatures = _smartAccountSettings[smartAccount]
