@@ -114,12 +114,6 @@ contract AccountRecoveryModule is
         return address(this);
     }
 
-    function _validateGuardiansSignatures(
-        address smartAccount,
-        bytes calldata moduleSignature,
-        bytes32 userOpHash
-    ) internal view returns (uint256) {}
-
     /**
      * @dev validates userOps to submit and execute recovery requests
      *     - if securityDelay is 0, it allows to execute the request immediately
@@ -138,102 +132,17 @@ contract AccountRecoveryModule is
         // even validating userOps not allowed for smartAccounts with 0 recoveries left
         if (_smartAccountSettings[smartAccount].recoveriesLeft == 0)
             revert("AccRecovery: No recoveries left");
-        // if there is already a request added for this userOp.callData, return validation success
-        // to procced with executing the request
-        // with validAfter set to the timestamp of the request + securityDelay
-        // so that the request execution userOp can be validated only after the delay
+
+        // if there is already a request added for this userOp.callData, return validation data
         if (
             keccak256(userOp.callData) ==
             _smartAccountRequests[smartAccount].callDataHash
         ) return _validatePreSubmittedRequestExecution(smartAccount);
 
-        // otherwise we need to check all the signatures first
-        uint256 requiredSignatures = _smartAccountSettings[smartAccount]
-            .recoveryThreshold;
-        if (requiredSignatures == 0) revert("AccRecovery: Threshold not set");
-
-        bytes calldata moduleSignature = userOp.signature[96:];
-
-        require(
-            moduleSignature.length >= requiredSignatures * 2 * 65,
-            "AccRecovery: Invalid Sigs Length"
-        );
-
-        address lastGuardianAddress;
-        address currentGuardianAddress;
-        bytes memory currentGuardianSig;
-        uint48 latestValidAfter;
-        uint48 earliestValidUntil = type(uint48).max;
-        bytes32 userOpHashSigned = userOpHash.toEthSignedMessageHash();
-
-        for (uint256 i; i < requiredSignatures; ) {
-            {
-                // even indexed signatures are signatures over userOpHash
-                // every signature is 65 bytes long and they are packed into moduleSignature
-                address currentUserOpSignerAddress = userOpHashSigned.recover(
-                    moduleSignature[2 * i * 65:(2 * i + 1) * 65]
-                );
-
-                // odd indexed signatures are signatures over CONTROL_HASH used to calculate guardian id
-                currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 *
-                    i +
-                    2) * 65];
-
-                currentGuardianAddress = keccak256(
-                    abi.encodePacked(CONTROL_MESSAGE, smartAccount)
-                ).toEthSignedMessageHash().recover(currentGuardianSig);
-
-                if (currentUserOpSignerAddress != currentGuardianAddress) {
-                    return SIG_VALIDATION_FAILED;
-                }
-            }
-
-            bytes32 currentGuardian = keccak256(currentGuardianSig);
-
-            /* uint48 validAfter = _guardians[currentGuardian][smartAccount]
-                .validAfter;
-            uint48 validUntil = _guardians[currentGuardian][smartAccount]
-                .validUntil; */
-
-            (uint48 validAfter, uint48 validUntil) = (
-                _guardians[currentGuardian][smartAccount].validAfter,
-                _guardians[currentGuardian][smartAccount].validUntil
-            );
-
-            // validUntil == 0 means the `currentGuardian` has not been set as guardian
-            // for the smartAccount
-            // validUntil can never be 0 as it is set to type(uint48).max in initForSmartAccount
-            if (validUntil == 0) {
-                return SIG_VALIDATION_FAILED;
-            }
-
-            // gas efficient way to ensure all guardians are unique
-            // requires from dapp to sort signatures before packing them into bytes
-            if (currentGuardianAddress <= lastGuardianAddress)
-                revert("AccRecovery: NotUnique/BadOrder");
-
-            // detect the common validity window for all the guardians
-            // if at least one guardian is not valid yet or expired
-            // the whole userOp will be invalidated at the EntryPoint
-            if (validUntil < earliestValidUntil) {
-                earliestValidUntil = validUntil;
-            }
-            if (validAfter > latestValidAfter) {
-                latestValidAfter = validAfter;
-            }
-            lastGuardianAddress = currentGuardianAddress;
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        // if all the signatures are ok, we need to check if it is a new recovery request
+        // Check if it is a userOp to submit a request or to immediately execute the request
         // anything except adding a new request to this module is allowed only if securityDelay is 0
         // which means user explicitly allowed to execute an operation immediately
-        // userOp.callData expected to be the calldata of the default execution function
-        // in this case execute(address dest, uint256 value, bytes calldata data);
-        // where `data` is the submitRecoveryRequest() method calldata
+        // guardians signatures are also validated at this point
         if (
             bytes4(userOp.callData[0:4]) != EXECUTE_OPTIMIZED_SELECTOR &&
             bytes4(userOp.callData[0:4]) != EXECUTE_SELECTOR
@@ -264,14 +173,12 @@ contract AccountRecoveryModule is
         if (isValidAddingRequestUserOp != isValidRecoveryExecutionUserOp) {
             //exactly one should be true
             return
-                VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
-                (uint256(earliestValidUntil) << 160) |
-                (uint256(latestValidAfter) << (160 + 48));
+                _validateGuardiansSignatures(
+                    smartAccount,
+                    userOp.signature[96:],
+                    userOpHash
+                );
         } else {
-            // a) if both conditions are true, it makes no sense, as with the 0 delay, there's no need to submit a
-            // request, as request can be immediately executed in the execution phase of userOp handling
-            // b) if none of the conditions are met, this means userOp is not for submitting a new request which only makes sense for
-            // immediate executions
             // not using custom error here because of how EntryPoint handles the revert data for the validation failure
             revert("AccRecovery: Wrong userOp");
         }
@@ -586,9 +493,36 @@ contract AccountRecoveryModule is
     }
 
     /**
+     * @dev Internal method to remove guardian and adjust threshold if needed
+     * It is needed when after removing guardian, the threshold becomes higher than
+     * the number of guardians
+     * @param guardian guardian to remove
+     * @param smartAccount smartAccount to remove guardian from
+     */
+    function _removeGuardianAndChangeTresholdIfNeeded(
+        bytes32 guardian,
+        address smartAccount
+    ) internal {
+        delete _guardians[guardian][smartAccount];
+        --_smartAccountSettings[smartAccount].guardiansCount;
+        emit GuardianRemoved(smartAccount, guardian);
+        // if number of guardians became less than threshold, lower the threshold
+        if (
+            _smartAccountSettings[smartAccount].guardiansCount <
+            _smartAccountSettings[smartAccount].recoveryThreshold
+        ) {
+            _smartAccountSettings[smartAccount].recoveryThreshold--;
+            emit ThresholdChanged(
+                smartAccount,
+                _smartAccountSettings[smartAccount].recoveryThreshold
+            );
+        }
+    }
+
+    /**
      * @dev Returns validation data based on the timestamp
      * when the request becomes valid
-     * So the validAfter of the return (validation data) is the 
+     * So the validAfter of the return (validation data) is the
      * timestamp of the request submission + securityDelay
      * So the request can be executed only after the security delay
      * @param smartAccount Smart Account being recovered
@@ -655,30 +589,93 @@ contract AccountRecoveryModule is
     }
 
     /**
-     * @dev Internal method to remove guardian and adjust threshold if needed
-     * It is needed when after removing guardian, the threshold becomes higher than
-     * the number of guardians
-     * @param guardian guardian to remove
-     * @param smartAccount smartAccount to remove guardian from
+     * @dev Validates guardians signatures
+     * @param smartAccount Smart Account being recovered
+     * @param moduleSignature cleaned signature
+     * @param userOpHash hash of the userOp
+     * @return validation data (sig validation result + validUntil + validAfter)
      */
-    function _removeGuardianAndChangeTresholdIfNeeded(
-        bytes32 guardian,
-        address smartAccount
-    ) internal {
-        delete _guardians[guardian][smartAccount];
-        --_smartAccountSettings[smartAccount].guardiansCount;
-        emit GuardianRemoved(smartAccount, guardian);
-        // if number of guardians became less than threshold, lower the threshold
-        if (
-            _smartAccountSettings[smartAccount].guardiansCount <
-            _smartAccountSettings[smartAccount].recoveryThreshold
-        ) {
-            _smartAccountSettings[smartAccount].recoveryThreshold--;
-            emit ThresholdChanged(
-                smartAccount,
-                _smartAccountSettings[smartAccount].recoveryThreshold
+    function _validateGuardiansSignatures(
+        address smartAccount,
+        bytes calldata moduleSignature,
+        bytes32 userOpHash
+    ) internal view returns (uint256) {
+        uint256 requiredSignatures = _smartAccountSettings[smartAccount]
+            .recoveryThreshold;
+        if (requiredSignatures == 0) revert("AccRecovery: Threshold not set");
+
+        require(
+            moduleSignature.length >= requiredSignatures * 2 * 65,
+            "AccRecovery: Invalid Sigs Length"
+        );
+
+        address lastGuardianAddress;
+        address currentGuardianAddress;
+        bytes memory currentGuardianSig;
+        uint48 latestValidAfter;
+        uint48 earliestValidUntil = type(uint48).max;
+        bytes32 userOpHashSigned = userOpHash.toEthSignedMessageHash();
+
+        for (uint256 i; i < requiredSignatures; ) {
+            {
+                // even indexed signatures are signatures over userOpHash
+                // every signature is 65 bytes long and they are packed into moduleSignature
+                address currentUserOpSignerAddress = userOpHashSigned.recover(
+                    moduleSignature[2 * i * 65:(2 * i + 1) * 65]
+                );
+
+                // odd indexed signatures are signatures over CONTROL_HASH used to calculate guardian id
+                currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 *
+                    i +
+                    2) * 65];
+
+                currentGuardianAddress = keccak256(
+                    abi.encodePacked(CONTROL_MESSAGE, smartAccount)
+                ).toEthSignedMessageHash().recover(currentGuardianSig);
+
+                if (currentUserOpSignerAddress != currentGuardianAddress) {
+                    return SIG_VALIDATION_FAILED;
+                }
+            }
+
+            bytes32 currentGuardian = keccak256(currentGuardianSig);
+
+            (uint48 validAfter, uint48 validUntil) = (
+                _guardians[currentGuardian][smartAccount].validAfter,
+                _guardians[currentGuardian][smartAccount].validUntil
             );
+
+            // validUntil == 0 means the `currentGuardian` has not been set as guardian
+            // for the smartAccount
+            // validUntil can never be 0 as it is set to type(uint48).max in initForSmartAccount
+            if (validUntil == 0) {
+                return SIG_VALIDATION_FAILED;
+            }
+
+            // gas efficient way to ensure all guardians are unique
+            // requires from dapp to sort signatures before packing them into bytes
+            if (currentGuardianAddress <= lastGuardianAddress)
+                revert("AccRecovery: NotUnique/BadOrder");
+
+            // detect the common validity window for all the guardians
+            // if at least one guardian is not valid yet or expired
+            // the whole userOp will be invalidated at the EntryPoint
+            if (validUntil < earliestValidUntil) {
+                earliestValidUntil = validUntil;
+            }
+            if (validAfter > latestValidAfter) {
+                latestValidAfter = validAfter;
+            }
+            lastGuardianAddress = currentGuardianAddress;
+
+            unchecked {
+                ++i;
+            }
         }
+        return
+            VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
+            (uint256(earliestValidUntil) << 160) |
+            (uint256(latestValidAfter) << (160 + 48));
     }
 
     /**

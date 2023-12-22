@@ -1338,11 +1338,12 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length"); // fails as signatures.length is 0 and thus less than required
-      // because when there's no submitted request (it was deleted after the first execution), the validation goes to the branch with checking sigs
-      // - even if the userOp would be properly signed, it would fail as security delay is > 0, and the userOp is not
-      //   to submit a request. See the appropriate test case below in the 'ValidateUserOp' section
-      // - if security delay is 0, see the next negative test.Aas it doesn't require submitting a request when security delay is 0
+        .withArgs(0, "AA23 reverted: AccRecovery: Wrong userOp");
+      // when there's no submitted request (it was deleted after the first execution), the validation goes to the branch with checking
+      // if this is a valid userOp for:
+      // - adding the recovery request (which is not the case)
+      // - executing the recovery request when security delay is 0 (which is not the case)
+      // Thus it reverts with the 'Wrong userOp' error message
     });
 
     // when the delay is 0, the properly signed userOp to execute the request can not be validated twice (unless it was re-signed)
@@ -1886,7 +1887,9 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length"); // it doesn't find the request and tries to verify sigs then
+        .withArgs(0, "AA23 reverted: AccRecovery: Wrong userOp");
+      // it doesn't find the request so userOp should be to add one or security delay should be 0
+      // since nonce of this is true, it reverts with the 'Wrong userOp' error message
     });
 
     it("Should revert if the recovery threshold is 0", async () => {
@@ -2019,9 +2022,20 @@ describe("Account Recovery Module: ", async () => {
           accountRecoveryModule.interface.encodeFunctionData(
             "submitRecoveryRequest",
             [
-              // this is wrong calldata btw, as it doesn't use executeRecovery, but it doesn't matter for this test
-              ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-                newOwner.address,
+              userSA.interface.encodeFunctionData("execute", [
+                accountRecoveryModule.address,
+                ethers.utils.parseEther("0"),
+                accountRecoveryModule.interface.encodeFunctionData(
+                  "executeRecovery",
+                  [
+                    ecdsaModule.address,
+                    ethers.utils.parseEther("0"),
+                    ecdsaModule.interface.encodeFunctionData(
+                      "transferOwnership",
+                      [newOwner.address]
+                    ),
+                  ]
+                ),
               ]),
             ]
           ),
@@ -2266,9 +2280,20 @@ describe("Account Recovery Module: ", async () => {
           accountRecoveryModule.interface.encodeFunctionData(
             "submitRecoveryRequest",
             [
-              // this is wrong calldata btw, as it doesn't use executeRecovery, but it doesn't matter for this test
-              ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-                newOwner.address,
+              userSA.interface.encodeFunctionData("execute", [
+                accountRecoveryModule.address,
+                ethers.utils.parseEther("0"),
+                accountRecoveryModule.interface.encodeFunctionData(
+                  "executeRecovery",
+                  [
+                    ecdsaModule.address,
+                    ethers.utils.parseEther("0"),
+                    ecdsaModule.interface.encodeFunctionData(
+                      "transferOwnership",
+                      [newOwner.address]
+                    ),
+                  ]
+                ),
               ]),
             ]
           ),
@@ -2327,9 +2352,20 @@ describe("Account Recovery Module: ", async () => {
           accountRecoveryModule.interface.encodeFunctionData(
             "submitRecoveryRequest",
             [
-              // this is wrong calldata btw, as it doesn't use executeRecovery, but it doesn't matter for this test
-              ecdsaModule.interface.encodeFunctionData("transferOwnership", [
-                newOwner.address,
+              userSA.interface.encodeFunctionData("execute", [
+                accountRecoveryModule.address,
+                ethers.utils.parseEther("0"),
+                accountRecoveryModule.interface.encodeFunctionData(
+                  "executeRecovery",
+                  [
+                    ecdsaModule.address,
+                    ethers.utils.parseEther("0"),
+                    ecdsaModule.interface.encodeFunctionData(
+                      "transferOwnership",
+                      [newOwner.address]
+                    ),
+                  ]
+                ),
               ]),
             ]
           ),
