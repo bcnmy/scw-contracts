@@ -26,7 +26,6 @@ contract SessionKeyManager is
     BaseAuthorizationModule,
     ISessionKeyManagerModule
 {
-
     string public constant NAME = "Session Key Manager Module";
     string public constant VERSION = "1.1.0";
 
