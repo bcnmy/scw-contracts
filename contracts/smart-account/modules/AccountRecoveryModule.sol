@@ -114,28 +114,11 @@ contract AccountRecoveryModule is
         return address(this);
     }
 
-    function _validatePreSubmittedRequestExecution(
-        address smartAccount
-    ) internal view returns (uint256) {
-        uint48 reqValidAfter = _smartAccountRequests[smartAccount]
-            .requestTimestamp +
-            _smartAccountSettings[smartAccount].securityDelay;
-        return
-            VALIDATION_SUCCESS |
-            (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
-            (uint256(reqValidAfter) << (160 + 48));
-    }
-
     function _validateGuardiansSignatures(
         address smartAccount,
         bytes calldata moduleSignature,
         bytes32 userOpHash
-
-    ) internal view returns (uint256) {
-
-    }
-
-
+    ) internal view returns (uint256) {}
 
     /**
      * @dev validates userOps to submit and execute recovery requests
@@ -291,51 +274,6 @@ contract AccountRecoveryModule is
             // immediate executions
             // not using custom error here because of how EntryPoint handles the revert data for the validation failure
             revert("AccRecovery: Wrong userOp");
-        }
-    }
-
-    function _validateRequestToBeAdded(bytes memory innerCallData) internal view {
-        //check this is a request through SA.execute => this.executeRecovery
-        bytes4 expectedExecuteSelector;
-        address expectedThisAddress;
-        assembly {
-            //32(memory bytes array length) + 4(submitRecoveryRequest selector) + 32(offset) + 32(length)
-            expectedExecuteSelector := mload(add(innerCallData, 0x64))
-            expectedThisAddress := mload(add(innerCallData, 0x68))
-        }
-        if (
-            expectedExecuteSelector != EXECUTE_SELECTOR &&
-            expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR
-        ) {
-            revert("AccRecovery: WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
-        }
-        if (expectedThisAddress != address(this)) {
-            revert("AccRecovery: WRR02"); //Wrong Recovery Request 02 = call should be to this contract
-        }
-        bytes4 expectedExecuteRecoverySelector;
-        uint256 executeRecoveryCallDataOffset;
-
-        assembly {
-            executeRecoveryCallDataOffset := mload(add(innerCallData, 0xa8))
-            expectedExecuteRecoverySelector := mload(
-                add(
-                    innerCallData,
-                    add(
-                        //executeRecovery callData start position
-                        add(
-                            0x68, //position where execute() arguments start
-                            executeRecoveryCallDataOffset //offset where executeRecovery callData bytes array start
-                        ),
-                        //skip length
-                        0x20
-                    )
-                )
-            )
-        }
-        if (
-            expectedExecuteRecoverySelector != this.executeRecovery.selector
-        ) {
-            revert("AccRecovery: WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
         }
     }
 
@@ -645,6 +583,75 @@ contract AccountRecoveryModule is
         bytes memory
     ) public view virtual override returns (bytes4) {
         return 0xffffffff; // not supported
+    }
+
+    /**
+     * @dev Returns validation data based on the timestamp
+     * when the request becomes valid
+     * So the validAfter of the return (validation data) is the 
+     * timestamp of the request submission + securityDelay
+     * So the request can be executed only after the security delay
+     * @param smartAccount Smart Account being recovered
+     */
+    function _validatePreSubmittedRequestExecution(
+        address smartAccount
+    ) internal view returns (uint256) {
+        uint48 reqValidAfter = _smartAccountRequests[smartAccount]
+            .requestTimestamp +
+            _smartAccountSettings[smartAccount].securityDelay;
+        return
+            VALIDATION_SUCCESS |
+            (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
+            (uint256(reqValidAfter) << (160 + 48));
+    }
+
+    /**
+     * @dev Checks if the request to be added is valid
+     * The valid request should use SA.execute => this.executeRecovery flow
+     * @param innerCallData callData of the request
+     */
+    function _validateRequestToBeAdded(
+        bytes memory innerCallData
+    ) internal view {
+        bytes4 expectedExecuteSelector;
+        address expectedThisAddress;
+        assembly {
+            //32(memory bytes array length) + 4(submitRecoveryRequest selector) + 32(offset) + 32(length)
+            expectedExecuteSelector := mload(add(innerCallData, 0x64))
+            expectedThisAddress := mload(add(innerCallData, 0x68))
+        }
+        if (
+            expectedExecuteSelector != EXECUTE_SELECTOR &&
+            expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR
+        ) {
+            revert("AccRecovery: WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
+        }
+        if (expectedThisAddress != address(this)) {
+            revert("AccRecovery: WRR02"); //Wrong Recovery Request 02 = call should be to this contract
+        }
+        bytes4 expectedExecuteRecoverySelector;
+        uint256 executeRecoveryCallDataOffset;
+
+        assembly {
+            executeRecoveryCallDataOffset := mload(add(innerCallData, 0xa8))
+            expectedExecuteRecoverySelector := mload(
+                add(
+                    innerCallData,
+                    add(
+                        //executeRecovery callData start position
+                        add(
+                            0x68, //position where execute() arguments start
+                            executeRecoveryCallDataOffset //offset where executeRecovery callData bytes array start
+                        ),
+                        //skip length
+                        0x20
+                    )
+                )
+            )
+        }
+        if (expectedExecuteRecoverySelector != this.executeRecovery.selector) {
+            revert("AccRecovery: WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
+        }
     }
 
     /**
