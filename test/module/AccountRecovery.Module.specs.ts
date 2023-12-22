@@ -1588,7 +1588,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Wrong selector");
+        .withArgs(0, "AA23 reverted: AccRecovery: Wrong exec selector");
     });
 
     it("Should revert if the delay is >0 and the calldata is NOT for submitting request", async () => {

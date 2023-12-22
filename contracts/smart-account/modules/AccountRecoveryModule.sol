@@ -126,6 +126,17 @@ contract AccountRecoveryModule is
             (uint256(reqValidAfter) << (160 + 48));
     }
 
+    function _validateGuardiansSignatures(
+        address smartAccount,
+        bytes calldata moduleSignature,
+        bytes32 userOpHash
+
+    ) internal view returns (uint256) {
+
+    }
+
+
+
     /**
      * @dev validates userOps to submit and execute recovery requests
      *     - if securityDelay is 0, it allows to execute the request immediately
@@ -243,7 +254,7 @@ contract AccountRecoveryModule is
         if (
             bytes4(userOp.callData[0:4]) != EXECUTE_OPTIMIZED_SELECTOR &&
             bytes4(userOp.callData[0:4]) != EXECUTE_SELECTOR
-        ) revert("AccRecovery: Wrong selector");
+        ) revert("AccRecovery: Wrong exec selector");
 
         (address dest, uint256 callValue, bytes memory innerCallData) = abi
             .decode(
@@ -259,50 +270,8 @@ contract AccountRecoveryModule is
             this.submitRecoveryRequest.selector) &&
             (dest == address(this)) &&
             callValue == 0;
-        if (isValidAddingRequestUserOp) {
-            //check this is a request through SA.execute => this.executeRecovery
-            bytes4 expectedExecuteSelector;
-            address expectedThisAddress;
-            assembly {
-                //32(memory bytes array length) + 4(submitRecoveryRequest selector) + 32(offset) + 32(length)
-                expectedExecuteSelector := mload(add(innerCallData, 0x64))
-                expectedThisAddress := mload(add(innerCallData, 0x68))
-            }
-            if (
-                expectedExecuteSelector != EXECUTE_SELECTOR &&
-                expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR
-            ) {
-                revert("AccRecovery: WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
-            }
-            if (expectedThisAddress != address(this)) {
-                revert("AccRecovery: WRR02"); //Wrong Recovery Request 02 = call should be to this contract
-            }
-            bytes4 expectedExecuteRecoverySelector;
-            uint256 executeRecoveryCallDataOffset;
-
-            assembly {
-                executeRecoveryCallDataOffset := mload(add(innerCallData, 0xa8))
-                expectedExecuteRecoverySelector := mload(
-                    add(
-                        innerCallData,
-                        add(
-                            //executeRecovery callData start position
-                            add(
-                                0x68, //position where execute() arguments start
-                                executeRecoveryCallDataOffset //offset where executeRecovery callData bytes array start
-                            ),
-                            //skip length
-                            0x20
-                        )
-                    )
-                )
-            }
-            if (
-                expectedExecuteRecoverySelector != this.executeRecovery.selector
-            ) {
-                revert("AccRecovery: WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
-            }
-        }
+        if (isValidAddingRequestUserOp)
+            _validateRequestToBeAdded(innerCallData);
 
         bool isValidRecoveryExecutionUserOp = (innerSelector ==
             this.executeRecovery.selector &&
@@ -322,6 +291,51 @@ contract AccountRecoveryModule is
             // immediate executions
             // not using custom error here because of how EntryPoint handles the revert data for the validation failure
             revert("AccRecovery: Wrong userOp");
+        }
+    }
+
+    function _validateRequestToBeAdded(bytes memory innerCallData) internal view {
+        //check this is a request through SA.execute => this.executeRecovery
+        bytes4 expectedExecuteSelector;
+        address expectedThisAddress;
+        assembly {
+            //32(memory bytes array length) + 4(submitRecoveryRequest selector) + 32(offset) + 32(length)
+            expectedExecuteSelector := mload(add(innerCallData, 0x64))
+            expectedThisAddress := mload(add(innerCallData, 0x68))
+        }
+        if (
+            expectedExecuteSelector != EXECUTE_SELECTOR &&
+            expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR
+        ) {
+            revert("AccRecovery: WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
+        }
+        if (expectedThisAddress != address(this)) {
+            revert("AccRecovery: WRR02"); //Wrong Recovery Request 02 = call should be to this contract
+        }
+        bytes4 expectedExecuteRecoverySelector;
+        uint256 executeRecoveryCallDataOffset;
+
+        assembly {
+            executeRecoveryCallDataOffset := mload(add(innerCallData, 0xa8))
+            expectedExecuteRecoverySelector := mload(
+                add(
+                    innerCallData,
+                    add(
+                        //executeRecovery callData start position
+                        add(
+                            0x68, //position where execute() arguments start
+                            executeRecoveryCallDataOffset //offset where executeRecovery callData bytes array start
+                        ),
+                        //skip length
+                        0x20
+                    )
+                )
+            )
+        }
+        if (
+            expectedExecuteRecoverySelector != this.executeRecovery.selector
+        ) {
+            revert("AccRecovery: WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
         }
     }
 
