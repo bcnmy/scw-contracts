@@ -198,7 +198,7 @@ contract AccountRecoveryModule is
                 .validUntil; */
 
             (uint48 validAfter, uint48 validUntil) = (
-                _guardians[currentGuardian][smartAccount].validAfter, 
+                _guardians[currentGuardian][smartAccount].validAfter,
                 _guardians[currentGuardian][smartAccount].validUntil
             );
 
