@@ -8,8 +8,6 @@ import {IAccountRecoveryModule} from "../interfaces/IAccountRecoveryModule.sol";
 import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
 import {Enum} from "../common/Enum.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title Account Recovery module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
@@ -192,13 +190,17 @@ contract AccountRecoveryModule is
                 }
             }
 
-            //address sender = userOp.sender;
             bytes32 currentGuardian = keccak256(currentGuardianSig);
 
-            uint48 validAfter = _guardians[currentGuardian][smartAccount]
+            /* uint48 validAfter = _guardians[currentGuardian][smartAccount]
                 .validAfter;
             uint48 validUntil = _guardians[currentGuardian][smartAccount]
-                .validUntil;
+                .validUntil; */
+
+            (uint48 validAfter, uint48 validUntil) = (
+                _guardians[currentGuardian][smartAccount].validAfter, 
+                _guardians[currentGuardian][smartAccount].validUntil
+            );
 
             // validUntil == 0 means the `currentGuardian` has not been set as guardian
             // for the smartAccount
@@ -244,7 +246,6 @@ contract AccountRecoveryModule is
                 userOp.callData[4:], // skip selector
                 (address, uint256, bytes)
             );
-        //console.logBytes(innerCallData);
         bytes4 innerSelector;
         assembly {
             innerSelector := mload(add(innerCallData, 0x20))
