@@ -34,7 +34,7 @@ contract AccountRecoveryModule is
     using ECDSA for bytes32;
 
     string public constant NAME = "Account Recovery Module";
-    string public constant VERSION = "0.1.0";
+    string public constant VERSION = "1.0.0";
 
     // execute(address,uint256,bytes)
     bytes4 public immutable EXECUTE_SELECTOR;
