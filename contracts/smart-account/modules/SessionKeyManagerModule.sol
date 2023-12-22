@@ -26,6 +26,10 @@ contract SessionKeyManager is
     BaseAuthorizationModule,
     ISessionKeyManagerModule
 {
+
+    string public constant NAME = "Session Key Manager Module";
+    string public constant VERSION = "1.1.0";
+
     /**
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys

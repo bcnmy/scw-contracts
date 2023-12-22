@@ -23,7 +23,7 @@ contract PasskeyRegistryModule is
     IPasskeyRegistryModule
 {
     string public constant NAME = "PassKeys Ownership Registry Module";
-    string public constant VERSION = "0.2.0";
+    string public constant VERSION = "1.1.0";
 
     mapping(address => PassKeyId) public smartAccountPassKeys;
 

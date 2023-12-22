@@ -31,7 +31,7 @@ contract EcdsaOwnershipRegistryModule is
     using ECDSA for bytes32;
 
     string public constant NAME = "ECDSA Ownership Registry Module";
-    string public constant VERSION = "0.2.0";
+    string public constant VERSION = "1.1.0";
     mapping(address => address) internal _smartAccountOwners;
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule

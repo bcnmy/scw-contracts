@@ -36,7 +36,7 @@ contract SmartAccount is
     using LibAddress for address;
 
     // Storage Version
-    string public constant override VERSION = "2.0.0";
+    string public constant override VERSION = "2.1.0";
 
     // Owner storage. Deprecated. Left for storage layout compatibility
     address public ownerDeprecated;
