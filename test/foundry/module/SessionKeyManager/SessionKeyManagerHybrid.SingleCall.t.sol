@@ -6,7 +6,7 @@ import {SATestBase, IEntryPoint} from "../../base/SATestBase.sol";
 import {SmartAccount} from "sa/SmartAccount.sol";
 import {UserOperation} from "aa-core/EntryPoint.sol";
 import {SessionKeyManagerHybrid} from "sa/modules/SessionKeyManagers/SessionKeyManagerHybrid.sol";
-import {IStatefulSessionKeyManagerBase} from "sa/interfaces/modules/SessionKeyManagers/IStatefulSessionKeyManagerBase.sol";
+import {ISessionKeyManagerModuleHybrid} from "sa/interfaces/modules/SessionKeyManagers/ISessionKeyManagerModuleHybrid.sol";
 import {MockSessionValidationModule} from "sa/test/mocks/MockSessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Vm} from "forge-std/Test.sol";
@@ -22,7 +22,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
     event SessionCreated(
         address indexed sa,
         bytes32 indexed sessionDataDigest,
-        IStatefulSessionKeyManagerBase.SessionData data
+        ISessionKeyManagerModuleHybrid.SessionData data
     );
     event SessionDisabled(
         address indexed sa,
@@ -71,9 +71,48 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         entryPoint.handleOps(toArray(op), owner.addr);
     }
 
+    function testEnableSession() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+        bytes32 sessionDataDigest = sessionKeyManagerHybrid.sessionDataDigest(
+            sessionData
+        );
+
+        // Enable session
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(sessionKeyManagerHybrid),
+                0,
+                abi.encodeCall(
+                    sessionKeyManagerHybrid.enableSession,
+                    (sessionData)
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.expectEmit();
+        emit SessionCreated(address(sa), sessionDataDigest, sessionData);
+
+        entryPoint.handleOps(toArray(op), owner.addr);
+
+        // Check session is enabled
+        ISessionKeyManagerModuleHybrid.SessionData
+            memory enabledSessionData = sessionKeyManagerHybrid
+                .enabledSessionsData(sessionDataDigest, address(sa));
+        assertEq(enabledSessionData, sessionData);
+    }
+
     function testEnableAndUseSession() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -123,7 +162,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is enabled
-        IStatefulSessionKeyManagerBase.SessionData
+        ISessionKeyManagerModuleHybrid.SessionData
             memory enabledSessionData = sessionKeyManagerHybrid
                 .enabledSessionsData(sessionDataDigest, address(sa));
         assertEq(enabledSessionData, sessionData);
@@ -131,7 +170,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
 
     function testEnableAndUseSessionPostCaching() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -200,7 +239,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             memory sessionDatas = new SessionKeyManagerHybrid.SessionData[](5);
 
         for (uint256 i = 0; i < chainIds.length; ++i) {
-            sessionDatas[i] = IStatefulSessionKeyManagerBase.SessionData({
+            sessionDatas[i] = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: uint48(block.timestamp + i),
                 validAfter: uint48(block.timestamp),
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -246,7 +285,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is enabled
-        IStatefulSessionKeyManagerBase.SessionData
+        ISessionKeyManagerModuleHybrid.SessionData
             memory enabledSessionData = sessionKeyManagerHybrid
                 .enabledSessionsData(sessionDataDigest, address(sa));
         assertEq(enabledSessionData, sessionDatas[0]);
@@ -257,14 +296,14 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
                 sessionKeyManagerHybrid.sessionDataDigest(sessionDatas[i]),
                 address(sa)
             );
-            IStatefulSessionKeyManagerBase.SessionData memory emptyData;
+            ISessionKeyManagerModuleHybrid.SessionData memory emptyData;
             assertEq(enabledSessionData, emptyData);
         }
     }
 
     function testDisableSession() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -328,11 +367,11 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is disabled
-        IStatefulSessionKeyManagerBase.SessionData
+        ISessionKeyManagerModuleHybrid.SessionData
             memory enabledSessionData = sessionKeyManagerHybrid
                 .enabledSessionsData(sessionDataDigest, address(sa));
 
-        IStatefulSessionKeyManagerBase.SessionData memory emptyData;
+        ISessionKeyManagerModuleHybrid.SessionData memory emptyData;
         assertEq(enabledSessionData, emptyData);
     }
 
@@ -343,7 +382,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             memory sessionDatas = new SessionKeyManagerHybrid.SessionData[](5);
 
         for (uint256 i = 0; i < chainIds.length; ++i) {
-            sessionDatas[i] = IStatefulSessionKeyManagerBase.SessionData({
+            sessionDatas[i] = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: uint48(block.timestamp + i),
                 validAfter: uint48(block.timestamp),
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -397,7 +436,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         public
     {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -441,7 +480,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         public
     {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -496,7 +535,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
 
     function testShouldNotValidateTransactionWithInvalidSessionIndex() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -551,7 +590,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
 
     function testShouldNotValidateTransactionWithInvalidChainId() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule),
@@ -609,7 +648,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         public
     {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule),

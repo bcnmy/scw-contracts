@@ -6,7 +6,7 @@ import {SATestBase, IEntryPoint} from "../../base/SATestBase.sol";
 import {SmartAccount} from "sa/SmartAccount.sol";
 import {UserOperation} from "aa-core/EntryPoint.sol";
 import {SessionKeyManagerHybrid} from "sa/modules/SessionKeyManagers/SessionKeyManagerHybrid.sol";
-import {IStatefulSessionKeyManagerBase} from "sa/interfaces/modules/SessionKeyManagers/IStatefulSessionKeyManagerBase.sol";
+import {ISessionKeyManagerModuleHybrid} from "sa/interfaces/modules/SessionKeyManagers/ISessionKeyManagerModuleHybrid.sol";
 import {MockSessionValidationModule} from "sa/test/mocks/MockSessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Vm} from "forge-std/Test.sol";
@@ -24,7 +24,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
     event SessionCreated(
         address indexed sa,
         bytes32 indexed sessionDataDigest,
-        IStatefulSessionKeyManagerBase.SessionData data
+        ISessionKeyManagerModuleHybrid.SessionData data
     );
     event SessionDisabled(
         address indexed sa,
@@ -87,7 +87,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
 
     function testEnableAndUseSessionSingleBatchItem() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule1),
@@ -153,7 +153,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
         entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check session is enabled
-        IStatefulSessionKeyManagerBase.SessionData
+        ISessionKeyManagerModuleHybrid.SessionData
             memory enabledSessionData = sessionKeyManagerHybrid
                 .enabledSessionsData(sessionDataDigest, address(sa));
         assertEq(enabledSessionData, sessionData);
@@ -161,7 +161,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
 
     function testEnableAndUseSessionTwoBatchItems() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData1 = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData1 = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule1),
@@ -172,7 +172,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
         );
 
         SessionKeyManagerHybrid.SessionData
-            memory sessionData2 = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData2 = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule2),
@@ -264,7 +264,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
         entryPoint.handleOps(toArray(op), owner.addr);
 
         // Check sessions are enabled
-        IStatefulSessionKeyManagerBase.SessionData
+        ISessionKeyManagerModuleHybrid.SessionData
             memory enabledSessionData = sessionKeyManagerHybrid
                 .enabledSessionsData(sessionDataDigest1, address(sa));
         assertEq(enabledSessionData, sessionData1);
@@ -278,7 +278,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
 
     function testUseSessionTwoBatchItemsPostEnable() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData1 = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData1 = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule1),
@@ -286,7 +286,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
             });
 
         SessionKeyManagerHybrid.SessionData
-            memory sessionData2 = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData2 = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule2),
@@ -400,7 +400,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
 
     function testUseSessionTwoBatchItemsOneFreshAndOtherPostEnable() public {
         SessionKeyManagerHybrid.SessionData
-            memory sessionData1 = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData1 = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule1),
@@ -408,7 +408,7 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
             });
 
         SessionKeyManagerHybrid.SessionData
-            memory sessionData2 = IStatefulSessionKeyManagerBase.SessionData({
+            memory sessionData2 = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
                 validAfter: 0,
                 sessionValidationModule: address(mockSessionValidationModule2),

@@ -2,7 +2,7 @@
 pragma solidity ^0.8.20;
 
 import {UserOperation} from "aa-core/EntryPoint.sol";
-import {IStatefulSessionKeyManagerBase} from "sa/interfaces/modules/SessionKeyManagers/IStatefulSessionKeyManagerBase.sol";
+import {ISessionKeyManagerModuleHybrid} from "sa/interfaces/modules/SessionKeyManagers/ISessionKeyManagerModuleHybrid.sol";
 
 abstract contract ToArrayUtils {
     // User Operations
@@ -94,46 +94,46 @@ abstract contract ToArrayUtils {
         return arr;
     }
 
-    // IStatefulSessionKeyManagerBase.SessionData
+    // ISessionKeyManagerModuleHybrid.SessionData
     function toArray(
-        IStatefulSessionKeyManagerBase.SessionData memory _a
+        ISessionKeyManagerModuleHybrid.SessionData memory _a
     )
         internal
         pure
-        returns (IStatefulSessionKeyManagerBase.SessionData[] memory)
+        returns (ISessionKeyManagerModuleHybrid.SessionData[] memory)
     {
-        IStatefulSessionKeyManagerBase.SessionData[]
-            memory arr = new IStatefulSessionKeyManagerBase.SessionData[](1);
+        ISessionKeyManagerModuleHybrid.SessionData[]
+            memory arr = new ISessionKeyManagerModuleHybrid.SessionData[](1);
         arr[0] = _a;
         return arr;
     }
 
     function toArray(
-        IStatefulSessionKeyManagerBase.SessionData memory _a,
-        IStatefulSessionKeyManagerBase.SessionData memory _b
+        ISessionKeyManagerModuleHybrid.SessionData memory _a,
+        ISessionKeyManagerModuleHybrid.SessionData memory _b
     )
         internal
         pure
-        returns (IStatefulSessionKeyManagerBase.SessionData[] memory)
+        returns (ISessionKeyManagerModuleHybrid.SessionData[] memory)
     {
-        IStatefulSessionKeyManagerBase.SessionData[]
-            memory arr = new IStatefulSessionKeyManagerBase.SessionData[](2);
+        ISessionKeyManagerModuleHybrid.SessionData[]
+            memory arr = new ISessionKeyManagerModuleHybrid.SessionData[](2);
         arr[0] = _a;
         arr[1] = _b;
         return arr;
     }
 
     function toArray(
-        IStatefulSessionKeyManagerBase.SessionData memory _a,
-        IStatefulSessionKeyManagerBase.SessionData memory _b,
-        IStatefulSessionKeyManagerBase.SessionData memory _c
+        ISessionKeyManagerModuleHybrid.SessionData memory _a,
+        ISessionKeyManagerModuleHybrid.SessionData memory _b,
+        ISessionKeyManagerModuleHybrid.SessionData memory _c
     )
         internal
         pure
-        returns (IStatefulSessionKeyManagerBase.SessionData[] memory)
+        returns (ISessionKeyManagerModuleHybrid.SessionData[] memory)
     {
-        IStatefulSessionKeyManagerBase.SessionData[]
-            memory arr = new IStatefulSessionKeyManagerBase.SessionData[](3);
+        ISessionKeyManagerModuleHybrid.SessionData[]
+            memory arr = new ISessionKeyManagerModuleHybrid.SessionData[](3);
         arr[0] = _a;
         arr[1] = _b;
         arr[2] = _c;

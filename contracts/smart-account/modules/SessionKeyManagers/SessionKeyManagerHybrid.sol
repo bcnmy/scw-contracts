@@ -9,8 +9,10 @@ import {UserOperation, UserOperationLib} from "@account-abstraction/contracts/in
 import {ISessionValidationModule} from "../../interfaces/modules/ISessionValidationModule.sol";
 import {ISessionKeyManagerModuleHybrid} from "../../interfaces/modules/SessionKeyManagers/ISessionKeyManagerModuleHybrid.sol";
 import {ISignatureValidator, EIP1271_MAGIC_VALUE} from "../../interfaces/ISignatureValidator.sol";
-import {StatefulSessionKeyManagerBase} from "./StatefulSessionKeyManagerBase.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import {BaseAuthorizationModule} from "../BaseAuthorizationModule.sol";
+import {IAuthorizationModule} from "../../interfaces/IAuthorizationModule.sol";
+import {ISmartAccount} from "../../interfaces/ISmartAccount.sol";
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
@@ -21,12 +23,15 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 contract SessionKeyManagerHybrid is
-    StatefulSessionKeyManagerBase,
+    BaseAuthorizationModule,
     ISessionKeyManagerModuleHybrid
 {
     using UserOperationLib for UserOperation;
 
-    /// @inheritdoc StatefulSessionKeyManagerBase
+    mapping(bytes32 _sessionDataDigest => mapping(address _sa => SessionData data))
+        internal _enabledSessionsData;
+
+    /// @inheritdoc IAuthorizationModule
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
@@ -93,13 +98,13 @@ contract SessionKeyManagerHybrid is
             );
         } else {
             (
-                bytes32 sessionDataDigest,
+                bytes32 sessionDataDigest_,
                 bytes calldata sessionKeySignature
             ) = _parseSessionDataPreEnabledSignatureSingleCall(moduleSignature);
 
             SessionData storage sessionData = _validateSessionKeyPreEnabled(
                 userOp.getSender(),
-                sessionDataDigest
+                sessionDataDigest_
             );
 
             rv = _packValidationData(
@@ -189,7 +194,7 @@ contract SessionKeyManagerHybrid is
     )
         internal
         pure
-        returns (bytes32 sessionDataDigest, bytes calldata sessionKeySignature)
+        returns (bytes32 sessionDataDigest_, bytes calldata sessionKeySignature)
     {
         /*
          * Session Data Pre Enabled Signature Layout
@@ -201,7 +206,7 @@ contract SessionKeyManagerHybrid is
             let offset := add(_moduleSignature.offset, 0x1)
             let baseOffset := offset
 
-            sessionDataDigest := calldataload(offset)
+            sessionDataDigest_ := calldataload(offset)
             offset := add(offset, 0x20)
 
             let dataPointer := add(baseOffset, calldataload(offset))
@@ -298,13 +303,13 @@ contract SessionKeyManagerHybrid is
                     );
             } else {
                 (
-                    bytes32 sessionDataDigest,
+                    bytes32 sessionDataDigest_,
                     bytes calldata callSpecificData
                 ) = _parseSessionDataPreEnabledSignatureBatchCall(sessionInfo);
 
                 SessionData storage sessionData = _validateSessionKeyPreEnabled(
                     userOpSender,
-                    sessionDataDigest
+                    sessionDataDigest_
                 );
 
                 validUntil = sessionData.validUntil;
@@ -418,7 +423,7 @@ contract SessionKeyManagerHybrid is
     )
         internal
         pure
-        returns (bytes32 sessionDataDigest, bytes calldata callSpecificData)
+        returns (bytes32 sessionDataDigest_, bytes calldata callSpecificData)
     {
         /*
          * Session Data Pre Enabled Signature Layout
@@ -430,7 +435,7 @@ contract SessionKeyManagerHybrid is
         assembly ("memory-safe") {
             let offset := add(_moduleSignature.offset, 0x1)
 
-            sessionDataDigest := calldataload(offset)
+            sessionDataDigest_ := calldataload(offset)
             offset := add(offset, 0x20)
 
             let baseOffset := offset
@@ -535,6 +540,47 @@ contract SessionKeyManagerHybrid is
         }
     }
 
+    /*********************** Session Management *******************************/
+
+    /// @inheritdoc ISessionKeyManagerModuleHybrid
+    function disableSession(bytes32 _sessionDigest) external override {
+        delete _enabledSessionsData[_sessionDigest][msg.sender];
+        emit SessionDisabled(msg.sender, _sessionDigest);
+    }
+
+    /// @inheritdoc ISessionKeyManagerModuleHybrid
+    function enableSession(SessionData calldata sessionData) external override {
+        bytes32 sessionDataDigest_ = sessionDataDigest(sessionData);
+        _enabledSessionsData[sessionDataDigest_][msg.sender] = sessionData;
+        emit SessionCreated(msg.sender, sessionDataDigest_, sessionData);
+    }
+
+    /// @inheritdoc ISessionKeyManagerModuleHybrid
+    function enabledSessionsData(
+        bytes32 _sessionDataDigest,
+        address _sa
+    ) external view override returns (SessionData memory data) {
+        data = _enabledSessionsData[_sessionDataDigest][_sa];
+    }
+
+    /********************** ISignatureValidator ****************************/
+
+    /// @inheritdoc ISignatureValidator
+    function isValidSignature(
+        bytes32,
+        bytes memory
+    ) public pure virtual override returns (bytes4) {
+        return 0xffffffff; // do not support it here
+    }
+
+    /// @inheritdoc ISignatureValidator
+    function isValidSignatureUnsafe(
+        bytes32,
+        bytes memory
+    ) public pure virtual override returns (bytes4) {
+        return 0xffffffff; // do not support it here
+    }
+
     /***************************** Common ***********************************/
 
     function _verifySessionEnableDataSignature(
@@ -616,6 +662,47 @@ contract SessionKeyManagerHybrid is
                 calldataload(_moduleSignature.offset)
             )
         }
+    }
+
+    /// @inheritdoc ISessionKeyManagerModuleHybrid
+    function sessionDataDigest(
+        SessionData calldata _data
+    ) public pure override returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _data.validUntil,
+                    _data.validAfter,
+                    _data.sessionValidationModule,
+                    _data.sessionKeyData
+                )
+            );
+    }
+
+    function _sessionDataDigestUnpacked(
+        uint48 _validUntil,
+        uint48 _validAfter,
+        address _sessionValidationModule,
+        bytes calldata _sessionKeyData
+    ) internal pure returns (bytes32) {
+        return
+            keccak256(
+                abi.encodePacked(
+                    _validUntil,
+                    _validAfter,
+                    _sessionValidationModule,
+                    _sessionKeyData
+                )
+            );
+    }
+
+    function _isBatchExecuteCall(
+        UserOperation calldata _userOp
+    ) internal pure returns (bool isBatchExecuteCall) {
+        bytes4 selector = bytes4(_userOp.callData[0:4]);
+        isBatchExecuteCall =
+            selector == ISmartAccount.executeBatch_y6U.selector ||
+            selector == ISmartAccount.executeBatch.selector;
     }
 
     function _parseSessionFromSessionEnableData(
