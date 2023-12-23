@@ -5,9 +5,11 @@ pragma solidity ^0.8.20;
 
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
- * @dev Similar to the Stateful Session Key Manager module, but the session enable transaction
- *      is batched with the first transaction that uses the session key.
- *      Session creation is offline and completely free.
+ * @dev Stores the Session Information explicity in the storage, instead of maintainting
+ *      a merkle tree.
+ *      This reduces the amount of calldata required to validate a session key, making it cheaper on
+ *      L2s.
+ *      Allows for a session to be enabled explicity, or being batched with the first usage of said session
  * @author Ankur Dubey - <ankur@biconomy.io>
  */
 interface ISessionKeyManagerModuleHybrid {

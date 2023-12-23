@@ -839,24 +839,6 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         );
     }
 
-    function assertEq(
-        SessionKeyManagerHybrid.SessionData memory _a,
-        SessionKeyManagerHybrid.SessionData memory _b
-    ) internal {
-        assertEq(_a.validUntil, _b.validUntil, "mismatched validUntil");
-        assertEq(_a.validAfter, _b.validAfter, "mismatched validAfter");
-        assertEq(
-            _a.sessionValidationModule,
-            _b.sessionValidationModule,
-            "mismatched sessionValidationModule"
-        );
-        assertEq(
-            _a.sessionKeyData,
-            _b.sessionKeyData,
-            "mismatched sessionKeyData"
-        );
-    }
-
     function makeSessionEnableData(
         uint64[] memory chainIds,
         SessionKeyManagerHybrid.SessionData[] memory _sessionDatas,
@@ -915,7 +897,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             callData: _calldata,
             callGasLimit: gasleft() / 100,
             verificationGasLimit: gasleft() / 100,
-            preVerificationGas: defaultPreVerificationGas,
+            preVerificationGas: DEFAULT_PRE_VERIFICATIION_GAS,
             maxFeePerGas: tx.gasprice,
             maxPriorityFeePerGas: tx.gasprice - block.basefee,
             paymasterAndData: bytes(""),
@@ -965,7 +947,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             callData: _calldata,
             callGasLimit: gasleft() / 100,
             verificationGasLimit: gasleft() / 100,
-            preVerificationGas: defaultPreVerificationGas,
+            preVerificationGas: DEFAULT_PRE_VERIFICATIION_GAS,
             maxFeePerGas: tx.gasprice,
             maxPriorityFeePerGas: tx.gasprice - block.basefee,
             paymasterAndData: bytes(""),

@@ -9,44 +9,31 @@ import {SmartAccountFactory} from "factory/SmartAccountFactory.sol";
 import {SmartAccount} from "sa/SmartAccount.sol";
 import {EcdsaOwnershipRegistryModule} from "modules/EcdsaOwnershipRegistryModule.sol";
 import {ToArrayUtils} from "./utils/ToArrayUtils.sol";
+import {AssertUtils} from "./utils/AssertUtils.sol";
+import {EntryPointUtils} from "./utils/EntrypointUtils.sol";
 
-abstract contract SATestBase is Test, ToArrayUtils {
-    // Test Environment Configuration
-    string constant mnemonic =
-        "test test test test test test test test test test test junk";
-    uint256 constant testAccountCount = 10;
-    uint256 constant initialMainAccountFunds = 100000 ether;
-    uint256 constant defaultPreVerificationGas = 21000;
-    // Event Topics
-    bytes32 constant userOperationEventTopic =
-        0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f;
-    bytes32 constant userOperationRevertReasonTopic =
-        0x1c4fada7374c0a9ee8841fc38afe82932dc0f8e69012e927f061a8bae611a201;
+/* solhint-disable ordering*/
 
-    uint32 nextKeyIndex;
-
-    struct UserOperationEventData {
-        bytes32 userOpHash;
-        address sender;
-        address paymaster;
-        uint256 nonce;
-        bool success;
-        uint256 actualGasCost;
-        uint256 actualGasUsed;
-    }
-
-    struct UserOperationRevertReasonEventData {
-        bytes32 userOpHash;
-        address sender;
-        uint256 nonce;
-        bytes revertReason;
-    }
-
+abstract contract SATestBase is
+    Test,
+    ToArrayUtils,
+    AssertUtils,
+    EntryPointUtils
+{
     // Test Accounts
     struct TestAccount {
         address payable addr;
         uint256 privateKey;
     }
+
+    // Test Environment Configuration
+    string internal constant MNEMONIC =
+        "test test test test test test test test test test test junk";
+    uint256 internal constant TEST_ACCOUNT_COUNT = 10;
+    uint256 internal constant INITIAL_MAIN_ACCOUNT_FUNDS = 100000 ether;
+    uint256 internal constant DEFAULT_PRE_VERIFICATIION_GAS = 21000;
+
+    uint32 internal nextKeyIndex;
 
     TestAccount[] internal testAccounts;
     mapping(address account => TestAccount) internal testAccountsByAddress;
@@ -74,19 +61,19 @@ abstract contract SATestBase is Test, ToArrayUtils {
     EcdsaOwnershipRegistryModule internal ecdsaOwnershipRegistryModule;
 
     function getNextPrivateKey() internal returns (uint256) {
-        return vm.deriveKey(mnemonic, ++nextKeyIndex);
+        return vm.deriveKey(MNEMONIC, ++nextKeyIndex);
     }
 
     function setUp() public virtual {
         // Generate Test Addresses
-        for (uint256 i = 0; i < testAccountCount; i++) {
+        for (uint256 i = 0; i < TEST_ACCOUNT_COUNT; i++) {
             uint256 privateKey = getNextPrivateKey();
             testAccounts.push(
                 TestAccount(payable(vm.addr(privateKey)), privateKey)
             );
             testAccountsByAddress[testAccounts[i].addr] = testAccounts[i];
 
-            deal(testAccounts[i].addr, initialMainAccountFunds);
+            deal(testAccounts[i].addr, INITIAL_MAIN_ACCOUNT_FUNDS);
         }
 
         // Name Test Addresses
@@ -188,45 +175,6 @@ abstract contract SATestBase is Test, ToArrayUtils {
             );
     }
 
-    function getUserOperationEventData(
-        Vm.Log[] memory _entries
-    ) internal returns (UserOperationEventData memory data) {
-        for (uint256 i = 0; i < _entries.length; ++i) {
-            if (_entries[i].topics[0] != userOperationEventTopic) {
-                continue;
-            }
-            data.userOpHash = _entries[i].topics[1];
-            data.sender = address(uint160(uint256(_entries[i].topics[2])));
-            data.paymaster = address(uint160(uint256(_entries[i].topics[3])));
-            (
-                data.nonce,
-                data.success,
-                data.actualGasCost,
-                data.actualGasUsed
-            ) = abi.decode(_entries[i].data, (uint256, bool, uint256, uint256));
-            return data;
-        }
-        fail("entries does not contain UserOperationEvent");
-    }
-
-    function getUserOperationRevertReasonEventData(
-        Vm.Log[] memory _entries
-    ) internal returns (UserOperationRevertReasonEventData memory data) {
-        for (uint256 i = 0; i < _entries.length; ++i) {
-            if (_entries[i].topics[0] != userOperationRevertReasonTopic) {
-                continue;
-            }
-            data.userOpHash = _entries[i].topics[1];
-            data.sender = address(uint160(uint256(_entries[i].topics[2])));
-            (data.nonce, data.revertReason) = abi.decode(
-                _entries[i].data,
-                (uint256, bytes)
-            );
-            return data;
-        }
-        fail("entries does not contain UserOperationRevertReasonEvent");
-    }
-
     // Module Setup Data Helpers
     function getEcdsaOwnershipRegistryModuleSetupData(
         address _owner
@@ -252,7 +200,7 @@ abstract contract SATestBase is Test, ToArrayUtils {
             callData: _calldata,
             callGasLimit: gasleft() / 100,
             verificationGasLimit: gasleft() / 100,
-            preVerificationGas: defaultPreVerificationGas,
+            preVerificationGas: DEFAULT_PRE_VERIFICATIION_GAS,
             maxFeePerGas: tx.gasprice,
             maxPriorityFeePerGas: tx.gasprice - block.basefee,
             paymasterAndData: bytes(""),
