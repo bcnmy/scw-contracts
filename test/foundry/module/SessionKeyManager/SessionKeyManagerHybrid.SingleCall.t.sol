@@ -110,7 +110,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         assertEq(enabledSessionData, sessionData);
     }
 
-    function testEnableAndUseSession() public {
+    function testEnableAndUseSessionInSameTransaction() public {
         SessionKeyManagerHybrid.SessionData
             memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
@@ -166,6 +166,60 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
             memory enabledSessionData = sessionKeyManagerHybrid
                 .enabledSessionsData(sessionDataDigest, address(sa));
         assertEq(enabledSessionData, sessionData);
+    }
+
+    function testExplicitEnableAndUseSessionDifferentOp() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Data
+        uint64[] memory chainIds = new uint64[](1);
+        chainIds[0] = uint64(block.chainid);
+
+        SessionKeyManagerHybrid.SessionData[]
+            memory sessionDatas = new SessionKeyManagerHybrid.SessionData[](1);
+        sessionDatas[0] = sessionData;
+
+        // Enable session
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(sessionKeyManagerHybrid),
+                0,
+                abi.encodeCall(
+                    sessionKeyManagerHybrid.enableSession,
+                    (sessionData)
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+        entryPoint.handleOps(toArray(op), owner.addr);
+
+        // Use session with just digest
+        op = makeUseExistingSessionUserOp(
+            getSmartAccountExecuteCalldata(
+                address(stub),
+                0,
+                abi.encodeCall(
+                    stub.emitMessage,
+                    ("shouldProcessTransactionFromSessionKey")
+                )
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            sessionData,
+            bob
+        );
+        vm.expectEmit();
+        emit Log("shouldProcessTransactionFromSessionKey");
+        entryPoint.handleOps(toArray(op), owner.addr);
     }
 
     function testEnableAndUseSessionPostCaching() public {
@@ -426,7 +480,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
                 abi.encodeWithSelector(
                     IEntryPoint.FailedOp.selector,
                     0,
-                    "AA23 reverted: SessionKeyDataHashMismatch"
+                    "AA23 reverted: SKM: SessionKeyDataHashMismatch"
                 )
             );
         }
@@ -582,7 +636,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
                 abi.encodeWithSelector(
                     IEntryPoint.FailedOp.selector,
                     0,
-                    "AA23 reverted: SessionKeyIndexInvalid"
+                    "AA23 reverted: SKM: SessionKeyIndexInvalid"
                 )
             );
         }
@@ -638,7 +692,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
                 abi.encodeWithSelector(
                     IEntryPoint.FailedOp.selector,
                     0,
-                    "AA23 reverted: SessionChainIdMismatch"
+                    "AA23 reverted: SKM: SessionChainIdMismatch"
                 )
             );
         }

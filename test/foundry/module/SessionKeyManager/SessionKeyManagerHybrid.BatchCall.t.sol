@@ -524,6 +524,767 @@ contract SessionKeyManagerHybridBatchCallTest is SATestBase {
         entryPoint.handleOps(toArray(op), owner.addr);
     }
 
+    function testShouldNotAllowSessionEnableWithInvalidSessionEnableSignature()
+        public
+    {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Tamper Session Enable Data
+        sessionEnableData[0] = bytes1(0xFF);
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            0,
+            0,
+            sessionData,
+            callSpecificData
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SKM: SessionNotApproved"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowSessionEnableWithEnableDataListLengthMismatch()
+        public
+    {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            0,
+            0,
+            sessionData,
+            callSpecificData
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            // Add extra session enable data to make the list length mismatch
+            toArray(sessionEnableData, bytes("")),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SKM: EDListLengthMismatch"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowSessionInfosLengthAndBatchItemsLengthMismatch()
+        public
+    {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            0,
+            0,
+            sessionData,
+            callSpecificData
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            // Add extra batch item to make the list length mismatch
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to, to),
+                toArray(value, value),
+                toArray(callData, callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SKM: SessionInfo length mismatch"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowInvalidSessionEnableDataIndex() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            // Tamper session enable data index
+            1,
+            0,
+            sessionData,
+            callSpecificData
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SKM: SKEnableDataIndexInvalid"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowInvalidChainIdInSessionEnableData() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                // Tamper chain id
+                toArrayU64(uint64(block.chainid + 1)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            0,
+            0,
+            sessionData,
+            callSpecificData
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SKM: SessionChainIdMismatch"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowSessionWithDifferentDigestToBeExecuted() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Tamper Session Data
+        sessionData.sessionKeyData = abi.encodePacked(alice.addr);
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            0,
+            0,
+            sessionData,
+            callSpecificData
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SKM: SessionKeyDataHashMismatch"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowInvalidSessionEnableKeyIndex() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            0,
+            // Tamper session enable key index
+            1,
+            sessionData,
+            callSpecificData
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SKM: SessionKeyIndexInvalid"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowUsageOfNonEnabledSessionsInPreEnabledFlow()
+        public
+    {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionPreEnabledSessionInfo(
+            sessionData,
+            sessionKeyManagerHybrid,
+            callSpecificData
+        );
+
+        // Use session directly
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            new bytes[](0),
+            new bytes[](0),
+            toArray(sessionInfo)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA23 reverted: SKM: Session key is not enabled"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowUsageOfSessionsNotValidYet() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData1 = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData2 = ISessionKeyManagerModuleHybrid.SessionData({
+                // set validAfter to be in the future
+                validUntil: 0,
+                validAfter: uint48(block.timestamp) + 1,
+                sessionValidationModule: address(mockSessionValidationModule2),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid), uint64(block.chainid)),
+                toArray(sessionData1, sessionData2),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData1 = abi.encode("hello world");
+        bytes memory sessionInfo1 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            0, // sessionEnableData[0][0]
+            sessionData1,
+            callSpecificData1
+        );
+        bytes memory callSpecificData2 = abi.encode("hello world 2");
+        bytes memory sessionInfo2 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            1, // sessionEnableData[0][1]
+            sessionData2,
+            callSpecificData2
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData1 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey1")
+        );
+        bytes memory callData2 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey2")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to, to),
+                toArray(value, value),
+                toArray(callData1, callData2)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo1, sessionInfo2)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA22 expired or not due"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowUsageOfExpiredSession() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData1 = ISessionKeyManagerModuleHybrid.SessionData({
+                // set validUntil to be in the past
+                validUntil: uint48(block.timestamp) - 1,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData2 = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule2),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid), uint64(block.chainid)),
+                toArray(sessionData1, sessionData2),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData1 = abi.encode("hello world");
+        bytes memory sessionInfo1 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            0, // sessionEnableData[0][0]
+            sessionData1,
+            callSpecificData1
+        );
+        bytes memory callSpecificData2 = abi.encode("hello world 2");
+        bytes memory sessionInfo2 = makeSessionEnableSessionInfo(
+            0, // sessionEnableData[0]
+            1, // sessionEnableData[0][1]
+            sessionData2,
+            callSpecificData2
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData1 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey1")
+        );
+        bytes memory callData2 = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey2")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to, to),
+                toArray(value, value),
+                toArray(callData1, callData2)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo1, sessionInfo2)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA22 expired or not due"
+                )
+            );
+        }
+    }
+
+    function testShouldNotAllowSessionExecutionIfSVMReturnsDifferentSigner()
+        public
+    {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule1),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+
+        // Generate Session Enable Data
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(
+                toArrayU64(uint64(block.chainid)),
+                toArray(sessionData),
+                sa
+            );
+
+        // Generate Session Info
+        bytes memory callSpecificData = abi.encode("hello world");
+        bytes memory sessionInfo = makeSessionEnableSessionInfo(
+            0,
+            0,
+            sessionData,
+            callSpecificData
+        );
+
+        // Enable and Use session
+        address to = address(stub);
+        uint256 value = 0;
+        bytes memory callData = abi.encodeCall(
+            stub.emitMessage,
+            ("shouldProcessTransactionFromSessionKey")
+        );
+        UserOperation memory op = makeSessionUserOp(
+            getSmartAccountBatchExecuteCalldata(
+                toArray(to),
+                toArray(value),
+                toArray(callData)
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            bob,
+            toArray(sessionEnableData),
+            toArray(sessionEnableSignature),
+            toArray(sessionInfo)
+        );
+
+        vm.mockCall(
+            address(mockSessionValidationModule1),
+            0,
+            bytes(""),
+            abi.encode(charlie.addr)
+        );
+
+        try entryPoint.handleOps(toArray(op), owner.addr) {
+            fail("should have reverted");
+        } catch (bytes memory reason) {
+            assertEq(
+                reason,
+                abi.encodeWithSelector(
+                    IEntryPoint.FailedOp.selector,
+                    0,
+                    "AA24 signature error"
+                )
+            );
+        }
+    }
+
     function testShouldNotSupportERC1271SignatureValidation(
         uint256 seed
     ) public {

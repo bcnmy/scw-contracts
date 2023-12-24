@@ -598,7 +598,7 @@ contract SessionKeyManagerHybrid is
                 _sessionEnableSignature
             ) != EIP1271_MAGIC_VALUE
         ) {
-            revert("SessionNotApproved");
+            revert("SKM: SessionNotApproved");
         }
     }
 
@@ -619,7 +619,7 @@ contract SessionKeyManagerHybrid is
             );
 
         if (sessionChainId != block.chainid) {
-            revert("SessionChainIdMismatch");
+            revert("SKM: SessionChainIdMismatch");
         }
 
         bytes32 computedDigest = _sessionDataDigestUnpacked(
@@ -630,7 +630,7 @@ contract SessionKeyManagerHybrid is
         );
 
         if (sessionDigest != computedDigest) {
-            revert("SessionKeyDataHashMismatch");
+            revert("SKM: SessionKeyDataHashMismatch");
         }
 
         // Cache the session key data in the smart account storage for next validation
@@ -738,7 +738,7 @@ contract SessionKeyManagerHybrid is
         }
 
         if (_sessionKeyIndex >= enabledKeysCount) {
-            revert("SessionKeyIndexInvalid");
+            revert("SKM: SessionKeyIndexInvalid");
         }
     }
 }

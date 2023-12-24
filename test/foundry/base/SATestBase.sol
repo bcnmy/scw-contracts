@@ -134,6 +134,9 @@ abstract contract SATestBase is
             address(ecdsaOwnershipRegistryModule),
             "ECDSA Ownership Registry Module"
         );
+
+        // Ensure non zero timestamp
+        vm.warp(1703452990); // Sunday, December 24, 2023 9:23:10 PM GMT
     }
 
     // Utility Functions
