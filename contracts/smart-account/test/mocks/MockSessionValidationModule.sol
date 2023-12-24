@@ -6,12 +6,6 @@ import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOpera
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract MockSessionValidationModule is ISessionValidationModule {
-    bool shouldRevert = false;
-
-    function setShouldRevert(bool _shouldRevert) external {
-        shouldRevert = _shouldRevert;
-    }
-
     event ValidateSessionParams(
         address destinationContract,
         uint256 callValue,
@@ -25,11 +19,7 @@ contract MockSessionValidationModule is ISessionValidationModule {
         bytes32 _userOpHash,
         bytes calldata _data,
         bytes calldata _sig
-    ) external view override returns (bool) {
-        if (shouldRevert) {
-            revert("Mock: Reverting");
-        }
-
+    ) external pure override returns (bool) {
         (_op);
         address sessionKey = address(bytes20(_data[0:20]));
         return
@@ -44,10 +34,6 @@ contract MockSessionValidationModule is ISessionValidationModule {
         bytes calldata sessionKeyData,
         bytes calldata callSpecificData
     ) external override returns (address) {
-        if (shouldRevert) {
-            revert("Mock: Reverting");
-        }
-
         emit ValidateSessionParams(
             destinationContract,
             callValue,
