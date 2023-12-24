@@ -113,7 +113,7 @@ contract SessionKeyManager is
         if (
             !MerkleProof.verify(merkleProof, sessionKeyStorage.merkleRoot, leaf)
         ) {
-            revert("SKM: SessionNotApproved");
+            revert("SessionNotApproved");
         }
     }
 
