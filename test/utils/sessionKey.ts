@@ -2,17 +2,10 @@ import { BigNumber, BytesLike, Contract, Signer } from "ethers";
 import { ethers } from "hardhat";
 import { EntryPoint } from "../../typechain-types";
 import { UserOperation } from "./userOperation";
-import { fillAndSign, makeEcdsaModuleUserOp, packUserOp } from "./userOp";
-import {
-  hexZeroPad,
-  hexConcat,
-  defaultAbiCoder,
-  solidityPack,
-  solidityKeccak256,
-} from "ethers/lib/utils";
+import { fillAndSign, makeEcdsaModuleUserOp } from "./userOp";
+import { hexZeroPad, hexConcat, defaultAbiCoder } from "ethers/lib/utils";
 import MerkleTree from "merkletreejs";
 import { keccak256 } from "ethereumjs-util";
-import { callDataCost } from "./testUtils";
 
 export interface SessionKeyParams {
   sessionKeyData: string;
@@ -130,260 +123,6 @@ export async function makeEcdsaSessionKeySignedUserOp(
   return userOp;
 }
 
-export async function makeStatelessEcdsaSessionKeySignedUserOp(
-  functionName: string,
-  functionParams: any,
-  userOpSender: string,
-  sessionKey: Signer,
-  entryPoint: EntryPoint,
-  sessionKeyManagerAddress: string,
-  validUntil: number,
-  validAfter: number,
-  sessionKeyIndex: number,
-  sessionValidationModuleAddress: string,
-  sessionKeyParamsData: BytesLike,
-  sessionEnableData: BytesLike,
-  erc1271EnableSignature: BytesLike,
-  options?: {
-    preVerificationGas?: number;
-  }
-): Promise<UserOperation> {
-  const SmartAccount = await ethers.getContractFactory("SmartAccount");
-
-  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-    functionName,
-    functionParams
-  );
-
-  const userOp = await fillAndSign(
-    {
-      sender: userOpSender,
-      callData: txnDataAA1,
-      ...options,
-    },
-    sessionKey,
-    entryPoint,
-    "nonce",
-    true
-  );
-
-  const paddedSig = defaultAbiCoder.encode(
-    [
-      "uint48",
-      "uint48",
-      "uint256",
-      "address",
-      "bytes",
-      "bytes",
-      "bytes",
-      "bytes",
-    ],
-    [
-      validUntil,
-      validAfter,
-      sessionKeyIndex,
-      sessionValidationModuleAddress,
-      sessionKeyParamsData,
-      sessionEnableData,
-      erc1271EnableSignature,
-      userOp.signature,
-    ]
-  );
-
-  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"],
-    [paddedSig, sessionKeyManagerAddress]
-  );
-  userOp.signature = signatureWithModuleAddress;
-
-  return userOp;
-}
-
-export async function makeHybridEcdsaSessionKeyEnableSignedUserOp(
-  functionName: string,
-  functionParams: any,
-  userOpSender: string,
-  sessionKey: Signer,
-  entryPoint: EntryPoint,
-  sessionKeyManagerAddress: string,
-  validUntil: number,
-  validAfter: number,
-  sessionKeyIndex: number,
-  sessionValidationModuleAddress: string,
-  sessionKeyParamsData: BytesLike,
-  sessionEnableData: BytesLike,
-  erc1271EnableSignature: BytesLike,
-  options?: {
-    preVerificationGas?: number;
-  }
-): Promise<UserOperation> {
-  const SmartAccount = await ethers.getContractFactory("SmartAccount");
-
-  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-    functionName,
-    functionParams
-  );
-
-  const userOp = await fillAndSign(
-    {
-      sender: userOpSender,
-      callData: txnDataAA1,
-      ...options,
-    },
-    sessionKey,
-    entryPoint,
-    "nonce",
-    true
-  );
-
-  const paddedSig = defaultAbiCoder.encode(
-    [
-      "uint256",
-      "uint48",
-      "uint48",
-      "uint256",
-      "address",
-      "bytes",
-      "bytes",
-      "bytes",
-      "bytes",
-    ],
-    [
-      1,
-      validUntil,
-      validAfter,
-      sessionKeyIndex,
-      sessionValidationModuleAddress,
-      sessionKeyParamsData,
-      sessionEnableData,
-      erc1271EnableSignature,
-      userOp.signature,
-    ]
-  );
-
-  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"],
-    [paddedSig, sessionKeyManagerAddress]
-  );
-  userOp.signature = signatureWithModuleAddress;
-
-  return userOp;
-}
-
-export async function makeStatefullEcdsaSessionKeySignedUserOp(
-  functionName: string,
-  functionParams: any,
-  userOpSender: string,
-  sessionKey: Signer,
-  entryPoint: EntryPoint,
-  sessionKeyManagerAddress: string,
-  validUntil: number,
-  validAfter: number,
-  sessionValidationModuleAddress: string,
-  sessionKeyParamsData: BytesLike,
-  options?: {
-    preVerificationGas?: number;
-  }
-): Promise<UserOperation> {
-  const SmartAccount = await ethers.getContractFactory("SmartAccount");
-
-  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-    functionName,
-    functionParams
-  );
-
-  const userOp = await fillAndSign(
-    {
-      sender: userOpSender,
-      callData: txnDataAA1,
-      ...options,
-    },
-    sessionKey,
-    entryPoint,
-    "nonce",
-    true
-  );
-
-  const sessionDataDigest = solidityKeccak256(
-    ["uint48", "uint48", "address", "bytes"],
-    [
-      validUntil,
-      validAfter,
-      sessionValidationModuleAddress,
-      sessionKeyParamsData,
-    ]
-  );
-  const moduleSignature = ethers.utils.defaultAbiCoder.encode(
-    ["bytes32", "bytes"],
-    [sessionDataDigest, userOp.signature]
-  );
-
-  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"],
-    [moduleSignature, sessionKeyManagerAddress]
-  );
-  userOp.signature = signatureWithModuleAddress;
-
-  return userOp;
-}
-
-export async function makeHybridEcdsaPreEnabledSessionKeySignedUserOp(
-  functionName: string,
-  functionParams: any,
-  userOpSender: string,
-  sessionKey: Signer,
-  entryPoint: EntryPoint,
-  sessionKeyManagerAddress: string,
-  validUntil: number,
-  validAfter: number,
-  sessionValidationModuleAddress: string,
-  sessionKeyParamsData: BytesLike,
-  options?: {
-    preVerificationGas?: number;
-  }
-): Promise<UserOperation> {
-  const SmartAccount = await ethers.getContractFactory("SmartAccount");
-
-  const txnDataAA1 = SmartAccount.interface.encodeFunctionData(
-    functionName,
-    functionParams
-  );
-
-  const userOp = await fillAndSign(
-    {
-      sender: userOpSender,
-      callData: txnDataAA1,
-      ...options,
-    },
-    sessionKey,
-    entryPoint,
-    "nonce",
-    true
-  );
-
-  const sessionDataDigest = solidityKeccak256(
-    ["uint48", "uint48", "address", "bytes"],
-    [
-      validUntil,
-      validAfter,
-      sessionValidationModuleAddress,
-      sessionKeyParamsData,
-    ]
-  );
-  const moduleSignature = ethers.utils.defaultAbiCoder.encode(
-    ["uint256", "bytes32", "bytes"],
-    [0, sessionDataDigest, userOp.signature]
-  );
-
-  const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
-    ["bytes", "address"],
-    [moduleSignature, sessionKeyManagerAddress]
-  );
-  userOp.signature = signatureWithModuleAddress;
-
-  return userOp;
-}
-
 export async function enableNewTreeForSmartAccountViaEcdsa(
   leaves: BytesLike[],
   sessionKeyManager: Contract,
@@ -414,9 +153,7 @@ export async function enableNewTreeForSmartAccountViaEcdsa(
     [addMerkleRootUserOp],
     await smartAccountOwner.getAddress()
   );
-  const { gasUsed } = await tx.wait();
-
-  console.log("gasUsed in new merkle tree user op", gasUsed.toString());
+  await tx.wait();
 
   return merkleTree;
 }
@@ -457,11 +194,7 @@ export async function addLeavesForSmartAccountViaEcdsa(
     [addMerkleRootUserOp],
     await smartAccountOwner.getAddress()
   );
-  const { gasUsed } = await tx.wait();
-
-  const calldataCost = callDataCost(packUserOp(addMerkleRootUserOp, false));
-  console.log("Merkle Tree Update root calldata cost", calldataCost);
-  console.log("gasUsed in update merkle tree user op", gasUsed.toString());
+  await tx.wait();
 
   return newMerkleTree;
 }
@@ -497,28 +230,4 @@ export async function getERC20SessionKeyParams(
     leafData: leafData,
   };
   return params;
-}
-
-export function makeSessionEnableData(
-  chainIds: number[],
-  sessionData: BytesLike[]
-): BytesLike {
-  if (chainIds.length !== sessionData.length) {
-    throw new Error("chainIds and sessionData must be of same length");
-  }
-
-  return solidityPack(
-    [
-      "uint8",
-      ...(new Array(chainIds.length).fill(0).map(() => "uint64") as string[]),
-      ...(new Array(sessionData.length)
-        .fill(0)
-        .map(() => "bytes32") as string[]),
-    ],
-    [
-      chainIds.length,
-      ...chainIds,
-      ...sessionData.map((data) => ethers.utils.keccak256(data)),
-    ]
-  );
 }

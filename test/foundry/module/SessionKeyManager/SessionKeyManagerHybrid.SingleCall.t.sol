@@ -10,6 +10,7 @@ import {ISessionKeyManagerModuleHybrid} from "sa/interfaces/modules/SessionKeyMa
 import {MockSessionValidationModule} from "sa/test/mocks/MockSessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {Vm} from "forge-std/Test.sol";
+import "forge-std/console2.sol";
 
 contract SessionKeyManagerHybridSingleCallTest is SATestBase {
     SmartAccount private sa;
