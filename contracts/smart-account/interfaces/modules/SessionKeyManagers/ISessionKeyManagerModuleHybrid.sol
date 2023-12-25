@@ -38,7 +38,7 @@ interface ISessionKeyManagerModuleHybrid {
     function enableSession(SessionData calldata sessionData) external;
 
     /**
-     * @notice Explicity disable a session. Can be useful is situations where a session
+     * @notice Explicitly disable a session. Can be useful is situations where a session
      *         needs to be disabled before it expires.
      * @param _sessionDigest digest of session key data
      */

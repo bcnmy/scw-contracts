@@ -5,6 +5,7 @@ import {
   ISessionKeyManagerModuleHybrid,
   SessionKeyManagerHybrid,
   SmartAccount__factory,
+  EcdsaOwnershipRegistryModule,
 } from "../../typechain-types";
 import {
   arrayify,
@@ -14,7 +15,6 @@ import {
   solidityPack,
 } from "ethers/lib/utils";
 import { fillAndSign } from "./userOp";
-import { EcdsaOwnershipRegistryModule } from "../../typechain";
 
 type ExecutionCallParams = {
   to: string;
@@ -212,5 +212,104 @@ export class HybridSKMSingleCallUtils extends HybridSKMUtils {
     userOp.signature = signatureWithModuleAddress;
 
     return userOp;
+  }
+}
+
+export class HybridSKMBatchCallUtils extends HybridSKMUtils {
+  // eslint-disable-next-line no-useless-constructor
+  constructor(
+    entryPoint: EntryPoint,
+    sessionKeyManager: SessionKeyManagerHybrid,
+    ecdsaModule: EcdsaOwnershipRegistryModule
+  ) {
+    super(entryPoint, sessionKeyManager, ecdsaModule);
+  }
+
+  async makeEcdsaSessionKeySignedUserOp(
+    userOpSender: string,
+    executionCallParams: ExecutionCallParams[],
+    sessionKey: Signer,
+    sessionEnableDataList: BytesLike[],
+    sessionEnableSignatureList: BytesLike[],
+    sessionInfos: BytesLike[],
+    options?: {
+      preVerificationGas?: number;
+    }
+  ): Promise<UserOperation> {
+    const callData = SmartAccount__factory.createInterface().encodeFunctionData(
+      "executeBatch",
+      [
+        executionCallParams.map(({ to }) => to),
+        executionCallParams.map(({ value }) => value),
+        executionCallParams.map(({ calldata }) => calldata),
+      ]
+    );
+
+    const userOp = await fillAndSign(
+      {
+        sender: userOpSender,
+        callData,
+        ...options,
+      },
+      sessionKey,
+      this.entryPoint,
+      "nonce",
+      true
+    );
+
+    const paddedSig = defaultAbiCoder.encode(
+      ["bytes[]", "bytes[]", "bytes[]", "bytes"],
+      [
+        sessionEnableDataList,
+        sessionEnableSignatureList,
+        sessionInfos,
+        userOp.signature,
+      ]
+    );
+
+    const signatureWithModuleAddress = defaultAbiCoder.encode(
+      ["bytes", "address"],
+      [paddedSig, this.sessionKeyManager.address]
+    );
+    userOp.signature = signatureWithModuleAddress;
+
+    return userOp;
+  }
+
+  makeSessionEnableSessionInfo(
+    sessionEnableDataIndex: number,
+    sessionKeyIndex: number,
+    sessionData: ISessionKeyManagerModuleHybrid.SessionDataStruct,
+    callSpecificData: BytesLike
+  ): BytesLike {
+    return solidityPack(
+      ["uint8", "uint8", "uint8", "uint48", "uint48", "address", "bytes"],
+      [
+        TRANSACTION_MODE.ENABLE_AND_USE,
+        sessionEnableDataIndex,
+        sessionKeyIndex,
+        sessionData.validUntil,
+        sessionData.validAfter,
+        sessionData.sessionValidationModule,
+        defaultAbiCoder.encode(
+          ["bytes", "bytes"],
+          [sessionData.sessionKeyData, callSpecificData]
+        ),
+      ]
+    );
+  }
+
+  async makePreEnabledSessionInfo(
+    sessionData: ISessionKeyManagerModuleHybrid.SessionDataStruct,
+    callSpecificData: BytesLike
+  ): Promise<BytesLike> {
+    return solidityPack(
+      ["uint8", "bytes32", "bytes"],
+      [
+        TRANSACTION_MODE.PRE_ENABLED,
+        await this.sessionDigest(sessionData),
+        defaultAbiCoder.encode(["bytes"], [callSpecificData]),
+      ]
+    );
   }
 }

@@ -2,7 +2,7 @@ import { expect } from "chai";
 import { ethers, deployments } from "hardhat";
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
 import { encodeTransfer } from "../../utils/testUtils";
-import { hexZeroPad } from "ethers/lib/utils";
+import { defaultAbiCoder, hexZeroPad } from "ethers/lib/utils";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -17,7 +17,10 @@ import {
   SessionKeyManagerHybrid__factory,
   ISessionKeyManagerModuleHybrid,
 } from "../../../typechain-types";
-import { HybridSKMSingleCallUtils } from "../../utils/hybridSessionKeyManager";
+import {
+  HybridSKMBatchCallUtils,
+  HybridSKMSingleCallUtils,
+} from "../../utils/hybridSessionKeyManager";
 
 describe("Hybrid Session Key Manager", async () => {
   let [deployer, smartAccountOwner, charlie, sessionKey, alice] =
@@ -92,7 +95,10 @@ describe("Hybrid Session Key Manager", async () => {
     );
     await entryPoint.handleOps([userOp], alice.address);
 
-    const mockSessionValidationModule = await (
+    const mockSessionValidationModule1 = await (
+      await ethers.getContractFactory("MockSessionValidationModule")
+    ).deploy();
+    const mockSessionValidationModule2 = await (
       await ethers.getContractFactory("MockSessionValidationModule")
     ).deploy();
 
@@ -103,10 +109,19 @@ describe("Hybrid Session Key Manager", async () => {
       validUntil,
       validAfter,
       sessionKeyData,
-      sessionValidationModule: mockSessionValidationModule.address,
+      sessionValidationModule: mockSessionValidationModule1.address,
+    };
+    const sessionData2: ISessionKeyManagerModuleHybrid.SessionDataStruct = {
+      ...sessionData,
+      sessionValidationModule: mockSessionValidationModule2.address,
     };
 
     const hybridSKMSingleCallUtils = new HybridSKMSingleCallUtils(
+      entryPoint,
+      hybridSessionKeyManager,
+      ecdsaModule
+    );
+    const hybridSKMBatchCallUtils = new HybridSKMBatchCallUtils(
       entryPoint,
       hybridSessionKeyManager,
       ecdsaModule
@@ -120,10 +135,13 @@ describe("Hybrid Session Key Manager", async () => {
       ecdsaModule: ecdsaModule,
       userSA: userSA,
       hybridSessionKeyManager,
-      mockSessionValidationModule: mockSessionValidationModule,
+      mockSessionValidationModule: mockSessionValidationModule1,
+      mockSessionValidationModule2,
       sessionKeyData: sessionKeyData,
       sessionData,
+      sessionData2,
       hybridSKMSingleCallUtils,
+      hybridSKMBatchCallUtils,
       smartAccountOwner,
     };
   });
@@ -253,6 +271,284 @@ describe("Hybrid Session Key Manager", async () => {
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore.add(tokenAmountToTransfer)
+      );
+    });
+  });
+
+  describe("Batch Call", async () => {
+    it("Should process signed user operation from Session for 2 batch items when enabling and use is batched", async () => {
+      const {
+        entryPoint,
+        userSA,
+        hybridSKMBatchCallUtils: utils,
+        mockToken,
+        sessionData,
+        sessionData2,
+        smartAccountOwner,
+      } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+
+      const { sessionEnableData, sessionEnableSignature } =
+        await utils.makeSessionEnableData(
+          [chainId, chainId],
+          [sessionData, sessionData2],
+          userSA.address,
+          smartAccountOwner
+        );
+
+      const callSpecificData = defaultAbiCoder.encode(
+        ["string"],
+        ["hello world"]
+      );
+
+      const sessionInfo1 = utils.makeSessionEnableSessionInfo(
+        0,
+        0,
+        sessionData,
+        callSpecificData
+      );
+      const sessionInfo2 = utils.makeSessionEnableSessionInfo(
+        0,
+        1,
+        sessionData2,
+        callSpecificData
+      );
+
+      const transferUserOp = await utils.makeEcdsaSessionKeySignedUserOp(
+        userSA.address,
+        [
+          {
+            to: mockToken.address,
+            value: ethers.utils.parseEther("0"),
+            calldata: encodeTransfer(
+              charlie.address,
+              tokenAmountToTransfer.toString()
+            ),
+          },
+          {
+            to: mockToken.address,
+            value: ethers.utils.parseEther("0"),
+            calldata: encodeTransfer(
+              charlie.address,
+              tokenAmountToTransfer.toString()
+            ),
+          },
+        ],
+        sessionKey,
+        [sessionEnableData],
+        [sessionEnableSignature],
+        [sessionInfo1, sessionInfo2],
+        {
+          preVerificationGas: 60000,
+        }
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(
+        charlie.address
+      );
+
+      await environment.sendUserOperation(transferUserOp, entryPoint.address);
+
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(
+        charlieTokenBalanceBefore.add(tokenAmountToTransfer.mul(2))
+      );
+    });
+
+    it("Should process signed user operation from Session for 2 batch items when one is fresh and other is pre-enabled", async () => {
+      const {
+        entryPoint,
+        userSA,
+        hybridSKMBatchCallUtils: utils,
+        mockToken,
+        sessionData,
+        sessionData2,
+        smartAccountOwner,
+        ecdsaModule,
+        hybridSessionKeyManager,
+      } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+      const chainId = (await ethers.provider.getNetwork()).chainId;
+
+      // Pre-enable the 2nd session
+      const enableSessionOp = await makeEcdsaModuleUserOp(
+        "execute_ncC",
+        [
+          hybridSessionKeyManager.address,
+          ethers.utils.parseEther("0"),
+          hybridSessionKeyManager.interface.encodeFunctionData(
+            "enableSession",
+            [sessionData2]
+          ),
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address,
+        {
+          preVerificationGas: 50000,
+        }
+      );
+      await environment.sendUserOperation(enableSessionOp, entryPoint.address);
+
+      const { sessionEnableData, sessionEnableSignature } =
+        await utils.makeSessionEnableData(
+          [chainId],
+          [sessionData],
+          userSA.address,
+          smartAccountOwner
+        );
+
+      const callSpecificData = defaultAbiCoder.encode(
+        ["string"],
+        ["hello world"]
+      );
+
+      const sessionInfo1 = utils.makeSessionEnableSessionInfo(
+        0,
+        0,
+        sessionData,
+        callSpecificData
+      );
+      const sessionInfo2 = await utils.makePreEnabledSessionInfo(
+        sessionData2,
+        callSpecificData
+      );
+
+      const transferUserOp = await utils.makeEcdsaSessionKeySignedUserOp(
+        userSA.address,
+        [
+          {
+            to: mockToken.address,
+            value: ethers.utils.parseEther("0"),
+            calldata: encodeTransfer(
+              charlie.address,
+              tokenAmountToTransfer.toString()
+            ),
+          },
+          {
+            to: mockToken.address,
+            value: ethers.utils.parseEther("0"),
+            calldata: encodeTransfer(
+              charlie.address,
+              tokenAmountToTransfer.toString()
+            ),
+          },
+        ],
+        sessionKey,
+        [sessionEnableData],
+        [sessionEnableSignature],
+        [sessionInfo1, sessionInfo2],
+        {
+          preVerificationGas: 60000,
+        }
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(
+        charlie.address
+      );
+
+      await environment.sendUserOperation(transferUserOp, entryPoint.address);
+
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(
+        charlieTokenBalanceBefore.add(tokenAmountToTransfer.mul(2))
+      );
+    });
+
+    it("Should process signed user operation from Session for 2 batch items when both are pre-enabled", async () => {
+      const {
+        entryPoint,
+        userSA,
+        hybridSKMBatchCallUtils: utils,
+        mockToken,
+        sessionData,
+        sessionData2,
+        smartAccountOwner,
+        ecdsaModule,
+        hybridSessionKeyManager,
+      } = await setupTests();
+      const tokenAmountToTransfer = ethers.utils.parseEther("0.834");
+
+      // Pre-enable both sessions
+      const enableSessionOp = await makeEcdsaModuleUserOp(
+        "executeBatch",
+        [
+          [hybridSessionKeyManager.address, hybridSessionKeyManager.address],
+          [ethers.utils.parseEther("0"), ethers.utils.parseEther("0")],
+          [
+            hybridSessionKeyManager.interface.encodeFunctionData(
+              "enableSession",
+              [sessionData]
+            ),
+            hybridSessionKeyManager.interface.encodeFunctionData(
+              "enableSession",
+              [sessionData2]
+            ),
+          ],
+        ],
+        userSA.address,
+        smartAccountOwner,
+        entryPoint,
+        ecdsaModule.address,
+        {
+          preVerificationGas: 60000,
+        }
+      );
+      await environment.sendUserOperation(enableSessionOp, entryPoint.address);
+
+      const callSpecificData = defaultAbiCoder.encode(
+        ["string"],
+        ["hello world"]
+      );
+
+      const sessionInfo1 = await utils.makePreEnabledSessionInfo(
+        sessionData,
+        callSpecificData
+      );
+      const sessionInfo2 = await utils.makePreEnabledSessionInfo(
+        sessionData2,
+        callSpecificData
+      );
+
+      const transferUserOp = await utils.makeEcdsaSessionKeySignedUserOp(
+        userSA.address,
+        [
+          {
+            to: mockToken.address,
+            value: ethers.utils.parseEther("0"),
+            calldata: encodeTransfer(
+              charlie.address,
+              tokenAmountToTransfer.toString()
+            ),
+          },
+          {
+            to: mockToken.address,
+            value: ethers.utils.parseEther("0"),
+            calldata: encodeTransfer(
+              charlie.address,
+              tokenAmountToTransfer.toString()
+            ),
+          },
+        ],
+        sessionKey,
+        [],
+        [],
+        [sessionInfo1, sessionInfo2],
+        {
+          preVerificationGas: 60000,
+        }
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(
+        charlie.address
+      );
+
+      await environment.sendUserOperation(transferUserOp, entryPoint.address);
+
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(
+        charlieTokenBalanceBefore.add(tokenAmountToTransfer.mul(2))
       );
     });
   });
