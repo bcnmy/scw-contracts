@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {ISecurityPolicyPlugin} from "contracts/smart-account/interfaces/modules/ISecurityPolicyManagerPlugin.sol";
 import {IERC7484SecurityPolicyPluginEventsErrors} from "contracts/smart-account/interfaces/modules/IERC7484SecurityPolicyPluginEventsErrors.sol";
