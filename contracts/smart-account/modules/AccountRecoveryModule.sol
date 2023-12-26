@@ -640,7 +640,9 @@ contract AccountRecoveryModule is
 
             bytes32 currentGuardian = keccak256(currentGuardianSig);
 
-            TimeFrame memory guardianTimeFrame = _guardians[currentGuardian][smartAccount];
+            TimeFrame memory guardianTimeFrame = _guardians[currentGuardian][
+                smartAccount
+            ];
 
             // validUntil == 0 means the `currentGuardian` has not been set as guardian
             // for the smartAccount
