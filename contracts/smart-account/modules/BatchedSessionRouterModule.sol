@@ -31,6 +31,7 @@ contract BatchedSessionRouter is
 {
     bytes4 public constant EXECUTE_BATCH_SELECTOR = 0x47e1da2a;
     bytes4 public constant EXECUTE_BATCH_OPTIMIZED_SELECTOR = 0x00004680;
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
 
     /// @inheritdoc IAuthorizationModule
     function validateUserOp(
@@ -57,7 +58,7 @@ contract BatchedSessionRouter is
                 // parse the signature to get the array of required parameters
                 (sessionKeyManager, sessionData, sessionKeySignature) = abi
                     .decode(
-                        userOp.signature[96:],
+                        userOp.signature[MODULE_SIGNATURE_OFFSET:],
                         (address, SessionData[], bytes)
                     );
             }

@@ -32,6 +32,8 @@ contract EcdsaOwnershipRegistryModule is
 
     string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "1.1.0";
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
+    uint256 private constant MODULE_SIGNATURE_END_POSITION = 96 + 65;
     mapping(address => address) internal _smartAccountOwners;
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule
@@ -77,7 +79,8 @@ contract EcdsaOwnershipRegistryModule is
         if (
             _verifySignature(
                 userOpHash,
-                userOp.signature[96:161],
+                userOp
+                    .signature[MODULE_SIGNATURE_OFFSET:MODULE_SIGNATURE_END_POSITION],
                 userOp.sender
             )
         ) {

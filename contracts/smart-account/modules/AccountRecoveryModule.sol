@@ -41,6 +41,8 @@ contract AccountRecoveryModule is
     // Hash to be signed by guardians to make a guardianId
     string public constant CONTROL_MESSAGE = "ACC_RECOVERY_SECURE_MSG";
 
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
+
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
     // complies with associated storage rules
@@ -146,7 +148,8 @@ contract AccountRecoveryModule is
             .recoveryThreshold;
         if (requiredSignatures == 0) revert("AccRecovery: Threshold not set");
 
-        bytes calldata moduleSignature = userOp.signature[96:];
+        bytes calldata moduleSignature = userOp
+            .signature[MODULE_SIGNATURE_OFFSET:];
 
         require(
             moduleSignature.length >= requiredSignatures * 2 * 65,

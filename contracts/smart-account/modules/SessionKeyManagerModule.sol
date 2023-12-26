@@ -29,6 +29,8 @@ contract SessionKeyManager is
     string public constant NAME = "Session Key Manager Module";
     string public constant VERSION = "1.1.0";
 
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
+
     /**
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
@@ -54,7 +56,7 @@ contract SessionKeyManager is
             bytes32[] memory merkleProof,
             bytes memory sessionKeySignature
         ) = abi.decode(
-                userOp.signature[96:],
+                userOp.signature[MODULE_SIGNATURE_OFFSET:],
                 (uint48, uint48, address, bytes, bytes32[], bytes)
             );
 
