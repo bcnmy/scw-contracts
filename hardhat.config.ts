@@ -268,7 +268,6 @@ const config: HardhatUserConfig = {
       chainId: 91715,
     },
   },
-
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     onlyCalledMethods: true,

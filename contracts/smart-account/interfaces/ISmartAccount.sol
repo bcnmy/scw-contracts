@@ -13,6 +13,11 @@ interface ISmartAccount is IBaseSmartAccount, IModuleManager {
         address indexed newImplementation
     );
 
+    event SmartAccountReceivedNativeToken(
+        address indexed sender,
+        uint256 value
+    );
+
     // Errors
 
     /**

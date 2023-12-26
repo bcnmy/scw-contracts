@@ -64,12 +64,9 @@ contract SmartAccount is
         _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
     }
 
-    /**
-     *  Left for v1 compatibility reasons
-     *  Otherwise SAs upgraded from v1 won't be able to receive native tokens
-     *  As v1 Proxy doesn't have receive()
-     */
-    receive() external payable {}
+    receive() external payable {
+        emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
+    }
 
     /// @inheritdoc ISmartAccount
     function init(

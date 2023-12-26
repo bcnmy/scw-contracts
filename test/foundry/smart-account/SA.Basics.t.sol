@@ -114,11 +114,18 @@ contract SABasicsTest is SATestBase {
 
         MockEthSender mockEthSender = new MockEthSender();
         vm.deal(address(mockEthSender), 100 ether);
+
+        uint256 userSABalanceBefore = address(sa).balance;
         
         uint256 gasStipend = 0;
-        // by some reason it passes even if there's extra gas consumed by receive()
-        // same doesn't pass with Hardhat
-        // see SA.Basics.specs.ts for reference
+
         mockEthSender.send(address(sa), 1 ether, gasStipend);
+        uint256 userSABalanceAfter = address(sa).balance;
+
+        assertEq(
+            userSABalanceAfter - userSABalanceBefore,
+            1 ether,
+            "smart account should receive 1 ether"
+        );
     }
 }

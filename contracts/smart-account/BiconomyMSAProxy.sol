@@ -17,11 +17,6 @@ contract BiconomyMSAProxy {
         }
     }
 
-    receive() external payable {
-        // leaving it blank for the compatibility reasons,
-        // as some protocols send value with exactly 2300 gas
-    }
-
     fallback() external payable {
         address target;
         assembly {
