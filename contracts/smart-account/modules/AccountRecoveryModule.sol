@@ -640,15 +640,12 @@ contract AccountRecoveryModule is
 
             bytes32 currentGuardian = keccak256(currentGuardianSig);
 
-            (uint48 validAfter, uint48 validUntil) = (
-                _guardians[currentGuardian][smartAccount].validAfter,
-                _guardians[currentGuardian][smartAccount].validUntil
-            );
+            TimeFrame memory guardianTimeFrame = _guardians[currentGuardian][smartAccount];
 
             // validUntil == 0 means the `currentGuardian` has not been set as guardian
             // for the smartAccount
             // validUntil can never be 0 as it is set to type(uint48).max in initForSmartAccount
-            if (validUntil == 0) {
+            if (guardianTimeFrame.validUntil == 0) {
                 return SIG_VALIDATION_FAILED;
             }
 
@@ -660,11 +657,11 @@ contract AccountRecoveryModule is
             // detect the common validity window for all the guardians
             // if at least one guardian is not valid yet or expired
             // the whole userOp will be invalidated at the EntryPoint
-            if (validUntil < earliestValidUntil) {
-                earliestValidUntil = validUntil;
+            if (guardianTimeFrame.validUntil < earliestValidUntil) {
+                earliestValidUntil = guardianTimeFrame.validUntil;
             }
-            if (validAfter > latestValidAfter) {
-                latestValidAfter = validAfter;
+            if (guardianTimeFrame.validAfter > latestValidAfter) {
+                latestValidAfter = guardianTimeFrame.validAfter;
             }
             lastGuardianAddress = currentGuardianAddress;
 
