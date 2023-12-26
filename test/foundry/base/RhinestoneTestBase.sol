@@ -10,6 +10,6 @@ contract RhinestoneTestBase is SATestBase, BaseTest {
         SATestBase.setUp();
         BaseTest.setUp();
 
-        vm.label(address(instancel1.registry), "Rhinestone Registry");
+        vm.label(address(instance.registry), "Rhinestone Registry");
     }
 }
