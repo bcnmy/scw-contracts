@@ -64,6 +64,12 @@ contract SmartAccount is
         _modules[SENTINEL_MODULES] = SENTINEL_MODULES;
     }
 
+    /**
+     * @dev This function is a special fallback function that is triggered when the contract receives Ether.
+     * It logs an event indicating the amount of Ether received and the sender's address.
+     * @notice This function is marked as external and payable, meaning it can be called from external
+     * sources and accepts Ether as payment.
+     */
     receive() external payable {
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
