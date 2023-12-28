@@ -160,11 +160,11 @@ contract AccountRecoveryModule is
             innerSelector := mload(add(innerCallData, 0x20))
         }
 
-        bool isValidAddingRequestUserOp = (innerSelector ==
+        bool isTheValidUserOpToAddARecoveryRequest = (innerSelector ==
             this.submitRecoveryRequest.selector) &&
             (dest == address(this)) &&
             callValue == 0;
-        if (isValidAddingRequestUserOp)
+        if (isTheValidUserOpToAddARecoveryRequest)
             _validateRequestToBeAdded(innerCallData);
 
         bool isValidRecoveryExecutionUserOp = (innerSelector ==
@@ -172,7 +172,10 @@ contract AccountRecoveryModule is
             dest == address(this) &&
             _smartAccountSettings[smartAccount].securityDelay == 0);
 
-        if (isValidAddingRequestUserOp != isValidRecoveryExecutionUserOp) {
+        if (
+            isTheValidUserOpToAddARecoveryRequest !=
+            isValidRecoveryExecutionUserOp
+        ) {
             //exactly one should be true
             return
                 _validateGuardiansSignatures(
@@ -455,12 +458,7 @@ contract AccountRecoveryModule is
                 Enum.Operation.Call
             );
         if (!success) revert RecoveryExecutionFailed(msg.sender, retData);
-        emit RecoveryExecuted(
-            msg.sender,
-            to,
-            value,
-            data
-        );
+        emit RecoveryExecuted(msg.sender, to, value, data);
     }
 
     /**

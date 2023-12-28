@@ -117,7 +117,10 @@ interface IAccountRecoveryModule {
      * @param smartAccount address of the Smart Account
      * @param recoveriesLeft new recoveries allowed
      */
-    event RecoveriesLeft(address indexed smartAccount, uint8 indexed recoveriesLeft);
+    event RecoveriesLeft(
+        address indexed smartAccount,
+        uint8 indexed recoveriesLeft
+    );
 
     /**
      * @dev Emitted when all the guardians and setting have been reset for the Smart Account
