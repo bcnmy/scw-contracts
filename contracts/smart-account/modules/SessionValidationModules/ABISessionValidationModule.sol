@@ -71,6 +71,7 @@ contract ABISessionValidationModule is IABISessionValidationModule {
      * @param callValue value to be sent with the call
      * @param _funcCallData the data for the call. is parsed inside the SVM
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
+     * param _callSpecificData additional data, specific to the call, not used here
      * @return sessionKey address of the sessionKey that signed the userOp
      * for example to store a list of allowed tokens or receivers
      */
@@ -90,6 +91,16 @@ contract ABISessionValidationModule is IABISessionValidationModule {
             );
     }
 
+    /**
+     * @dev validates that the call (destinationContract, callValue, funcCallData)
+     * complies with the Session Key permissions represented by sessionKeyData
+     * @param destinationContract address of the contract to be called
+     * @param callValue value to be sent with the call
+     * @param _funcCallData the data for the call. is parsed inside the SVM
+     * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
+     * @return sessionKey address of the sessionKey that signed the userOp
+     * for example to store a list of allowed tokens or receivers
+     */
     function _validateSessionParams(
         address destinationContract,
         uint256 callValue,
@@ -116,13 +127,19 @@ contract ABISessionValidationModule is IABISessionValidationModule {
             revert("ABISV Value exceeded");
         }
 
-        if (!_checkPermission(_funcCallData, permission))
+        if (!_checkRulesForPermission(_funcCallData, permission))
             revert("ABISV: Permission violated");
 
         return sessionKey;
     }
 
-    function _checkPermission(
+    /**
+     * @dev checks if the calldata matches the permission
+     * @param data the data for the call. is parsed inside the SVM
+     * @param permission Permission object that contains rules to be checked
+     * @return true if the calldata matches the permission, false otherwise
+     */
+    function _checkRulesForPermission(
         bytes calldata data,
         Permission calldata permission
     ) internal pure returns (bool) {
@@ -134,23 +151,40 @@ contract ABISessionValidationModule is IABISessionValidationModule {
             uint256 offset = rule.offset;
             bytes32 value = rule.value;
             bytes32 param = bytes32(data[4 + offset:4 + offset + 32]);
-            if (condition == Condition.EQUAL && param != value) {
-                return false;
-            } else if (
-                condition == Condition.LESS_THAN_OR_EQUAL && param > value
-            ) {
-                return false;
-            } else if (condition == Condition.LESS_THAN && param >= value) {
-                return false;
-            } else if (
-                condition == Condition.GREATER_THAN_OR_EQUAL && param < value
-            ) {
-                return false;
-            } else if (condition == Condition.GREATER_THAN && param <= value) {
-                return false;
-            } else if (condition == Condition.NOT_EQUAL && param == value) {
+
+            bool rulePassed;
+            assembly ("memory-safe") {
+                switch condition
+                case 0 {
+                    // Condition.EQUAL
+                    rulePassed := eq(param, value)
+                }
+                case 1 {
+                    // Condition.LESS_THAN_OR_EQUAL
+                    rulePassed := or(lt(param, value), eq(param, value))
+                }
+                case 2 {
+                    // Condition.LESS_THAN
+                    rulePassed := lt(param, value)
+                }
+                case 3 {
+                    // Condition.GREATER_THAN_OR_EQUAL
+                    rulePassed := or(gt(param, value), eq(param, value))
+                }
+                case 4 {
+                    // Condition.GREATER_THAN
+                    rulePassed := gt(param, value)
+                }
+                case 5 {
+                    // Condition.NOT_EQUAL
+                    rulePassed := not(eq(param, value))
+                }
+            }
+
+            if (!rulePassed) {
                 return false;
             }
+
             unchecked {
                 ++i;
             }
