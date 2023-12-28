@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 contract MockInvalidAuthModule {
     mapping(address => bytes) internal _setupData;

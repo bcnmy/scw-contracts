@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 /* solhint-disable no-unused-import */
 
@@ -12,15 +12,14 @@ import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
 
 /**
- * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
+ * @title ECDSA Multi Ownership Authorization Module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
  *         - It allows to validate user operations signed by EOA private key.
  *         - EIP-1271 compatible (ensures Smart Account can validate signed messages).
- *         - One owner per Smart Account.
+ *         - Multiple owners per Smart Account.
  *         - Does not support outdated eth_sign flow for cheaper validations
  *         (see https://support.metamask.io/hc/en-us/articles/14764161421467-What-is-eth-sign-and-why-is-it-a-risk-)
  * !!!!!!! Only EOA owners supported, no Smart Account Owners
- *         For Smart Contract Owners check SmartContractOwnership module instead
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
@@ -45,6 +44,7 @@ contract MultiOwnedECDSAModule is
             revert AlreadyInitedForSmartAccount(msg.sender);
         }
         uint256 ownersToAdd = eoaOwners.length;
+        if (ownersToAdd == 0) revert NoOwnersToAdd();
         for (uint256 i; i < ownersToAdd; ) {
             if (eoaOwners[i] == address(0))
                 revert ZeroAddressNotAllowedAsOwner();
@@ -68,7 +68,7 @@ contract MultiOwnedECDSAModule is
         address owner,
         address newOwner
     ) external override {
-        if (_isSmartContract(newOwner)) revert NotEOA(owner);
+        if (_isSmartContract(newOwner)) revert NotEOA(newOwner);
         if (newOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == newOwner)
@@ -97,7 +97,7 @@ contract MultiOwnedECDSAModule is
     function removeOwner(address owner) external override {
         if (!_smartAccountOwners[owner][msg.sender])
             revert NotAnOwner(owner, msg.sender);
-        _transferOwnership(msg.sender, owner, address(0));
+        _smartAccountOwners[owner][msg.sender] = false;
         unchecked {
             --numberOfOwners[msg.sender];
         }

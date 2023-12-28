@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 // bytes4(keccak256("isValidSignature(bytes32,bytes)")
 bytes4 constant EIP1271_MAGIC_VALUE = 0x1626ba7e;
@@ -16,7 +16,7 @@ interface ISignatureValidator {
      */
     function isValidSignature(
         bytes32 _dataHash,
-        bytes memory _signature
+        bytes calldata _signature
     ) external view returns (bytes4);
 
     /**
@@ -28,6 +28,6 @@ interface ISignatureValidator {
      */
     function isValidSignatureUnsafe(
         bytes32 dataHash,
-        bytes memory moduleSignature
+        bytes calldata moduleSignature
     ) external view returns (bytes4);
 }

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {IERC165} from "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import {BaseSmartAccount, IEntryPoint, UserOperation} from "./BaseSmartAccount.sol";
@@ -22,7 +22,7 @@ import {IFallbackManager} from "./interfaces/base/IFallbackManager.sol";
  *         - It allows to receive and manage assets.
  *         - It is responsible for managing the modules and fallbacks.
  *         - The Smart Account can be extended with modules, such as Social Recovery, Session Key and others.
- * @author Chirag Titiya - <chirag@biconomy.io>, Filipp Makarov - <filipp.makarov@biconomy.io>
+ * @author Chirag Titiya - <chirag@biconomy.io>, Filipp Makarov - <filipp.makarov@biconomy.io>, Ankur Dubey - <ankur@biconomy.io>
  */
 contract SmartAccount is
     BaseSmartAccount,
@@ -36,7 +36,7 @@ contract SmartAccount is
     using LibAddress for address;
 
     // Storage Version
-    string public constant override VERSION = "2.0.0";
+    string public constant override VERSION = "2.1.0";
 
     // Owner storage. Deprecated. Left for storage layout compatibility
     address public ownerDeprecated;
@@ -71,7 +71,6 @@ contract SmartAccount is
      * sources and accepts Ether as payment.
      */
     receive() external payable {
-        if (address(this) == SELF) revert DelegateCallsOnly();
         emit SmartAccountReceivedNativeToken(msg.sender, msg.value);
     }
 
@@ -127,10 +126,22 @@ contract SmartAccount is
             revert CallerIsNotAnEntryPoint(msg.sender);
         }
 
-        (, address validationModule) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
+        // gas efficient way to get the validation module address
+        address validationModule;
+        uint256 userOpEndOffset;
+        assembly {
+            userOpEndOffset := add(calldataload(0x04), 0x24)
+            validationModule := calldataload(
+                add(
+                    add(
+                        calldataload(add(userOpEndOffset, 0x120)),
+                        userOpEndOffset
+                    ),
+                    0x20
+                )
+            )
+        }
+
         if (address(_modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
@@ -289,7 +300,7 @@ contract SmartAccount is
     /// @inheritdoc ISignatureValidator
     function isValidSignature(
         bytes32 dataHash,
-        bytes memory signature
+        bytes calldata signature
     ) public view override returns (bytes4) {
         (bytes memory moduleSignature, address validationModule) = abi.decode(
             signature,
@@ -309,7 +320,7 @@ contract SmartAccount is
     /// @inheritdoc ISignatureValidator
     function isValidSignatureUnsafe(
         bytes32 dataHash,
-        bytes memory signature
+        bytes calldata signature
     ) public view returns (bytes4) {
         (bytes memory moduleSignature, address validationModule) = abi.decode(
             signature,

@@ -15,3 +15,5 @@ libs=contracts/smart-account/libs/
 modules=contracts/smart-account/modules/
 paymasters=contracts/smart-account/paymasters/
 test-contracts=contracts/smart-account/test/
+
+solady/=lib/registry/lib/solady/src

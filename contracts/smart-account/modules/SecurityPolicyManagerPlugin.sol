@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {ISecurityPolicyManagerPlugin, ISecurityPolicyPlugin, SENTINEL_MODULE_ADDRESS} from "contracts/smart-account/interfaces/modules/ISecurityPolicyManagerPlugin.sol";
 import {Enum} from "contracts/smart-account/common/Enum.sol";
@@ -87,8 +87,10 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
 
             switch success
             case 0x1 {
-                moduleInstallationSuccess := mload(ptr)
-                module := mload(add(ptr, 0x60))
+                if eq(size, 0x80) {
+                    moduleInstallationSuccess := mload(ptr)
+                    module := mload(add(ptr, 0x60))
+                }
             }
             case 0x0 {
                 revert(ptr, size)

@@ -292,7 +292,7 @@ describe("Address Resolver", function () {
       const accountObject4 = result1.find(
         (smartAccountInfo: SmartAccountInfo) =>
           smartAccountInfo.factoryVersion === "v2" &&
-          smartAccountInfo.currentVersion === "2.0.0" &&
+          smartAccountInfo.currentVersion === "2.1.0" &&
           smartAccountInfo.deploymentIndex.toNumber() === 0
       );
 
@@ -301,7 +301,7 @@ describe("Address Resolver", function () {
       const accountObject5 = result1.find(
         (smartAccountInfo: SmartAccountInfo) =>
           smartAccountInfo.factoryVersion === "v2" &&
-          smartAccountInfo.currentVersion === "2.0.0" &&
+          smartAccountInfo.currentVersion === "2.1.0" &&
           smartAccountInfo.deploymentIndex.toNumber() === 1
       );
 
@@ -310,7 +310,7 @@ describe("Address Resolver", function () {
       const accountObject8 = result2.find(
         (smartAccountInfo: SmartAccountInfo) =>
           smartAccountInfo.factoryVersion === "v2" &&
-          smartAccountInfo.currentVersion === "2.0.0" &&
+          smartAccountInfo.currentVersion === "2.1.0" &&
           smartAccountInfo.deploymentIndex.toNumber() === 0
       );
 
@@ -319,7 +319,7 @@ describe("Address Resolver", function () {
       const accountObject9 = result2.find(
         (smartAccountInfo: SmartAccountInfo) =>
           smartAccountInfo.factoryVersion === "v2" &&
-          smartAccountInfo.currentVersion === "2.0.0" &&
+          smartAccountInfo.currentVersion === "2.1.0" &&
           smartAccountInfo.deploymentIndex.toNumber() === 1
       );
 
@@ -373,7 +373,7 @@ describe("Address Resolver", function () {
       const accountObject6Result5 = result5.find(
         (smartAccountInfo: SmartAccountInfo) =>
           smartAccountInfo.factoryVersion === "v2" &&
-          smartAccountInfo.currentVersion === "2.0.0" &&
+          smartAccountInfo.currentVersion === "2.1.0" &&
           smartAccountInfo.deploymentIndex.toNumber() === 1
       );
 
