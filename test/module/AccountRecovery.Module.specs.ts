@@ -1338,7 +1338,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Wrong userOp");
+        .withArgs(0, "AA23 reverted: Account Recovery VUO03");
       // when there's no submitted request (it was deleted after the first execution), the validation goes to the branch with checking
       // if this is a valid userOp for:
       // - adding the recovery request (which is not the case)
@@ -1551,7 +1551,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: No recoveries left");
+        .withArgs(0, "AA23 reverted: Account Recovery VUO01");
     });
   });
 
@@ -1589,7 +1589,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Wrong exec selector");
+        .withArgs(0, "AA23 reverted: Account Recovery VUO02");
     });
 
     it("Should revert if the delay is >0 and the calldata is NOT for submitting request", async () => {
@@ -1623,7 +1623,7 @@ describe("Account Recovery Module: ", async () => {
         entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Wrong userOp");
+        .withArgs(0, "AA23 reverted: Account Recovery VUO03");
     });
 
     it("Should revert if the delay is >0 and the inner submit request calldata is not for module.executeRecovery", async () => {
@@ -1672,7 +1672,7 @@ describe("Account Recovery Module: ", async () => {
         entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: WRR03");
+        .withArgs(0, "AA23 reverted: Account Recovery WRR03");
     });
 
     // should revert if submitting request is not for SA.execute
@@ -1718,7 +1718,7 @@ describe("Account Recovery Module: ", async () => {
         entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: WRR01");
+        .withArgs(0, "AA23 reverted: Account Recovery WRR01");
     });
 
     // should revert if submitting request is not for SA.execute(recoveryModule)
@@ -1767,7 +1767,7 @@ describe("Account Recovery Module: ", async () => {
         entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: WRR02");
+        .withArgs(0, "AA23 reverted: Account Recovery WRR02");
     });
 
     it("Should revert if the delay is 0 and the calldata is not for executeRecovery", async () => {
@@ -1834,7 +1834,7 @@ describe("Account Recovery Module: ", async () => {
         entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Wrong userOp");
+        .withArgs(0, "AA23 reverted: Account Recovery VUO03");
     });
 
     it("Should revert if userOp.callData of the request doesn't match the submitted request", async () => {
@@ -1887,7 +1887,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Wrong userOp");
+        .withArgs(0, "AA23 reverted: Account Recovery VUO03");
       // it doesn't find the request so userOp should be to add one or security delay should be 0
       // since nonce of this is true, it reverts with the 'Wrong userOp' error message
     });
@@ -2007,7 +2007,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Threshold not set");
+        .withArgs(0, "AA23 reverted: Account Recovery SIG01");
     });
 
     it("Should revert if trying to submit the unsigned request ('signature' is empty)", async () => {
@@ -2051,7 +2051,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
+        .withArgs(0, "AA23 reverted: Account Recovery SIG02");
     });
 
     it("Should revert if there's not enough signatures", async () => {
@@ -2079,7 +2079,7 @@ describe("Account Recovery Module: ", async () => {
         entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
+        .withArgs(0, "AA23 reverted: Account Recovery SIG02");
     });
 
     it("Should revert if at least one guardian is expired", async () => {
@@ -2382,7 +2382,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: Invalid Sigs Length");
+        .withArgs(0, "AA23 reverted: Account Recovery SIG02");
     });
 
     it("Should revert if guardians are not unique", async () => {
@@ -2411,7 +2411,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: NotUnique/BadOrder");
+        .withArgs(0, "AA23 reverted: Account Recovery SIG03");
     });
 
     it("Reverts if signatures are not sorted by the ascending signer's address", async () => {
@@ -2440,7 +2440,7 @@ describe("Account Recovery Module: ", async () => {
         })
       )
         .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: AccRecovery: NotUnique/BadOrder");
+        .withArgs(0, "AA23 reverted: Account Recovery SIG03");
     });
   });
 

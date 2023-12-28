@@ -40,14 +40,12 @@ interface IAccountRecoveryModule {
      * @param recoverer module address that executed the recovery request
      * @param recoveryCallValue value that was sent with the recovery request
      * @param recoveryCallData calldata that was executed to recover the account
-     * @param recoveriesLeft number of recoveries left
      */
     event RecoveryExecuted(
         address indexed smartAccount,
         address recoverer,
         uint256 recoveryCallValue,
-        bytes recoveryCallData,
-        uint8 recoveriesLeft
+        bytes recoveryCallData
     );
 
     /**
@@ -119,7 +117,7 @@ interface IAccountRecoveryModule {
      * @param smartAccount address of the Smart Account
      * @param recoveriesLeft new recoveries allowed
      */
-    event RecoveriesLeft(address indexed smartAccount, uint8 recoveriesLeft);
+    event RecoveriesLeft(address indexed smartAccount, uint8 indexed recoveriesLeft);
 
     /**
      * @dev Emitted when all the guardians and setting have been reset for the Smart Account

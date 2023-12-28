@@ -4,7 +4,7 @@ pragma solidity ^0.8.23;
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IAccountRecoveryModule} from "../interfaces/IAccountRecoveryModule.sol";
+import {IAccountRecoveryModule} from "../interfaces/modules/IAccountRecoveryModule.sol";
 import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
 import {Enum} from "../common/Enum.sol";
 
@@ -133,7 +133,7 @@ contract AccountRecoveryModule is
         address smartAccount = userOp.sender;
         // even validating userOps not allowed for smartAccounts with 0 recoveries left
         if (_smartAccountSettings[smartAccount].recoveriesLeft == 0)
-            revert("AccRecovery: No recoveries left");
+            revert("Account Recovery VUO01"); //Validate User Op 01 = no recoveries left
 
         // if there is already a request added for this userOp.callData, return validation data
         if (
@@ -148,7 +148,7 @@ contract AccountRecoveryModule is
         if (
             bytes4(userOp.callData[0:4]) != EXECUTE_OPTIMIZED_SELECTOR &&
             bytes4(userOp.callData[0:4]) != EXECUTE_SELECTOR
-        ) revert("AccRecovery: Wrong exec selector");
+        ) revert("Account Recovery VUO02"); //Validate User Op 02 = wrong selector
 
         (address dest, uint256 callValue, bytes memory innerCallData) = abi
             .decode(
@@ -182,7 +182,7 @@ contract AccountRecoveryModule is
                 );
         } else {
             // not using custom error here because of how EntryPoint handles the revert data for the validation failure
-            revert("AccRecovery: Wrong userOp");
+            revert("Account Recovery VUO03"); //Validate User Op 03 = wrong userOp
         }
     }
 
@@ -459,8 +459,7 @@ contract AccountRecoveryModule is
             msg.sender,
             to,
             value,
-            data,
-            _smartAccountSettings[msg.sender].recoveriesLeft
+            data
         );
     }
 
@@ -560,10 +559,10 @@ contract AccountRecoveryModule is
             expectedExecuteSelector != EXECUTE_SELECTOR &&
             expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR
         ) {
-            revert("AccRecovery: WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
+            revert("Account Recovery WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
         }
         if (expectedThisAddress != address(this)) {
-            revert("AccRecovery: WRR02"); //Wrong Recovery Request 02 = call should be to this contract
+            revert("Account Recovery WRR02"); //Wrong Recovery Request 02 = call should be to this contract
         }
         bytes4 expectedExecuteRecoverySelector;
         uint256 executeRecoveryCallDataOffset;
@@ -586,7 +585,7 @@ contract AccountRecoveryModule is
             )
         }
         if (expectedExecuteRecoverySelector != this.executeRecovery.selector) {
-            revert("AccRecovery: WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
+            revert("Account Recovery WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
         }
     }
 
@@ -604,11 +603,11 @@ contract AccountRecoveryModule is
     ) internal view returns (uint256) {
         uint256 requiredSignatures = _smartAccountSettings[smartAccount]
             .recoveryThreshold;
-        if (requiredSignatures == 0) revert("AccRecovery: Threshold not set");
+        if (requiredSignatures == 0) revert("Account Recovery SIG01"); //Threshold not set
 
         require(
             moduleSignature.length >= requiredSignatures * 2 * 65,
-            "AccRecovery: Invalid Sigs Length"
+            "Account Recovery SIG02" //invalid length of the moduleSignature
         );
 
         address lastGuardianAddress;
@@ -656,7 +655,7 @@ contract AccountRecoveryModule is
             // gas efficient way to ensure all guardians are unique
             // requires from dapp to sort signatures before packing them into bytes
             if (currentGuardianAddress <= lastGuardianAddress)
-                revert("AccRecovery: NotUnique/BadOrder");
+                revert("Account Recovery SIG03"); // NotUnique Guardian or Bad Order of Guardians
 
             // detect the common validity window for all the guardians
             // if at least one guardian is not valid yet or expired
