@@ -95,7 +95,7 @@ describe("Smart Account Setup", async () => {
           invalidModuleSetupData,
           0
         )
-      ).to.be.revertedWith("ModuleCannotBeZeroOrSentinel");
+      ).to.be.revertedWith("ModuleCanNotBeZeroOrSentinel");
     });
 
     it("Can not be called after proxy deployment", async () => {

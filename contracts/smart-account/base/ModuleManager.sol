@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 import {Executor, Enum} from "./Executor.sol";
@@ -178,7 +178,7 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
     function _enableModule(address module) internal virtual {
         // Module address cannot be null or sentinel.
         if (module == address(0) || module == SENTINEL_MODULES) {
-            revert ModuleCannotBeZeroOrSentinel(module);
+            revert ModuleCanNotBeZeroOrSentinel(module);
         }
         // Module cannot be added twice.
         if (_modules[module] != address(0)) revert ModuleAlreadyEnabled(module);
@@ -204,6 +204,11 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
 
     /**
      * @dev Removes a module from the allowlist.
+     * Features the check, which does not allow removing the only enabled module.
+     * Attention: If the only enabled module left IS NOT the validation (authorization) module,
+     * the Smart Account won't be able to further validate userOps
+     * thus it becomes frozen forever.
+     * So please make sure there's always at least one validation (authorization) module enabled.
      * @notice This can only be done via a wallet transaction.
      * @notice Disables the module `module` for the wallet.
      * @param prevModule Module that pointed to the module to be removed in the linked list
@@ -215,8 +220,12 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
     ) internal virtual {
         // Validate module address and check that it corresponds to module index.
         if (module == address(0) || module == SENTINEL_MODULES) {
-            revert ModuleCannotBeZeroOrSentinel(module);
+            revert ModuleCanNotBeZeroOrSentinel(module);
         }
+        if (
+            _modules[module] == SENTINEL_MODULES &&
+            _modules[SENTINEL_MODULES] == module
+        ) revert CanNotDisableOnlyModule(module);
         if (_modules[prevModule] != module) {
             revert ModuleAndPrevModuleMismatch(
                 module,
@@ -272,7 +281,7 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
             initialAuthorizationModule == address(0) ||
             initialAuthorizationModule == SENTINEL_MODULES
         ) {
-            revert ModuleCannotBeZeroOrSentinel(initialAuthorizationModule);
+            revert ModuleCanNotBeZeroOrSentinel(initialAuthorizationModule);
         }
 
         _modules[initialAuthorizationModule] = SENTINEL_MODULES;
