@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {EIP1271_MAGIC_VALUE, ISignatureValidator} from "../../interfaces/ISignatureValidator.sol";
 import {ISmartAccount} from "../../interfaces/ISmartAccount.sol";

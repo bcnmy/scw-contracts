@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 /**
  * @title ECDSA Multi Ownership Authorization Module for Biconomy Smart Accounts.
@@ -20,6 +20,7 @@ interface IMultiOwnedECDSAModule {
     );
 
     error AlreadyInitedForSmartAccount(address smartAccount);
+    error NoOwnersToAdd();
     error WrongSignatureLength();
     error NotEOA(address account);
     error ZeroAddressNotAllowedAsOwner();

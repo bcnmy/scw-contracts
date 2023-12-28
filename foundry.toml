@@ -13,8 +13,8 @@ remappings = [
     "hardhat/=node_modules/hardhat/",
 ]
 via_ir = true
-solc_version = "0.8.21"
 evm_version = "paris"
+auto_detect_solc = true
 
 # See more config options https://github.com/foundry-rs/foundry/tree/master/config
 

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 //
 // Initial Implementation by
 // https://github.com/itsobvioustech/aa-passkeys-wallet/blob/main/src/Secp256r1.sol
