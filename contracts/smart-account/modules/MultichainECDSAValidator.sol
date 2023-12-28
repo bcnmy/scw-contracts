@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {EcdsaOwnershipRegistryModule} from "./EcdsaOwnershipRegistryModule.sol";
@@ -43,7 +43,7 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
 
         address sender;
         // read sender from userOp, which is first userOp member (saves gas)
-        assembly {
+        assembly ("memory-safe") {
             sender := calldataload(userOp)
         }
 
@@ -70,15 +70,18 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
                 moduleSignature,
                 (uint48, uint48, bytes32, bytes32[], bytes)
             );
+        {
+            // make a leaf out of userOpHash, validUntil and validAfter
+            bytes32 leaf = keccak256(
+                abi.encodePacked(validUntil, validAfter, userOpHash)
+            );
 
-        // make a leaf out of userOpHash, validUntil and validAfter
-        bytes32 leaf = keccak256(
-            abi.encodePacked(validUntil, validAfter, userOpHash)
-        );
-
-        if (!MerkleProof.verify(merkleProof, merkleTreeRoot, leaf)) {
-            revert("Invalid UserOp");
+            if (!MerkleProof.verify(merkleProof, merkleTreeRoot, leaf)) {
+                revert("Invalid UserOp");
+            }
         }
+
+        validUntil = validUntil == 0 ? type(uint48).max : validUntil;
 
         return
             _verifySignature(
@@ -88,7 +91,7 @@ contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
             )
                 ? _packValidationData(
                     false, //sigVerificationFailed = false
-                    validUntil == 0 ? type(uint48).max : validUntil,
+                    validUntil,
                     validAfter
                 )
                 : SIG_VALIDATION_FAILED;

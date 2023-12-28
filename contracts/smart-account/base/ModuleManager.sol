@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: LGPL-3.0-only
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 import {Executor, Enum} from "./Executor.sol";
@@ -58,7 +58,7 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         bytes memory data,
         Enum.Operation operation,
         uint256 txGas
-    ) public virtual override returns (bool) {
+    ) public payable virtual override returns (bool) {
         // Only whitelisted modules are allowed.
         if (
             msg.sender == SENTINEL_MODULES || _modules[msg.sender] == address(0)
@@ -81,7 +81,7 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         uint256 value,
         bytes memory data,
         Enum.Operation operation
-    ) public virtual override returns (bool) {
+    ) public payable virtual override returns (bool) {
         return execTransactionFromModule(to, value, data, operation, 0);
     }
 
@@ -92,7 +92,7 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         bytes memory data,
         Enum.Operation operation,
         uint256 txGas
-    ) public override returns (bool success, bytes memory returnData) {
+    ) public payable override returns (bool success, bytes memory returnData) {
         success = execTransactionFromModule(to, value, data, operation, txGas);
 
         assembly {
@@ -116,7 +116,7 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         uint256 value,
         bytes memory data,
         Enum.Operation operation
-    ) public override returns (bool, bytes memory) {
+    ) public payable override returns (bool, bytes memory) {
         return
             execTransactionFromModuleReturnData(to, value, data, operation, 0);
     }
@@ -127,7 +127,7 @@ abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
         uint256[] calldata value,
         bytes[] calldata data,
         Enum.Operation[] calldata operations
-    ) public virtual override returns (bool success) {
+    ) public payable virtual override returns (bool success) {
         if (
             to.length == 0 ||
             to.length != value.length ||

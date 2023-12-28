@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 /* solhint-disable no-unused-import */
 
@@ -31,7 +31,9 @@ contract EcdsaOwnershipRegistryModule is
     using ECDSA for bytes32;
 
     string public constant NAME = "ECDSA Ownership Registry Module";
-    string public constant VERSION = "0.2.0";
+    string public constant VERSION = "1.1.0";
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
+    uint256 private constant MODULE_SIGNATURE_END_POSITION = 96 + 65;
     mapping(address => address) internal _smartAccountOwners;
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule
@@ -74,11 +76,14 @@ contract EcdsaOwnershipRegistryModule is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external view virtual override returns (uint256) {
-        (bytes memory cleanEcdsaSignature, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
-        if (_verifySignature(userOpHash, cleanEcdsaSignature, userOp.sender)) {
+        if (
+            _verifySignature(
+                userOpHash,
+                userOp
+                    .signature[MODULE_SIGNATURE_OFFSET:MODULE_SIGNATURE_END_POSITION],
+                userOp.sender
+            )
+        ) {
             return VALIDATION_SUCCESS;
         }
         return SIG_VALIDATION_FAILED;

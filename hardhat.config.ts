@@ -50,7 +50,7 @@ const config: HardhatUserConfig = {
   solidity: {
     compilers: [
       {
-        version: "0.8.20",
+        version: "0.8.23",
         settings: {
           evmVersion: "paris",
           optimizer: { enabled: true, runs: 800 },
@@ -268,7 +268,6 @@ const config: HardhatUserConfig = {
       chainId: 91715,
     },
   },
-
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
     onlyCalledMethods: true,

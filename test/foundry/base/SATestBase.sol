@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {Test, Vm} from "forge-std/Test.sol";
 import {MockToken} from "test-contracts/mocks/MockToken.sol";
@@ -171,6 +171,18 @@ abstract contract SATestBase is Test {
         bytes memory _calldata
     ) internal pure returns (bytes memory) {
         return abi.encodeCall(SmartAccount.execute, (_dest, _value, _calldata));
+    }
+
+    function getSmartAccountBatchExecuteCalldata(
+        address[] memory _dest,
+        uint256[] memory _values,
+        bytes[] memory _calldatas
+    ) internal pure returns (bytes memory) {
+        return
+            abi.encodeCall(
+                SmartAccount.executeBatch_y6U,
+                (_dest, _values, _calldatas)
+            );
     }
 
     function getUserOperationEventData(

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
@@ -42,6 +42,8 @@ contract AccountRecoveryModule is
     bytes4 public immutable EXECUTE_OPTIMIZED_SELECTOR;
     // Hash to be signed by guardians to make a guardianId
     string public constant CONTROL_MESSAGE = "ACC_RECOVERY_SECURE_MSG";
+
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
 
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)

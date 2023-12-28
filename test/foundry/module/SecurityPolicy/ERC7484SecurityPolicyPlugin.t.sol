@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {RhinestoneTestBase, RegistryTestLib, RegistryInstance, AttestationRequestData} from "../../base/RhinestoneTestBase.sol";
 import {SmartAccount} from "sa/SmartAccount.sol";
@@ -62,7 +62,7 @@ contract ERC7484SecurityPolicyPluginTest is
 
         // Deploy ERC7484SecurityPolicyPlugin
         erc7484SecurityPolicyPlugin = new ERC7484SecurityPolicyPlugin(
-            instancel1.registry
+            instance.registry
         );
 
         // Enable the Security Policy
@@ -107,7 +107,7 @@ contract ERC7484SecurityPolicyPluginTest is
 
         // Deploy and register MultichainValidator with registry
         validator = MultichainECDSAValidator(
-            instancel1.deployAndRegister(
+            instance.deployAndRegister(
                 defaultResolver,
                 type(MultichainECDSAValidator).creationCode,
                 abi.encode(0)
@@ -162,7 +162,7 @@ contract ERC7484SecurityPolicyPluginTest is
         external
     {
         // Create 3 attestations for the multichain validator module
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             bob.privateKey,
             AttestationRequestData({
@@ -172,7 +172,7 @@ contract ERC7484SecurityPolicyPluginTest is
                 value: 0
             })
         );
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             charlie.privateKey,
             AttestationRequestData({
@@ -182,7 +182,7 @@ contract ERC7484SecurityPolicyPluginTest is
                 value: 0
             })
         );
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             dan.privateKey,
             AttestationRequestData({
@@ -234,7 +234,7 @@ contract ERC7484SecurityPolicyPluginTest is
         vm.stopPrank();
 
         // Create 3 attestations for the multichain validator module
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             bob.privateKey,
             AttestationRequestData({
@@ -244,7 +244,7 @@ contract ERC7484SecurityPolicyPluginTest is
                 value: 0
             })
         );
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             charlie.privateKey,
             AttestationRequestData({
@@ -254,7 +254,7 @@ contract ERC7484SecurityPolicyPluginTest is
                 value: 0
             })
         );
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             dan.privateKey,
             AttestationRequestData({
@@ -315,7 +315,7 @@ contract ERC7484SecurityPolicyPluginTest is
         external
     {
         // Create 2 attestations for the multichain validator module
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             bob.privateKey,
             AttestationRequestData({
@@ -325,7 +325,7 @@ contract ERC7484SecurityPolicyPluginTest is
                 value: 0
             })
         );
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             charlie.privateKey,
             AttestationRequestData({
@@ -381,7 +381,7 @@ contract ERC7484SecurityPolicyPluginTest is
         external
     {
         // Create 3 attestations for the multichain validator module
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             bob.privateKey,
             AttestationRequestData({
@@ -391,7 +391,7 @@ contract ERC7484SecurityPolicyPluginTest is
                 value: 0
             })
         );
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             charlie.privateKey,
             AttestationRequestData({
@@ -401,7 +401,7 @@ contract ERC7484SecurityPolicyPluginTest is
                 value: 0
             })
         );
-        instancel1.newAttestation(
+        instance.newDelegatedAttestation(
             defaultSchema1,
             dan.privateKey,
             AttestationRequestData({
@@ -413,7 +413,7 @@ contract ERC7484SecurityPolicyPluginTest is
         );
 
         // Revoke one of the attestations
-        instancel1.revokeAttestation(
+        instance.delegatedRevokeAttestation(
             address(validator),
             defaultSchema1,
             bob.privateKey

@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
@@ -26,6 +26,11 @@ contract SessionKeyManager is
     BaseAuthorizationModule,
     ISessionKeyManagerModule
 {
+    string public constant NAME = "Session Key Manager Module";
+    string public constant VERSION = "1.1.0";
+
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
+
     /**
      * @dev mapping of Smart Account to a SessionStorage
      * Info about session keys is stored as root of the merkle tree built over the session keys
@@ -43,10 +48,6 @@ contract SessionKeyManager is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256) {
-        (bytes memory moduleSignature, ) = abi.decode(
-            userOp.signature,
-            (bytes, address)
-        );
         (
             uint48 validUntil,
             uint48 validAfter,
@@ -55,7 +56,7 @@ contract SessionKeyManager is
             bytes32[] memory merkleProof,
             bytes memory sessionKeySignature
         ) = abi.decode(
-                moduleSignature,
+                userOp.signature[MODULE_SIGNATURE_OFFSET:],
                 (uint48, uint48, address, bytes, bytes32[], bytes)
             );
 

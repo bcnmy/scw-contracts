@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 /* solhint-disable function-max-lines */
 
@@ -31,6 +31,7 @@ contract BatchedSessionRouter is
 {
     bytes4 public constant EXECUTE_BATCH_SELECTOR = 0x47e1da2a;
     bytes4 public constant EXECUTE_BATCH_OPTIMIZED_SELECTOR = 0x00004680;
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
 
     /// @inheritdoc IAuthorizationModule
     function validateUserOp(
@@ -54,14 +55,12 @@ contract BatchedSessionRouter is
             bytes memory sessionKeySignature;
 
             {
-                (bytes memory moduleSignature, ) = abi.decode(
-                    userOp.signature,
-                    (bytes, address)
-                );
-
                 // parse the signature to get the array of required parameters
                 (sessionKeyManager, sessionData, sessionKeySignature) = abi
-                    .decode(moduleSignature, (address, SessionData[], bytes));
+                    .decode(
+                        userOp.signature[MODULE_SIGNATURE_OFFSET:],
+                        (address, SessionData[], bytes)
+                    );
             }
 
             if (

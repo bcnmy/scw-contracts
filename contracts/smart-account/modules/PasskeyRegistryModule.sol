@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
@@ -23,7 +23,7 @@ contract PasskeyRegistryModule is
     IPasskeyRegistryModule
 {
     string public constant NAME = "PassKeys Ownership Registry Module";
-    string public constant VERSION = "0.2.0";
+    string public constant VERSION = "1.1.0";
 
     mapping(address => PassKeyId) public smartAccountPassKeys;
 
