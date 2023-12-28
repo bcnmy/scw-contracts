@@ -88,7 +88,7 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     });
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-    // deploy forward flow module and enable it in the smart account
+    // deploy module and enable it in the smart account
     const sessionKeyManager = await (
       await ethers.getContractFactory("SessionKeyManager")
     ).deploy();
@@ -323,8 +323,6 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
   });
 
   it("should be able to process Batched userOp via Batched Session Router and ABI SVM", async () => {
-    // make batched userOp to check how changes in the module influence batched flow
-    // as it is expected it will be widely used for the abi svm
     const {
       entryPoint,
       userSA,
@@ -342,7 +340,6 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
 
     const MockProtocol = await ethers.getContractFactory("MockProtocol");
     const IERC20 = await ethers.getContractFactory("ERC20");
-    const SmartAccount = await ethers.getContractFactory("SmartAccount");
 
     const approveCallData = IERC20.interface.encodeFunctionData("approve", [
       mockProtocol.address,
@@ -355,17 +352,8 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     const changeStateCallData = MockProtocol.interface.encodeFunctionData(
       "changeState",
       [
-        0x123, // some random uint256
+        0x123, // some random uint256 that is less than 1,024
         ethers.utils.hexZeroPad("0xdeafbeef", 32), // bytes, 32-length
-      ]
-    );
-
-    const executeBatchData = SmartAccount.interface.encodeFunctionData(
-      "executeBatch_y6U",
-      [
-        [mockToken.address, mockProtocol.address, mockProtocol.address],
-        [0, 0, ethers.utils.parseEther("0.01")],
-        [approveCallData, interactCallData, changeStateCallData],
       ]
     );
 

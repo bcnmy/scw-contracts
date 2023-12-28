@@ -5,6 +5,7 @@ import {
   getERC20SessionKeyParams,
   getABISessionKeyParams,
   addLeavesForSmartAccountViaEcdsa,
+  makeEcdsaSessionKeySignedBatchUserOp,
 } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
@@ -60,7 +61,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
     });
     await mockToken.mint(userSA.address, ethers.utils.parseEther("1000000"));
 
-    // deploy forward flow module and enable it in the smart account
+    // deploy module and enable it in the smart account
     const sessionKeyManager = await (
       await ethers.getContractFactory("SessionKeyManager")
     ).deploy();
@@ -74,8 +75,28 @@ describe("SessionKey: ABI Session Validation Module", async () => {
     );
     await entryPoint.handleOps([userOp], alice.address);
 
+    const sessionRouter = await (
+      await ethers.getContractFactory("BatchedSessionRouter")
+    ).deploy();
+    const userOp2 = await makeEcdsaModuleUserOp(
+      "enableModule",
+      [sessionRouter.address],
+      userSA.address,
+      smartAccountOwner,
+      entryPoint,
+      ecdsaModule.address,
+      {
+        preVerificationGas: 50000,
+      }
+    );
+    await entryPoint.handleOps([userOp2], alice.address);
+
     const abiSVM = await (
       await ethers.getContractFactory("ABISessionValidationModule")
+    ).deploy();
+
+    const mockProtocol = await (
+      await ethers.getContractFactory("MockProtocol")
     ).deploy();
 
     const { sessionKeyData, leafData } = await getABISessionKeyParams(
@@ -99,8 +120,79 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       abiSVM.address
     );
 
+    const { sessionKeyData: sessionKeyData2, leafData: leafData2 } =
+      await getABISessionKeyParams(
+        sessionKey.address,
+        [
+          mockToken.address,
+          ethers.utils.hexDataSlice(
+            ethers.utils.id("approve(address,uint256)"),
+            0,
+            4
+          ), // transfer function selector
+          ethers.utils.parseEther("0"), // value limit
+          // array of offsets, values, and conditions
+          [
+            [0, ethers.utils.hexZeroPad(mockProtocol.address, 32), 0], // equal
+            [32, ethers.utils.hexZeroPad("0x21E19E0C9BAB2400000", 32), 1], // less than or equal; 0x056bc75e2d63100000 = hex(10^22) = 10,000tokens
+          ],
+        ],
+        0,
+        0,
+        abiSVM.address
+      );
+
+    const { sessionKeyData: sessionKeyData3, leafData: leafData3 } =
+      await getABISessionKeyParams(
+        sessionKey.address,
+        [
+          mockProtocol.address,
+          ethers.utils.hexDataSlice(
+            ethers.utils.id("interact(address,uint256)"),
+            0,
+            4
+          ),
+          ethers.utils.parseEther("0"), // value limit
+          // array of offsets, values, and conditions
+          [
+            [0, ethers.utils.hexZeroPad(mockToken.address, 32), 0], // equal
+            [32, ethers.utils.hexZeroPad("0x21E19E0C9BAB2400000", 32), 1], // less than or equal; 0x056bc75e2d63100000 = hex(10^22) = 10,000tokens
+          ],
+        ],
+        0,
+        0,
+        abiSVM.address
+      );
+
+    const { sessionKeyData: sessionKeyData4, leafData: leafData4 } =
+      await getABISessionKeyParams(
+        sessionKey.address,
+        [
+          mockProtocol.address,
+          ethers.utils.hexDataSlice(
+            ethers.utils.id("changeState(uint256,bytes)"),
+            0,
+            4
+          ), // transfer function selector
+          ethers.utils.parseEther("0.5"), // value limit
+          // array of offsets, values, and conditions
+          [
+            [0, ethers.utils.hexZeroPad("0x0400", 32), 1], // less than or equal; 0x400 = 1,024
+            [32, ethers.utils.hexZeroPad("0x40", 32), 0], // offset == 0x40 = 64 = first arg(32) + offset_itself(32)
+            [64, ethers.utils.hexZeroPad("0x20", 32), 3], // length >= 0x20 (32)
+          ],
+        ],
+        0,
+        0,
+        abiSVM.address
+      );
+
+    const leaves = [leafData, leafData2, leafData3, leafData4].map((x) =>
+      ethers.utils.keccak256(x)
+    );
+
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
-      [ethers.utils.keccak256(leafData)],
+      leaves,
       sessionKeyManager,
       userSA.address,
       smartAccountOwner,
@@ -120,12 +212,19 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       userSA: userSA,
       mockToken: mockToken,
       sessionKeyManager: sessionKeyManager,
-      abiSVM: abiSVM,
-      sessionKeyData: sessionKeyData,
-      leafData: leafData,
       merkleTree: merkleTree,
       vulnerableErc20SessionModule: vulnerableErc20SessionModule,
       sessionKey: sessionKey,
+      abiSVM: abiSVM,
+      leafDatas: [leafData, leafData2, leafData3, leafData4],
+      sessionKeyDatas: [
+        sessionKeyData,
+        sessionKeyData2,
+        sessionKeyData3,
+        sessionKeyData4,
+      ],
+      sessionRouter: sessionRouter,
+      mockProtocol: mockProtocol,
     };
   });
 
@@ -135,13 +234,16 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       userSA,
       sessionKeyManager,
       abiSVM,
-      sessionKeyData,
-      leafData,
+      sessionKeyDatas,
+      leafDatas,
       merkleTree,
       mockToken,
     } = await setupTests();
     const IERC20 = await ethers.getContractFactory("ERC20");
     const tokenAmountToApprove = ethers.utils.parseEther("0.7534");
+
+    const sessionKeyData = sessionKeyDatas[0];
+    const leafData = leafDatas[0];
 
     const approveUserOp = await makeEcdsaSessionKeySignedUserOp(
       "execute_ncC",
@@ -178,6 +280,99 @@ describe("SessionKey: ABI Session Validation Module", async () => {
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore
+    );
+  });
+
+  it("should be able to process Batched userOp via Batched Session Router and ABI SVM", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      abiSVM,
+      sessionKeyDatas,
+      leafDatas,
+      merkleTree,
+      mockToken,
+      sessionRouter,
+      mockProtocol,
+    } = await setupTests();
+
+    const tokenAmountToTransfer = ethers.utils.parseEther("3.2432");
+
+    const MockProtocol = await ethers.getContractFactory("MockProtocol");
+    const IERC20 = await ethers.getContractFactory("ERC20");
+    const SmartAccount = await ethers.getContractFactory("SmartAccount");
+
+    const approveCallData = IERC20.interface.encodeFunctionData("approve", [
+      mockProtocol.address,
+      tokenAmountToTransfer,
+    ]);
+    const interactCallData = MockProtocol.interface.encodeFunctionData(
+      "interact",
+      [mockToken.address, tokenAmountToTransfer]
+    );
+    const changeStateCallData = MockProtocol.interface.encodeFunctionData(
+      "changeState",
+      [
+        0x123, // some random uint256 that is less than 1,024
+        ethers.utils.hexZeroPad("0xdeafbeef", 32), // bytes, 32-length
+      ]
+    );
+
+    const approveSessionKeyData = sessionKeyDatas[1];
+    const approveLeafData = leafDatas[1];
+    const interactSessionKeyData = sessionKeyDatas[2];
+    const interactLeafData = leafDatas[2];
+    const changeStateSessionKeyData = sessionKeyDatas[3];
+    const changeStateLeafData = leafDatas[3];
+
+    const userOp = await makeEcdsaSessionKeySignedBatchUserOp(
+      "executeBatch_y6U",
+      [
+        [mockToken.address, mockProtocol.address, mockProtocol.address],
+        [0, 0, ethers.utils.parseEther("0.01")],
+        [approveCallData, interactCallData, changeStateCallData],
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      [
+        [
+          0,
+          0,
+          abiSVM.address,
+          approveSessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(approveLeafData)),
+          "0x",
+        ],
+        [
+          0,
+          0,
+          abiSVM.address,
+          interactSessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(interactLeafData)),
+          "0x",
+        ],
+        [
+          0,
+          0,
+          abiSVM.address,
+          changeStateSessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(changeStateLeafData)),
+          "0x",
+        ],
+      ],
+      sessionRouter.address,
+      {
+        preVerificationGas: 75000,
+      }
+    );
+
+    await entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 });
+
+    expect(await mockToken.balanceOf(mockProtocol.address)).to.equal(
+      tokenAmountToTransfer
     );
   });
 });

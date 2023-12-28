@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.20;
+pragma solidity ^0.8.23;
 import "../../interfaces/modules/SessionValidationModules/IABISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
@@ -74,38 +74,34 @@ contract ABISessionValidationModule is IABISessionValidationModule {
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData,
         bytes memory /*_callSpecificData*/
-    ) public pure virtual override returns (address) {
-        // TODO optimize this, maybe make permission calldata and get it with assembly
-        (address sessionKey, Permission memory permission) = abi.decode(
-            _sessionKeyData,
-            (address, Permission)
-        );
-
-        if (destinationContract != permission.destinationContract) {
-            revert("ABISV Wrong Destination");
-        }
-        if (callValue > permission.valueLimit) {
-            revert("ABISV Value exceeded");
-        }
-
-        if (!checkPermission(_funcCallData, permission))
-            revert("ABISV: Permission violated");
-
-        return sessionKey;
+    ) external pure virtual override returns (address) {
+        return
+            _validateSessionParams(
+                destinationContract,
+                callValue,
+                _funcCallData,
+                _sessionKeyData
+            );
     }
 
-    // CHECK IF THIS MAKES IT CHEAPER VIA BATCHED SESSION ROUTER
     function _validateSessionParams(
         address destinationContract,
         uint256 callValue,
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData
     ) internal pure virtual returns (address) {
-        // TODO optimize this, maybe make permission calldata and get it with assembly
-        (address sessionKey, Permission memory permission) = abi.decode(
-            _sessionKeyData,
-            (address, Permission)
-        );
+        address sessionKey;
+        Permission calldata permission;
+        assembly {
+            sessionKey := calldataload(_sessionKeyData.offset)
+            // struct in calldata is defined by its offset
+            // for bytes calldata bytesObject we define bytesObject.offset and bytesObject.length,
+            // for struct calldata structObject we define structObject = offset
+            permission := add(
+                _sessionKeyData.offset,
+                calldataload(add(_sessionKeyData.offset, 0x20))
+            )
+        }
 
         if (destinationContract != permission.destinationContract) {
             revert("ABISV Wrong Destination");
@@ -114,15 +110,15 @@ contract ABISessionValidationModule is IABISessionValidationModule {
             revert("ABISV Value exceeded");
         }
 
-        if (!checkPermission(_funcCallData, permission))
+        if (!_checkPermission(_funcCallData, permission))
             revert("ABISV: Permission violated");
 
         return sessionKey;
     }
 
-    function checkPermission(
+    function _checkPermission(
         bytes calldata data,
-        Permission memory permission
+        Permission calldata permission
     ) internal pure returns (bool) {
         if (bytes4(data[0:4]) != permission.selector) return false;
         uint256 length = permission.rules.length;
