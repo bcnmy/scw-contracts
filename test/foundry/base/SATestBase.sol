@@ -168,13 +168,13 @@ abstract contract SATestBase is
 
     function getSmartAccountBatchExecuteCalldata(
         address[] memory _dest,
-        uint256[] memory _value,
-        bytes[] memory _calldata
+        uint256[] memory _values,
+        bytes[] memory _calldatas
     ) internal pure returns (bytes memory) {
         return
             abi.encodeCall(
-                SmartAccount.executeBatch,
-                (_dest, _value, _calldata)
+                SmartAccount.executeBatch_y6U,
+                (_dest, _values, _calldatas)
             );
     }
 
