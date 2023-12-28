@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
 
-import "../Proxy.sol";
+import "../BiconomyMSAProxy.sol";
 import "../BaseSmartAccount.sol";
 import {DefaultCallbackHandler} from "../handler/DefaultCallbackHandler.sol";
 import {Stakeable} from "../common/Stakeable.sol";
@@ -41,7 +41,7 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
             moduleSetupData
         );
         bytes memory code = abi.encodePacked(
-            type(Proxy).creationCode,
+            type(BiconomyMSAProxy).creationCode,
             uint256(uint160(basicImplementation))
         );
         bytes32 salt = keccak256(
@@ -69,7 +69,7 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
         );
 
         bytes memory deploymentData = abi.encodePacked(
-            type(Proxy).creationCode,
+            type(BiconomyMSAProxy).creationCode,
             uint256(uint160(basicImplementation))
         );
 
@@ -111,7 +111,7 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
         bytes calldata moduleSetupData
     ) public override returns (address proxy) {
         bytes memory deploymentData = abi.encodePacked(
-            type(Proxy).creationCode,
+            type(BiconomyMSAProxy).creationCode,
             uint256(uint160(basicImplementation))
         );
 
@@ -152,7 +152,7 @@ contract SmartAccountFactory is Stakeable, ISmartAccountFactory {
 
     /// @inheritdoc ISmartAccountFactory
     function accountCreationCode() public pure override returns (bytes memory) {
-        return type(Proxy).creationCode;
+        return type(BiconomyMSAProxy).creationCode;
     }
 
     /**

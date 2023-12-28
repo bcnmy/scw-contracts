@@ -16,7 +16,7 @@ interface ISignatureValidator {
      */
     function isValidSignature(
         bytes32 _dataHash,
-        bytes memory _signature
+        bytes calldata _signature
     ) external view returns (bytes4);
 
     /**
@@ -28,6 +28,6 @@ interface ISignatureValidator {
      */
     function isValidSignatureUnsafe(
         bytes32 dataHash,
-        bytes memory moduleSignature
+        bytes calldata moduleSignature
     ) external view returns (bytes4);
 }

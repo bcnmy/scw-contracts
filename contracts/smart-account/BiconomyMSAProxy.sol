@@ -2,11 +2,11 @@
 pragma solidity ^0.8.23;
 
 /**
- * @title Proxy // This is the user's Smart Account
+ * @title BiconomyMSAProxy // This is the user's Smart Account
  * @notice Basic proxy that delegates all calls to a fixed implementation contract.
  * @dev    Implementation address is stored in the slot defined by the Proxy's address
  */
-contract Proxy {
+contract BiconomyMSAProxy {
     constructor(address _implementation) {
         require(
             _implementation != address(0),

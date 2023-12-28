@@ -173,6 +173,18 @@ abstract contract SATestBase is Test {
         return abi.encodeCall(SmartAccount.execute, (_dest, _value, _calldata));
     }
 
+    function getSmartAccountBatchExecuteCalldata(
+        address[] memory _dest,
+        uint256[] memory _values,
+        bytes[] memory _calldatas
+    ) internal pure returns (bytes memory) {
+        return
+            abi.encodeCall(
+                SmartAccount.executeBatch_y6U,
+                (_dest, _values, _calldatas)
+            );
+    }
+
     function getUserOperationEventData(
         Vm.Log[] memory _entries
     ) internal returns (UserOperationEventData memory data) {

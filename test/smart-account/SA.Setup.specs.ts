@@ -117,7 +117,8 @@ describe("Smart Account Setup", async () => {
 
   describe("Update Implementation", async () => {
     it("Can not be called not from EntryPoint or Self", async () => {
-      const { smartAccountImplementation, userSA } = await setupTests();
+      const { smartAccountImplementation, userSA, entryPoint } =
+        await setupTests();
 
       await expect(userSA.updateImplementation(AddressZero))
         .to.be.revertedWith("CallerIsNotEntryPointOrSelf")
@@ -173,7 +174,7 @@ describe("Smart Account Setup", async () => {
   });
 
   // update callback handler
-  describe("Update Implementation", async () => {
+  describe("Set Fallback Handler", async () => {
     it("Can not be called not from EntryPoint or Self", async () => {
       const { userSA } = await setupTests();
       const prevHandler = await userSA.getFallbackHandler();

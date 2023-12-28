@@ -120,14 +120,14 @@ interface IModuleManager {
         bytes memory data,
         Enum.Operation operation,
         uint256 txGas
-    ) external returns (bool success);
+    ) external payable returns (bool success);
 
     function execTransactionFromModule(
         address to,
         uint256 value,
         bytes memory data,
         Enum.Operation operation
-    ) external returns (bool);
+    ) external payable returns (bool);
 
     /**
      * @dev Allows a Module to execute a wallet transaction without any further confirmations and returns data
@@ -143,14 +143,14 @@ interface IModuleManager {
         bytes memory data,
         Enum.Operation operation,
         uint256 txGas
-    ) external returns (bool success, bytes memory returnData);
+    ) external payable returns (bool success, bytes memory returnData);
 
     function execTransactionFromModuleReturnData(
         address to,
         uint256 value,
         bytes memory data,
         Enum.Operation operation
-    ) external returns (bool success, bytes memory returnData);
+    ) external payable returns (bool success, bytes memory returnData);
 
     /**
      * @dev Allows a Module to execute a batch of Smart Account transactions without any further confirmations.
@@ -164,7 +164,7 @@ interface IModuleManager {
         uint256[] calldata value,
         bytes[] calldata data,
         Enum.Operation[] calldata operations
-    ) external returns (bool success);
+    ) external payable returns (bool success);
 
     /**
      * @dev Returns if a module is enabled

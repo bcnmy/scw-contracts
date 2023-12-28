@@ -12,12 +12,13 @@ interface ISmartAccount is IBaseSmartAccount, IModuleManager {
         address indexed oldImplementation,
         address indexed newImplementation
     );
+
     event SmartAccountReceivedNativeToken(
         address indexed sender,
-        uint256 indexed value
+        uint256 value
     );
 
-    // Error
+    // Errors
 
     /**
      * @notice Throws if zero address has been provided as Entry Point address
@@ -104,11 +105,6 @@ interface ISmartAccount is IBaseSmartAccount, IModuleManager {
      * @param moduleAddressProvided module address taken from signature
      */
     error WrongValidationModule(address moduleAddressProvided);
-
-    /**
-     * @notice Thrown when the function that must be called only via delegatecall is called directly
-     */
-    error DelegateCallsOnly();
 
     /**
      * @notice Thrown when trying to use address of the Smart Account as an owner for itself
