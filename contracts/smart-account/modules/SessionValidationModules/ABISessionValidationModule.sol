@@ -34,21 +34,27 @@ contract ABISessionValidationModule is IABISessionValidationModule {
         );
 
         bytes calldata callData = _op.callData;
+        address destContract;
+        uint256 callValue;
         bytes calldata data;
         assembly {
+            destContract := calldataload(add(callData.offset, 0x4))
+            callValue := calldataload(add(callData.offset, 0x24))
+
             let dataOffset := add(
                 add(callData.offset, 0x04),
                 calldataload(add(callData.offset, 0x44))
             )
+
             let length := calldataload(dataOffset)
-            data.offset := add(dataOffset, 32)
+            data.offset := add(dataOffset, 0x20)
             data.length := length
         }
 
         return
             _validateSessionParams(
-                address(bytes20(callData[16:36])),
-                uint256(bytes32(callData[36:68])),
+                destContract,
+                callValue,
                 data,
                 _sessionKeyData
             ) ==
@@ -123,31 +129,26 @@ contract ABISessionValidationModule is IABISessionValidationModule {
         if (bytes4(data[0:4]) != permission.selector) return false;
         uint256 length = permission.rules.length;
         for (uint256 i; i < length; ) {
-            Rule memory rule = permission.rules[i];
-            bytes32 param = bytes32(data[4 + rule.offset:4 + rule.offset + 32]);
-            if (rule.condition == Condition.EQUAL && param != rule.value) {
+            Rule calldata rule = permission.rules[i];
+            Condition condition = rule.condition;
+            uint256 offset = rule.offset;
+            bytes32 value = rule.value;
+            bytes32 param = bytes32(data[4 + offset:4 + offset + 32]);
+            if (condition == Condition.EQUAL && param != value) {
                 return false;
             } else if (
-                rule.condition == Condition.LESS_THAN_OR_EQUAL &&
-                param > rule.value
+                condition == Condition.LESS_THAN_OR_EQUAL && param > value
             ) {
                 return false;
-            } else if (
-                rule.condition == Condition.LESS_THAN && param >= rule.value
-            ) {
+            } else if (condition == Condition.LESS_THAN && param >= value) {
                 return false;
             } else if (
-                rule.condition == Condition.GREATER_THAN_OR_EQUAL &&
-                param < rule.value
+                condition == Condition.GREATER_THAN_OR_EQUAL && param < value
             ) {
                 return false;
-            } else if (
-                rule.condition == Condition.GREATER_THAN && param <= rule.value
-            ) {
+            } else if (condition == Condition.GREATER_THAN && param <= value) {
                 return false;
-            } else if (
-                rule.condition == Condition.NOT_EQUAL && param == rule.value
-            ) {
+            } else if (condition == Condition.NOT_EQUAL && param == value) {
                 return false;
             }
             unchecked {
