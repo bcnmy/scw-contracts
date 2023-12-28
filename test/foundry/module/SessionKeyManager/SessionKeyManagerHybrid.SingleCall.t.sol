@@ -223,7 +223,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         entryPoint.handleOps(toArray(op), owner.addr);
     }
 
-    function testEnableAndUseSessionPostCaching() public {
+    function testEnableAndUseSessionPostSessionEnable() public {
         SessionKeyManagerHybrid.SessionData
             memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
                 validUntil: 0,
@@ -699,7 +699,7 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         }
     }
 
-    function testShouldNotValidateTransactionSignedFromInvalidSessionSignerPostCaching()
+    function testShouldNotValidateTransactionSignedFromInvalidSessionSignerPostSessionEnable()
         public
     {
         SessionKeyManagerHybrid.SessionData

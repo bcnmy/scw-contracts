@@ -30,6 +30,8 @@ contract SessionKeyManagerHybrid is
 {
     using UserOperationLib for UserOperation;
 
+    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
+
     mapping(bytes32 _sessionDataDigest => mapping(address _sa => SessionData data))
         internal _enabledSessionsData;
 
@@ -57,7 +59,8 @@ contract SessionKeyManagerHybrid is
          * 0x0                  | 0x1               | 0x01 if sessionEnableTransaction, 0x00 otherwise
          * 0x1                  | --                | Data depending on the above flag
          */
-        bytes calldata moduleSignature = userOp.signature[96:];
+        bytes calldata moduleSignature = userOp
+            .signature[MODULE_SIGNATURE_OFFSET:];
 
         if (_isSessionEnableTransaction(moduleSignature)) {
             (
@@ -156,6 +159,9 @@ contract SessionKeyManagerHybrid is
         assembly ("memory-safe") {
             let offset := add(_moduleSignature.offset, 0x1)
 
+            // Parse the closesly packed non-abi encoded data
+            // offset refers to the starting byte of the data in msg.data
+
             sessionKeyIndex := shr(248, calldataload(offset))
             offset := add(offset, 0x1)
 
@@ -167,6 +173,11 @@ contract SessionKeyManagerHybrid is
 
             sessionValidationModule := shr(96, calldataload(offset))
             offset := add(offset, 0x14)
+
+            // Parse the abi encoded data
+            // baseOffset refers to the starting byte of this section, which starts with a list of offsets to the actual data
+            // dataPointer refers to the starting byte of the actual data
+            // offset refers to the offset of the "offset" to the actual data in the list of offsets
 
             let baseOffset := offset
             let dataPointer := add(baseOffset, calldataload(offset))
@@ -229,7 +240,9 @@ contract SessionKeyManagerHybrid is
             bytes[] calldata sessionEnableSignatureList,
             bytes[] calldata sessionInfos,
             bytes calldata sessionKeySignature
-        ) = _parseValidateUserOpBatchSignature(userOp.signature[96:]);
+        ) = _parseValidateUserOpBatchSignature(
+                userOp.signature[MODULE_SIGNATURE_OFFSET:]
+            );
 
         // Pre-verify all session enable data signatures
         address userOpSender = userOp.getSender();
@@ -261,7 +274,7 @@ contract SessionKeyManagerHybrid is
         // Also find the earliest validUntil and latest validAfter
         uint48 earliestValidUntil = type(uint48).max;
         uint48 latestValidAfter;
-        for (uint256 i = 0; i < length; ) {
+        for (uint256 i = 0; i < length; ++i) {
             bytes calldata sessionInfo = sessionInfos[i];
             uint48 validUntil;
             uint48 validAfter;
@@ -269,63 +282,28 @@ contract SessionKeyManagerHybrid is
 
             if (_isSessionEnableTransaction(sessionInfo)) {
                 (
-                    uint256 sessionKeyEnableDataIndex,
-                    uint256 sessionKeyIndex,
-                    uint48 _validUntil,
-                    uint48 _validAfter,
-                    address sessionValidationModule,
-                    bytes calldata sessionKeyData,
-                    bytes calldata callSpecificData
-                ) = _parseSessionEnableSignatureBatchCall(sessionInfo);
-
-                validUntil = _validUntil;
-                validAfter = _validAfter;
-
-                if (sessionKeyEnableDataIndex >= sessionEnableDataList.length) {
-                    revert("SKM: SKEnableDataIndexInvalid");
-                }
-
-                _validateSessionKeySessionEnableTransaction(
                     validUntil,
                     validAfter,
-                    sessionKeyIndex,
-                    sessionValidationModule,
-                    sessionKeyData,
-                    sessionEnableDataList[sessionKeyEnableDataIndex] // The signature has already been verified
+                    sessionKeyReturned
+                ) = _validateUserOpBatchExecuteSessionEnableTransaction(
+                    sessionInfo,
+                    sessionEnableDataList,
+                    destinations[i],
+                    callValues[i],
+                    operationCalldatas[i]
                 );
-
-                sessionKeyReturned = ISessionValidationModule(
-                    sessionValidationModule
-                ).validateSessionParams(
-                        destinations[i],
-                        callValues[i],
-                        operationCalldatas[i],
-                        sessionKeyData,
-                        callSpecificData
-                    );
             } else {
                 (
-                    bytes32 sessionDataDigest_,
-                    bytes calldata callSpecificData
-                ) = _parseSessionDataPreEnabledSignatureBatchCall(sessionInfo);
-
-                SessionData storage sessionData = _validateSessionKeyPreEnabled(
-                    userOpSender,
-                    sessionDataDigest_
+                    validUntil,
+                    validAfter,
+                    sessionKeyReturned
+                ) = _validateUserOpBatchExecutePreEnabledTransaction(
+                    sessionInfo,
+                    destinations[i],
+                    callValues[i],
+                    operationCalldatas[i],
+                    userOpSender
                 );
-
-                validUntil = sessionData.validUntil;
-                validAfter = sessionData.validAfter;
-
-                sessionKeyReturned = ISessionValidationModule(
-                    sessionData.sessionValidationModule
-                ).validateSessionParams(
-                        destinations[i],
-                        callValues[i],
-                        operationCalldatas[i],
-                        sessionData.sessionKeyData,
-                        callSpecificData
-                    );
             }
 
             // compare if userOp was signed with the proper session key
@@ -339,10 +317,6 @@ contract SessionKeyManagerHybrid is
             if (validAfter > latestValidAfter) {
                 latestValidAfter = validAfter;
             }
-
-            unchecked {
-                ++i;
-            }
         }
 
         return
@@ -350,6 +324,94 @@ contract SessionKeyManagerHybrid is
                 false, // sig validation failed = false; if we are here, it is valid
                 earliestValidUntil,
                 latestValidAfter
+            );
+    }
+
+    function _validateUserOpBatchExecuteSessionEnableTransaction(
+        bytes calldata _sessionInfo,
+        bytes[] calldata _sessionEnableDataList,
+        address _destination,
+        uint256 _callValue,
+        bytes calldata _operationCalldata
+    )
+        internal
+        returns (
+            uint48 validUntil,
+            uint48 validAfter,
+            address sessionKeyReturned
+        )
+    {
+        (
+            uint256 sessionKeyEnableDataIndex,
+            uint256 sessionKeyIndex,
+            uint48 _validUntil,
+            uint48 _validAfter,
+            address sessionValidationModule,
+            bytes calldata sessionKeyData,
+            bytes calldata callSpecificData
+        ) = _parseSessionEnableSignatureBatchCall(_sessionInfo);
+
+        validUntil = _validUntil;
+        validAfter = _validAfter;
+
+        if (sessionKeyEnableDataIndex >= _sessionEnableDataList.length) {
+            revert("SKM: SKEnableDataIndexInvalid");
+        }
+
+        _validateSessionKeySessionEnableTransaction(
+            validUntil,
+            validAfter,
+            sessionKeyIndex,
+            sessionValidationModule,
+            sessionKeyData,
+            _sessionEnableDataList[sessionKeyEnableDataIndex] // The signature has already been verified
+        );
+
+        sessionKeyReturned = ISessionValidationModule(sessionValidationModule)
+            .validateSessionParams(
+                _destination,
+                _callValue,
+                _operationCalldata,
+                sessionKeyData,
+                callSpecificData
+            );
+    }
+
+    function _validateUserOpBatchExecutePreEnabledTransaction(
+        bytes calldata _sessionInfo,
+        address _destination,
+        uint256 _callValue,
+        bytes calldata _operationCalldata,
+        address userOpSender
+    )
+        internal
+        returns (
+            uint48 validUntil,
+            uint48 validAfter,
+            address sessionKeyReturned
+        )
+    {
+        (
+            bytes32 sessionDataDigest_,
+            bytes calldata callSpecificData
+        ) = _parseSessionDataPreEnabledSignatureBatchCall(_sessionInfo);
+
+        SessionData storage sessionData = _validateSessionKeyPreEnabled(
+            userOpSender,
+            sessionDataDigest_
+        );
+
+        validUntil = sessionData.validUntil;
+        validAfter = sessionData.validAfter;
+
+        sessionKeyReturned = ISessionValidationModule(
+            sessionData.sessionValidationModule
+        ).validateSessionParams(
+                _destination,
+                _callValue,
+                _operationCalldata,
+                sessionData.sessionKeyData,
+                callSpecificData
             );
     }
 
