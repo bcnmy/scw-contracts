@@ -25,7 +25,7 @@ contract PasskeyRegistryModule is
     string public constant NAME = "PassKeys Ownership Registry Module";
     string public constant VERSION = "0.2.0";
 
-    mapping(address => PassKeyId) public _smartAccountPasskey;
+    mapping(address => PassKeyId) public smartAccountPasskey;
 
     /// @inheritdoc IPasskeyRegistryModule
     function initForSmartAccount(
@@ -33,12 +33,12 @@ contract PasskeyRegistryModule is
         uint256 _pubKeyY,
         string calldata _keyId
     ) external override returns (address) {
-        PassKeyId storage passKeyId = _smartAccountPasskey[msg.sender];
+        PassKeyId storage passKeyId = smartAccountPasskey[msg.sender];
 
         if (passKeyId.pubKeyX != 0 && passKeyId.pubKeyY != 0)
             revert AlreadyInitedForSmartAccount(msg.sender);
 
-        _smartAccountPasskey[msg.sender] = PassKeyId(
+        smartAccountPasskey[msg.sender] = PassKeyId(
             _pubKeyX,
             _pubKeyY,
             _keyId
@@ -48,14 +48,14 @@ contract PasskeyRegistryModule is
     }
 
     /**
-     * @dev Returns the owner of the Smart Account. Reverts for Smart Accounts without owners.
+     * @dev Returns the owner of the Smart Account.
      * @param smartAccount Smart Account address.
      * @return PassKeyId The owner key of the Smart Account.
      */
     function getOwner(
         address smartAccount
     ) external view returns (PassKeyId memory) {
-        return _smartAccountPasskey[smartAccount];
+        return smartAccountPasskey[smartAccount];
     }
 
     /// @inheritdoc IAuthorizationModule
@@ -166,7 +166,7 @@ contract PasskeyRegistryModule is
         bytes32 clientHash = sha256(bytes(clientDataJSON));
         bytes32 sigHash = sha256(bytes.concat(authenticatorData, clientHash));
 
-        PassKeyId memory passKey = _smartAccountPasskey[smartAccount];
+        PassKeyId memory passKey = smartAccountPasskey[smartAccount];
         if (passKey.pubKeyX == 0 && passKey.pubKeyY == 0) {
             revert NoPassKeyRegisteredForSmartAccount(smartAccount);
         }
