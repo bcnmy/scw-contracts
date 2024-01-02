@@ -15,9 +15,15 @@ describe("Secp256r1 tests:", function () {
     const p1X = BigNumber.from("4"); // P as the point at infinity
     const p1Y = BigNumber.from("8");
     const p1Z = BigNumber.from("0");
-    const p2X = BigNumber.from("5"); // any point Q
-    const p2Y = BigNumber.from("5");
-    const p2Z = BigNumber.from("5");
+    const p2X = BigNumber.from(
+      "0x150c79a46d10a0a7b5977ce4b1e7f35dad727095655b33a38bfece87c66b5f07"
+    ); // any point Q
+    const p2Y = BigNumber.from(
+      "0x7165fee1b0b7ff988cef7a9234527b89814cef0f95a4101ecbd98f1e84e086a9"
+    );
+    const p2Z = BigNumber.from(
+      "0x67f4336965ac19295a42860c44f2724595138978380e171631046a570fb257d8"
+    );
 
     const [resultX, resultY, resultZ] = await secp256r1.jAdd(
       p1X,
@@ -36,9 +42,15 @@ describe("Secp256r1 tests:", function () {
 
   // px = c^2 * qx,py = c^3 * qy,andpz = c * qz
   it("Point addition P + Q where Q is (0) -> (4, 8, 0)", async () => {
-    const p1X = BigNumber.from("5"); // P is any point
-    const p1Y = BigNumber.from("5");
-    const p1Z = BigNumber.from("5");
+    const p1X = BigNumber.from(
+      "0x150c79a46d10a0a7b5977ce4b1e7f35dad727095655b33a38bfece87c66b5f07"
+    ); // P is any point
+    const p1Y = BigNumber.from(
+      "0x7165fee1b0b7ff988cef7a9234527b89814cef0f95a4101ecbd98f1e84e086a9"
+    );
+    const p1Z = BigNumber.from(
+      "0x67f4336965ac19295a42860c44f2724595138978380e171631046a570fb257d8"
+    );
     const p2X = BigNumber.from("4"); // Q as the point at infinity
     const p2Y = BigNumber.from("8");
     const p2Z = BigNumber.from("0");
@@ -78,9 +90,15 @@ describe("Secp256r1 tests:", function () {
   });
 
   it("Point addition P + Q where P is equal to Q", async () => {
-    const pX = 5; // any point on curve if same
-    const pY = 1;
-    const pZ = 5;
+    const pX = BigNumber.from(
+      "0x150c79a46d10a0a7b5977ce4b1e7f35dad727095655b33a38bfece87c66b5f07"
+    );
+    const pY = BigNumber.from(
+      "0x7165fee1b0b7ff988cef7a9234527b89814cef0f95a4101ecbd98f1e84e086a9"
+    );
+    const pZ = BigNumber.from(
+      "0x67f4336965ac19295a42860c44f2724595138978380e171631046a570fb257d8"
+    );
 
     const [resultX, resultY, resultZ] = await secp256r1.jAdd(
       pX,
