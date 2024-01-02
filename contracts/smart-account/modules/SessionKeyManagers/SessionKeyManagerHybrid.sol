@@ -32,7 +32,10 @@ contract SessionKeyManagerHybrid is
 
     uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
 
-    mapping(bytes32 _sessionDataDigest => mapping(address _sa => SessionData data))
+    // For a given Session Data Digest and Smart Account, stores
+    // - the corresponding Session Data if the Session is enabled
+    // - nothing otherwise
+    mapping(bytes32 sessionDataDigest => mapping(address sa => SessionData data))
         internal _enabledSessionsData;
 
     /// @inheritdoc IAuthorizationModule
