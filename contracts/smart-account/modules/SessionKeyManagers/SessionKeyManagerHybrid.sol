@@ -42,11 +42,11 @@ contract SessionKeyManagerHybrid is
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual override returns (uint256 rv) {
+    ) external virtual override returns (uint256) {
         if (_isBatchExecuteCall(userOp)) {
-            rv = _validateUserOpBatchExecute(userOp, userOpHash);
+            return _validateUserOpBatchExecute(userOp, userOpHash);
         } else {
-            rv = _validateUserOpSingleExecute(userOp, userOpHash);
+            return _validateUserOpSingleExecute(userOp, userOpHash);
         }
     }
 
