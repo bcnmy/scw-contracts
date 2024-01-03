@@ -29,6 +29,7 @@ interface IPasskeyRegistryModule {
 
     function isValidSignatureForAddress(
         bytes32 signedDataHash,
-        bytes memory moduleSignature
+        bytes memory moduleSignature,
+        address smartAccount
     ) external view returns (bytes4);
 }
