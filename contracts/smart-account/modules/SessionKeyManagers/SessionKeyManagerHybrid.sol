@@ -30,6 +30,7 @@ contract SessionKeyManagerHybrid is
 {
     using UserOperationLib for UserOperation;
 
+    // Byte offset in userOp.signature where the module signature starts
     uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
 
     // For a given Session Data Digest and Smart Account, stores
@@ -162,18 +163,21 @@ contract SessionKeyManagerHybrid is
         assembly ("memory-safe") {
             let offset := add(_moduleSignature.offset, 0x1)
 
-            // Parse the closesly packed non-abi encoded data
+            // Parse the closely packed non-abi encoded data
             // offset refers to the starting byte of the data in msg.data
 
+            // Extract the session key index
             sessionKeyIndex := shr(248, calldataload(offset))
             offset := add(offset, 0x1)
 
+            // Extract the validUntil and validAfter
             validUntil := shr(208, calldataload(offset))
             offset := add(offset, 0x6)
 
             validAfter := shr(208, calldataload(offset))
             offset := add(offset, 0x6)
 
+            // Extract the session validation module address
             sessionValidationModule := shr(96, calldataload(offset))
             offset := add(offset, 0x14)
 
@@ -185,20 +189,24 @@ contract SessionKeyManagerHybrid is
             let baseOffset := offset
             let dataPointer := add(baseOffset, calldataload(offset))
 
+            // Extract the session key data
             sessionKeyData.offset := add(dataPointer, 0x20)
             sessionKeyData.length := calldataload(dataPointer)
             offset := add(offset, 0x20)
 
+            // Extract the session enable data
             dataPointer := add(baseOffset, calldataload(offset))
             sessionEnableData.offset := add(dataPointer, 0x20)
             sessionEnableData.length := calldataload(dataPointer)
             offset := add(offset, 0x20)
 
+            // Extract the session enable signature
             dataPointer := add(baseOffset, calldataload(offset))
             sessionEnableSignature.offset := add(dataPointer, 0x20)
             sessionEnableSignature.length := calldataload(dataPointer)
             offset := add(offset, 0x20)
 
+            // Extract the session key signature
             dataPointer := add(baseOffset, calldataload(offset))
             sessionKeySignature.offset := add(dataPointer, 0x20)
             sessionKeySignature.length := calldataload(dataPointer)
@@ -222,10 +230,13 @@ contract SessionKeyManagerHybrid is
             let offset := add(_moduleSignature.offset, 0x1)
             let baseOffset := offset
 
+            // Extract the session data digest
             sessionDataDigest_ := calldataload(offset)
             offset := add(offset, 0x20)
 
             let dataPointer := add(baseOffset, calldataload(offset))
+
+            // Extract the session key signature
             sessionKeySignature.offset := add(dataPointer, 0x20)
             sessionKeySignature.length := calldataload(dataPointer)
         }
@@ -464,20 +475,25 @@ contract SessionKeyManagerHybrid is
                 let baseOffset := offset
 
                 let dataPointer := add(baseOffset, calldataload(offset))
+
+                // Extract the session enable data list
                 sessionEnableDataList.offset := add(dataPointer, 0x20)
                 sessionEnableDataList.length := calldataload(dataPointer)
                 offset := add(offset, 0x20)
 
+                // Extract the session enable signature list
                 dataPointer := add(baseOffset, calldataload(offset))
                 sessionEnableSignatureList.offset := add(dataPointer, 0x20)
                 sessionEnableSignatureList.length := calldataload(dataPointer)
                 offset := add(offset, 0x20)
 
+                // Extract the session info list
                 dataPointer := add(baseOffset, calldataload(offset))
                 sessionInfos.offset := add(dataPointer, 0x20)
                 sessionInfos.length := calldataload(dataPointer)
                 offset := add(offset, 0x20)
 
+                // Extract the session key signature
                 dataPointer := add(baseOffset, calldataload(offset))
                 sessionKeySignature.offset := add(dataPointer, 0x20)
                 sessionKeySignature.length := calldataload(dataPointer)
@@ -502,12 +518,14 @@ contract SessionKeyManagerHybrid is
         assembly ("memory-safe") {
             let offset := add(_moduleSignature.offset, 0x1)
 
+            // Extract the session data digest
             sessionDataDigest_ := calldataload(offset)
             offset := add(offset, 0x20)
 
             let baseOffset := offset
             let dataPointer := add(baseOffset, calldataload(offset))
 
+            // Extract the session key signature
             callSpecificData.offset := add(dataPointer, 0x20)
             callSpecificData.length := calldataload(dataPointer)
         }
@@ -542,28 +560,34 @@ contract SessionKeyManagerHybrid is
         assembly ("memory-safe") {
             let offset := add(_moduleSignature.offset, 0x1)
 
+            // Extract the session enable data index
             sessionEnableDataIndex := shr(248, calldataload(offset))
             offset := add(offset, 0x1)
 
+            // Extract the session key index
             sessionKeyIndex := shr(248, calldataload(offset))
             offset := add(offset, 0x1)
 
+            // Extract the validUntil and validAfter
             validUntil := shr(208, calldataload(offset))
             offset := add(offset, 0x6)
 
             validAfter := shr(208, calldataload(offset))
             offset := add(offset, 0x6)
 
+            // Extract the session validation module address
             sessionValidationModule := shr(96, calldataload(offset))
             offset := add(offset, 0x14)
 
             let baseOffset := offset
             let dataPointer := add(baseOffset, calldataload(offset))
 
+            // Extract the session key data
             sessionKeyData.offset := add(dataPointer, 0x20)
             sessionKeyData.length := calldataload(dataPointer)
             offset := add(offset, 0x20)
 
+            // Extract the call specific data
             dataPointer := add(baseOffset, calldataload(offset))
             callSpecificData.offset := add(dataPointer, 0x20)
             callSpecificData.length := calldataload(dataPointer)
@@ -592,15 +616,19 @@ contract SessionKeyManagerHybrid is
             let baseOffset := offset
 
             let dataPointer := add(baseOffset, calldataload(offset))
+
+            // Extract the destinations
             destinations.offset := add(dataPointer, 0x20)
             destinations.length := calldataload(dataPointer)
             offset := add(offset, 0x20)
 
+            // Extract the call values
             dataPointer := add(baseOffset, calldataload(offset))
             callValues.offset := add(dataPointer, 0x20)
             callValues.length := calldataload(dataPointer)
             offset := add(offset, 0x20)
 
+            // Extract the operation calldatas
             dataPointer := add(baseOffset, calldataload(offset))
             operationCalldatas.offset := add(dataPointer, 0x20)
             operationCalldatas.length := calldataload(dataPointer)
@@ -813,15 +841,18 @@ contract SessionKeyManagerHybrid is
         assembly ("memory-safe") {
             let offset := _sessionEnableData.offset
 
+            // Extract the number of session keys enabled
             enabledKeysCount := shr(248, calldataload(offset))
             offset := add(offset, 0x1)
 
+            // Extract the session chain ID
             sessionChainId := shr(
                 192,
                 calldataload(add(offset, mul(0x8, _sessionKeyIndex)))
             )
             offset := add(offset, mul(0x8, enabledKeysCount))
 
+            // Extract the session data hash
             sessionDigest := calldataload(
                 add(offset, mul(0x20, _sessionKeyIndex))
             )

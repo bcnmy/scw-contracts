@@ -6,9 +6,13 @@ import {Vm, Test} from "forge-std/Test.sol";
 
 abstract contract EntryPointUtils is Test {
     // Event Topics
-    bytes32 constant userOperationEventTopic =
+
+    // keccak256("UserOperationEvent(bytes32 indexed,address indexed,address indexed,uint256,bool,uint256,uint256))"
+    bytes32 private constant userOperationEventTopic =
         0x49628fd1471006c1482da88028e9ce4dbb080b815c9b0344d39e5a8e6ec1419f;
-    bytes32 constant userOperationRevertReasonTopic =
+
+    // keccak256("UserOperationRevertReason(bytes32 indexed,address indexed,uint256,bytes)")
+    bytes32 private constant userOperationRevertReasonTopic =
         0x1c4fada7374c0a9ee8841fc38afe82932dc0f8e69012e927f061a8bae611a201;
 
     struct UserOperationEventData {

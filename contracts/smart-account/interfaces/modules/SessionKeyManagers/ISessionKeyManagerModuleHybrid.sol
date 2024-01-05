@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-/* solhint-disable no-empty-blocks*/
-
 /**
  * @title Session Key Manager module for Biconomy Modular Smart Accounts.
  * @dev Stores the Session Information explicity in the storage, instead of maintainting
