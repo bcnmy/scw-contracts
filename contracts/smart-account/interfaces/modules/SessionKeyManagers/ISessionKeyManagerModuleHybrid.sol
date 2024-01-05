@@ -36,20 +36,20 @@ interface ISessionKeyManagerModuleHybrid {
     function enableSession(SessionData calldata sessionData) external;
 
     /**
-     * @dev creates a session for a smart account
+     * @dev creates multiple sessions for a smart account
      * @param sessionDatas session data corresponding to multiple sessions to be enabled
      */
     function enableSessions(SessionData[] calldata sessionDatas) external;
 
     /**
-     * @notice Explicitly disable a session. Can be useful is situations where a session
+     * @notice Explicitly disable a session. Can be useful in situations where a session
      *         needs to be disabled before it expires.
      * @param _sessionDigest digest of session key data
      */
     function disableSession(bytes32 _sessionDigest) external;
 
     /**
-     * @notice Explicitly disable a session. Can be useful is situations where a session
+     * @notice Explicitly disable multiple sessions. Can be useful in situations where a session
      *         needs to be disabled before it expires.
      * @param _sessionDigests digests of session key datas to be disabled
      */
@@ -58,7 +58,7 @@ interface ISessionKeyManagerModuleHybrid {
     /**
      * @notice Returns session data for a given session digest and smart account
      * @param _sessionDataDigest digest of session key data
-     * @param _sa smart account for which session key is being disabled
+     * @param _sa smart account for which session data is to be fetched
      * @return data SessionData struct
      */
     function enabledSessionsData(
