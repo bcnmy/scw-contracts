@@ -197,4 +197,33 @@ abstract contract ToArrayUtils {
         arr[2] = _c;
         return arr;
     }
+
+    // bytes32
+    function toArray(bytes32 _a) internal pure returns (bytes32[] memory) {
+        bytes32[] memory arr = new bytes32[](1);
+        arr[0] = _a;
+        return arr;
+    }
+
+    function toArray(
+        bytes32 _a,
+        bytes32 _b
+    ) internal pure returns (bytes32[] memory) {
+        bytes32[] memory arr = new bytes32[](2);
+        arr[0] = _a;
+        arr[1] = _b;
+        return arr;
+    }
+
+    function toArray(
+        bytes32 _a,
+        bytes32 _b,
+        bytes32 _c
+    ) internal pure returns (bytes32[] memory) {
+        bytes32[] memory arr = new bytes32[](3);
+        arr[0] = _a;
+        arr[1] = _b;
+        arr[2] = _c;
+        return arr;
+    }
 }

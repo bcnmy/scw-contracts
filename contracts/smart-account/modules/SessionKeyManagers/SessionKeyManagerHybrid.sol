@@ -616,10 +616,35 @@ contract SessionKeyManagerHybrid is
     }
 
     /// @inheritdoc ISessionKeyManagerModuleHybrid
+    function disableSessions(
+        bytes32[] calldata _sessionDigests
+    ) external override {
+        uint256 length = _sessionDigests.length;
+        for (uint256 i = 0; i < length; ++i) {
+            delete _enabledSessionsData[_sessionDigests[i]][msg.sender];
+            emit SessionDisabled(msg.sender, _sessionDigests[i]);
+        }
+    }
+
+    /// @inheritdoc ISessionKeyManagerModuleHybrid
     function enableSession(SessionData calldata sessionData) external override {
         bytes32 sessionDataDigest_ = sessionDataDigest(sessionData);
         _enabledSessionsData[sessionDataDigest_][msg.sender] = sessionData;
         emit SessionCreated(msg.sender, sessionDataDigest_, sessionData);
+    }
+
+    /// @inheritdoc ISessionKeyManagerModuleHybrid
+    function enableSessions(
+        SessionData[] calldata _sessionDatas
+    ) external override {
+        uint256 length = _sessionDatas.length;
+        for (uint256 i = 0; i < length; ++i) {
+            SessionData calldata sessionData = _sessionDatas[i];
+
+            bytes32 sessionDataDigest_ = sessionDataDigest(sessionData);
+            _enabledSessionsData[sessionDataDigest_][msg.sender] = sessionData;
+            emit SessionCreated(msg.sender, sessionDataDigest_, sessionData);
+        }
     }
 
     /// @inheritdoc ISessionKeyManagerModuleHybrid

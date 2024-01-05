@@ -111,6 +111,62 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
         assertEq(enabledSessionData, sessionData);
     }
 
+    function testEnableSessions() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData1 = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData2 = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 1,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+        bytes32 sessionDataDigest1 = sessionKeyManagerHybrid.sessionDataDigest(
+            sessionData1
+        );
+        bytes32 sessionDataDigest2 = sessionKeyManagerHybrid.sessionDataDigest(
+            sessionData2
+        );
+
+        // Enable session
+        UserOperation memory op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(sessionKeyManagerHybrid),
+                0,
+                abi.encodeCall(
+                    sessionKeyManagerHybrid.enableSessions,
+                    (toArray(sessionData1, sessionData2))
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+
+        vm.expectEmit();
+        emit SessionCreated(address(sa), sessionDataDigest1, sessionData1);
+        vm.expectEmit();
+        emit SessionCreated(address(sa), sessionDataDigest2, sessionData2);
+
+        entryPoint.handleOps(toArray(op), owner.addr);
+
+        // Check session is enabled
+        ISessionKeyManagerModuleHybrid.SessionData
+            memory enabledSessionData = sessionKeyManagerHybrid
+                .enabledSessionsData(sessionDataDigest1, address(sa));
+        assertEq(enabledSessionData, sessionData1);
+        enabledSessionData = sessionKeyManagerHybrid.enabledSessionsData(
+            sessionDataDigest2,
+            address(sa)
+        );
+        assertEq(enabledSessionData, sessionData2);
+    }
+
     function testEnableAndUseSessionInSameTransaction() public {
         SessionKeyManagerHybrid.SessionData
             memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
@@ -410,6 +466,80 @@ contract SessionKeyManagerHybridSingleCallTest is SATestBase {
                 abi.encodeCall(
                     sessionKeyManagerHybrid.disableSession,
                     (sessionDataDigest)
+                )
+            ),
+            sa,
+            0,
+            alice
+        );
+        vm.expectEmit();
+        emit SessionDisabled(address(sa), sessionDataDigest);
+
+        entryPoint.handleOps(toArray(op), owner.addr);
+
+        // Check session is disabled
+        ISessionKeyManagerModuleHybrid.SessionData
+            memory enabledSessionData = sessionKeyManagerHybrid
+                .enabledSessionsData(sessionDataDigest, address(sa));
+
+        ISessionKeyManagerModuleHybrid.SessionData memory emptyData;
+        assertEq(enabledSessionData, emptyData);
+    }
+
+    function testDisableSessions() public {
+        SessionKeyManagerHybrid.SessionData
+            memory sessionData = ISessionKeyManagerModuleHybrid.SessionData({
+                validUntil: 0,
+                validAfter: 0,
+                sessionValidationModule: address(mockSessionValidationModule),
+                sessionKeyData: abi.encodePacked(bob.addr)
+            });
+        bytes32 sessionDataDigest = sessionKeyManagerHybrid.sessionDataDigest(
+            sessionData
+        );
+
+        // Generate Session Data
+        uint64[] memory chainIds = new uint64[](1);
+        chainIds[0] = uint64(block.chainid);
+
+        SessionKeyManagerHybrid.SessionData[]
+            memory sessionDatas = new SessionKeyManagerHybrid.SessionData[](1);
+        sessionDatas[0] = sessionData;
+
+        (
+            bytes memory sessionEnableData,
+            bytes memory sessionEnableSignature
+        ) = makeSessionEnableData(chainIds, sessionDatas, sa);
+
+        // Enable and Use session
+        UserOperation memory op = makeEnableAndUseSessionUserOp(
+            getSmartAccountExecuteCalldata(
+                address(stub),
+                0,
+                abi.encodeCall(
+                    stub.emitMessage,
+                    ("shouldProcessTransactionFromSessionKey")
+                )
+            ),
+            sa,
+            0,
+            sessionKeyManagerHybrid,
+            sessionData,
+            bob,
+            0,
+            sessionEnableData,
+            sessionEnableSignature
+        );
+        entryPoint.handleOps(toArray(op), owner.addr);
+
+        // Disable session
+        op = makeEcdsaModuleUserOp(
+            getSmartAccountExecuteCalldata(
+                address(sessionKeyManagerHybrid),
+                0,
+                abi.encodeCall(
+                    sessionKeyManagerHybrid.disableSessions,
+                    (toArray(sessionDataDigest))
                 )
             ),
             sa,
