@@ -150,14 +150,27 @@ contract AccountRecoveryModule is
             bytes4(userOp.callData[0:4]) != EXECUTE_SELECTOR
         ) revert("Account Recovery VUO02"); //Validate User Op 02 = wrong selector
 
-        (address dest, uint256 callValue, bytes memory innerCallData) = abi
-            .decode(
-                userOp.callData[4:], // skip selector
-                (address, uint256, bytes)
-            );
+        bytes calldata callData = userOp.callData;
+        address dest;
+        uint256 callValue;
+        bytes calldata innerCallData;
         bytes4 innerSelector;
         assembly {
-            innerSelector := mload(add(innerCallData, 0x20))
+            dest := calldataload(add(callData.offset, 0x4))
+            callValue := calldataload(add(callData.offset, 0x24))
+
+            let dataOffset := add(
+                add(callData.offset, 0x04),
+                calldataload(add(callData.offset, 0x44))
+            )
+
+            let length := calldataload(dataOffset)
+            innerCallData.offset := add(dataOffset, 0x20)
+            innerCallData.length := length
+            if gt(length, 0x04) {
+                innerSelector := calldataload(innerCallData.offset)
+            }
+            //otherwise innerSelector won't be set => execution reverts later with VUO03
         }
 
         bool isTheValidUserOpToAddARecoveryRequest = (innerSelector ==
@@ -544,14 +557,35 @@ contract AccountRecoveryModule is
      * @param innerCallData callData of the request
      */
     function _validateRequestToBeAdded(
-        bytes memory innerCallData
+        bytes calldata innerCallData
     ) internal view {
+        bytes calldata expectedExecuteCallData;
         bytes4 expectedExecuteSelector;
         address expectedThisAddress;
         assembly {
-            //32(memory bytes array length) + 4(submitRecoveryRequest selector) + 32(offset) + 32(length)
-            expectedExecuteSelector := mload(add(innerCallData, 0x64))
-            expectedThisAddress := mload(add(innerCallData, 0x68))
+            let expectedExecuteCallDataArgsStart := add(
+                innerCallData.offset,
+                0x4
+            )
+            let expectedExecuteCallDataOffset := add(
+                expectedExecuteCallDataArgsStart,
+                calldataload(expectedExecuteCallDataArgsStart)
+            )
+            expectedExecuteCallData.length := calldataload(
+                expectedExecuteCallDataOffset
+            )
+            expectedExecuteCallData.offset := add(
+                expectedExecuteCallDataOffset,
+                0x20
+            )
+            if gt(expectedExecuteCallData.length, 0x24) {
+                expectedExecuteSelector := calldataload(
+                    expectedExecuteCallData.offset
+                )
+                expectedThisAddress := calldataload(
+                    add(expectedExecuteCallData.offset, 0x4)
+                )
+            }
         }
         if (
             expectedExecuteSelector != EXECUTE_SELECTOR &&
@@ -562,25 +596,32 @@ contract AccountRecoveryModule is
         if (expectedThisAddress != address(this)) {
             revert("Account Recovery WRR02"); //Wrong Recovery Request 02 = call should be to this contract
         }
+
         bytes4 expectedExecuteRecoverySelector;
-        uint256 executeRecoveryCallDataOffset;
 
         assembly {
-            executeRecoveryCallDataOffset := mload(add(innerCallData, 0xa8))
-            expectedExecuteRecoverySelector := mload(
-                add(
-                    innerCallData,
+            //offset of calldata argument of execute() which is executeRecovery calldata
+            let executeRecoveryCallDataOffset := add(
+                // args start position
+                add(expectedExecuteCallData.offset, 0x4),
+                // offset is stored
+                calldataload(
                     add(
-                        //executeRecovery callData start position
-                        add(
-                            0x68, //position where execute() arguments start
-                            executeRecoveryCallDataOffset //offset where executeRecovery callData bytes array start
-                        ),
-                        //skip length
-                        0x20
+                        expectedExecuteCallData.offset,
+                        0x44 //selector + to + value
                     )
                 )
             )
+
+            if gt(
+                calldataload(executeRecoveryCallDataOffset), //execute() data arg length
+                0x4
+            ) {
+                //skip 32 bytes length
+                expectedExecuteRecoverySelector := calldataload(
+                    add(0x20, executeRecoveryCallDataOffset)
+                )
+            }
         }
         if (expectedExecuteRecoverySelector != this.executeRecovery.selector) {
             revert("Account Recovery WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
