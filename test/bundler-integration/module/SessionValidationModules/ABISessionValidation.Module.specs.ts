@@ -131,20 +131,28 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
 
     const { sessionKeyData, leafData } = await getABISessionKeyParams(
       sessionKey.address,
-      [
-        mockToken.address,
-        ethers.utils.hexDataSlice(
+      {
+        destContract: mockToken.address,
+        functionSelector: ethers.utils.hexDataSlice(
           ethers.utils.id("transfer(address,uint256)"),
           0,
           4
         ), // transfer function selector
-        ethers.utils.parseEther("0"), // value limit
+        valueLimit: ethers.utils.parseEther("1"),
         // array of offsets, values, and conditions
-        [
-          [0, ethers.utils.hexZeroPad(charlie.address, 32), 0], // equal
-          [32, ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32), 1], // 0x056bc75e2d63100000 = hex(10^20) = 100eth
+        rules: [
+          {
+            offset: 0,
+            condition: 0, // equal
+            referenceValue: ethers.utils.hexZeroPad(charlie.address, 32),
+          },
+          {
+            offset: 32,
+            condition: 1, // less than or equal
+            referenceValue: ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32),
+          },
         ],
-      ],
+      },
       0,
       0,
       abiSVM.address
@@ -153,20 +161,31 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     const { sessionKeyData: sessionKeyData2, leafData: leafData2 } =
       await getABISessionKeyParams(
         sessionKey.address,
-        [
-          mockToken.address,
-          ethers.utils.hexDataSlice(
+        {
+          destContract: mockToken.address,
+          functionSelector: ethers.utils.hexDataSlice(
             ethers.utils.id("approve(address,uint256)"),
             0,
             4
           ), // transfer function selector
-          ethers.utils.parseEther("0"), // value limit
+          valueLimit: ethers.utils.parseEther("0"), // value limit
           // array of offsets, values, and conditions
-          [
-            [0, ethers.utils.hexZeroPad(mockProtocol.address, 32), 0], // equal
-            [32, ethers.utils.hexZeroPad("0x21E19E0C9BAB2400000", 32), 1], // less than or equal; 0x056bc75e2d63100000 = hex(10^22) = 10,000tokens
+          rules: [
+            {
+              offset: 0,
+              condition: 0,
+              referenceValue: ethers.utils.hexZeroPad(mockProtocol.address, 32),
+            }, // equal
+            {
+              offset: 32,
+              condition: 1, // less than or equal;
+              referenceValue: ethers.utils.hexZeroPad(
+                "0x21E19E0C9BAB2400000",
+                32
+              ), // 0x056bc75e2d63100000 = hex(10^22) = 10,000tokens
+            },
           ],
-        ],
+        },
         0,
         0,
         abiSVM.address
@@ -175,20 +194,31 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     const { sessionKeyData: sessionKeyData3, leafData: leafData3 } =
       await getABISessionKeyParams(
         sessionKey.address,
-        [
-          mockProtocol.address,
-          ethers.utils.hexDataSlice(
+        {
+          destContract: mockProtocol.address,
+          functionSelector: ethers.utils.hexDataSlice(
             ethers.utils.id("interact(address,uint256)"),
             0,
             4
           ),
-          ethers.utils.parseEther("0"), // value limit
+          valueLimit: ethers.utils.parseEther("0"), // value limit
           // array of offsets, values, and conditions
-          [
-            [0, ethers.utils.hexZeroPad(mockToken.address, 32), 0], // equal
-            [32, ethers.utils.hexZeroPad("0x21E19E0C9BAB2400000", 32), 1], // less than or equal; 0x056bc75e2d63100000 = hex(10^22) = 10,000tokens
+          rules: [
+            {
+              offset: 0,
+              condition: 0, // equal
+              referenceValue: ethers.utils.hexZeroPad(mockToken.address, 32),
+            },
+            {
+              offset: 32,
+              referenceValue: ethers.utils.hexZeroPad(
+                "0x21E19E0C9BAB2400000",
+                32
+              ), // 0x056bc75e2d63100000 = hex(10^22) = 10,000tokens
+              condition: 1, // less than or equal;
+            },
           ],
-        ],
+        },
         0,
         0,
         abiSVM.address
@@ -197,21 +227,33 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     const { sessionKeyData: sessionKeyData4, leafData: leafData4 } =
       await getABISessionKeyParams(
         sessionKey.address,
-        [
-          mockProtocol.address,
-          ethers.utils.hexDataSlice(
+        {
+          destContract: mockProtocol.address,
+          functionSelector: ethers.utils.hexDataSlice(
             ethers.utils.id("changeState(uint256,bytes)"),
             0,
             4
           ), // transfer function selector
-          ethers.utils.parseEther("0.5"), // value limit
+          valueLimit: ethers.utils.parseEther("0.5"), // value limit
           // array of offsets, values, and conditions
-          [
-            [0, ethers.utils.hexZeroPad("0x0400", 32), 1], // less than or equal; 0x400 = 1,024
-            [32, ethers.utils.hexZeroPad("0x40", 32), 0], // offset == 0x40 = 64 = first arg(32) + offset_itself(32)
-            [64, ethers.utils.hexZeroPad("0x20", 32), 3], // length >= 0x20 (32)
+          rules: [
+            {
+              offset: 0,
+              referenceValue: ethers.utils.hexZeroPad("0x0400", 32),
+              condition: 1,
+            }, // less than or equal; 0x400 = 1,024
+            {
+              offset: 32,
+              referenceValue: ethers.utils.hexZeroPad("0x40", 32),
+              condition: 0,
+            }, // offset == 0x40 = 64 = first arg(32) + offset_itself(32)
+            {
+              offset: 64,
+              referenceValue: ethers.utils.hexZeroPad("0x20", 32),
+              condition: 3,
+            }, // length >= 0x20 (32)
           ],
-        ],
+        },
         0,
         0,
         abiSVM.address

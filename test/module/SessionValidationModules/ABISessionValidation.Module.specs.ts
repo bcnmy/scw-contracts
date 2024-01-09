@@ -92,20 +92,28 @@ describe("SessionKey: ABI Session Validation Module", async () => {
 
     const { sessionKeyData, leafData } = await getABISessionKeyParams(
       sessionKey.address,
-      [
-        mockToken.address,
-        ethers.utils.hexDataSlice(
-          ethers.utils.id("transfer(address,uint256)"),
+      {
+        destContract: mockToken.address,
+        functionSelector: ethers.utils.hexDataSlice(
+          ethers.utils.id("transfer(address,uint256)"), // transfer function selector
           0,
           4
-        ), // transfer function selector
-        ethers.utils.parseEther("1"),
+        ),
+        valueLimit: ethers.utils.parseEther("1"),
         // array of offsets, values, and conditions
-        [
-          [0, ethers.utils.hexZeroPad(charlie.address, 32), 0], // equal
-          [32, ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32), 1], // less than or equal
+        rules: [
+          {
+            offset: 0,
+            referenceValue: ethers.utils.hexZeroPad(charlie.address, 32),
+            condition: 0, // equal
+          },
+          {
+            offset: 32,
+            referenceValue: ethers.utils.hexZeroPad("0x056bc75e2d63100000", 32),
+            condition: 1, // less than or equal
+          },
         ],
-      ],
+      },
       0,
       0,
       abiSVM.address
@@ -192,7 +200,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       })
     )
       .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: ABISV: Permission violated");
+      .withArgs(0, "AA23 reverted: ABISV Wrong Selector");
 
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore

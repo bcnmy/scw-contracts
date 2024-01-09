@@ -159,7 +159,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
                 bytes(_sessionKeyData[62:])
             )
         ) {
-            revert("ABISV: Permission rule violated");
+            revert("ABISV Permission rule violated");
         }
 
         return sessionKey;
