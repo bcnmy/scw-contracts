@@ -3,6 +3,7 @@ import {
   makeEcdsaSessionKeySignedUserOp,
   enableNewTreeForSmartAccountViaEcdsa,
   getABISessionKeyParams,
+  makeEcdsaSessionKeySignedBatchUserOp,
 } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp } from "../../utils/userOp";
@@ -121,8 +122,8 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       ecdsaModule.address
     );
 
-    const vulnerableErc20SessionModule = await (
-      await ethers.getContractFactory("VulnerableERC20SessionValidationModule")
+    const mockProtocol = await (
+      await ethers.getContractFactory("MockProtocol")
     ).deploy();
 
     return {
@@ -134,12 +135,12 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       mockToken: mockToken,
       sessionKeyManager: sessionKeyManager,
       merkleTree: merkleTree,
-      vulnerableErc20SessionModule: vulnerableErc20SessionModule,
       sessionKey: sessionKey,
       abiSVM: abiSVM,
       leafDatas: [leafData],
       sessionKeyDatas: [sessionKeyData],
       sessionRouter: sessionRouter,
+      mockProtocol: mockProtocol,
     };
   });
 

@@ -1,16 +1,37 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.23;
-import "../../interfaces/modules/SessionValidationModules/IABISessionValidationModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
+import "../../interfaces/modules/ISessionValidationModule.sol";
 
 /**
  * @title ABI Session Validation Module for Biconomy Smart Accounts.
  * @dev Validates userOps for any contract / method / params.
- *         -
+ *      The _sessionKeyData layout:
+ * Offset (in bytes)    | Length (in bytes) | Contents
+ * 0x0                  | 0x14              | Session key (address)
+ * 0x14                 | 0x14              | Permitted destination contract (address)
+ * 0x28                 | 0x4               | Permitted selector (bytes4)
+ * 0x2c                 | 0x10              | Permitted value limit (uint128)
+ * 0x3c                 | 0x2               | Rules list length (uint16)
+ * 0x3e + 0x23*N        | 0x23              | Rule #N
+ *
+ * Rule layout:
+ * Offset (in bytes)    | Length (in bytes) | Contents
+ * 0x0                  | 0x2               | Offset (uint16)
+ * 0x2                  | 0x1               | Condition (uint8)
+ * 0x3                  | 0x20              | Value (bytes32)
+ *
+ * Condition is a uint8, and can be one of the following:
+ * 0: EQUAL
+ * 1: LESS_THAN_OR_EQUAL
+ * 2: LESS_THAN
+ * 3: GREATER_THAN_OR_EQUAL
+ * 4: GREATER_THAN
+ * 5: NOT_EQUAL
  *
  * Inspired by https://github.com/zerodevapp/kernel/blob/main/src/validator/SessionKeyValidator.sol
  */
-contract ABISessionValidationModule is IABISessionValidationModule {
+contract ABISessionValidationModule is ISessionValidationModule {
     /**
      * @dev validates if the _op (UserOperation) matches the SessionKey permissions
      * and that _op has been signed by this SessionKey
@@ -107,28 +128,39 @@ contract ABISessionValidationModule is IABISessionValidationModule {
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData
     ) internal pure virtual returns (address) {
-        address sessionKey;
-        Permission calldata permission;
-        assembly {
-            sessionKey := calldataload(_sessionKeyData.offset)
-            // struct in calldata is defined by its offset
-            // for bytes calldata bytesObject we define bytesObject.offset and bytesObject.length,
-            // for struct calldata structObject we define structObject = offset
-            permission := add(
-                _sessionKeyData.offset,
-                calldataload(add(_sessionKeyData.offset, 0x20))
-            )
-        }
+        address sessionKey = address(bytes20(_sessionKeyData[0:20]));
+        address permittedDestinationContract = address(
+            bytes20(_sessionKeyData[20:40])
+        );
+        bytes4 permittedSelector = bytes4(_sessionKeyData[40:44]);
+        uint256 permittedValueLimit = uint256(
+            uint128(bytes16(_sessionKeyData[44:60]))
+        );
+        uint256 rulesListLength = uint256(
+            uint16(bytes2(_sessionKeyData[60:62]))
+        );
 
-        if (destinationContract != permission.destinationContract) {
+        if (destinationContract != permittedDestinationContract) {
             revert("ABISV Wrong Destination");
         }
-        if (callValue > permission.valueLimit) {
+
+        if (bytes4(_funcCallData[0:4]) != permittedSelector) {
+            revert("ABISV Wrong Selector");
+        }
+
+        if (callValue > permittedValueLimit) {
             revert("ABISV Value exceeded");
         }
 
-        if (!_checkRulesForPermission(_funcCallData, permission))
-            revert("ABISV: Permission violated");
+        if (
+            !_checkRulesForPermission(
+                _funcCallData,
+                rulesListLength,
+                bytes(_sessionKeyData[62:])
+            )
+        ) {
+            revert("ABISV: Permission rule violated");
+        }
 
         return sessionKey;
     }
@@ -136,20 +168,21 @@ contract ABISessionValidationModule is IABISessionValidationModule {
     /**
      * @dev checks if the calldata matches the permission
      * @param data the data for the call. is parsed inside the SVM
-     * @param permission Permission object that contains rules to be checked
+     * @param rulesListLength the length of the rules list
+     * @param rules the rules list
      * @return true if the calldata matches the permission, false otherwise
      */
     function _checkRulesForPermission(
         bytes calldata data,
-        Permission calldata permission
+        uint256 rulesListLength,
+        bytes calldata rules
     ) internal pure returns (bool) {
-        if (bytes4(data[0:4]) != permission.selector) return false;
-        uint256 length = permission.rules.length;
-        for (uint256 i; i < length; ) {
-            Rule calldata rule = permission.rules[i];
-            Condition condition = rule.condition;
-            uint256 offset = rule.offset;
-            bytes32 value = rule.value;
+        for (uint256 i; i < rulesListLength; ++i) {
+            (uint256 offset, uint256 condition, bytes32 value) = _parseRule(
+                rules,
+                i
+            );
+
             bytes32 param = bytes32(data[4 + offset:4 + offset + 32]);
 
             bool rulePassed;
@@ -184,11 +217,18 @@ contract ABISessionValidationModule is IABISessionValidationModule {
             if (!rulePassed) {
                 return false;
             }
-
-            unchecked {
-                ++i;
-            }
         }
         return true;
+    }
+
+    function _parseRule(
+        bytes calldata rules,
+        uint256 index
+    ) internal pure returns (uint256 offset, uint256 condition, bytes32 value) {
+        offset = uint256(uint16(bytes2(rules[index * 35:index * 35 + 2])));
+        condition = uint256(
+            uint8(bytes1(rules[index * 35 + 2:index * 35 + 3]))
+        );
+        value = bytes32(rules[index * 35 + 3:index * 35 + 35]);
     }
 }

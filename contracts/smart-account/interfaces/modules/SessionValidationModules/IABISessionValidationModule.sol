@@ -25,4 +25,8 @@ abstract contract IABISessionValidationModule is ISessionValidationModule {
         uint256 valueLimit;
         Rule[] rules;
     }
+
+    // bytes permission
+    // bytes20+bytes4+uint128+rulesListLength+rulesList
+    // RulesList: uint16_Offset+uint8_Condition+bytes32_Value
 }
