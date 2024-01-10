@@ -115,6 +115,35 @@ export const getSmartContractOwnershipRegistryModule = async () => {
   );
 };
 
+export const getVerifyingPaymaster = async (
+  owner: Wallet | SignerWithAddress,
+  verifiedSigner: Wallet | SignerWithAddress
+) => {
+  const entryPoint = await getEntryPoint();
+  const VerifyingSingletonPaymaster = await hre.ethers.getContractFactory(
+    "VerifyingSingletonPaymaster"
+  );
+  const verifyingSingletonPaymaster = await VerifyingSingletonPaymaster.deploy(
+    owner.address,
+    entryPoint.address,
+    verifiedSigner.address
+  );
+
+  await verifyingSingletonPaymaster
+    .connect(owner)
+    .addStake(10, { value: ethers.utils.parseEther("2") });
+
+  await verifyingSingletonPaymaster.depositFor(verifiedSigner.address, {
+    value: ethers.utils.parseEther("1"),
+  });
+
+  await entryPoint.depositTo(verifyingSingletonPaymaster.address, {
+    value: ethers.utils.parseEther("10"),
+  });
+
+  return verifyingSingletonPaymaster;
+};
+
 export const getSmartAccountWithModule = async (
   moduleSetupContract: string,
   moduleSetupData: BytesLike,
