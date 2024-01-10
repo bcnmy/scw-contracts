@@ -252,13 +252,6 @@ export async function getABISessionKeyParams(
   validAfter: number,
   sessionValidationModuleAddress: string
 ): Promise<SessionKeyParams> {
-  /* let sessionKeyData = defaultAbiCoder.encode(
-    [
-      "tuple(address, bytes4, uint256, tuple(uint256, bytes32, uint8)[])",
-    ],
-    [permission]
-  ); */
-
   let sessionKeyData = hexConcat([
     sessionKey,
     permission.destContract,

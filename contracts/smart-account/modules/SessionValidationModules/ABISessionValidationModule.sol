@@ -48,13 +48,14 @@ contract ABISessionValidationModule is ISessionValidationModule {
         bytes calldata _sessionKeyData,
         bytes calldata _sessionKeySignature
     ) external pure override returns (bool) {
+        bytes calldata callData = _op.callData;
+
         require(
-            bytes4(_op.callData[0:4]) == EXECUTE_OPTIMIZED_SELECTOR ||
-                bytes4(_op.callData[0:4]) == EXECUTE_SELECTOR,
+            bytes4(callData[0:4]) == EXECUTE_OPTIMIZED_SELECTOR ||
+                bytes4(callData[0:4]) == EXECUTE_SELECTOR,
             "ABISV Not Execute Selector"
         );
 
-        bytes calldata callData = _op.callData;
         address destContract;
         uint256 callValue;
         bytes calldata data;
@@ -64,6 +65,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
 
             let dataOffset := add(
                 add(callData.offset, 0x04),
+                //offset of the bytes arg is stored after selector and two first 32-byte args
                 calldataload(add(callData.offset, 0x44))
             )
 

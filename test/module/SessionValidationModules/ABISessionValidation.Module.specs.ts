@@ -6,7 +6,7 @@ import {
   makeEcdsaSessionKeySignedBatchUserOp,
 } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
-import { makeEcdsaModuleUserOp } from "../../utils/userOp";
+import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -15,6 +15,7 @@ import {
   getEcdsaOwnershipRegistryModule,
   getSmartAccountWithModule,
 } from "../../utils/setupHelper";
+import { hexDataSlice, defaultAbiCoder } from "ethers/lib/utils";
 
 describe("SessionKey: ABI Session Validation Module", async () => {
   const [
@@ -484,5 +485,143 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         charlieTokenBalanceBefore
       );
     });
+
+    // can not use custom built calldata to trick the module
+    it("Can not use custom calldata to trick the module", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockToken,
+        mockProtocol,
+      } = await setupTests();
+
+      const interactSessionKeyData = sessionKeyDatas[2];
+      const interactLeafData = leafDatas[2];
+
+      const tokenAmount = ethers.utils.parseEther("10");
+
+      const properCallData = userSA.interface.encodeFunctionData(
+        "execute_ncC",
+        [
+          mockProtocol.address, // dest
+          ethers.utils.parseEther("0"), // value
+          mockProtocol.interface.encodeFunctionData("interact", [
+            mockToken.address,
+            tokenAmount,
+          ]),
+        ]
+      );
+
+      let manipulatedCalldata = properCallData;
+      // console.log(manipulatedCalldata);
+
+      /*
+      0000189a //execute_ncC sleector
+      000000000000000000000000e8b7a1a3ec6bc0b2ef1a285a261865b290cc3d36 // dest
+      00000000000000000000000000000000000000000000000000038d7ea4c68000 //value
+      0000000000000000000000000000000000000000000000000000000000000060 //offset
+      0000000000000000000000000000000000000000000000000000000000000044 //length
+      b3efe46c // interact selector
+      000000000000000000000000e8b7a1a3ec6bc0b2ef1a285a261865b290cc3d36 // token address
+      0000000000000000000000000000000000000000000000008ac7230489e80000 // amount
+      00000000000000000000000000000000000000000000000000000000 //trailing zeroes
+      */
+
+      // insert the malicious calldata (selector+args) right after the current offset
+      // prepare malicious calldata
+      const maliciousMethodCalldata = ethers.utils.hexConcat([
+        ethers.utils.hexZeroPad("0x4", 32),
+        mockProtocol.interface.encodeFunctionData("notAllowedMethod", []),
+      ]);
+      // console.log(maliciousMethodCalldata);
+
+      // prev offset = 96 (3*32) , add 36=32+4 = length of the injected calldata
+      const newOffset = ethers.utils.hexZeroPad(
+        ethers.utils.hexlify(96 + 36),
+        32
+      );
+      // console.log(newOffset);
+
+      manipulatedCalldata = ethers.utils.hexConcat([
+        hexDataSlice(manipulatedCalldata, 0, 68),
+        newOffset,
+        maliciousMethodCalldata,
+        hexDataSlice(manipulatedCalldata, 100),
+      ]);
+
+      // console.log(manipulatedCalldata);
+
+      /*
+        0x0000189a
+        000000000000000000000000e8b7a1a3ec6bc0b2ef1a285a261865b290cc3d36
+        00000000000000000000000000000000000000000000000000038d7ea4c68000
+        0000000000000000000000000000000000000000000000000000000000000084
+        0000000000000000000000000000000000000000000000000000000000000004
+        0bb48f21
+        0000000000000000000000000000000000000000000000000000000000000044
+        b3efe46c
+        000000000000000000000000e8b7a1a3ec6bc0b2ef1a285a261865b290cc3d36
+        0000000000000000000000000000000000000000000000008ac7230489e80000
+        00000000000000000000000000000000000000000000000000000000
+      */
+
+      const userOp = await fillAndSign(
+        {
+          sender: userSA.address,
+          callData: manipulatedCalldata,
+        },
+        sessionKey,
+        entryPoint,
+        "nonce",
+        true
+      );
+
+      const paddedSig = defaultAbiCoder.encode(
+        ["uint48", "uint48", "address", "bytes", "bytes32[]", "bytes"],
+        [
+          0,
+          0,
+          abiSVM.address,
+          interactSessionKeyData,
+          merkleTree.getHexProof(ethers.utils.keccak256(interactLeafData)),
+          userOp.signature,
+        ]
+      );
+
+      const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"],
+        [paddedSig, sessionKeyManager.address]
+      );
+      userOp.signature = signatureWithModuleAddress;
+
+      const unallowedTriggersBefore = await mockProtocol.getUnallowedTriggers(
+        userSA.address
+      );
+
+      await entryPoint.handleOps([userOp], alice.address, {
+        gasLimit: 10000000,
+      });
+
+      expect(await mockProtocol.getUnallowedTriggers(userSA.address)).to.equal(
+        unallowedTriggersBefore
+      );
+    });
+
+    // all the 6 conditions work
+    /*
+    it("__", async () => {});
+
+    it("__", async () => {});
+
+    it("__", async () => {});
+    */
+
+    // can apply equal condition to every 32 bytes word of the 'bytes' arg
+    // in bundler
   });
 });
