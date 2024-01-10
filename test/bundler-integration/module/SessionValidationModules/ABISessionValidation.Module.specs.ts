@@ -250,7 +250,12 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
               offset: 64,
               referenceValue: ethers.utils.hexZeroPad("0x20", 32),
               condition: 3,
-            }, // length >= 0x20 (32)
+            }, // calldata length >= 0x20 (32)
+            {
+              offset: 96,
+              referenceValue: ethers.utils.hexZeroPad("0xdeafbeef", 32),
+              condition: 0,
+            }, // `bytes` arg can be divided into 32-byte chunks and checked for equality
           ],
         },
         0,

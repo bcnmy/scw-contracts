@@ -3,6 +3,8 @@ pragma solidity ^0.8.23;
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../../interfaces/modules/ISessionValidationModule.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title ABI Session Validation Module for Biconomy Smart Accounts.
  * @dev Validates userOps for any contract / method / params.
@@ -188,6 +190,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
             bytes32 param = bytes32(data[4 + offset:4 + offset + 32]);
 
             bool rulePassed;
+
             assembly ("memory-safe") {
                 switch condition
                 case 0 {
@@ -212,7 +215,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
                 }
                 case 5 {
                     // Condition.NOT_EQUAL
-                    rulePassed := not(eq(param, value))
+                    rulePassed := iszero(eq(param, value))
                 }
             }
 

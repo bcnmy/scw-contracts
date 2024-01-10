@@ -16,6 +16,7 @@ import {
   getSmartAccountWithModule,
 } from "../../utils/setupHelper";
 import { hexDataSlice, defaultAbiCoder } from "ethers/lib/utils";
+import { mockProtocol } from "../../../typechain-types/contracts/smart-account/test/mocks";
 
 describe("SessionKey: ABI Session Validation Module", async () => {
   const [
@@ -199,7 +200,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
             ethers.utils.id("changeState(uint256,bytes)"),
             0,
             4
-          ), // transfer function selector
+          ), // function selector
           valueLimit: ethers.utils.parseEther("0.5"), // value limit
           // array of offsets, values, and conditions
           rules: [
@@ -225,8 +226,43 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         abiSVM.address
       );
 
-    const leaves = [leafData, leafData2, leafData3, leafData4].map((x) =>
-      ethers.utils.keccak256(x)
+    const { sessionKeyData: sessionKeyData5, leafData: leafData5 } =
+      await getABISessionKeyParams(
+        sessionKey.address,
+        {
+          destContract: mockProtocol.address,
+          functionSelector: ethers.utils.hexDataSlice(
+            ethers.utils.id("testArgsMethod(uint256,uint256,uint256)"),
+            0,
+            4
+          ), // function selector
+          valueLimit: ethers.utils.parseEther("0.5"), // value limit
+          // array of offsets, values, and conditions
+          rules: [
+            {
+              offset: 0,
+              referenceValue: ethers.utils.hexZeroPad("0x05", 32),
+              condition: 2,
+            }, // less than 5;
+            {
+              offset: 32,
+              referenceValue: ethers.utils.hexZeroPad("0x05", 32),
+              condition: 4,
+            }, // more than 5
+            {
+              offset: 64,
+              referenceValue: ethers.utils.hexZeroPad("0x05", 32),
+              condition: 5,
+            }, // not equal 5
+          ],
+        },
+        0,
+        0,
+        abiSVM.address
+      );
+
+    const leaves = [leafData, leafData2, leafData3, leafData4, leafData5].map(
+      (x) => ethers.utils.keccak256(x)
     );
 
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
@@ -249,12 +285,13 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       merkleTree: merkleTree,
       sessionKey: sessionKey,
       abiSVM: abiSVM,
-      leafDatas: [leafData, leafData2, leafData3, leafData4],
+      leafDatas: [leafData, leafData2, leafData3, leafData4, leafData5],
       sessionKeyDatas: [
         sessionKeyData,
         sessionKeyData2,
         sessionKeyData3,
         sessionKeyData4,
+        sessionKeyData5,
       ],
       sessionRouter: sessionRouter,
       mockProtocol: mockProtocol,
@@ -518,19 +555,6 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       );
 
       let manipulatedCalldata = properCallData;
-      // console.log(manipulatedCalldata);
-
-      /*
-      0000189a //execute_ncC sleector
-      000000000000000000000000e8b7a1a3ec6bc0b2ef1a285a261865b290cc3d36 // dest
-      00000000000000000000000000000000000000000000000000038d7ea4c68000 //value
-      0000000000000000000000000000000000000000000000000000000000000060 //offset
-      0000000000000000000000000000000000000000000000000000000000000044 //length
-      b3efe46c // interact selector
-      000000000000000000000000e8b7a1a3ec6bc0b2ef1a285a261865b290cc3d36 // token address
-      0000000000000000000000000000000000000000000000008ac7230489e80000 // amount
-      00000000000000000000000000000000000000000000000000000000 //trailing zeroes
-      */
 
       // insert the malicious calldata (selector+args) right after the current offset
       // prepare malicious calldata
@@ -538,14 +562,12 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         ethers.utils.hexZeroPad("0x4", 32),
         mockProtocol.interface.encodeFunctionData("notAllowedMethod", []),
       ]);
-      // console.log(maliciousMethodCalldata);
 
       // prev offset = 96 (3*32) , add 36=32+4 = length of the injected calldata
       const newOffset = ethers.utils.hexZeroPad(
         ethers.utils.hexlify(96 + 36),
         32
       );
-      // console.log(newOffset);
 
       manipulatedCalldata = ethers.utils.hexConcat([
         hexDataSlice(manipulatedCalldata, 0, 68),
@@ -553,22 +575,6 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         maliciousMethodCalldata,
         hexDataSlice(manipulatedCalldata, 100),
       ]);
-
-      // console.log(manipulatedCalldata);
-
-      /*
-        0x0000189a
-        000000000000000000000000e8b7a1a3ec6bc0b2ef1a285a261865b290cc3d36
-        00000000000000000000000000000000000000000000000000038d7ea4c68000
-        0000000000000000000000000000000000000000000000000000000000000084
-        0000000000000000000000000000000000000000000000000000000000000004
-        0bb48f21
-        0000000000000000000000000000000000000000000000000000000000000044
-        b3efe46c
-        000000000000000000000000e8b7a1a3ec6bc0b2ef1a285a261865b290cc3d36
-        0000000000000000000000000000000000000000000000008ac7230489e80000
-        00000000000000000000000000000000000000000000000000000000
-      */
 
       const userOp = await fillAndSign(
         {
@@ -613,15 +619,296 @@ describe("SessionKey: ABI Session Validation Module", async () => {
     });
 
     // all the 6 conditions work
-    /*
-    it("__", async () => {});
 
-    it("__", async () => {});
+    it("Reverts Rule condition == 0 (equal) is violated", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockToken,
+      } = await setupTests();
+      const IERC20 = await ethers.getContractFactory("ERC20");
+      const tokenAmountToApprove = ethers.utils.parseEther("0.7534");
 
-    it("__", async () => {});
-    */
+      const approvePermissionSessionKeyData = sessionKeyDatas[1];
+      const approvePermissionLeafData = leafDatas[1];
 
-    // can apply equal condition to every 32 bytes word of the 'bytes' arg
-    // in bundler
+      const approveUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "execute_ncC",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          IERC20.interface.encodeFunctionData("approve", [
+            bob.address, // should be equal to charlie but it is not
+            tokenAmountToApprove,
+          ]),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0,
+        0,
+        abiSVM.address,
+        approvePermissionSessionKeyData,
+        merkleTree.getHexProof(
+          ethers.utils.keccak256(approvePermissionLeafData)
+        )
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(
+        charlie.address
+      );
+
+      await expect(
+        entryPoint.handleOps([approveUserOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(
+        charlieTokenBalanceBefore
+      );
+    });
+
+    it("Reverts Rule condition == 1 (less than or equal) is violated", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockToken,
+        mockProtocol,
+      } = await setupTests();
+
+      const exceedingAmount = ethers.utils.parseEther("10001");
+      const interactPermissionSessionKeyData = sessionKeyDatas[2];
+      const interactPermissionLeafData = leafDatas[2];
+
+      const userOp = await makeEcdsaSessionKeySignedUserOp(
+        "execute_ncC",
+        [
+          mockProtocol.address,
+          ethers.utils.parseEther("0"),
+          mockProtocol.interface.encodeFunctionData("interact", [
+            mockToken.address,
+            exceedingAmount,
+          ]),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0,
+        0,
+        abiSVM.address,
+        interactPermissionSessionKeyData,
+        merkleTree.getHexProof(
+          ethers.utils.keccak256(interactPermissionLeafData)
+        )
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+    });
+
+    it("Reverts Rule condition == 3 (greater than or equal) is violated", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockProtocol,
+      } = await setupTests();
+
+      const changeStatePermissionSessionKeyData = sessionKeyDatas[3];
+      const changeStatePermissionLeafData = leafDatas[3];
+
+      const userOp = await makeEcdsaSessionKeySignedUserOp(
+        "execute_ncC",
+        [
+          mockProtocol.address,
+          ethers.utils.parseEther("0"),
+          mockProtocol.interface.encodeFunctionData("changeState", [
+            0x123,
+            "0xdeafbeef", // length < 32
+          ]),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0,
+        0,
+        abiSVM.address,
+        changeStatePermissionSessionKeyData,
+        merkleTree.getHexProof(
+          ethers.utils.keccak256(changeStatePermissionLeafData)
+        )
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+    });
+
+    it("Reverts Rule condition == 2 (less than) is violated", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockProtocol,
+      } = await setupTests();
+
+      const testSessionKeyData = sessionKeyDatas[4];
+      const testLeafData = leafDatas[4];
+
+      const userOp = await makeEcdsaSessionKeySignedUserOp(
+        "execute_ncC",
+        [
+          mockProtocol.address,
+          ethers.utils.parseEther("0"),
+          mockProtocol.interface.encodeFunctionData("testArgsMethod", [
+            0x06, // more than 0x05, but should be strictly less
+            0x06, // second arg should be > 0x05
+            0x06, // third arg should be != 0x05
+          ]),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0,
+        0,
+        abiSVM.address,
+        testSessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(testLeafData))
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+    });
+
+    it("Reverts Rule condition == 4 (more than) is violated", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockProtocol,
+      } = await setupTests();
+
+      const testSessionKeyData = sessionKeyDatas[4];
+      const testLeafData = leafDatas[4];
+
+      const userOp = await makeEcdsaSessionKeySignedUserOp(
+        "execute_ncC",
+        [
+          mockProtocol.address,
+          ethers.utils.parseEther("0"),
+          mockProtocol.interface.encodeFunctionData("testArgsMethod", [
+            0x04, // first arg should be < 0x05
+            0x04, // second arg should be > 0x05 but it is less
+            0x04, // third arg should be != 0x05
+          ]),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0,
+        0,
+        abiSVM.address,
+        testSessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(testLeafData))
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+    });
+
+    it("Reverts Rule condition == 5 (not equal) is violated", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockProtocol,
+      } = await setupTests();
+
+      const testSessionKeyData = sessionKeyDatas[4];
+      const testLeafData = leafDatas[4];
+
+      const userOp = await makeEcdsaSessionKeySignedUserOp(
+        "execute_ncC",
+        [
+          mockProtocol.address,
+          ethers.utils.parseEther("0"),
+          mockProtocol.interface.encodeFunctionData("testArgsMethod", [
+            0x04, // first arg should be < 0x05
+            0x06, // second arg should be > 0x05
+            0x05, // third arg should be != 0x05 but it is equal
+          ]),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0,
+        0,
+        abiSVM.address,
+        testSessionKeyData,
+        merkleTree.getHexProof(ethers.utils.keccak256(testLeafData))
+      );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+    });
   });
 });
