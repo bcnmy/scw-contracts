@@ -51,7 +51,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
         require(
             bytes4(_op.callData[0:4]) == EXECUTE_OPTIMIZED_SELECTOR ||
                 bytes4(_op.callData[0:4]) == EXECUTE_SELECTOR,
-            "ABISV Invalid Selector"
+            "ABISV Not Execute Selector"
         );
 
         bytes calldata callData = _op.callData;
@@ -141,15 +141,15 @@ contract ABISessionValidationModule is ISessionValidationModule {
         );
 
         if (destinationContract != permittedDestinationContract) {
-            revert("ABISV Wrong Destination");
+            revert("ABISV Destination Forbidden");
         }
 
         if (bytes4(_funcCallData[0:4]) != permittedSelector) {
-            revert("ABISV Wrong Selector");
+            revert("ABISV Selector Forbidden");
         }
 
         if (callValue > permittedValueLimit) {
-            revert("ABISV Value exceeded");
+            revert("ABISV Permitted Value Exceeded");
         }
 
         if (
@@ -159,7 +159,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
                 bytes(_sessionKeyData[62:])
             )
         ) {
-            revert("ABISV Permission rule violated");
+            revert("ABISV Arg Rule Violated");
         }
 
         return sessionKey;

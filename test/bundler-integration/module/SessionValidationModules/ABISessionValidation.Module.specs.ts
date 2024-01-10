@@ -3,7 +3,6 @@ import {
   makeEcdsaSessionKeySignedUserOp,
   enableNewTreeForSmartAccountViaEcdsa,
   getABISessionKeyParams,
-  addLeavesForSmartAccountViaEcdsa,
   makeEcdsaSessionKeySignedBatchUserOp,
 } from "../../../utils/sessionKey";
 import { ethers, deployments } from "hardhat";
