@@ -8,6 +8,4 @@ import {ISignatureValidator} from "../../interfaces/ISignatureValidator.sol";
 interface IBaseAuthorizationModule is
     IAuthorizationModule,
     ISignatureValidator
-{
-
-}
+{}
