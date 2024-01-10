@@ -8,7 +8,7 @@ import "hardhat/console.sol";
 /**
  * @title ABI Session Validation Module for Biconomy Smart Accounts.
  * @dev Validates userOps for any contract / method / params.
- *      The _sessionKeyData layout:
+ * The _sessionKeyData layout:
  * Offset (in bytes)    | Length (in bytes) | Contents
  * 0x0                  | 0x14              | Session key (address)
  * 0x14                 | 0x14              | Permitted destination contract (address)
