@@ -38,7 +38,9 @@ contract MockProtocol {
         return unallowedTriggers[user];
     }
 
-    function testArgsMethod(uint256 arg1, uint256 arg2, uint256 arg3) external {
-        states[msg.sender] = arg1 + arg2 + arg3;
-    }
+    function testArgsMethod(
+        uint256 arg1,
+        uint256 arg2,
+        uint256 arg3
+    ) external {}
 }
