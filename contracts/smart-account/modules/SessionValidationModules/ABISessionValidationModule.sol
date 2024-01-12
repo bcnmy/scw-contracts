@@ -3,8 +3,6 @@ pragma solidity ^0.8.23;
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import "../../interfaces/modules/ISessionValidationModule.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title ABI Session Validation Module for Biconomy Smart Accounts.
  * @dev Validates userOps for any contract / method / params.
@@ -68,10 +66,12 @@ contract ABISessionValidationModule is ISessionValidationModule {
             let dataOffset := add(
                 add(callData.offset, 0x04),
                 //offset of the bytes arg is stored after selector and two first 32-byte args
+                // 0x4+0x20+0x20=0x44
                 calldataload(add(callData.offset, 0x44))
             )
 
             let length := calldataload(dataOffset)
+            //data itself starts after the length which is another 32bytes word, so we add 0x20
             data.offset := add(dataOffset, 0x20)
             data.length := length
         }
@@ -187,10 +187,10 @@ contract ABISessionValidationModule is ISessionValidationModule {
                 i
             );
 
+            // get the 32bytes word to verify against reference value from the actual calldata of the userOp
             bytes32 param = bytes32(data[4 + offset:4 + offset + 32]);
 
             bool rulePassed;
-
             assembly ("memory-safe") {
                 switch condition
                 case 0 {
