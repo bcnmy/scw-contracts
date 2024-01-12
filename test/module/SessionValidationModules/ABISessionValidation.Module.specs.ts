@@ -3,7 +3,6 @@ import {
   makeEcdsaSessionKeySignedUserOp,
   enableNewTreeForSmartAccountViaEcdsa,
   getABISessionKeyParams,
-  makeEcdsaSessionKeySignedBatchUserOp,
 } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
@@ -16,19 +15,10 @@ import {
   getSmartAccountWithModule,
 } from "../../utils/setupHelper";
 import { hexDataSlice, defaultAbiCoder } from "ethers/lib/utils";
-import { mockProtocol } from "../../../typechain-types/contracts/smart-account/test/mocks";
 
 describe("SessionKey: ABI Session Validation Module", async () => {
-  const [
-    deployer,
-    smartAccountOwner,
-    alice,
-    bob,
-    charlie,
-    verifiedSigner,
-    sessionKey,
-    nonAuthSessionKey,
-  ] = waffle.provider.getWallets();
+  const [deployer, smartAccountOwner, alice, bob, charlie, sessionKey] =
+    waffle.provider.getWallets();
   const maxAmount = ethers.utils.parseEther("100");
 
   const setupTests = deployments.createFixture(async ({ deployments }) => {
@@ -261,9 +251,39 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         abiSVM.address
       );
 
-    const leaves = [leafData, leafData2, leafData3, leafData4, leafData5].map(
-      (x) => ethers.utils.keccak256(x)
-    );
+    const { sessionKeyData: sessionKeyData6, leafData: leafData6 } =
+      await getABISessionKeyParams(
+        sessionKey.address,
+        {
+          destContract: mockToken.address,
+          functionSelector: ethers.utils.hexDataSlice(
+            ethers.utils.id("transfer(address,uint256)"), // transfer function selector
+            0,
+            4
+          ),
+          valueLimit: ethers.utils.parseEther("1"),
+          // array of offsets, values, and conditions
+          rules: [
+            {
+              offset: 0,
+              referenceValue: ethers.utils.hexZeroPad(charlie.address, 32),
+              condition: 6, // NON EXISTING CONDITION
+            },
+          ],
+        },
+        0,
+        0,
+        abiSVM.address
+      );
+
+    const leaves = [
+      leafData,
+      leafData2,
+      leafData3,
+      leafData4,
+      leafData5,
+      leafData6,
+    ].map((x) => ethers.utils.keccak256(x));
 
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
       leaves,
@@ -285,13 +305,21 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       merkleTree: merkleTree,
       sessionKey: sessionKey,
       abiSVM: abiSVM,
-      leafDatas: [leafData, leafData2, leafData3, leafData4, leafData5],
+      leafDatas: [
+        leafData,
+        leafData2,
+        leafData3,
+        leafData4,
+        leafData5,
+        leafData6,
+      ],
       sessionKeyDatas: [
         sessionKeyData,
         sessionKeyData2,
         sessionKeyData3,
         sessionKeyData4,
         sessionKeyData5,
+        sessionKeyData6,
       ],
       sessionRouter: sessionRouter,
       mockProtocol: mockProtocol,
@@ -308,7 +336,6 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         sessionKeyDatas,
         leafDatas,
         merkleTree,
-        mockToken,
       } = await setupTests();
 
       const transferPermissionSessionKeyData = sessionKeyDatas[0];
@@ -909,6 +936,63 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       )
         .to.be.revertedWith("FailedOp")
         .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+    });
+
+    it("Always reverts if the condition is non-existent", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockToken,
+      } = await setupTests();
+      const IERC20 = await ethers.getContractFactory("ERC20");
+      const tokenAmountToApprove = ethers.utils.parseEther("0.7534");
+
+      const nonExistentConditionSessionKeyData = sessionKeyDatas[5];
+      const nonExistentConditionLeafData = leafDatas[5];
+
+      const approveUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "execute_ncC",
+        [
+          mockToken.address,
+          0,
+          IERC20.interface.encodeFunctionData("transfer", [
+            charlie.address,
+            tokenAmountToApprove,
+          ]),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0,
+        0,
+        abiSVM.address,
+        nonExistentConditionSessionKeyData,
+        merkleTree.getHexProof(
+          ethers.utils.keccak256(nonExistentConditionLeafData)
+        )
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(
+        charlie.address
+      );
+
+      await expect(
+        entryPoint.handleOps([approveUserOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(
+        charlieTokenBalanceBefore
+      );
     });
   });
 });
