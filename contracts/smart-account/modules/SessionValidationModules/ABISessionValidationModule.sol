@@ -227,14 +227,14 @@ contract ABISessionValidationModule is ISessionValidationModule {
         return true;
     }
 
-    /** 
+    /**
      * @dev Parses a rule with a given index from the rules list
      * @param rules the rules list as a bytes array
      * @param index the index of the rule to be parsed
      * @return offset - the offset of the parameter in the calldata (multiplier of 32)
      * @return condition - the condition to be checked
      * @return value - the reference value to be checked against
-    */
+     */
     function _parseRule(
         bytes calldata rules,
         uint256 index
