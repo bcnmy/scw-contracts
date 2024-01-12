@@ -63,6 +63,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
             destContract := calldataload(add(callData.offset, 0x4))
             callValue := calldataload(add(callData.offset, 0x24))
 
+            //we get the data offset from the calldata itself, so no assumptions are made about the data layout
             let dataOffset := add(
                 add(callData.offset, 0x04),
                 //offset of the bytes arg is stored after selector and two first 32-byte args
@@ -226,6 +227,14 @@ contract ABISessionValidationModule is ISessionValidationModule {
         return true;
     }
 
+    /** 
+     * @dev Parses a rule with a given index from the rules list
+     * @param rules the rules list as a bytes array
+     * @param index the index of the rule to be parsed
+     * @return offset - the offset of the parameter in the calldata (multiplier of 32)
+     * @return condition - the condition to be checked
+     * @return value - the reference value to be checked against
+    */
     function _parseRule(
         bytes calldata rules,
         uint256 index
