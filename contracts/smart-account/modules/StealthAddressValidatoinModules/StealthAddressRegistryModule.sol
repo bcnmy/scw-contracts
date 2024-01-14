@@ -6,21 +6,9 @@ import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignature
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {StealthAggreagteSignature} from "./StealthAggreagteSignature.sol";
-
-/**
- * @dev Storage structure for Stealth Address Registry Module.
- * StealthPubkey, dhkey are used in aggregated signature.
- * EphemeralPubkey is used to recover private key of stealth address.
- */
-struct StealthStorage {
-    uint256 stealthPubkey;
-    uint256 dhkey;
-    uint256 ephemeralPubkey;
-    address stealthAddress;
-    uint8 stealthPubkeyPrefix;
-    uint8 dhkeyPrefix;
-    uint8 ephemeralPrefix;
-}
+import {IAuthorizationModule} from "../../interfaces/IAuthorizationModule.sol";
+import {IStealthAddressRegistryModule} from "../../interfaces/modules/IStealthAddressRegistryModule.sol";
+import {ISignatureValidator} from "../../interfaces/ISignatureValidator.sol";
 
 /**
  * @title Stealth Address Registry Module for Biconomy Modular Smart Accounts.
@@ -31,27 +19,17 @@ struct StealthStorage {
  *         - One stealth address owner per Smart Account.
  * @author Justin Zen - <justin@moonchute.xyz>
  */
-contract StealthAddressRegistryModule is BaseAuthorizationModule {
+contract StealthAddressRegistryModule is
+    BaseAuthorizationModule,
+    IStealthAddressRegistryModule
+{
     using ECDSA for bytes32;
 
     string public constant NAME = "Stealth Address Registry Module";
     string public constant VERSION = "0.1.0";
     mapping(address => StealthStorage) internal _smartAccountStealth;
 
-    error AlreadyInitedForSmartAccount(address smartAccount);
-    error ZeroAddressNotAllowedAsStealthAddress();
-
-    /**
-     * @dev Initializes the module for a Smart Account.
-     * Should be used at a time of first enabling the module for a Smart Account.
-     * @param stealthAddress The stealth address of the Smart Account.
-     * @param stealthPubkey The compressed stealth pubkey of the Smart Account.
-     * @param dhkey The compressed shared key of the Smart Account.
-     * @param ephemeralPubkey The compressed ephemeral pubkey of the Smart Account.
-     * @param stealthPubkeyPrefix The prefix of the stealth pubkey of the Smart Account.
-     * @param dhkeyPrefix The prefix of the shared key of the Smart Account.
-     * @param ephemeralPrefix The prefix of the ephemeral pubkey of the Smart Account.
-     */
+    /// @inheritdoc IStealthAddressRegistryModule
     function initForSmartAccount(
         address stealthAddress,
         uint256 stealthPubkey,
@@ -78,12 +56,7 @@ contract StealthAddressRegistryModule is BaseAuthorizationModule {
         return address(this);
     }
 
-    /**
-     * @dev Validates userOperation
-     * @param userOp User Operation to be validated.
-     * @param userOpHash Hash of the User Operation to be validated.
-     * @return validationData 0 if signature is valid, SIG_VALIDATION_FAILED otherwise.
-     */
+    /// @inheritdoc IAuthorizationModule
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
@@ -118,11 +91,7 @@ contract StealthAddressRegistryModule is BaseAuthorizationModule {
         return SIG_VALIDATION_FAILED;
     }
 
-    /**
-     * @dev Returns the parameter of the Smart Account.
-     * @param smartAccount The address of the Smart Account.
-     * @return stealthStorage The parameter of the Smart Account.
-     */
+    /// @inheritdoc IStealthAddressRegistryModule
     function getStealthAddress(
         address smartAccount
     ) external view returns (StealthStorage memory) {
@@ -164,12 +133,7 @@ contract StealthAddressRegistryModule is BaseAuthorizationModule {
         return bytes4(0xffffffff);
     }
 
-    /**
-     * @dev Returns the the magic value of EIP-1271.
-     * @param dataHash The hash of the data signed.
-     * @param moduleSignature The signature of the data.
-     * @return magicValue The magic value.
-     */
+    /// @inheritdoc ISignatureValidator
     function isValidSignatureUnsafe(
         bytes32 dataHash,
         bytes memory moduleSignature
