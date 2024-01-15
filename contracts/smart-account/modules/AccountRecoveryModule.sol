@@ -8,8 +8,6 @@ import {IAccountRecoveryModule} from "../interfaces/modules/IAccountRecoveryModu
 import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
 import {Enum} from "../common/Enum.sol";
 
-import "hardhat/console.sol";
-
 /**
  * @title Account Recovery module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
@@ -156,7 +154,6 @@ contract AccountRecoveryModule is
         address dest;
         uint256 callValue;
         bytes calldata innerCallData;
-        console.log(callData.length);
         if (callData.length < 0x64)
             // 0x64 = 0x4 selector + 0x20 dest + 0x20 value + 0x20 innerCallData.offset
             revert("Account Recovery VUO04"); // Validate User Op 02 = wrong callData length
