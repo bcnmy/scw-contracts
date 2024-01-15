@@ -124,7 +124,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
             ethers.utils.id("approve(address,uint256)"),
             0,
             4
-          ), // transfer function selector
+          ), // approve function selector
           valueLimit: ethers.utils.parseEther("0"), // value limit
           // array of offsets, values, and conditions
           rules: [
@@ -276,6 +276,33 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         abiSVM.address
       );
 
+    let sessionKeyData7 = ethers.utils.hexConcat([
+      sessionKey.address,
+      mockToken.address,
+      ethers.utils.hexDataSlice(
+        ethers.utils.id("approve(address,uint256)"),
+        0,
+        4
+      ), // approve function selector
+      ethers.utils.hexZeroPad(ethers.utils.parseEther("0").toHexString(), 16),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(5), 2), // SET INCORRECT RULES LENGTH
+    ]);
+
+    // ADD JUST ONE RULE
+    sessionKeyData7 = ethers.utils.hexConcat([
+      sessionKeyData7,
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 2), // offset is uint16, so there can't be more than 2**16/32 args = 2**11
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 1), // condition uint8
+      ethers.utils.hexZeroPad(mockProtocol.address, 32),
+    ]);
+
+    const leafData7 = ethers.utils.hexConcat([
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 6),
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(0), 6),
+      ethers.utils.hexZeroPad(abiSVM.address, 20),
+      sessionKeyData7,
+    ]);
+
     const leaves = [
       leafData,
       leafData2,
@@ -283,6 +310,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
       leafData4,
       leafData5,
       leafData6,
+      leafData7,
     ].map((x) => ethers.utils.keccak256(x));
 
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
@@ -312,6 +340,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         leafData4,
         leafData5,
         leafData6,
+        leafData7,
       ],
       sessionKeyDatas: [
         sessionKeyData,
@@ -320,6 +349,7 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         sessionKeyData4,
         sessionKeyData5,
         sessionKeyData6,
+        sessionKeyData7,
       ],
       sessionRouter: sessionRouter,
       mockProtocol: mockProtocol,
@@ -975,6 +1005,63 @@ describe("SessionKey: ABI Session Validation Module", async () => {
         nonExistentConditionSessionKeyData,
         merkleTree.getHexProof(
           ethers.utils.keccak256(nonExistentConditionLeafData)
+        )
+      );
+
+      const charlieTokenBalanceBefore = await mockToken.balanceOf(
+        charlie.address
+      );
+
+      await expect(
+        entryPoint.handleOps([approveUserOp], alice.address, {
+          gasLimit: 10000000,
+        })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: ABISV Arg Rule Violated");
+
+      expect(await mockToken.balanceOf(charlie.address)).to.equal(
+        charlieTokenBalanceBefore
+      );
+    });
+
+    it("Reverts if Rules length is incorrect", async () => {
+      const {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyDatas,
+        leafDatas,
+        merkleTree,
+        mockToken,
+      } = await setupTests();
+      const IERC20 = await ethers.getContractFactory("ERC20");
+      const tokenAmountToApprove = ethers.utils.parseEther("0.7534");
+
+      const approvePermissionSessionKeyData = sessionKeyDatas[6]; // session key data with rules.length = 5 but just one rule added
+      const approvePermissionLeafData = leafDatas[6];
+
+      const approveUserOp = await makeEcdsaSessionKeySignedUserOp(
+        "execute_ncC",
+        [
+          mockToken.address,
+          ethers.utils.parseEther("0"),
+          IERC20.interface.encodeFunctionData("approve", [
+            bob.address, // should be equal to charlie but it is not
+            tokenAmountToApprove,
+          ]),
+        ],
+        userSA.address,
+        sessionKey,
+        entryPoint,
+        sessionKeyManager.address,
+        0,
+        0,
+        abiSVM.address,
+        approvePermissionSessionKeyData,
+        merkleTree.getHexProof(
+          ethers.utils.keccak256(approvePermissionLeafData)
         )
       );
 

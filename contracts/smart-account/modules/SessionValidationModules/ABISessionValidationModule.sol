@@ -166,6 +166,11 @@ contract ABISessionValidationModule is ISessionValidationModule {
             revert("ABISV Permitted Value Exceeded");
         }
 
+        // avoided explicit check that (_sessionKeyData.length - 62) is the multiple of RULE_LENGTH
+        // also avoided calculating the rules list length from the rules list itself
+        // both to save on gas
+        // there is a test case that demonstrates that if the incorrect rules list length is provided
+        // the validation will fail
         if (
             !_checkRulesForPermission(
                 _funcCallData,
