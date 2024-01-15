@@ -43,8 +43,6 @@ contract AccountRecoveryModule is
     // Hash to be signed by guardians to make a guardianId
     string public constant CONTROL_MESSAGE = "ACC_RECOVERY_SECURE_MSG";
 
-    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
-
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
     // complies with associated storage rules
@@ -144,7 +142,7 @@ contract AccountRecoveryModule is
         // Check if it is a userOp to submit a request or to immediately execute the request
         // anything except adding a new request to this module is allowed only if securityDelay is 0
         // which means user explicitly allowed to execute an operation immediately
-        // guardians signatures are also validated at this point
+        // guardians signatures are validated after it via _validateGuardiansSignatures
         if (
             bytes4(userOp.callData[0:4]) != EXECUTE_OPTIMIZED_SELECTOR &&
             bytes4(userOp.callData[0:4]) != EXECUTE_SELECTOR
