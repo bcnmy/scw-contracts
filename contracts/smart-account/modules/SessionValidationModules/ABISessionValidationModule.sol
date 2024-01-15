@@ -32,6 +32,9 @@ import "../../interfaces/modules/ISessionValidationModule.sol";
  * Inspired by https://github.com/zerodevapp/kernel/blob/main/src/validator/SessionKeyValidator.sol
  */
 contract ABISessionValidationModule is ISessionValidationModule {
+    uint256 private constant RULE_LENGTH = 35;
+    uint256 private constant SELECTOR_LENGTH = 4;
+
     /**
      * @dev validates if the _op (UserOperation) matches the SessionKey permissions
      * and that _op has been signed by this SessionKey
@@ -60,7 +63,9 @@ contract ABISessionValidationModule is ISessionValidationModule {
         uint256 callValue;
         bytes calldata data;
         assembly {
-            destContract := calldataload(add(callData.offset, 0x4))
+            //offset of the first 32-byte arg is 0x4
+            destContract := calldataload(add(callData.offset, SELECTOR_LENGTH))
+            //offset of the second 32-byte arg is 0x24 = 0x4 (SELECTOR_LENGTH) + 0x20 (first 32-byte arg)
             callValue := calldataload(add(callData.offset, 0x24))
 
             //we get the data offset from the calldata itself, so no assumptions are made about the data layout
@@ -133,14 +138,18 @@ contract ABISessionValidationModule is ISessionValidationModule {
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData
     ) internal pure virtual returns (address) {
+        // every address is 20bytes
         address sessionKey = address(bytes20(_sessionKeyData[0:20]));
         address permittedDestinationContract = address(
             bytes20(_sessionKeyData[20:40])
         );
+        // every selector is 4bytes
         bytes4 permittedSelector = bytes4(_sessionKeyData[40:44]);
+        // value limit is encoded as uint128 which is 16 bytes length
         uint256 permittedValueLimit = uint256(
             uint128(bytes16(_sessionKeyData[44:60]))
         );
+        // rules list length is encoded as uint16 which is 2 bytes length
         uint256 rulesListLength = uint256(
             uint16(bytes2(_sessionKeyData[60:62]))
         );
@@ -161,7 +170,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
             !_checkRulesForPermission(
                 _funcCallData,
                 rulesListLength,
-                bytes(_sessionKeyData[62:])
+                bytes(_sessionKeyData[62:]) //the rest of the _sessionKeyData is the rules list
             )
         ) {
             revert("ABISV Arg Rule Violated");
@@ -189,7 +198,9 @@ contract ABISessionValidationModule is ISessionValidationModule {
             );
 
             // get the 32bytes word to verify against reference value from the actual calldata of the userOp
-            bytes32 param = bytes32(data[4 + offset:4 + offset + 32]);
+            bytes32 param = bytes32(
+                data[SELECTOR_LENGTH + offset:SELECTOR_LENGTH + offset + 32]
+            );
 
             bool rulePassed;
             assembly ("memory-safe") {
@@ -239,10 +250,19 @@ contract ABISessionValidationModule is ISessionValidationModule {
         bytes calldata rules,
         uint256 index
     ) internal pure returns (uint256 offset, uint256 condition, bytes32 value) {
-        offset = uint256(uint16(bytes2(rules[index * 35:index * 35 + 2])));
-        condition = uint256(
-            uint8(bytes1(rules[index * 35 + 2:index * 35 + 3]))
+        // offset length is 2 bytes
+        offset = uint256(
+            uint16(bytes2(rules[index * RULE_LENGTH:index * RULE_LENGTH + 2]))
         );
-        value = bytes32(rules[index * 35 + 3:index * 35 + 35]);
+        // condition length is 1 byte
+        condition = uint256(
+            uint8(
+                bytes1(rules[index * RULE_LENGTH + 2:index * RULE_LENGTH + 3])
+            )
+        );
+        // value length is 32 bytes
+        value = bytes32(
+            rules[index * RULE_LENGTH + 3:index * RULE_LENGTH + RULE_LENGTH]
+        );
     }
 }
