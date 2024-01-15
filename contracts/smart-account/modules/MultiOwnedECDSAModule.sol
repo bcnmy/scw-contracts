@@ -68,7 +68,6 @@ contract MultiOwnedECDSAModule is
     ) external override {
         if (_isSmartContract(newOwner)) revert NotEOA(newOwner);
         if (newOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
-        //if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == newOwner)
             revert OwnerAlreadyUsedForSmartAccount(newOwner, msg.sender);
         //address(0) is not an owner initially as it points to the address(0) = false
