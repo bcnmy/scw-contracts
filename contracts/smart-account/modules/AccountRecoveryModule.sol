@@ -157,7 +157,8 @@ contract AccountRecoveryModule is
         uint256 callValue;
         bytes calldata innerCallData;
         console.log(callData.length);
-        if (callData.length < 0x64)  // 0x64 = 0x4 selector + 0x20 dest + 0x20 value + 0x20 innerCallData.offset
+        if (callData.length < 0x64)
+            // 0x64 = 0x4 selector + 0x20 dest + 0x20 value + 0x20 innerCallData.offset
             revert("Account Recovery VUO04"); // Validate User Op 02 = wrong callData length
         assembly {
             dest := calldataload(add(callData.offset, 0x4))
@@ -173,8 +174,7 @@ contract AccountRecoveryModule is
             innerCallData.length := length
         }
 
-        if (innerCallData.length < 4) 
-            revert("Account Recovery VUO05"); //Validate User Op 05 = innerCallData too short
+        if (innerCallData.length < 4) revert("Account Recovery VUO05"); //Validate User Op 05 = innerCallData too short
         bytes4 innerSelector = bytes4(innerCallData);
 
         bool isTheValidUserOpToAddARecoveryRequest = (innerSelector ==

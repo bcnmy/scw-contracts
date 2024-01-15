@@ -1708,7 +1708,7 @@ describe("Account Recovery Module: ", async () => {
 
       const userOp =
         await makeMultiSignedUserOpWithGuardiansListArbitraryCalldata(
-          userOpCallData.slice(0, 198), //<0x64*2
+          userOpCallData.slice(0, 198), // <0x64*2
           userSA.address,
           arrayOfSigners,
           controlMessage,
