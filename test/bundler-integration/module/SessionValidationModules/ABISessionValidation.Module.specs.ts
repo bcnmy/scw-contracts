@@ -263,8 +263,27 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
         abiSVM.address
       );
 
-    const leaves = [leafData, leafData2, leafData3, leafData4].map((x) =>
-      ethers.utils.keccak256(x)
+    // whitelist contract and method
+    const { sessionKeyData: sessionKeyData5, leafData: leafData5 } =
+      await getABISessionKeyParams(
+        sessionKey.address,
+        {
+          destContract: mockToken.address,
+          functionSelector: ethers.utils.hexDataSlice(
+            ethers.utils.id("transfer(address,uint256)"),
+            0,
+            4
+          ), // transfer function selector
+          valueLimit: ethers.utils.parseEther("0"), // value limit
+          rules: [],
+        },
+        0,
+        0,
+        abiSVM.address
+      );
+
+    const leaves = [leafData, leafData2, leafData3, leafData4, leafData5].map(
+      (x) => ethers.utils.keccak256(x)
     );
 
     const merkleTree = await enableNewTreeForSmartAccountViaEcdsa(
@@ -285,12 +304,13 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
       mockToken: mockToken,
       sessionKeyManager: sessionKeyManager,
       abiSVM: abiSVM,
-      leafDatas: [leafData, leafData2, leafData3, leafData4],
+      leafDatas: [leafData, leafData2, leafData3, leafData4, leafData5],
       sessionKeyDatas: [
         sessionKeyData,
         sessionKeyData2,
         sessionKeyData3,
         sessionKeyData4,
+        sessionKeyData5,
       ],
       merkleTree: merkleTree,
       sessionKey: sessionKey,
@@ -365,6 +385,45 @@ describe("SessionKey: ABI Session Validation Module (with Bundler)", async () =>
     await environment.sendUserOperation(transferUserOp, entryPoint.address);
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore.add(tokenAmountToTransfer)
+    );
+  });
+
+  it("should be able to process Session Key signed userOp with 0 rules", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      abiSVM,
+      leafDatas,
+      sessionKeyDatas,
+      merkleTree,
+      mockToken,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("100");
+
+    const transferSessionKeyData = sessionKeyDatas[4]; // has 0 Rules
+    const transferLeafData = leafDatas[4];
+
+    const transferUserOp = await makeErc20TransferUserOpViaABISVM(
+      mockToken.address,
+      tokenAmountToTransfer, // any amount
+      alice.address, // any receipient
+      ethers.utils.parseEther("0"),
+      {
+        entryPoint,
+        userSA,
+        sessionKeyManager,
+        abiSVM,
+        sessionKeyData: transferSessionKeyData,
+        leafData: transferLeafData,
+        merkleTree,
+      }
+    );
+
+    const aliceTokenBalanceBefore = await mockToken.balanceOf(alice.address);
+    await environment.sendUserOperation(transferUserOp, entryPoint.address);
+    expect(await mockToken.balanceOf(alice.address)).to.equal(
+      aliceTokenBalanceBefore.add(tokenAmountToTransfer)
     );
   });
 
