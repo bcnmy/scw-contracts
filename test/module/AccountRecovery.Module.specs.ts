@@ -1675,6 +1675,102 @@ describe("Account Recovery Module: ", async () => {
         .withArgs(0, "AA23 reverted: Account Recovery WRR03");
     });
 
+    it("Should revert if the userOp.callData is too short", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        arrayOfSigners,
+      } = await setupTests();
+
+      const recoveryCalldata = userSA.interface.encodeFunctionData("execute", [
+        accountRecoveryModule.address,
+        ethers.utils.parseEther("0"),
+        ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+          // WRONG CALLDATA HOWEVER IT DOESN'T MATTER
+          newOwner.address,
+        ]),
+      ]);
+
+      const submitRequestCallData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "submitRecoveryRequest",
+          [recoveryCalldata]
+        );
+
+      const userOpCallData = userSA.interface.encodeFunctionData("execute", [
+        accountRecoveryModule.address,
+        ethers.utils.parseEther("0"),
+        submitRequestCallData,
+      ]);
+
+      const userOp =
+        await makeMultiSignedUserOpWithGuardiansListArbitraryCalldata(
+          userOpCallData.slice(0, 198), //<0x64*2
+          userSA.address,
+          arrayOfSigners,
+          controlMessage,
+          entryPoint,
+          accountRecoveryModule.address
+        );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: Account Recovery VUO04");
+    });
+
+    it("Should revert if the inner callData (bytes arg) of the userOp.callData is too short (<4 bytes)", async () => {
+      const {
+        entryPoint,
+        userSA,
+        accountRecoveryModule,
+        ecdsaModule,
+        controlMessage,
+        arrayOfSigners,
+      } = await setupTests();
+
+      const recoveryCalldata = userSA.interface.encodeFunctionData("execute", [
+        accountRecoveryModule.address,
+        ethers.utils.parseEther("0"),
+        ecdsaModule.interface.encodeFunctionData("transferOwnership", [
+          // WRONG CALLDATA HOWEVER IT DOESN'T MATTER
+          newOwner.address,
+        ]),
+      ]);
+
+      const submitRequestCallData =
+        accountRecoveryModule.interface.encodeFunctionData(
+          "submitRecoveryRequest",
+          [recoveryCalldata]
+        );
+
+      const userOpCallData = userSA.interface.encodeFunctionData("execute", [
+        accountRecoveryModule.address,
+        ethers.utils.parseEther("0"),
+        submitRequestCallData,
+      ]);
+
+      const userOp =
+        await makeMultiSignedUserOpWithGuardiansListArbitraryCalldata(
+          userOpCallData.slice(0, 262), // <0x84*2
+          userSA.address,
+          arrayOfSigners,
+          controlMessage,
+          entryPoint,
+          accountRecoveryModule.address
+        );
+
+      await expect(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
+      )
+        .to.be.revertedWith("FailedOp")
+        .withArgs(0, "AA23 reverted: Account Recovery VUO05");
+    });
+
     // should revert if submitting request is not for SA.execute
     it("Should revert if the delay is >0 and the inner submit request calldata is not for SA.execute", async () => {
       const {

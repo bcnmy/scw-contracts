@@ -8,6 +8,8 @@ import {IAccountRecoveryModule} from "../interfaces/modules/IAccountRecoveryModu
 import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
 import {Enum} from "../common/Enum.sol";
 
+import "hardhat/console.sol";
+
 /**
  * @title Account Recovery module for Biconomy Smart Accounts.
  * @dev Compatible with Biconomy Modular Interface v 0.1
@@ -154,7 +156,9 @@ contract AccountRecoveryModule is
         address dest;
         uint256 callValue;
         bytes calldata innerCallData;
-        bytes4 innerSelector;
+        console.log(callData.length);
+        if (callData.length < 0x64)  // 0x64 = 0x4 selector + 0x20 dest + 0x20 value + 0x20 innerCallData.offset
+            revert("Account Recovery VUO04"); // Validate User Op 02 = wrong callData length
         assembly {
             dest := calldataload(add(callData.offset, 0x4))
             callValue := calldataload(add(callData.offset, 0x24))
@@ -167,11 +171,11 @@ contract AccountRecoveryModule is
             let length := calldataload(dataOffset)
             innerCallData.offset := add(dataOffset, 0x20)
             innerCallData.length := length
-            if gt(length, 0x04) {
-                innerSelector := calldataload(innerCallData.offset)
-            }
-            //otherwise innerSelector won't be set => execution reverts later with VUO03
         }
+
+        if (innerCallData.length < 4) 
+            revert("Account Recovery VUO05"); //Validate User Op 05 = innerCallData too short
+        bytes4 innerSelector = bytes4(innerCallData);
 
         bool isTheValidUserOpToAddARecoveryRequest = (innerSelector ==
             this.submitRecoveryRequest.selector) &&
