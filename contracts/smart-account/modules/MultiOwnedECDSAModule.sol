@@ -29,7 +29,7 @@ contract MultiOwnedECDSAModule is
 {
     using ECDSA for bytes32;
 
-    string public constant NAME = "ECDSA Ownership Registry Module";
+    string public constant NAME = "Multiowned ECDSA Ownership Module";
     string public constant VERSION = "0.2.0";
 
     // owner => smartAccount => isOwner
@@ -45,7 +45,7 @@ contract MultiOwnedECDSAModule is
         }
         uint256 ownersToAdd = eoaOwners.length;
         if (ownersToAdd == 0) revert NoOwnersToAdd();
-        for (uint256 i; i < ownersToAdd; ) {
+        for (uint256 i; i < ownersToAdd; ++i) {
             if (eoaOwners[i] == address(0))
                 revert ZeroAddressNotAllowedAsOwner();
             if (_smartAccountOwners[eoaOwners[i]][msg.sender])
@@ -55,9 +55,7 @@ contract MultiOwnedECDSAModule is
                 );
 
             _smartAccountOwners[eoaOwners[i]][msg.sender] = true;
-            unchecked {
-                ++i;
-            }
+            emit OwnershipTransferred(msg.sender, address(0), eoaOwners[i]);
         }
         numberOfOwners[msg.sender] = ownersToAdd;
         return address(this);
@@ -70,9 +68,9 @@ contract MultiOwnedECDSAModule is
     ) external override {
         if (_isSmartContract(newOwner)) revert NotEOA(newOwner);
         if (newOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
-        if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == newOwner)
             revert OwnerAlreadyUsedForSmartAccount(newOwner, msg.sender);
+        //address(0) is not an owner initially as it points to the address(0) = false
         if (!_smartAccountOwners[owner][msg.sender])
             revert NotAnOwner(owner, msg.sender);
         if (_smartAccountOwners[newOwner][msg.sender])
@@ -91,6 +89,7 @@ contract MultiOwnedECDSAModule is
         unchecked {
             ++numberOfOwners[msg.sender];
         }
+        emit OwnershipTransferred(msg.sender, address(0), owner);
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
@@ -101,6 +100,7 @@ contract MultiOwnedECDSAModule is
         unchecked {
             --numberOfOwners[msg.sender];
         }
+        emit OwnershipTransferred(msg.sender, owner, address(0));
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
