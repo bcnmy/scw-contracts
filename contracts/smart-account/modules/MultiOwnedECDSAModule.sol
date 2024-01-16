@@ -29,7 +29,7 @@ contract MultiOwnedECDSAModule is
 {
     using ECDSA for bytes32;
 
-    string public constant NAME = "ECDSA Ownership Registry Module";
+    string public constant NAME = "Multiowned ECDSA Ownership Module";
     string public constant VERSION = "0.2.0";
 
     // owner => smartAccount => isOwner
