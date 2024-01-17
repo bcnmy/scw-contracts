@@ -1,6 +1,6 @@
 import hardhat, { ethers } from "hardhat";
 import { getContractAddress, parseEther } from "ethers/lib/utils";
-import { Deployer__factory } from "../typechain";
+import { Deployer__factory } from "../typechain-types";
 import { DEPLOYMENT_CHAIN_GAS_PRICES } from "./utils";
 
 export async function mainDeployDeployer() {
