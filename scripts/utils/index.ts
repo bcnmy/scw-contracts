@@ -131,14 +131,11 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   81: {
     gasPrice: parseUnits("800", "gwei"),
   },
-  7116: {
-    // gasPrice: parseUnits("15", "gwei"),
-  },
   88018: {},
   88882: {
     gasPrice: parseUnits("10", "gwei"),
   },
-  1001: {
+  7116: {
     gasPrice: parseUnits("1", "gwei"),
   },
   1115: {
@@ -183,6 +180,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
     // gasPrice: parseUnits("10", "gwei"),
   },
   169: {},
+  168587773: { gasPrice: parseUnits("2", "gwei") },
+  534351: { gasPrice: parseUnits("1", "gwei") },
 };
 
 export type StakingConfig = {
@@ -253,10 +252,6 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
-  7116: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"),
-  },
   88018: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
@@ -265,7 +260,7 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
-  1001: {
+  7116: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -351,6 +346,14 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"),
   },
+  168587773: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
+  534351: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
 };
 
 // For testnets, we stake 0.1 <native tokens>. For mainnets, we use industry standard values.
@@ -425,10 +428,6 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   88882: {
-    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"),
-  },
-  1001: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -513,6 +512,14 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   169: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"), // 1 ETH = $1,674.88
+  },
+  168587773: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  534351: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
   },
 };
 
