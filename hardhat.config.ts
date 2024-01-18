@@ -400,12 +400,8 @@ const config: HardhatUserConfig = {
       mantaMainnet: "PLACEHOLDER_STRING",
       mantaTestnet: "PLACEHOLDER_STRING",
       arbitrumSepolia: process.env.ARBITRUM_API_KEY || "",
-      // To Be Added
-      // scroll testnet
-      // scroll mainnet
-      // blast testnet
-      // zeta testnet
-      // capx testnet
+      scrollTestnet: process.env.SCROLL_API_KEY || "",
+      blastTestnet: process.env.BLAST_API_KEY || "",
     },
     customChains: [
       {
@@ -613,7 +609,7 @@ const config: HardhatUserConfig = {
         network: "scrollTestnet",
         chainId: 534351,
         urls: {
-          apiURL: ``,
+          apiURL: `https://scrollscan.com/api/${process.env.SCROLL_API_KEY}`,
           browserURL: "https://sepolia.scrollscan.com",
         },
       },
