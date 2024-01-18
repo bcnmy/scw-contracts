@@ -293,7 +293,7 @@ const config: HardhatUserConfig = {
     capxTestnet: {
       url: process.env.CAPX_TESTNET_URL || "",
       accounts: hardhatAccounts,
-      chainId: 1001,
+      chainId: 7116,
     },
     chillizTestnet: {
       url: process.env.CHILLIZ_TESTNET_URL || "",
@@ -339,6 +339,16 @@ const config: HardhatUserConfig = {
       url: process.env.ARBITRUM_SEPOLIA_TESTNET_URL || "",
       accounts: hardhatAccounts,
       chainId: 421614,
+    },
+    blastTestnet: {
+      url: process.env.BLAST_TESTNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 168587773,
+    },
+    scrollTestnet: {
+      url: process.env.SCROLL_TESTNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 534351,
     },
   },
   gasReporter: {
@@ -390,6 +400,8 @@ const config: HardhatUserConfig = {
       mantaMainnet: "PLACEHOLDER_STRING",
       mantaTestnet: "PLACEHOLDER_STRING",
       arbitrumSepolia: process.env.ARBITRUM_API_KEY || "",
+      scrollTestnet: process.env.SCROLL_API_KEY || "",
+      blastTestnet: "blastTestnet", // apiKey is not required, just set a placeholder
     },
     customChains: [
       {
@@ -434,7 +446,7 @@ const config: HardhatUserConfig = {
       },
       {
         network: "capxTestnet",
-        chainId: 1001,
+        chainId: 7116,
         urls: {
           apiURL: "http://148.113.163.123:4010/api",
           browserURL: "http://148.113.163.123:4010",
@@ -464,7 +476,6 @@ const config: HardhatUserConfig = {
           browserURL: "https://scan.chiliz.com",
         },
       },
-
       {
         network: "capxTestnet",
         chainId: 7116,
@@ -584,6 +595,23 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: `https://open-platform.nodereal.io/${process.env.COMBO_API_KEY}/combotrace/contract/`,
           browserURL: "https://combotrace.nodereal.io/",
+        },
+      },
+      {
+        network: "blastTestnet",
+        chainId: 168587773,
+        urls: {
+          apiURL:
+            "https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan",
+          browserURL: "https://testnet.blastscan.io",
+        },
+      },
+      {
+        network: "scrollTestnet",
+        chainId: 534351,
+        urls: {
+          apiURL: `https://scrollscan.com/api/${process.env.SCROLL_API_KEY}`,
+          browserURL: "https://sepolia.scrollscan.com",
         },
       },
     ],
