@@ -401,7 +401,7 @@ const config: HardhatUserConfig = {
       mantaTestnet: "PLACEHOLDER_STRING",
       arbitrumSepolia: process.env.ARBITRUM_API_KEY || "",
       scrollTestnet: process.env.SCROLL_API_KEY || "",
-      blastTestnet: process.env.BLAST_API_KEY || "",
+      blastTestnet: "blastTestnet", // apiKey is not required, just set a placeholder
     },
     customChains: [
       {
@@ -601,7 +601,8 @@ const config: HardhatUserConfig = {
         network: "blastTestnet",
         chainId: 168587773,
         urls: {
-          apiURL: ``,
+          apiURL:
+            "https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan",
           browserURL: "https://testnet.blastscan.io",
         },
       },
