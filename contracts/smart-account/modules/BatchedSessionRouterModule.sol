@@ -151,7 +151,7 @@ contract BatchedSessionRouter is
     function isValidSignature(
         bytes32 _dataHash,
         bytes memory _signature
-    ) public pure override returns (bytes4) {
+    ) public pure virtual returns (bytes4) {
         (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }
@@ -162,7 +162,7 @@ contract BatchedSessionRouter is
     function isValidSignatureUnsafe(
         bytes32,
         bytes memory
-    ) public pure virtual override returns (bytes4) {
+    ) public pure virtual returns (bytes4) {
         return 0xffffffff; // not supported
     }
 }
