@@ -489,7 +489,7 @@ contract AccountRecoveryModule is
     function isValidSignature(
         bytes32,
         bytes memory
-    ) public view virtual override returns (bytes4) {
+    ) public view virtual returns (bytes4) {
         return 0xffffffff; // not supported
     }
 
@@ -499,7 +499,7 @@ contract AccountRecoveryModule is
     function isValidSignatureUnsafe(
         bytes32,
         bytes memory
-    ) public view virtual override returns (bytes4) {
+    ) public view virtual returns (bytes4) {
         return 0xffffffff; // not supported
     }
 
