@@ -101,7 +101,7 @@ contract EcdsaOwnershipRegistryModule is
     function isValidSignature(
         bytes32 dataHash,
         bytes memory moduleSignature
-    ) public view virtual override returns (bytes4) {
+    ) public view virtual returns (bytes4) {
         return
             isValidSignatureForAddress(dataHash, moduleSignature, msg.sender);
     }
