@@ -37,7 +37,7 @@ contract BatchedSessionRouter is
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external virtual override returns (uint256) {
+    ) external virtual returns (uint256) {
         {
             // check this is a proper method call
             bytes4 selector = bytes4(userOp.callData[0:4]);

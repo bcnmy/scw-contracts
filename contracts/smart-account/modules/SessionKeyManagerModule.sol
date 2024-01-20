@@ -38,7 +38,7 @@ contract SessionKeyManager is
     mapping(address => SessionStorage) internal _userSessions;
 
     /// @inheritdoc ISessionKeyManagerModule
-    function setMerkleRoot(bytes32 _merkleRoot) external override {
+    function setMerkleRoot(bytes32 _merkleRoot) external {
         _userSessions[msg.sender].merkleRoot = _merkleRoot;
         emit MerkleRootUpdated(msg.sender, _merkleRoot);
     }
@@ -87,7 +87,7 @@ contract SessionKeyManager is
     /// @inheritdoc ISessionKeyManagerModule
     function getSessionKeys(
         address smartAccount
-    ) external view override returns (SessionStorage memory) {
+    ) external view returns (SessionStorage memory) {
         return _userSessions[smartAccount];
     }
 
@@ -99,7 +99,7 @@ contract SessionKeyManager is
         address sessionValidationModule,
         bytes memory sessionKeyData,
         bytes32[] memory merkleProof
-    ) public virtual override {
+    ) public virtual {
         SessionStorage storage sessionKeyStorage = _getSessionData(
             smartAccount
         );
@@ -122,7 +122,7 @@ contract SessionKeyManager is
     function isValidSignature(
         bytes32 _dataHash,
         bytes memory _signature
-    ) public pure override returns (bytes4) {
+    ) public pure returns (bytes4) {
         (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }
@@ -131,7 +131,7 @@ contract SessionKeyManager is
     function isValidSignatureUnsafe(
         bytes32 _dataHash,
         bytes memory _signature
-    ) public pure override returns (bytes4) {
+    ) public pure returns (bytes4) {
         (_dataHash, _signature);
         return 0xffffffff; // do not support it here
     }

@@ -23,7 +23,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     function checkSetupAndEnableModule(
         address, //setupContract
         bytes calldata //setupData
-    ) external override returns (address) {
+    ) external returns (address) {
         // Instruct the SA to install the module and return the address
 
         bool moduleInstallationSuccess;
@@ -113,9 +113,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     }
 
     /// @inheritdoc ISecurityPolicyManagerPlugin
-    function checkAndEnableModule(
-        address _module
-    ) external override returns (address) {
+    function checkAndEnableModule(address _module) external returns (address) {
         // Reject if the module is not a contract
         if (!_module.isContract()) {
             revert ModuleIsNotAContract(_module);
@@ -205,9 +203,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     ////////////////////////// SECURITY POLICY MANAGEMENT FUNCTIONS //////////////////////////
 
     /// @inheritdoc ISecurityPolicyManagerPlugin
-    function enableSecurityPolicy(
-        ISecurityPolicyPlugin _policy
-    ) external override {
+    function enableSecurityPolicy(ISecurityPolicyPlugin _policy) external {
         if (
             _policy == ISecurityPolicyPlugin(address(0x0)) ||
             _policy == ISecurityPolicyPlugin(SENTINEL_MODULE_ADDRESS)
@@ -236,7 +232,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     /// @inheritdoc ISecurityPolicyManagerPlugin
     function enableSecurityPolicies(
         ISecurityPolicyPlugin[] calldata _policies
-    ) external override {
+    ) external {
         mapping(address => address)
             storage enabledSecurityPolicies = enabledSecurityPoliciesLinkedList[
                 msg.sender
@@ -280,7 +276,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
     function disableSecurityPolicy(
         ISecurityPolicyPlugin _policy,
         ISecurityPolicyPlugin _pointer
-    ) external override {
+    ) external {
         if (
             _policy == ISecurityPolicyPlugin(address(0x0)) ||
             _policy == ISecurityPolicyPlugin(SENTINEL_MODULE_ADDRESS)
@@ -315,7 +311,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         ISecurityPolicyPlugin _start,
         ISecurityPolicyPlugin _end,
         ISecurityPolicyPlugin _pointer
-    ) external override {
+    ) external {
         mapping(address => address)
             storage enabledSecurityPolicies = enabledSecurityPoliciesLinkedList[
                 msg.sender
@@ -373,12 +369,7 @@ contract SecurityPolicyManagerPlugin is ISecurityPolicyManagerPlugin {
         address _sa,
         address _start,
         uint256 _pageSize
-    )
-        external
-        view
-        override
-        returns (ISecurityPolicyPlugin[] memory enabledPolicies)
-    {
+    ) external view returns (ISecurityPolicyPlugin[] memory enabledPolicies) {
         enabledPolicies = new ISecurityPolicyPlugin[](_pageSize);
         uint256 actualEnabledPoliciesLength;
 

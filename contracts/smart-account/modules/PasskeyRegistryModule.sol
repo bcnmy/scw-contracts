@@ -32,7 +32,7 @@ contract PasskeyRegistryModule is
         uint256 _pubKeyX,
         uint256 _pubKeyY,
         string calldata _keyId
-    ) external override returns (address) {
+    ) external returns (address) {
         PassKeyId storage passKeyId = smartAccountPasskey[msg.sender];
 
         if (passKeyId.pubKeyX != 0 && passKeyId.pubKeyY != 0)
@@ -81,7 +81,7 @@ contract PasskeyRegistryModule is
     function isValidSignature(
         bytes32 signedDataHash,
         bytes memory moduleSignature
-    ) public view virtual override returns (bytes4) {
+    ) public view virtual returns (bytes4) {
         return
             isValidSignatureForAddress(
                 signedDataHash,

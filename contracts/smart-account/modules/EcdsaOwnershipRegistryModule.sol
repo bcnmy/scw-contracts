@@ -37,9 +37,7 @@ contract EcdsaOwnershipRegistryModule is
     mapping(address => address) internal _smartAccountOwners;
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule
-    function initForSmartAccount(
-        address eoaOwner
-    ) external override returns (address) {
+    function initForSmartAccount(address eoaOwner) external returns (address) {
         if (_smartAccountOwners[msg.sender] != address(0)) {
             revert AlreadyInitedForSmartAccount(msg.sender);
         }
@@ -49,21 +47,19 @@ contract EcdsaOwnershipRegistryModule is
     }
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule
-    function transferOwnership(address owner) external override {
+    function transferOwnership(address owner) external {
         if (_isSmartContract(owner)) revert NotEOA(owner);
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         _transferOwnership(msg.sender, owner);
     }
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule
-    function renounceOwnership() external override {
+    function renounceOwnership() external {
         _transferOwnership(msg.sender, address(0));
     }
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule
-    function getOwner(
-        address smartAccount
-    ) external view override returns (address) {
+    function getOwner(address smartAccount) external view returns (address) {
         address owner = _smartAccountOwners[smartAccount];
         if (owner == address(0)) {
             revert NoOwnerRegisteredForSmartAccount(smartAccount);
@@ -75,7 +71,7 @@ contract EcdsaOwnershipRegistryModule is
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view virtual override returns (uint256) {
+    ) external view virtual returns (uint256) {
         if (
             _verifySignature(
                 userOpHash,
@@ -111,7 +107,7 @@ contract EcdsaOwnershipRegistryModule is
         bytes32 dataHash,
         bytes memory moduleSignature,
         address smartAccount
-    ) public view virtual override returns (bytes4) {
+    ) public view virtual returns (bytes4) {
         if (
             _verifySignature(
                 keccak256(

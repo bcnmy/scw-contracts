@@ -62,10 +62,7 @@ contract MultiOwnedECDSAModule is
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
-    function transferOwnership(
-        address owner,
-        address newOwner
-    ) external override {
+    function transferOwnership(address owner, address newOwner) external {
         if (_isSmartContract(newOwner)) revert NotEOA(newOwner);
         if (newOwner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (owner == newOwner)
@@ -79,7 +76,7 @@ contract MultiOwnedECDSAModule is
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
-    function addOwner(address owner) external override {
+    function addOwner(address owner) external {
         if (_isSmartContract(owner)) revert NotEOA(owner);
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         if (_smartAccountOwners[owner][msg.sender])
@@ -93,7 +90,7 @@ contract MultiOwnedECDSAModule is
     }
 
     /// @inheritdoc IMultiOwnedECDSAModule
-    function removeOwner(address owner) external override {
+    function removeOwner(address owner) external {
         if (!_smartAccountOwners[owner][msg.sender])
             revert NotAnOwner(owner, msg.sender);
         _smartAccountOwners[owner][msg.sender] = false;
@@ -107,7 +104,7 @@ contract MultiOwnedECDSAModule is
     function isOwner(
         address smartAccount,
         address eoaAddress
-    ) external view override returns (bool) {
+    ) external view returns (bool) {
         return _smartAccountOwners[eoaAddress][smartAccount];
     }
 
@@ -115,7 +112,7 @@ contract MultiOwnedECDSAModule is
     function validateUserOp(
         UserOperation calldata userOp,
         bytes32 userOpHash
-    ) external view virtual override returns (uint256) {
+    ) external view virtual returns (uint256) {
         (bytes memory cleanEcdsaSignature, ) = abi.decode(
             userOp.signature,
             (bytes, address)
@@ -137,7 +134,7 @@ contract MultiOwnedECDSAModule is
     function isValidSignature(
         bytes32 dataHash,
         bytes memory moduleSignature
-    ) public view virtual override returns (bytes4) {
+    ) public view virtual returns (bytes4) {
         return
             isValidSignatureForAddress(dataHash, moduleSignature, msg.sender);
     }
@@ -147,7 +144,7 @@ contract MultiOwnedECDSAModule is
         bytes32 dataHash,
         bytes memory moduleSignature,
         address smartAccount
-    ) public view virtual override returns (bytes4) {
+    ) public view virtual returns (bytes4) {
         if (
             _verifySignature(
                 keccak256(
