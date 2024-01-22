@@ -116,6 +116,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   84531: {
     gasPrice: parseUnits("1.5", "gwei"),
   },
+  84532: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
   5611: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
@@ -182,6 +185,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   169: {},
   168587773: { gasPrice: parseUnits("2", "gwei") },
   534351: { gasPrice: parseUnits("1", "gwei") },
+  80085: { gasPrice: parseUnits("0.001", "gwei") },
+  534352: { gasPrice: parseUnits("1", "gwei") },
 };
 
 export type StakingConfig = {
