@@ -350,6 +350,31 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 534351,
     },
+    scrollMainnet: {
+      url: process.env.SCROLL_MAINNET_URL || "https://rpc.scroll.io/",
+      accounts: hardhatAccounts, // you should have this in env
+      chainId: 534352,
+    },
+    baseSepoliaTestnet: {
+      url: process.env.BASE_SEPOLIA_URL || "https://sepolia.base.org/",
+      accounts: hardhatAccounts,
+      chainId: 84532,
+    },
+    zetaTestnet: {
+      url:
+        process.env.ZETA_TESTNET_URL ||
+        "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
+      accounts: hardhatAccounts,
+      chainId: 7001,
+    },
+    // artio = beraChain testnet
+    artioTestnet: {
+      url:
+        process.env.BERA_TESTNET_URL ||
+        "https://rpc.ankr.com/berachain_testnet",
+      accounts: hardhatAccounts,
+      chainId: 80085,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -401,7 +426,11 @@ const config: HardhatUserConfig = {
       mantaTestnet: "PLACEHOLDER_STRING",
       arbitrumSepolia: process.env.ARBITRUM_API_KEY || "",
       scrollTestnet: process.env.SCROLL_API_KEY || "",
-      blastTestnet: "blastTestnet", // apiKey is not required, just set a placeholder
+      scrollMainnet: process.env.SCROLL_API_KEY || "",
+      blastTestnet: "blastTestnet", // apiKey is not required, just set a placeholder,
+      baseSepoliaTestnet: process.env.BASE_SEPOLIA_API_KEY || "",
+      zetaTestnet: process.env.ZETA_API_KEY || "",
+      artioTestnet: "artio_testnet", // API key is not required for Artio, just set a placeholder
     },
     customChains: [
       {
@@ -612,6 +641,40 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: `https://scrollscan.com/api/${process.env.SCROLL_API_KEY}`,
           browserURL: "https://sepolia.scrollscan.com",
+        },
+      },
+      {
+        network: "scrollMainnet",
+        chainId: 534352,
+        urls: {
+          apiURL: `https://api.scrollscan.com/api`,
+          // apiURL: `https://scrollscan.com/api/${process.env.SCROLL_API_KEY}`,
+          browserURL: "https://scrollscan.com",
+        },
+      },
+      {
+        network: "baseSepoliaTestnet",
+        chainId: 84532,
+        urls: {
+          apiURL: "https://api-sepolia.basescan.org/api/",
+          browserURL: "https://sepolia.base.org/",
+        },
+      },
+      {
+        network: "zetaTestnet",
+        chainId: 7001,
+        urls: {
+          apiURL: "https://zetachain-athens-evm.blockpi.network/v1/rpc/public",
+          browserURL: "https://zetachain-athens-3.blockscout.com/",
+        },
+      },
+      {
+        network: "artio_testnet",
+        chainId: 80085,
+        urls: {
+          apiURL:
+            "https://api.routescan.io/v2/network/testnet/evm/80085/etherscan",
+          browserURL: "https://artio.beratrail.io",
         },
       },
     ],
