@@ -18,6 +18,7 @@ import {
   EcdsaOwnershipRegistryModule__factory,
   MultichainECDSAValidator__factory,
   PasskeyRegistryModule__factory,
+  AccountRecoveryModule__factory,
   SessionKeyManager__factory,
   SmartAccountFactory__factory,
   SmartAccount__factory,
@@ -25,6 +26,7 @@ import {
 } from "../typechain";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
+// import { AccountRecoveryModule__factory } from "../typechain-types";
 
 // Deployment Configuration
 const DEPLOYMENT_MODE = process.env.DEPLOYMENT_MODE! as "DEV" | "PROD";
@@ -235,6 +237,16 @@ async function deployPasskeyModule(deployerInstance: Deployer) {
   );
 }
 
+async function deployAccountRecoveryModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.ACCOUNT_RECOVERY_MODULE,
+    `${AccountRecoveryModule__factory.bytecode}`,
+    "AccountRecoveryModule",
+    []
+  );
+}
+
 async function deploySessionKeyManagerModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
@@ -393,13 +405,13 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deployPasskeyModule(deployerInstance);
   console.log("=========================================");
+  await deployAccountRecoveryModule(deployerInstance);
+  console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
   console.log("=========================================");
   await deployBatchedSessionRouterModule(deployerInstance);
   console.log("=========================================");
   await deployErc20SessionValidationModule(deployerInstance);
-  console.log("=========================================");
-  await deploySmartContractOwnershipRegistryModule(deployerInstance);
   console.log("=========================================");
   await deployAddressResolver(deployerInstance);
   console.log("=========================================");
