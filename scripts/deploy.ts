@@ -1,4 +1,4 @@
-import { ethers, run } from "hardhat";
+import { ethers, run, network } from "hardhat";
 import {
   deployContract,
   DEPLOYMENT_CHAIN_GAS_PRICES,
@@ -8,6 +8,7 @@ import {
   factoryStakeConfigDevx,
   factoryStakeConfigProd,
   isContract,
+  writeDeploymentsToFile,
 } from "./utils";
 import {
   AddressResolver__factory,
@@ -87,10 +88,6 @@ export async function deployGeneric(
         deployerInstance
       );
     } else {
-      /* await run("verify:verify", {
-        address: computedAddress,
-        constructorArguments,
-      }); */
       console.log(
         `${contractName} is Already deployed with address ${computedAddress}`
       );
@@ -425,8 +422,12 @@ export async function mainDeploy(): Promise<Record<string, string>> {
 }
 
 if (require.main === module) {
-  mainDeploy().catch((error) => {
-    console.error(error);
-    process.exitCode = 1;
-  });
+  mainDeploy()
+    .then((deployedContracts) => {
+      writeDeploymentsToFile(deployedContracts, network.name);
+    })
+    .catch((error) => {
+      console.error(error);
+      process.exitCode = 1;
+    });
 }
