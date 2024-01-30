@@ -374,6 +374,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 80085,
     },
+    zeroOneTestnet: {
+      url: "https://subnets.avax.network/testnetzer/testnet/rpc",
+      accounts: [process.env.PRIVATE_KEY ?? ""], // you should have this in env
+      chainId: 56400,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
