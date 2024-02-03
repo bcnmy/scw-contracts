@@ -1,7 +1,6 @@
 // SPDX-License-Identifier: LGPL-3.0-only
 pragma solidity ^0.8.23;
 
-import {SelfAuthorized} from "../common/SelfAuthorized.sol";
 import {Executor, Enum} from "./Executor.sol";
 import {IModuleManager} from "../interfaces/base/IModuleManager.sol";
 
@@ -9,7 +8,7 @@ import {IModuleManager} from "../interfaces/base/IModuleManager.sol";
  * @title Module Manager - A contract that manages modules that can execute transactions
  *        on behalf of the Smart Account via this contract.
  */
-abstract contract ModuleManager is SelfAuthorized, Executor, IModuleManager {
+abstract contract ModuleManager is Executor, IModuleManager {
     address internal constant SENTINEL_MODULES = address(0x1);
     mapping(address => address) internal _modules;
     uint256[24] private __gap;
