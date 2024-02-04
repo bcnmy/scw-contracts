@@ -109,7 +109,7 @@ interface IAccountRecoveryModule {
      */
     event SecurityDelayChanged(
         address indexed smartAccount,
-        uint48 securityDelay
+        uint24 securityDelay
     );
 
     /**
