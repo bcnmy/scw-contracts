@@ -13,6 +13,8 @@ import {
 // eslint-disable-next-line node/no-extraneous-import
 import { TransactionReceipt, Provider } from "@ethersproject/providers";
 import { Deployer, Deployer__factory } from "../../typechain";
+import fs from "fs";
+import path from "path";
 
 // { FACTORY_ADDRESS  } is deployed from chirag's private key for nonce 0
 export const FACTORY_ADDRESS = "0x757056493cd5E44e4cFe2719aE05FbcfC1178087";
@@ -119,6 +121,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   84531: {
     gasPrice: parseUnits("1.5", "gwei"),
   },
+  84532: {
+    gasPrice: parseUnits("0.1", "gwei"),
+  },
   5611: {
     gasPrice: parseUnits("0.1", "gwei"),
   },
@@ -143,6 +148,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   },
   1115: {
     gasPrice: parseUnits("30", "gwei"),
+  },
+  7001: {
+    gasPrice: parseUnits("1", "gwei"),
   },
   3441005: {},
   421614: {},
@@ -185,6 +193,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   169: {},
   168587773: { gasPrice: parseUnits("2", "gwei") },
   534351: { gasPrice: parseUnits("1", "gwei") },
+  80085: { gasPrice: parseUnits("0.001", "gwei") },
+  534352: { gasPrice: parseUnits("1", "gwei") },
+  56400: { gasPrice: parseUnits("150", "gwei") },
 };
 
 export type StakingConfig = {
@@ -230,6 +241,18 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
   59140: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
+  },
+  84532: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  7001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  534352: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
   },
   84531: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -279,7 +302,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"),
   },
-
+  56400: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
   // Mainnets
   137: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -398,6 +424,14 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
+  84532: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  7001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
   84531: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
@@ -445,6 +479,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   421614: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"),
+  },
+  534352: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
   },
 
   // Mainnets
@@ -754,3 +792,24 @@ export const parseEvents = (
   receipt.logs
     .map((log) => contractInterface.parseLog(log))
     .filter((log) => log.name === eventName);
+
+export function writeDeploymentsToFile(
+  deployments: Record<string, string>,
+  networkName: string
+) {
+  // Define the directory path relative to the script's location
+  const directoryPath = path.join(__dirname, "../..", "deployed");
+
+  // Check if the directory exists, create it if it doesn't
+  if (!fs.existsSync(directoryPath)) {
+    fs.mkdirSync(directoryPath, { recursive: true });
+  }
+
+  // Define the file name and full file path
+  const fileName = `deployed-contracts-${networkName}.json`;
+  const filePath = path.join(directoryPath, fileName);
+
+  // Write the deployments to the file
+  fs.writeFileSync(filePath, JSON.stringify(deployments, null, 2));
+  console.log(`Deployments written to ${filePath}`);
+}
