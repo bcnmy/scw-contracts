@@ -367,6 +367,13 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 7001,
     },
+    zetachainMainnet: {
+      url:
+        process.env.ZETA_MAINNET_URL ||
+        "https://zetachain-mainnet-archive.allthatnode.com",
+      accounts: hardhatAccounts,
+      chainId: 7000,
+    },
     beraTestnet: {
       url:
         process.env.BERA_TESTNET_URL ||
@@ -433,6 +440,7 @@ const config: HardhatUserConfig = {
       scrollTestnet: process.env.SCROLL_API_KEY || "",
       sepolia: process.env.ETHERSCAN_API_KEY || "",
       zetaTestnet: process.env.ZETA_API_KEY || "PLACEHOLDER_STRING",
+      zetachainMainnet: process.env.ZETA_API_KEY || "PLACEHOLDER_STRING",
       zkEVMGoerli: process.env.ZKEVM_API_KEY || "",
       zkEVMMainnet: process.env.ZKEVM_API_KEY || "",
     },
@@ -667,8 +675,16 @@ const config: HardhatUserConfig = {
         network: "zetaTestnet",
         chainId: 7001,
         urls: {
-          apiURL: "https://eth-goerli.blockscout.com/api",
+          apiURL: "https://eth-goerli.blockscout.com/api", // todo: review
           browserURL: "https://zetachain-athens-3.blockscout.com/",
+        },
+      },
+      {
+        network: "zetachainMainnet",
+        chainId: 7000,
+        urls: {
+          apiURL: "https://eth-goerli.blockscout.com/api", // todo: review
+          browserURL: "https://zetachain-athens-3.blockscout.com/", // review
         },
       },
       {
