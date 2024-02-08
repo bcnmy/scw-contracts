@@ -59,7 +59,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
             "ABISV Not Execute Selector"
         );
 
-        address destContract;
+        uint160 destContract;
         uint256 callValue;
         bytes calldata data;
         assembly {
@@ -84,7 +84,7 @@ contract ABISessionValidationModule is ISessionValidationModule {
 
         return
             _validateSessionParams(
-                destContract,
+                address(destContract),
                 callValue,
                 data,
                 _sessionKeyData
