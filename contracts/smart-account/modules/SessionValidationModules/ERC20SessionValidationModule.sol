@@ -93,6 +93,13 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
             );
     }
 
+    function getUsageCounter(
+        bytes32 sessionKeyDataHash,
+        address smartAccount
+    ) external view returns (uint256) {
+        return usageCounters[sessionKeyDataHash][smartAccount];
+    }
+
     /**
      * @dev Internal function to validate the session parameters
      * @param destinationContract address of the contract to be called

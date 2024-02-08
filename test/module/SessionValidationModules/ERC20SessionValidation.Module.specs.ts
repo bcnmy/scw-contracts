@@ -729,6 +729,83 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
   });
 
   // SHOULD REVERT IF MAX USAGE EXCEEDED
+  it("should revert if max usage of the session is exceeded", async () => {
+    const {
+      entryPoint,
+      userSA,
+      sessionKeyManager,
+      erc20SessionModule,
+      mockToken,
+      sessionKeyData,
+      leafData,
+      merkleTree,
+    } = await setupTests();
+    const tokenAmountToTransfer = ethers.utils.parseEther("0.7534");
+
+    const charlieTokenBalanceBefore = await mockToken.balanceOf(
+      charlie.address
+    );
+
+    const transferUserOp = await makeEcdsaSessionKeySignedUserOp(
+      "execute_ncC",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      0,
+      0,
+      erc20SessionModule.address,
+      sessionKeyData,
+      merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+    );
+
+    // first successful usage of the session
+    await entryPoint.handleOps([transferUserOp], alice.address, {
+      gasLimit: 10000000,
+    });
+    expect(await mockToken.balanceOf(charlie.address)).to.equal(
+      charlieTokenBalanceBefore.add(tokenAmountToTransfer)
+    );
+
+    const sessionKeyDataHash = ethers.utils.keccak256(sessionKeyData);
+    expect(
+      await erc20SessionModule.getUsageCounter(
+        sessionKeyDataHash,
+        userSA.address
+      )
+    ).to.equal(1);
+
+    const transferUserOp2 = await makeEcdsaSessionKeySignedUserOp(
+      "execute_ncC",
+      [
+        mockToken.address,
+        ethers.utils.parseEther("0"),
+        encodeTransfer(charlie.address, tokenAmountToTransfer.toString()),
+      ],
+      userSA.address,
+      sessionKey,
+      entryPoint,
+      sessionKeyManager.address,
+      0,
+      0,
+      erc20SessionModule.address,
+      sessionKeyData,
+      merkleTree.getHexProof(ethers.utils.keccak256(leafData))
+    );
+
+    await expect(
+      entryPoint.handleOps([transferUserOp2], alice.address, {
+        gasLimit: 10000000,
+      })
+    )
+      .to.be.revertedWith("FailedOp")
+      .withArgs(0, "AA23 reverted: ERC20SV Max Usage Exceeded");
+  });
 
   describe("validateSessionParams(): ", async () => {
     it("Should be able to validate valid session params and return the session key address", async () => {
