@@ -104,12 +104,15 @@ describe("MultichainValidator Module", async () => {
 
     // ============== session key setup =============
 
+    const maxUsageOfTheSession = 10;
+
     // Get Session Key Params
     const { leafData } = await getERC20SessionKeyParams(
       sessionKey.address,
       mockToken.address,
       charlie.address,
       maxAmount,
+      maxUsageOfTheSession,
       0,
       0,
       erc20SessionModule.address

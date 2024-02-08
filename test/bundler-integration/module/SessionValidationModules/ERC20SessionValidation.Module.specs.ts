@@ -109,11 +109,14 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
       await ethers.getContractFactory("ERC20SessionValidationModule")
     ).deploy();
 
+    const maxUsageOfTheSession = 10;
+
     const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
       sessionKey.address,
       mockToken.address,
       charlie.address,
       maxAmount,
+      maxUsageOfTheSession,
       0,
       0,
       erc20SessionModule.address

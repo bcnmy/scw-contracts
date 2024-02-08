@@ -204,17 +204,19 @@ export async function getERC20SessionKeyParams(
   erc20TokenAddress: string,
   receiverAddress: string,
   maxAmountToTransfer: BigNumber,
+  maxUsage: number,
   validUntil: number,
   validAfter: number,
   sessionValidationModuleAddress: string
 ): Promise<SessionKeyParams> {
   const sessionKeyData = defaultAbiCoder.encode(
-    ["address", "address", "address", "uint256"],
+    ["address", "address", "address", "uint256", "uint256"],
     [
       sessionKey,
       erc20TokenAddress,
       receiverAddress,
       maxAmountToTransfer.toHexString(),
+      ethers.utils.hexlify(maxUsage),
     ]
   );
 

@@ -91,11 +91,14 @@ describe("SessionKey: Batched Session Router", async () => {
         await ethers.getContractFactory("MockProtocolSVM")
       ).deploy();
 
+      const maxUsage = 10;
+
       const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
         sessionKey.address,
         mockToken.address,
         mockProtocol.address,
         maxAmount,
+        maxUsage,
         0,
         0,
         erc20SessionModule.address
@@ -112,6 +115,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocol.address, // contract to interact with
           mockToken.address, // token to transfer to protocol
           maxAmount,
+          maxUsage,
           validUntilForMockProtocol,
           0,
           mockProtocolSVModule.address
@@ -153,6 +157,7 @@ describe("SessionKey: Batched Session Router", async () => {
         mockProtocol: mockProtocol,
         mockProtocolSVM: mockProtocolSVModule,
         validUntilForMockProtocol: validUntilForMockProtocol,
+        maxUsage: maxUsage,
       };
     }
   );
@@ -200,7 +205,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -208,7 +213,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -289,7 +294,7 @@ describe("SessionKey: Batched Session Router", async () => {
             erc20SessionModule.address,
             sessionKeyData,
             merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-            "0x",
+            userSA.address,
           ],
           [
             validUntilForMockProtocol,
@@ -297,7 +302,7 @@ describe("SessionKey: Batched Session Router", async () => {
             mockProtocolSVM.address,
             sessionKeyData2,
             merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-            "0x",
+            userSA.address,
           ],
         ],
         randomValueOfWrongType,
@@ -366,7 +371,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -374,7 +379,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -466,7 +471,7 @@ describe("SessionKey: Batched Session Router", async () => {
         erc20SessionModule.address,
         sessionKeyData,
         merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-        "0x",
+        userSA.address,
       ],
     ];
 
@@ -543,7 +548,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -551,7 +556,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -613,7 +618,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -621,7 +626,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -690,7 +695,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           wrongValidUntil,
@@ -698,7 +703,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -762,7 +767,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -770,7 +775,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -835,7 +840,7 @@ describe("SessionKey: Batched Session Router", async () => {
           wrongSessionValidationModuleAddress,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -843,7 +848,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -909,7 +914,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -917,7 +922,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -945,6 +950,7 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionKeyData2,
       leafData2,
       validUntilForMockProtocol,
+      maxUsage,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
@@ -966,6 +972,7 @@ describe("SessionKey: Batched Session Router", async () => {
         mockToken.address,
         mockProtocol.address,
         maxAmount.add(ethers.utils.parseEther("100")),
+        maxUsage,
         0,
         0,
         erc20SessionModule.address
@@ -989,7 +996,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           wrongSessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -997,7 +1004,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ],
       sessionRouter.address
@@ -1061,7 +1068,7 @@ describe("SessionKey: Batched Session Router", async () => {
             erc20SessionModule.address,
             sessionKeyData,
             merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-            "0x",
+            userSA.address,
           ],
           [
             validUntilForMockProtocol,
@@ -1069,7 +1076,7 @@ describe("SessionKey: Batched Session Router", async () => {
             mockProtocolSVM.address,
             sessionKeyData2,
             merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-            "0x",
+            userSA.address,
           ],
         ],
         sessionRouter.address
@@ -1151,7 +1158,7 @@ describe("SessionKey: Batched Session Router", async () => {
             erc20SessionModule.address,
             sessionKeyData,
             merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-            "0x",
+            userSA.address,
           ],
           [
             validUntilForMockProtocol,
@@ -1159,7 +1166,7 @@ describe("SessionKey: Batched Session Router", async () => {
             mockProtocolSVM.address,
             sessionKeyData2,
             merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-            "0x",
+            userSA.address,
           ],
         ],
         sessionRouter.address
@@ -1238,7 +1245,7 @@ describe("SessionKey: Batched Session Router", async () => {
           erc20SessionModule.address,
           sessionKeyData,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-          "0x",
+          userSA.address,
         ],
         [
           validUntilForMockProtocol,
@@ -1246,7 +1253,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocolSVM.address,
           sessionKeyData2,
           merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-          "0x",
+          userSA.address,
         ],
       ];
 
