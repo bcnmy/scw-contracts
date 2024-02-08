@@ -10,6 +10,7 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {IEcdsaOwnershipRegistryModule} from "../interfaces/modules/IEcdsaOwnershipRegistryModule.sol";
 import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
+import {LibAddress} from "../libs/LibAddress.sol";
 
 /**
  * @title ECDSA ownership Authorization module for Biconomy Smart Accounts.
@@ -29,6 +30,7 @@ contract EcdsaOwnershipRegistryModule is
     IEcdsaOwnershipRegistryModule
 {
     using ECDSA for bytes32;
+    using LibAddress for address;
 
     string public constant NAME = "ECDSA Ownership Registry Module";
     string public constant VERSION = "1.1.0";
@@ -50,7 +52,7 @@ contract EcdsaOwnershipRegistryModule is
 
     /// @inheritdoc IEcdsaOwnershipRegistryModule
     function transferOwnership(address owner) external override {
-        if (_isSmartContract(owner)) revert NotEOA(owner);
+        if (owner.isContract()) revert NotEOA(owner);
         if (owner == address(0)) revert ZeroAddressNotAllowedAsOwner();
         _transferOwnership(msg.sender, owner);
     }
@@ -200,17 +202,5 @@ contract EcdsaOwnershipRegistryModule is
             return true;
         }
         return false;
-    }
-
-    /**
-     * @dev Checks if the address provided is a smart contract.
-     * @param account Address to be checked.
-     */
-    function _isSmartContract(address account) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
     }
 }
