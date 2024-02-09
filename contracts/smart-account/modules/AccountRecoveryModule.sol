@@ -323,6 +323,7 @@ contract AccountRecoveryModule is
         );
     }
 
+    //@inheritdoc IAccountRecoveryModule
     function resetModuleForCaller(bytes32[] memory guardians) external {
         uint256 length = guardians.length;
         for (uint256 i; i < length; ) {
@@ -370,11 +371,7 @@ contract AccountRecoveryModule is
         emit SecurityDelayChanged(msg.sender, newSecurityDelay);
     }
 
-    /**
-     * @dev Changes how many allowed recoveries left for a Smart Account (msg.sender)
-     * Should be called by the Smart Account
-     * @param allowedRecoveries new security delay
-     */
+    //@inheritdoc IAccountRecoveryModule
     function setAllowedRecoveries(uint8 allowedRecoveries) external {
         _smartAccountSettings[msg.sender].recoveriesLeft = allowedRecoveries;
         emit RecoveriesLeft(msg.sender, allowedRecoveries);

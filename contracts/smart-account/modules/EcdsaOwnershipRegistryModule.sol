@@ -42,6 +42,10 @@ contract EcdsaOwnershipRegistryModule is
     function initForSmartAccount(
         address eoaOwner
     ) external override returns (address) {
+        // if (eoaOwner.isContract()) revert NotEOA(eoaOwner);
+        // This check is not possible because of [OP-041]
+        // See https://github.com/eth-infinitism/account-abstraction/blob/develop/erc/ERCS/erc-7562.md
+        // And https://github.com/eth-infinitism/bundler/issues/137 for details
         if (_smartAccountOwners[msg.sender] != address(0)) {
             revert AlreadyInitedForSmartAccount(msg.sender);
         }

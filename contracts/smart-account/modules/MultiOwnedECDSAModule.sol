@@ -48,6 +48,10 @@ contract MultiOwnedECDSAModule is
         uint256 ownersToAdd = eoaOwners.length;
         if (ownersToAdd == 0) revert NoOwnersToAdd();
         for (uint256 i; i < ownersToAdd; ++i) {
+            // if (eoaOwners[i].isContract()) revert NotEOA(eoaOwner);
+            // This check is not possible because of [OP-041]
+            // See https://github.com/eth-infinitism/account-abstraction/blob/develop/erc/ERCS/erc-7562.md
+            // And https://github.com/eth-infinitism/bundler/issues/137 for details
             if (eoaOwners[i] == address(0))
                 revert ZeroAddressNotAllowedAsOwner();
             if (_smartAccountOwners[eoaOwners[i]][msg.sender])
