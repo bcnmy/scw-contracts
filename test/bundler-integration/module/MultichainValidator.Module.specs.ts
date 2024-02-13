@@ -117,13 +117,17 @@ describe("MultichainValidator Module", async () => {
     // ============== session key setup =============
 
     const maxUsageOfTheSession = 10;
+    const maxUsageAndSAAddress = ethers.utils.hexConcat([
+      expectedSmartAccountAddress,
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(maxUsageOfTheSession), 8),
+    ]);
 
     const { leafData } = await getERC20SessionKeyParams(
       sessionKey.address,
       mockToken.address,
       charlie.address,
       maxAmount,
-      maxUsageOfTheSession,
+      maxUsageAndSAAddress,
       0,
       0,
       erc20SessionModule.address

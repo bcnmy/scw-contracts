@@ -121,6 +121,10 @@ describe("SessionKey: Batched Session Router (via Bundler)", async () => {
       ).deploy();
 
       const maxUsage = 10;
+      const maxUsageAndSAAddress = ethers.utils.hexConcat([
+        userSA.address,
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(maxUsage), 8),
+      ]);
 
       // create leaf for the erc20 session validation module
       const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
@@ -128,7 +132,7 @@ describe("SessionKey: Batched Session Router (via Bundler)", async () => {
         mockToken.address,
         mockProtocol.address,
         maxAmount,
-        maxUsage,
+        maxUsageAndSAAddress,
         0,
         0,
         erc20SessionModule.address
@@ -141,7 +145,7 @@ describe("SessionKey: Batched Session Router (via Bundler)", async () => {
           mockProtocol.address, // contract to interact with
           mockToken.address, // token to transfer to protocol
           maxAmount,
-          maxUsage,
+          maxUsageAndSAAddress,
           0,
           0,
           mockProtocolSVModule.address
@@ -257,7 +261,7 @@ describe("SessionKey: Batched Session Router (via Bundler)", async () => {
             erc20SessionModule.address,
             sessionKeyData,
             merkleTree.getHexProof(ethers.utils.keccak256(leafData)),
-            userSA.address,
+            "0x",
           ],
           [
             0,
@@ -265,7 +269,7 @@ describe("SessionKey: Batched Session Router (via Bundler)", async () => {
             mockProtocolSVM.address,
             sessionKeyData2,
             merkleTree.getHexProof(ethers.utils.keccak256(leafData2)),
-            userSA.address,
+            "0x",
           ],
         ],
         signatureOverUserOpHash,

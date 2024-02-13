@@ -78,13 +78,19 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
     ).deploy();
 
     const maxUsageOfTheSession = 1;
+    const maxUsageAndSAAddress = ethers.utils.hexConcat([
+      userSA.address,
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(maxUsageOfTheSession), 8),
+    ]);
+
+    console.log(maxUsageAndSAAddress);
 
     const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
       sessionKey.address,
       mockToken.address,
       charlie.address,
       maxAmount,
-      maxUsageOfTheSession,
+      maxUsageAndSAAddress,
       0,
       0,
       erc20SessionModule.address
@@ -117,7 +123,7 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       merkleTree: merkleTree,
       vulnerableErc20SessionModule: vulnerableErc20SessionModule,
       sessionKey: sessionKey,
-      maxUsageOfTheSession: maxUsageOfTheSession,
+      maxUsageOfTheSession: maxUsageAndSAAddress,
     };
   });
 

@@ -204,7 +204,7 @@ export async function getERC20SessionKeyParams(
   erc20TokenAddress: string,
   receiverAddress: string,
   maxAmountToTransfer: BigNumber,
-  maxUsage: number,
+  maxUsage: string,
   validUntil: number,
   validAfter: number,
   sessionValidationModuleAddress: string

@@ -22,7 +22,7 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
      * @param callValue value to be sent with the call
      * @param _funcCallData the data for the call. is parsed inside the SVM
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
-     * @param _callSpecificData additional data. expected to store userOp.sender address in this case
+     * param _callSpecificData additional data.
      * for example to store a list of allowed tokens or receivers
      */
     function validateSessionParams(
@@ -30,15 +30,14 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         uint256 callValue,
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData,
-        bytes calldata _callSpecificData
+        bytes calldata /*_callSpecificData */
     ) external virtual override returns (address) {
         return
             _validateSessionParams(
                 destinationContract,
                 callValue,
                 _funcCallData,
-                _sessionKeyData,
-                address(bytes20(_callSpecificData[0:20]))
+                _sessionKeyData
             );
     }
 
@@ -84,8 +83,7 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
                 tokenAddr,
                 callValue,
                 data,
-                _sessionKeyData,
-                _op.sender
+                _sessionKeyData
             ) ==
             ECDSA.recover(
                 ECDSA.toEthSignedMessageHash(_userOpHash),
@@ -106,15 +104,13 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
      * @param callValue value to be sent with the call
      * @param _funcCallData the data for the call. is parsed inside the SVM
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
-     * @param userOpSender address of the userOp sender
      * @return sessionKey address of the sessionKey
      */
     function _validateSessionParams(
         address destinationContract,
         uint256 callValue,
         bytes calldata _funcCallData,
-        bytes calldata _sessionKeyData,
-        address userOpSender
+        bytes calldata _sessionKeyData
     ) internal returns (address) {
         (
             address sessionKey,
@@ -127,6 +123,8 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
                 (address, address, address, uint256, uint256)
             );
 
+        address userOpSender = address(uint160(maxUsage >> 64));
+        maxUsage = uint64(maxUsage);
         require(destinationContract == token, "ERC20SV Wrong Token");
         require(callValue == 0, "ERC20SV Non Zero Value");
 
