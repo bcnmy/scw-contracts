@@ -83,8 +83,6 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       ethers.utils.hexZeroPad(ethers.utils.hexlify(maxUsageOfTheSession), 8),
     ]);
 
-    console.log(maxUsageAndSAAddress);
-
     const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
       sessionKey.address,
       mockToken.address,
