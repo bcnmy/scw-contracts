@@ -4,8 +4,9 @@ pragma solidity ^0.8.23;
 import {SATestBase} from "../base/SATestBase.sol";
 import {SmartAccount} from "sa/SmartAccount.sol";
 import {EcdsaOwnershipRegistryModule} from "modules/EcdsaOwnershipRegistryModule.sol";
-import {UserOperation} from "aa-core/EntryPoint.sol";
+import {EntryPoint, IEntryPoint, UserOperation} from "aa-core/EntryPoint.sol";
 import {MockEthSender} from "sa/test/mocks/MockEthSender.sol";
+import "forge-std/console.sol";
 
 contract Test {
     event Log(string message);
@@ -127,5 +128,22 @@ contract SABasicsTest is SATestBase {
             1 ether,
             "smart account should receive 1 ether"
         );
+    }
+
+    function testByteString() external {
+        bytes memory data = abi.encodePacked(
+            uint8(10),
+            uint64(1),
+            uint64(2),
+            bytes32(keccak256(abi.encodePacked(uint256(0x1234)))),
+            bytes32(keccak256(abi.encodePacked(uint256(0x4567))))
+        );
+        uint256 offset;
+
+        vm.breakpoint("a");
+        assembly {
+            offset := data
+        }
+        console.log("offset", offset);
     }
 }

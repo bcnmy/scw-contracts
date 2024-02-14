@@ -2,7 +2,9 @@
 const ethers = require("ethers");
 
 const fs = require("fs");
-const mnemonic = fs.readFileSync(".secret").toString().trim();
+const mnemonic = fs.existsSync(".secret")
+  ? fs.readFileSync(".secret").toString().trim()
+  : "test test test test test test test test test test test junk";
 
 const makeKeyList = (
   num = 5,

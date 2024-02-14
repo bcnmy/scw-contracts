@@ -24,3 +24,4 @@ deployments/localhost
 typings
 forge-cache
 out
+.env.bak

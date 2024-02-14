@@ -10,6 +10,7 @@ import "solidity-coverage";
 import "hardhat-deploy";
 import "@nomiclabs/hardhat-ethers";
 import "@nomicfoundation/hardhat-foundry";
+// import "hardhat-tracer";
 import { parseUnits } from "ethers/lib/utils";
 
 const walletUtils = require("./walletUtils");
@@ -66,7 +67,7 @@ const config: HardhatUserConfig = {
             // Forking Config for Deployment Testing
             chainId: 5000,
             forking: {
-              url: process.env.MANTLE_MAINNET_URL,
+              url: process.env.MANTLE_MAINNET_URL!,
             },
             accounts: [
               {
@@ -400,6 +401,9 @@ const config: HardhatUserConfig = {
         },
       },
     ],
+  },
+  tracer: {
+    gasCost: true,
   },
 };
 
