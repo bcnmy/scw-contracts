@@ -23,6 +23,7 @@ describe("MultiOwned ECDSA Module (with Bundler):", async () => {
   ] = [] as SignerWithAddress[];
   const smartAccountDeploymentIndex = 0;
   const SIG_VALIDATION_SUCCESS = 0;
+  const ADDRESS_ZERO = "0x0000000000000000000000000000000000000000";
   let environment: BundlerTestEnvironment;
 
   before(async function () {
@@ -171,6 +172,32 @@ describe("MultiOwned ECDSA Module (with Bundler):", async () => {
       expect(
         await multiOwnedECDSAModule.isOwner(userSA.address, eve.address)
       ).to.equal(true);
+    });
+
+    it("TransferOwnership from address(0) is not possible", async () => {
+      const { multiOwnedECDSAModule, entryPoint, userSA } = await setupTests();
+
+      // Calldata to set 0x00..00 as owner
+      const txnData1 = multiOwnedECDSAModule.interface.encodeFunctionData(
+        "transferOwnership",
+        [ADDRESS_ZERO, eve.address]
+      );
+      const userOp = await makeEcdsaModuleUserOp(
+        "execute_ncC",
+        [multiOwnedECDSAModule.address, 0, txnData1],
+        userSA.address,
+        smartAccountOwner1, // can be signed by any owner
+        entryPoint,
+        multiOwnedECDSAModule.address,
+        {
+          preVerificationGas: 50000,
+        }
+      );
+
+      await environment.sendUserOperation(userOp, entryPoint.address);
+      expect(
+        await multiOwnedECDSAModule.isOwner(userSA.address, eve.address)
+      ).to.equal(false);
     });
   });
 
