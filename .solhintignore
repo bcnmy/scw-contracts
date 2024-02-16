@@ -3,3 +3,5 @@ artifacts
 contracts/smart-account/test
 contracts/smart-account/libs
 contracts/smart-account/modules/AccountRecoveryModule.sol
+contracts/smart-account/modules/SessionValidationModules/ABISessionValidationModule.sol
+contracts/smart-account/test/mocks/MockProtocol.sol

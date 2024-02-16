@@ -231,3 +231,54 @@ export async function getERC20SessionKeyParams(
   };
   return params;
 }
+
+export interface Rule {
+  offset: number;
+  condition: number;
+  referenceValue: string | BytesLike;
+}
+
+export interface Permission {
+  destContract: string;
+  functionSelector: string;
+  valueLimit: BigNumber;
+  rules: Rule[];
+}
+
+export async function getABISessionKeyParams(
+  sessionKey: string,
+  permission: Permission,
+  validUntil: number,
+  validAfter: number,
+  sessionValidationModuleAddress: string
+): Promise<SessionKeyParams> {
+  let sessionKeyData = hexConcat([
+    sessionKey,
+    permission.destContract,
+    permission.functionSelector,
+    hexZeroPad(permission.valueLimit.toHexString(), 16),
+    hexZeroPad(ethers.utils.hexlify(permission.rules.length), 2), // this can't be more 2**11 (see below), so uint16 (2 bytes) is enough
+  ]);
+
+  for (let i = 0; i < permission.rules.length; i++) {
+    sessionKeyData = hexConcat([
+      sessionKeyData,
+      hexZeroPad(ethers.utils.hexlify(permission.rules[i].offset), 2), // offset is uint16, so there can't be more than 2**16/32 args = 2**11
+      hexZeroPad(ethers.utils.hexlify(permission.rules[i].condition), 1), // uint8
+      permission.rules[i].referenceValue,
+    ]);
+  }
+
+  const leafData = hexConcat([
+    hexZeroPad(ethers.utils.hexlify(validUntil), 6),
+    hexZeroPad(ethers.utils.hexlify(validAfter), 6),
+    hexZeroPad(sessionValidationModuleAddress, 20),
+    sessionKeyData,
+  ]);
+
+  const params: SessionKeyParams = {
+    sessionKeyData: sessionKeyData,
+    leafData: leafData,
+  };
+  return params;
+}
