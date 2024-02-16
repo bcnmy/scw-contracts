@@ -4,6 +4,7 @@ import {
   makeEcdsaModuleUserOp,
   getUserOpHash,
   fillAndSign,
+  DefaultsForUserOp,
 } from "../../utils/userOp";
 import {
   getEntryPoint,
@@ -124,6 +125,71 @@ describe("ECDSA Registry Module (with Bundler):", async () => {
       userSA: userSA,
       mockToken: mockToken,
     };
+  });
+
+  describe("Usage as default module: ", async () => {
+    it("Can be used as the default module at the SA deployment", async () => {
+      const { ecdsaRegistryModule, entryPoint, saFactory } = await setupTests();
+
+      const deploymentIndex = smartAccountDeploymentIndex + 1;
+
+      const ecdsaOwnershipSetupData =
+        ecdsaRegistryModule.interface.encodeFunctionData(
+          "initForSmartAccount",
+          [smartAccountOwner.address]
+        );
+
+      const deploymentData = saFactory.interface.encodeFunctionData(
+        "deployCounterFactualAccount",
+        [ecdsaRegistryModule.address, ecdsaOwnershipSetupData, deploymentIndex]
+      );
+
+      const expectedSmartAccountAddress =
+        await saFactory.getAddressForCounterFactualAccount(
+          ecdsaRegistryModule.address,
+          ecdsaOwnershipSetupData,
+          deploymentIndex
+        );
+
+      const provider = entryPoint?.provider;
+      const code = await provider.getCode(expectedSmartAccountAddress);
+      expect(code).to.equal("0x");
+
+      await deployer.sendTransaction({
+        to: expectedSmartAccountAddress,
+        value: ethers.utils.parseEther("1"),
+      });
+
+      const deploymentUserOp = await fillAndSign(
+        {
+          sender: expectedSmartAccountAddress,
+          callGasLimit: 1_000_000,
+          initCode: ethers.utils.hexConcat([saFactory.address, deploymentData]),
+          callData: "0x",
+          preVerificationGas: 50000,
+        },
+        smartAccountOwner,
+        entryPoint,
+        "nonce"
+      );
+
+      const signatureWithModuleAddress = ethers.utils.defaultAbiCoder.encode(
+        ["bytes", "address"],
+        [deploymentUserOp.signature, ecdsaRegistryModule.address]
+      );
+      deploymentUserOp.signature = signatureWithModuleAddress;
+
+      await environment.sendUserOperation(deploymentUserOp, entryPoint.address);
+
+      const userSA2 = await ethers.getContractAt(
+        "SmartAccount",
+        expectedSmartAccountAddress
+      );
+
+      expect(
+        await userSA2.isModuleEnabled(ecdsaRegistryModule.address)
+      ).to.be.equal(true);
+    });
   });
 
   describe("transferOwnership: ", async () => {

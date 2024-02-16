@@ -109,7 +109,7 @@ interface IAccountRecoveryModule {
      */
     event SecurityDelayChanged(
         address indexed smartAccount,
-        uint48 securityDelay
+        uint24 securityDelay
     );
 
     /**
@@ -336,6 +336,42 @@ interface IAccountRecoveryModule {
      * Can be used during the security delay to cancel the request
      */
     function renounceRecoveryRequest() external;
+
+    /**
+     * @dev Resets the module for a Smart Account that calls the method
+     * Should be called by the Smart Account
+     * @param guardians the list of guardians that are enabled for the Smart Account
+     */
+    function resetModuleForCaller(bytes32[] memory guardians) external;
+
+    /**
+     * @dev Changes how many allowed recoveries left for a Smart Account (msg.sender)
+     * Should be called by the Smart Account
+     * @param allowedRecoveries new security delay
+     */
+    function setAllowedRecoveries(uint8 allowedRecoveries) external;
+
+    /**
+     * @dev Executes recovery request for a Smart Account (msg.sender)
+     * Should be called by the Smart Account
+     * SA.execute => AccRecovery.executeRecovery
+     * Decrements recoveries left, and if 0 left, no userOps will be validated by this module
+     * It forces user to perform an explicit action:
+     *      - If user wants same guardians to be able to recover the account again,
+     *      they have to call setAllowedRecoveries() => NOT RECOMMENDED
+     *     - If user wants to change guardians, they have to
+     *          -- remove/replace guardians + adjust threshold + setAllowedRecoveries()
+     *          or
+     *          -- clear all guardians + re-init the module => RECOMMENDED
+     * @param to destination address
+     * @param value value to send
+     * @param data callData to execute
+     */
+    function executeRecovery(
+        address to,
+        uint256 value,
+        bytes calldata data
+    ) external;
 
     /**
      * @dev Returns guardian validity timeframes for the Smart Account

@@ -23,16 +23,6 @@ interface IModuleManager {
     );
 
     /**
-     * @notice Throws when trying to initialize module manager that already been initialized
-     */
-    error ModulesAlreadyInitialized();
-
-    /**
-     * @notice Throws when a delegatecall in course of module manager initialization has failed
-     */
-    error ModulesSetupExecutionFailed();
-
-    /**
      * @notice Throws when address(0) or SENTINEL_MODULES constant has been provided as a module address
      * @param module Module address provided
      */

@@ -91,11 +91,18 @@ describe("SessionKey: Batched Session Router", async () => {
         await ethers.getContractFactory("MockProtocolSVM")
       ).deploy();
 
+      const maxUsage = 10;
+      const maxUsageAndSAAddress = ethers.utils.hexConcat([
+        userSA.address,
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(maxUsage), 8),
+      ]);
+
       const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
         sessionKey.address,
         mockToken.address,
         mockProtocol.address,
         maxAmount,
+        maxUsageAndSAAddress,
         0,
         0,
         erc20SessionModule.address
@@ -112,6 +119,7 @@ describe("SessionKey: Batched Session Router", async () => {
           mockProtocol.address, // contract to interact with
           mockToken.address, // token to transfer to protocol
           maxAmount,
+          maxUsageAndSAAddress,
           validUntilForMockProtocol,
           0,
           mockProtocolSVModule.address
@@ -153,6 +161,7 @@ describe("SessionKey: Batched Session Router", async () => {
         mockProtocol: mockProtocol,
         mockProtocolSVM: mockProtocolSVModule,
         validUntilForMockProtocol: validUntilForMockProtocol,
+        maxUsage: maxUsageAndSAAddress,
       };
     }
   );
@@ -945,6 +954,7 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionKeyData2,
       leafData2,
       validUntilForMockProtocol,
+      maxUsage,
     } = await setupTests();
     const tokenAmountToTransfer = ethers.utils.parseEther("1.7534");
 
@@ -966,6 +976,7 @@ describe("SessionKey: Batched Session Router", async () => {
         mockToken.address,
         mockProtocol.address,
         maxAmount.add(ethers.utils.parseEther("100")),
+        maxUsage,
         0,
         0,
         erc20SessionModule.address

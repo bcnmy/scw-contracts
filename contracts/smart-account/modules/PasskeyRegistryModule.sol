@@ -120,11 +120,23 @@ contract PasskeyRegistryModule is
         bytes memory moduleSignature
     ) public view virtual returns (bytes4) {
         return
-            isValidSignatureForAddress(
+            isValidSignatureForAddressUnsafe(
                 signedDataHash,
                 moduleSignature,
                 msg.sender
             );
+    }
+
+    /// @inheritdoc IPasskeyRegistryModule
+    function isValidSignatureForAddressUnsafe(
+        bytes32 signedDataHash,
+        bytes memory moduleSignature,
+        address smartAccount
+    ) public view virtual returns (bytes4) {
+        if (_verifySignature(signedDataHash, moduleSignature, smartAccount)) {
+            return EIP1271_MAGIC_VALUE;
+        }
+        return bytes4(0xffffffff);
     }
 
     /**

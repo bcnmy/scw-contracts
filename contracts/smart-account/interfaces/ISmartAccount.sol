@@ -27,17 +27,6 @@ interface ISmartAccount is IBaseSmartAccount, IModuleManager {
     error EntryPointCannotBeZero();
 
     /**
-     * @notice Throws at mixedAuth when msg.sender is not an owner neither _self
-     * @param caller address that tried to call mixedAuth-protected method
-     */
-    error MixedAuthFail(address caller);
-
-    /**
-     * @notice Throws if trying to change an owner of a SmartAccount to the zero address
-     */
-    error OwnerCannotBeZero();
-
-    /**
      * @notice Throws if zero address has been provided as Base Implementation address
      */
     error BaseImplementationCannotBeZero();

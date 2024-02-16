@@ -19,6 +19,7 @@ abstract contract SignatureDecoder {
         // The signature format is a compact form of:
         //   {bytes32 r}{bytes32 s}{uint8 v}
         // Compact means, uint8 is not padded to 32 bytes.
+        require(signature.length == 65, "Invalid signature length");
 
         assembly {
             r := mload(add(signature, 0x20))

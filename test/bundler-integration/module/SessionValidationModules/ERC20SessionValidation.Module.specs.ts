@@ -3,7 +3,6 @@ import {
   makeEcdsaSessionKeySignedUserOp,
   enableNewTreeForSmartAccountViaEcdsa,
   getERC20SessionKeyParams,
-  addLeavesForSmartAccountViaEcdsa,
 } from "../../../utils/sessionKey";
 import { ethers, deployments } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../../../utils/userOp";
@@ -109,11 +108,18 @@ describe("SessionKey: ERC20 Session Validation Module (with Bundler)", async () 
       await ethers.getContractFactory("ERC20SessionValidationModule")
     ).deploy();
 
+    const maxUsageOfTheSession = 10;
+    const maxUsageAndSAAddress = ethers.utils.hexConcat([
+      userSA.address,
+      ethers.utils.hexZeroPad(ethers.utils.hexlify(maxUsageOfTheSession), 8),
+    ]);
+
     const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
       sessionKey.address,
       mockToken.address,
       charlie.address,
       maxAmount,
+      maxUsageAndSAAddress,
       0,
       0,
       erc20SessionModule.address

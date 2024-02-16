@@ -6,9 +6,12 @@ import {IAddressResolver} from "../interfaces/IAddressResolver.sol";
 import {ISmartAccountFactory} from "../interfaces/factory/ISmartAccountFactory.sol";
 import {ISmartAccountFactoryV1} from "../interfaces/factory/ISmartAccountFactoryV1.sol";
 import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
+import {LibAddress} from "../libs/LibAddress.sol";
 
 /// EOA <-> Smart Account address resolver for Biconomy smart accounts
 contract AddressResolver is IAddressResolver {
+    using LibAddress for address;
+
     address public immutable smartAccountFactoryV1;
     address public immutable smartAccountFactoryV2;
     address public immutable ecdsaOwnershipModule;
@@ -44,7 +47,7 @@ contract AddressResolver is IAddressResolver {
         for (uint256 i; i < _maxIndex; ) {
             address v1Address = ISmartAccountFactoryV1(smartAccountFactoryV1)
                 .getAddressForCounterFactualAccount(_eoa, i);
-            if (v1Address != address(0) && _isSmartContract(v1Address)) {
+            if (v1Address != address(0) && v1Address.isContract()) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v1Address,
                     smartAccountFactoryV1,
@@ -94,7 +97,7 @@ contract AddressResolver is IAddressResolver {
         for (uint256 i; i < _maxIndex; ) {
             address v1Address = ISmartAccountFactoryV1(smartAccountFactoryV1)
                 .getAddressForCounterFactualAccount(_eoa, i);
-            if (v1Address != address(0) && _isSmartContract(v1Address)) {
+            if (v1Address != address(0) && v1Address.isContract()) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v1Address,
                     smartAccountFactoryV1,
@@ -119,7 +122,7 @@ contract AddressResolver is IAddressResolver {
                     data,
                     i
                 );
-            if (v2Address != address(0) && _isSmartContract(v2Address)) {
+            if (v2Address != address(0) && v2Address.isContract()) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v2Address,
                     smartAccountFactoryV2,
@@ -173,7 +176,7 @@ contract AddressResolver is IAddressResolver {
         for (uint256 i; i < _maxIndex; ) {
             address v1Address = ISmartAccountFactoryV1(smartAccountFactoryV1)
                 .getAddressForCounterFactualAccount(_eoa, i);
-            if (v1Address != address(0) && _isSmartContract(v1Address)) {
+            if (v1Address != address(0) && v1Address.isContract()) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v1Address,
                     smartAccountFactoryV1,
@@ -193,7 +196,7 @@ contract AddressResolver is IAddressResolver {
                     _moduleSetupData,
                     i
                 );
-            if (v2Address != address(0) && _isSmartContract(v2Address)) {
+            if (v2Address != address(0) && v2Address.isContract()) {
                 _saInfo[nextArrayElementIndex] = SmartAccountResult(
                     v2Address,
                     smartAccountFactoryV2,
@@ -222,17 +225,5 @@ contract AddressResolver is IAddressResolver {
             }
         }
         return result;
-    }
-
-    /**
-     * @dev Checks if the address provided is a smart contract.
-     * @param account Address to be checked.
-     */
-    function _isSmartContract(address account) internal view returns (bool) {
-        uint256 size;
-        assembly {
-            size := extcodesize(account)
-        }
-        return size > 0;
     }
 }

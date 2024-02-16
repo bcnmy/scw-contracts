@@ -8,12 +8,9 @@ library LibAddress {
      * @dev This contract will return false if called within the constructor of
      *      a contract's deployment, as the code is not yet stored on-chain.
      */
-    function isContract(address account) internal view returns (bool) {
-        uint256 csize;
-
+    function isContract(address account) internal view returns (bool res) {
         assembly {
-            csize := extcodesize(account)
+            res := gt(extcodesize(account), 0)
         }
-        return csize != 0;
     }
 }
