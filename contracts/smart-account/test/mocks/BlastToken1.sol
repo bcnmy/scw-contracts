@@ -9,8 +9,10 @@ contract BlastToken1 is ERC20 {
 
     constructor() ERC20("TST1", "MockToken") {
         IBlast(BLAST).configureClaimableGas();
-        IBlast(BLAST).configureAutomaticYield();
+        IBlast(BLAST).configureClaimableYield();
     }
+
+    receive() external payable {}
 
     function mint(address sender, uint256 amount) external {
         _mint(sender, amount);
@@ -26,14 +28,42 @@ contract BlastToken1 is ERC20 {
         IBlast(BLAST).claimAllYield(address(this), recipient);
     }
 
-    function claimAllGas(address recipient) external {
-        // This function is public meaning anyone can claim the gas
-        IBlast(BLAST).claimAllGas(address(this), recipient);
+    /// @notice Claim all gas regardless of rate
+    /// @param recipientOfGas The address to send the gas to
+    function claimAllGas(address recipientOfGas) external {
+        IBlast(BLAST).claimAllGas(address(this), recipientOfGas);
+    }
+
+    /// @notice Claim gas at a minimum rate
+    /// @param recipientOfGas The address to send the gas to
+    /// @param minClaimRateBips The minimum rate to claim gas at
+    function claimGasAtMinClaimRate(
+        address recipientOfGas,
+        uint256 minClaimRateBips
+    ) external {
+        IBlast(BLAST).claimGasAtMinClaimRate(
+            address(this),
+            recipientOfGas,
+            minClaimRateBips
+        );
+    }
+
+    function readGasParams(
+        address contractAddress
+    )
+        external
+        view
+        returns (
+            uint256 etherSeconds,
+            uint256 etherBalance,
+            uint256 lastUpdated,
+            GasMode
+        )
+    {
+        return IBlast(BLAST).readGasParams(contractAddress);
     }
 
     function decimals() public view virtual override returns (uint8) {
         return 6;
     }
-
-    receive() external payable {}
 }
