@@ -23,7 +23,7 @@ import {
   SessionKeyManager__factory,
   SmartAccountFactory__factory,
   SmartAccount__factory,
-  SmartContractOwnershipRegistryModule__factory,
+  ABISessionValidationModule__factory,
 } from "../typechain";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
@@ -62,6 +62,9 @@ const DEPLOYMENT_SALTS =
 const entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
   "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
+
+const EXECUTE_SELECTOR = "0xb61d27f6";
+const EXECUTE_OPTIMIZED_SELECTOR = "0x0000189a";
 
 let baseImpAddress = "0x0000002512019Dafb59528B82CB92D3c5D2423aC";
 const provider = ethers.provider;
@@ -238,9 +241,12 @@ async function deployAccountRecoveryModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
     DEPLOYMENT_SALTS.ACCOUNT_RECOVERY_MODULE,
-    `${AccountRecoveryModule__factory.bytecode}`,
+    `${AccountRecoveryModule__factory.bytecode}${encodeParam(
+      "bytes4",
+      EXECUTE_SELECTOR
+    ).slice(2)}${encodeParam("bytes4", EXECUTE_OPTIMIZED_SELECTOR).slice(2)}`,
     "AccountRecoveryModule",
-    []
+    [EXECUTE_SELECTOR, EXECUTE_OPTIMIZED_SELECTOR]
   );
 }
 
@@ -274,14 +280,12 @@ async function deployErc20SessionValidationModule(deployerInstance: Deployer) {
   );
 }
 
-async function deploySmartContractOwnershipRegistryModule(
-  deployerInstance: Deployer
-) {
+async function deployAbiSessionValidationModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
-    DEPLOYMENT_SALTS.SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE,
-    `${SmartContractOwnershipRegistryModule__factory.bytecode}`,
-    "SmartContractOwnershipRegistryModule",
+    DEPLOYMENT_SALTS.ABI_SESSION_VALIDATION_MODULE,
+    `${ABISessionValidationModule__factory.bytecode}`,
+    "ABISessionValidationModule",
     []
   );
 }
@@ -391,27 +395,29 @@ export async function mainDeploy(): Promise<Record<string, string>> {
 
   const deployerInstance = await getPredeployedDeployerContractInstance();
 
-  console.log("=========================================");
-  await deployBaseWalletImpContract(deployerInstance);
-  console.log("=========================================");
-  await deployWalletFactoryContract(deployerInstance);
-  console.log("=========================================");
-  await deployEcdsaOwnershipRegistryModule(deployerInstance);
-  console.log("=========================================");
-  await deployMultichainValidatorModule(deployerInstance);
-  console.log("=========================================");
+  // console.log("=========================================");
+  // await deployBaseWalletImpContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployWalletFactoryContract(deployerInstance);
+  // console.log("=========================================");
+  // await deployEcdsaOwnershipRegistryModule(deployerInstance);
+  // console.log("=========================================");
+  // await deployMultichainValidatorModule(deployerInstance);
+  // console.log("=========================================");
   await deployPasskeyModule(deployerInstance);
   console.log("=========================================");
   await deployAccountRecoveryModule(deployerInstance);
   console.log("=========================================");
-  await deploySessionKeyManagerModule(deployerInstance);
+  // await deploySessionKeyManagerModule(deployerInstance);
+  // console.log("=========================================");
+  // await deployBatchedSessionRouterModule(deployerInstance);
+  // console.log("=========================================");
+  // await deployErc20SessionValidationModule(deployerInstance);
+  // console.log("=========================================");
+  await deployAbiSessionValidationModule(deployerInstance);
   console.log("=========================================");
-  await deployBatchedSessionRouterModule(deployerInstance);
-  console.log("=========================================");
-  await deployErc20SessionValidationModule(deployerInstance);
-  console.log("=========================================");
-  await deployAddressResolver(deployerInstance);
-  console.log("=========================================");
+  // await deployAddressResolver(deployerInstance);
+  // console.log("=========================================");
 
   console.log(
     "Deployed Contracts: ",
