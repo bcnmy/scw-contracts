@@ -163,7 +163,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
 
   // Mainnets
   137: {
-    // maxPriorityFeePerGas: parseUnits("50", "gwei")
+    maxFeePerGas: parseUnits("250", "gwei"),
+    maxPriorityFeePerGas: parseUnits("50", "gwei"),
   },
   56: {
     // maxPriorityFeePerGas: parseUnits("10", "gwei")
