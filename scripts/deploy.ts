@@ -395,29 +395,29 @@ export async function mainDeploy(): Promise<Record<string, string>> {
 
   const deployerInstance = await getPredeployedDeployerContractInstance();
 
-  // console.log("=========================================");
-  // await deployBaseWalletImpContract(deployerInstance);
-  // console.log("=========================================");
-  // await deployWalletFactoryContract(deployerInstance);
-  // console.log("=========================================");
-  // await deployEcdsaOwnershipRegistryModule(deployerInstance);
-  // console.log("=========================================");
-  // await deployMultichainValidatorModule(deployerInstance);
-  // console.log("=========================================");
+  console.log("=========================================");
+  await deployBaseWalletImpContract(deployerInstance);
+  console.log("=========================================");
+  await deployWalletFactoryContract(deployerInstance);
+  console.log("=========================================");
+  await deployEcdsaOwnershipRegistryModule(deployerInstance);
+  console.log("=========================================");
+  await deployMultichainValidatorModule(deployerInstance);
+  console.log("=========================================");
   await deployPasskeyModule(deployerInstance);
   console.log("=========================================");
   await deployAccountRecoveryModule(deployerInstance);
   console.log("=========================================");
-  // await deploySessionKeyManagerModule(deployerInstance);
-  // console.log("=========================================");
-  // await deployBatchedSessionRouterModule(deployerInstance);
-  // console.log("=========================================");
+  await deploySessionKeyManagerModule(deployerInstance);
+  console.log("=========================================");
+  await deployBatchedSessionRouterModule(deployerInstance);
+  console.log("=========================================");
   // await deployErc20SessionValidationModule(deployerInstance);
   // console.log("=========================================");
   await deployAbiSessionValidationModule(deployerInstance);
   console.log("=========================================");
-  // await deployAddressResolver(deployerInstance);
-  // console.log("=========================================");
+  await deployAddressResolver(deployerInstance);
+  console.log("=========================================");
 
   console.log(
     "Deployed Contracts: ",

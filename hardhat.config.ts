@@ -139,6 +139,12 @@ const config: HardhatUserConfig = {
       chainId: 80001,
       accounts: hardhatAccounts,
     },
+    polygon_amoy: {
+      url:
+        process.env.POLYGON_AMOY_URL || "https://rpc-amoy.polygon.technology/",
+      chainId: 80002,
+      accounts: hardhatAccounts,
+    },
     bnb_mainnet: {
       url: "https://bsc-dataseed2.binance.org",
       chainId: 56,
@@ -353,6 +359,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 168587773,
     },
+    blastMainnet: {
+      url: process.env.BLAST_MAINNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 81457,
+    },
     scrollTestnet: {
       url: process.env.SCROLL_TESTNET_URL || "",
       accounts: hardhatAccounts,
@@ -419,6 +430,7 @@ const config: HardhatUserConfig = {
       baseSepoliaTestnet: process.env.BASE_SEPOLIA_API_KEY || "",
       beraTestnet: process.env.BERA_API_KEY || "PLACEHOLDER_STRING",
       blastTestnet: "PLACEHOLDER_STRING",
+      blastMainnet: "PLACEHOLDER_STRING",
       bsc: process.env.BSCSCAN_API_KEY || "",
       bscTestnet: process.env.BSCSCAN_API_KEY || "",
       capxTestnet: "PLACEHOLDER_STRING",
@@ -444,6 +456,7 @@ const config: HardhatUserConfig = {
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
       polygon: process.env.POLYGONSCAN_API_KEY || "",
       polygonMumbai: process.env.POLYGONSCAN_API_KEY || "",
+      polygonAmoy: process.env.POLYGONSCAN_API_KEY || "",
       scrollMainnet: process.env.SCROLL_API_KEY || "",
       scrollTestnet: process.env.SCROLL_API_KEY || "",
       sepolia: process.env.ETHERSCAN_API_KEY || "",
@@ -653,6 +666,15 @@ const config: HardhatUserConfig = {
           apiURL:
             "https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan",
           browserURL: "https://testnet.blastscan.io",
+        },
+      },
+      {
+        network: "blastMainnet",
+        chainId: 81457,
+        urls: {
+          apiURL:
+            "https://api.routescan.io/v2/network/testnet/evm/81457/etherscan",
+          browserURL: "https://blastscan.io",
         },
       },
       {
