@@ -10,6 +10,4 @@ import {AuthorizationModulesConstants} from "./AuthorizationModulesConstants.sol
 abstract contract BaseAuthorizationModule is
     IBaseAuthorizationModule,
     AuthorizationModulesConstants
-{
-
-}
+{}

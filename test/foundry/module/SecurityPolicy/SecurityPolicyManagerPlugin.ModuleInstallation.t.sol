@@ -95,7 +95,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Enable p1, p2, p3, p4
         ISecurityPolicyPlugin[] memory policies = new ISecurityPolicyPlugin[](
@@ -118,7 +118,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
             0,
             alice
         );
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Create MultichainValidator
         validator = new MultichainECDSAValidator();
@@ -142,7 +142,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         vm.expectEmit(true, true, true, true);
         emit ModuleValidated(address(sa), address(validator));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         assertTrue(p1.wasCalled());
         assertTrue(p2.wasCalled());
@@ -174,7 +174,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         vm.expectEmit(true, true, true, true);
         emit ModuleValidated(address(sa), address(validator));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         assertTrue(p1.wasCalled());
         assertTrue(p2.wasCalled());
@@ -203,7 +203,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         p4.setShouldRevert(true);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -253,7 +253,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         p4.setShouldRevert(true);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -296,7 +296,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -342,7 +342,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -375,7 +375,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -417,7 +417,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -459,7 +459,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -501,7 +501,7 @@ contract SecurityPolicyManagerPluginModuleInstallationTest is
         );
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs

@@ -6,12 +6,20 @@ import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOpera
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract MockSessionValidationModule is ISessionValidationModule {
+    event ValidateSessionParams(
+        address destinationContract,
+        uint256 callValue,
+        bytes funcCallData,
+        bytes sessionKeyData,
+        bytes callSpecificData
+    );
+
     function validateSessionUserOp(
         UserOperation calldata _op,
         bytes32 _userOpHash,
         bytes calldata _data,
         bytes calldata _sig
-    ) external view override returns (bool) {
+    ) external pure override returns (bool) {
         (_op);
         address sessionKey = address(bytes20(_data[0:20]));
         return
@@ -25,7 +33,15 @@ contract MockSessionValidationModule is ISessionValidationModule {
         bytes calldata funcCallData,
         bytes calldata sessionKeyData,
         bytes calldata callSpecificData
-    ) external pure override returns (address) {
+    ) external override returns (address) {
+        emit ValidateSessionParams(
+            destinationContract,
+            callValue,
+            funcCallData,
+            sessionKeyData,
+            callSpecificData
+        );
+
         address sessionKey = address(bytes20(sessionKeyData[0:20]));
         return sessionKey;
     }

@@ -21,3 +21,6 @@ auto_detect_solc = true
 
 [profile.coverage]
 src = 'test/foundry'
+
+[fuzz]
+runs = 256

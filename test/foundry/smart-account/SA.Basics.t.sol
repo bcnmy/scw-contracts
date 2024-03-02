@@ -96,7 +96,7 @@ contract SABasicsTest is SATestBase {
             alice
         );
         vm.breakpoint("a");
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
     }
 
     function testReceiveEtherWithGasLimit() external {
@@ -116,7 +116,7 @@ contract SABasicsTest is SATestBase {
         vm.deal(address(mockEthSender), 100 ether);
 
         uint256 userSABalanceBefore = address(sa).balance;
-        
+
         uint256 gasStipend = 0;
 
         mockEthSender.send(address(sa), 1 ether, gasStipend);

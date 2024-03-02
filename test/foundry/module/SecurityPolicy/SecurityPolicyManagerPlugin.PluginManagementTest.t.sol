@@ -68,7 +68,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         vm.expectEmit(true, true, true, true);
         emit SecurityPolicyEnabled(address(sa), address(p1));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         ISecurityPolicyPlugin[] memory enabledSecurityPolicies = spmp
             .securityPoliciesPaginated(address(sa), address(0), 100);
@@ -95,7 +95,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable p1
         data = getSmartAccountExecuteCalldata(
@@ -111,7 +111,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         vm.expectEmit(true, true, true, true);
         emit SecurityPolicyDisabled(address(sa), address(p1));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         ISecurityPolicyPlugin[] memory enabledSecurityPolicies = spmp
             .securityPoliciesPaginated(address(sa), address(0), 100);
@@ -141,7 +141,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         );
 
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Page Size 100
         ISecurityPolicyPlugin[] memory enabledSecurityPolicies = spmp
@@ -251,7 +251,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable p3,p2
         data = getSmartAccountExecuteCalldata(
@@ -268,7 +268,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         emit SecurityPolicyDisabled(address(sa), address(p3));
         emit SecurityPolicyDisabled(address(sa), address(p2));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         ISecurityPolicyPlugin[] memory enabledSecurityPolicies = spmp
             .securityPoliciesPaginated(address(sa), address(0), 100);
@@ -291,7 +291,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         emit SecurityPolicyDisabled(address(sa), address(p4));
         emit SecurityPolicyDisabled(address(sa), address(p1));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         enabledSecurityPolicies = spmp.securityPoliciesPaginated(
             address(sa),
@@ -325,7 +325,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         vm.expectEmit(true, true, true, true);
         emit SecurityPolicyEnabled(address(sa), address(p2));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         ISecurityPolicyPlugin[] memory enabledSecurityPolicies = spmp
             .securityPoliciesPaginated(address(sa), address(0), 100);
@@ -353,7 +353,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         vm.expectEmit(true, true, true, true);
         emit SecurityPolicyEnabled(address(sa), address(p4));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         enabledSecurityPolicies = spmp.securityPoliciesPaginated(
             address(sa),
@@ -386,7 +386,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable p1,p2,p3,p4
         data = getSmartAccountExecuteCalldata(
@@ -405,7 +405,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         emit SecurityPolicyDisabled(address(sa), address(p2));
         emit SecurityPolicyDisabled(address(sa), address(p1));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         ISecurityPolicyPlugin[] memory enabledSecurityPolicies = spmp
             .securityPoliciesPaginated(address(sa), address(0), 100);
@@ -427,7 +427,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable p1,p2,p3,p4
         data = getSmartAccountExecuteCalldata(
@@ -446,7 +446,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         emit SecurityPolicyDisabled(address(sa), address(p2));
         emit SecurityPolicyDisabled(address(sa), address(p1));
 
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         enabledSecurityPolicies = spmp.securityPoliciesPaginated(
             address(sa),
@@ -472,7 +472,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -506,7 +506,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -548,7 +548,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -591,7 +591,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -635,7 +635,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -681,7 +681,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable address(0)
         data = getSmartAccountExecuteCalldata(
@@ -696,7 +696,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         UserOperationEventData memory eventData = getUserOperationEventData(
@@ -747,7 +747,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable SENTINEL_MODULE_ADDRESS
         data = getSmartAccountExecuteCalldata(
@@ -762,7 +762,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         UserOperationEventData memory eventData = getUserOperationEventData(
@@ -812,7 +812,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable p4
         data = getSmartAccountExecuteCalldata(
@@ -827,7 +827,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         UserOperationEventData memory eventData = getUserOperationEventData(
@@ -877,7 +877,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable p3
         data = getSmartAccountExecuteCalldata(
@@ -892,7 +892,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         UserOperationEventData memory eventData = getUserOperationEventData(
@@ -938,7 +938,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable p1->p4
         data = getSmartAccountExecuteCalldata(
@@ -952,7 +952,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         UserOperationEventData memory eventData = getUserOperationEventData(
@@ -1001,7 +1001,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         // Disable p4->p1
         data = getSmartAccountExecuteCalldata(
@@ -1015,7 +1015,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
 
         UserOperationEventData memory eventData = getUserOperationEventData(
@@ -1055,12 +1055,12 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         );
 
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -1093,7 +1093,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
             )
         );
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
 
         ISecurityPolicyPlugin[] memory policies = new ISecurityPolicyPlugin[](
             1
@@ -1110,7 +1110,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs
@@ -1146,7 +1146,7 @@ contract SecurityPolicyManagerPluginPluginManagementTest is
         UserOperation memory op = makeEcdsaModuleUserOp(data, sa, 0, alice);
 
         vm.recordLogs();
-        entryPoint.handleOps(arraifyOps(op), owner.addr);
+        entryPoint.handleOps(toArray(op), owner.addr);
         Vm.Log[] memory logs = vm.getRecordedLogs();
         UserOperationEventData memory eventData = getUserOperationEventData(
             logs

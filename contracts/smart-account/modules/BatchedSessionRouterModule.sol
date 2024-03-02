@@ -5,7 +5,7 @@ pragma solidity ^0.8.23;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {ISessionValidationModule} from "../interfaces/modules/ISessionValidationModule.sol";
-import {ISessionKeyManagerModule} from "../interfaces/modules/ISessionKeyManagerModule.sol";
+import {ISessionKeyManagerModule} from "../interfaces/modules/SessionKeyManagers/ISessionKeyManagerModule.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
