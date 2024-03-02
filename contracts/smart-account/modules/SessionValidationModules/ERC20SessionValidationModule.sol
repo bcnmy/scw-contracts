@@ -13,6 +13,8 @@ import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 contract ERC20SessionValidationModule is ISessionValidationModule {
+    mapping(bytes32 => mapping(address => uint256)) internal usageCounters;
+
     /**
      * @dev validates that the call (destinationContract, callValue, funcCallData)
      * complies with the Session Key permissions represented by sessionKeyData
@@ -20,7 +22,7 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
      * @param callValue value to be sent with the call
      * @param _funcCallData the data for the call. is parsed inside the SVM
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
-     * param _callSpecificData additional data, for example some proofs if the SVM utilizes merkle trees itself
+     * param _callSpecificData additional data.
      * for example to store a list of allowed tokens or receivers
      */
     function validateSessionParams(
@@ -28,26 +30,15 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         uint256 callValue,
         bytes calldata _funcCallData,
         bytes calldata _sessionKeyData,
-        bytes calldata /*_callSpecificData*/
+        bytes calldata /*_callSpecificData */
     ) external virtual override returns (address) {
-        (
-            address sessionKey,
-            address token,
-            address recipient,
-            uint256 maxAmount
-        ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
-
-        require(destinationContract == token, "ERC20SV Wrong Token");
-        require(callValue == 0, "ERC20SV Non Zero Value");
-
-        (address recipientCalled, uint256 amount) = abi.decode(
-            _funcCallData[4:],
-            (address, uint256)
-        );
-
-        require(recipient == recipientCalled, "ERC20SV Wrong Recipient");
-        require(amount <= maxAmount, "ERC20SV Max Amount Exceeded");
-        return sessionKey;
+        return
+            _validateSessionParams(
+                destinationContract,
+                callValue,
+                _funcCallData,
+                _sessionKeyData
+            );
     }
 
     /**
@@ -65,71 +56,90 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
         bytes32 _userOpHash,
         bytes calldata _sessionKeyData,
         bytes calldata _sessionKeySignature
-    ) external pure override returns (bool) {
+    ) external override returns (bool) {
         require(
             bytes4(_op.callData[0:4]) == EXECUTE_OPTIMIZED_SELECTOR ||
                 bytes4(_op.callData[0:4]) == EXECUTE_SELECTOR,
             "ERC20SV Invalid Selector"
         );
 
-        address sessionKey;
-
+        (address tokenAddr, uint256 callValue, ) = abi.decode(
+            _op.callData[4:], // skip selector
+            (address, uint256, bytes)
+        );
+        bytes calldata data;
         {
-            (
-                address innerSessionKey,
-                address token,
-                address recipient,
-                uint256 maxAmount
-            ) = abi.decode(
-                    _sessionKeyData,
-                    (address, address, address, uint256)
-                );
-            sessionKey = innerSessionKey;
-
-            {
-                // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
-                (address tokenAddr, uint256 callValue, ) = abi.decode(
-                    _op.callData[4:], // skip selector
-                    (address, uint256, bytes)
-                );
-                if (tokenAddr != token) {
-                    revert("ERC20SV Wrong Token");
-                }
-                if (callValue != 0) {
-                    revert("ERC20SV Non Zero Value");
-                }
-            }
-            // working with userOp.callData
-            // check if the call is to the allowed recepient and amount is not more than allowed
-            bytes calldata data;
-
-            {
-                //offset represents where does the inner bytes array start
-                uint256 offset = uint256(bytes32(_op.callData[4 + 64:4 + 96]));
-                uint256 length = uint256(
-                    bytes32(_op.callData[4 + offset:4 + offset + 32])
-                );
-                //we expect data to be the `IERC20.transfer(address, uint256)` calldata
-                data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
-            }
-
-            (address recipientCalled, uint256 amount) = abi.decode(
-                data[4:],
-                (address, uint256)
+            //offset represents where does the inner bytes array start
+            uint256 offset = uint256(bytes32(_op.callData[4 + 64:4 + 96]));
+            uint256 length = uint256(
+                bytes32(_op.callData[4 + offset:4 + offset + 32])
             );
-
-            if (recipientCalled != recipient) {
-                revert("ERC20SV Wrong Recipient");
-            }
-            if (amount > maxAmount) {
-                revert("ERC20SV Max Amount Exceeded");
-            }
+            //we expect data to be the `IERC20.transfer(address, uint256)` calldata
+            data = _op.callData[4 + offset + 32:4 + offset + 32 + length];
         }
 
         return
+            _validateSessionParams(
+                tokenAddr,
+                callValue,
+                data,
+                _sessionKeyData
+            ) ==
             ECDSA.recover(
                 ECDSA.toEthSignedMessageHash(_userOpHash),
                 _sessionKeySignature
-            ) == sessionKey;
+            );
+    }
+
+    function getUsageCounter(
+        bytes32 sessionKeyDataHash,
+        address smartAccount
+    ) external view returns (uint256) {
+        return usageCounters[sessionKeyDataHash][smartAccount];
+    }
+
+    /**
+     * @dev Internal function to validate the session parameters
+     * @param destinationContract address of the contract to be called
+     * @param callValue value to be sent with the call
+     * @param _funcCallData the data for the call. is parsed inside the SVM
+     * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
+     * @return sessionKey address of the sessionKey
+     */
+    function _validateSessionParams(
+        address destinationContract,
+        uint256 callValue,
+        bytes calldata _funcCallData,
+        bytes calldata _sessionKeyData
+    ) internal returns (address) {
+        (
+            address sessionKey,
+            address token,
+            address recipient,
+            uint256 maxAmount,
+            uint256 maxUsage
+        ) = abi.decode(
+                _sessionKeyData,
+                (address, address, address, uint256, uint256)
+            );
+
+        address userOpSender = address(uint160(maxUsage >> 64));
+        maxUsage = uint64(maxUsage);
+        require(destinationContract == token, "ERC20SV Wrong Token");
+        require(callValue == 0, "ERC20SV Non Zero Value");
+
+        (address recipientCalled, uint256 amount) = abi.decode(
+            _funcCallData[4:],
+            (address, uint256)
+        );
+
+        require(recipient == recipientCalled, "ERC20SV Wrong Recipient");
+        require(amount <= maxAmount, "ERC20SV Max Amount Exceeded");
+        bytes32 sessionKeyDataHash = keccak256(_sessionKeyData);
+        if (usageCounters[sessionKeyDataHash][userOpSender] >= maxUsage) {
+            revert("ERC20SV Max Usage Exceeded");
+        }
+        ++usageCounters[sessionKeyDataHash][userOpSender];
+        return sessionKey;
     }
 }

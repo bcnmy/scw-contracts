@@ -4,7 +4,9 @@ pragma solidity ^0.8.23;
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
-import {IAccountRecoveryModule} from "../interfaces/IAccountRecoveryModule.sol";
+import {IAccountRecoveryModule} from "../interfaces/modules/IAccountRecoveryModule.sol";
+import {ISmartAccount} from "../interfaces/ISmartAccount.sol";
+import {Enum} from "../common/Enum.sol";
 
 /**
  * @title Account Recovery module for Biconomy Smart Accounts.
@@ -32,7 +34,7 @@ contract AccountRecoveryModule is
     using ECDSA for bytes32;
 
     string public constant NAME = "Account Recovery Module";
-    string public constant VERSION = "0.1.0";
+    string public constant VERSION = "1.0.0";
 
     // execute(address,uint256,bytes)
     bytes4 public immutable EXECUTE_SELECTOR;
@@ -40,8 +42,6 @@ contract AccountRecoveryModule is
     bytes4 public immutable EXECUTE_OPTIMIZED_SELECTOR;
     // Hash to be signed by guardians to make a guardianId
     string public constant CONTROL_MESSAGE = "ACC_RECOVERY_SECURE_MSG";
-
-    uint256 private constant MODULE_SIGNATURE_OFFSET = 96;
 
     // guardianID => (smartAccount => TimeFrame)
     // guardianID = keccak256(signature over CONTROL_HASH)
@@ -74,7 +74,8 @@ contract AccountRecoveryModule is
         bytes32[] calldata guardians,
         TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
-        uint24 securityDelay
+        uint24 securityDelay,
+        uint8 recoveriesAllowed
     ) external returns (address) {
         uint256 length = guardians.length;
         if (_smartAccountSettings[msg.sender].guardiansCount > 0)
@@ -82,11 +83,13 @@ contract AccountRecoveryModule is
         if (recoveryThreshold > length)
             revert ThresholdTooHigh(recoveryThreshold, length);
         if (recoveryThreshold == 0) revert ZeroThreshold();
+        if (recoveriesAllowed == 0) revert ZeroAllowedRecoveries();
         if (length != timeFrames.length) revert InvalidAmountOfGuardianParams();
         _smartAccountSettings[msg.sender] = SaSettings(
             uint8(length),
             recoveryThreshold,
-            securityDelay
+            securityDelay,
+            recoveriesAllowed
         );
         for (uint256 i; i < length; ) {
             if (guardians[i] == bytes32(0)) revert ZeroGuardian();
@@ -125,139 +128,76 @@ contract AccountRecoveryModule is
         UserOperation calldata userOp,
         bytes32 userOpHash
     ) external virtual returns (uint256) {
-        // if there is already a request added for this userOp.callData, return validation success
-        // to procced with executing the request
-        // with validAfter set to the timestamp of the request + securityDelay
-        // so that the request execution userOp can be validated only after the delay
+        address smartAccount = userOp.sender;
+        // even validating userOps not allowed for smartAccounts with 0 recoveries left
+        if (_smartAccountSettings[smartAccount].recoveriesLeft == 0)
+            revert("Account Recovery VUO01"); //Validate User Op 01 = no recoveries left
+
+        // if there is already a request added for this userOp.callData, return validation data
         if (
             keccak256(userOp.callData) ==
-            _smartAccountRequests[msg.sender].callDataHash
-        ) {
-            uint48 reqValidAfter = _smartAccountRequests[msg.sender]
-                .requestTimestamp +
-                _smartAccountSettings[msg.sender].securityDelay;
-            delete _smartAccountRequests[msg.sender];
-            return
-                VALIDATION_SUCCESS |
-                (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
-                (uint256(reqValidAfter) << (160 + 48));
-        }
+            _smartAccountRequests[smartAccount].callDataHash
+        ) return _validatePreSubmittedRequestExecution(smartAccount);
 
-        // otherwise we need to check all the signatures first
-        uint256 requiredSignatures = _smartAccountSettings[userOp.sender]
-            .recoveryThreshold;
-        if (requiredSignatures == 0) revert("AccRecovery: Threshold not set");
-
-        bytes calldata moduleSignature = userOp
-            .signature[MODULE_SIGNATURE_OFFSET:];
-
-        require(
-            moduleSignature.length >= requiredSignatures * 2 * 65,
-            "AccRecovery: Invalid Sigs Length"
-        );
-
-        address lastGuardianAddress;
-        address currentGuardianAddress;
-        bytes memory currentGuardianSig;
-        uint48 latestValidAfter;
-        uint48 earliestValidUntil = type(uint48).max;
-        bytes32 userOpHashSigned = userOpHash.toEthSignedMessageHash();
-
-        for (uint256 i; i < requiredSignatures; ) {
-            {
-                // even indexed signatures are signatures over userOpHash
-                // every signature is 65 bytes long and they are packed into moduleSignature
-                address currentUserOpSignerAddress = userOpHashSigned.recover(
-                    moduleSignature[2 * i * 65:(2 * i + 1) * 65]
-                );
-
-                // odd indexed signatures are signatures over CONTROL_HASH used to calculate guardian id
-                currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 *
-                    i +
-                    2) * 65];
-
-                currentGuardianAddress = keccak256(
-                    abi.encodePacked(CONTROL_MESSAGE, userOp.sender)
-                ).toEthSignedMessageHash().recover(currentGuardianSig);
-
-                if (currentUserOpSignerAddress != currentGuardianAddress) {
-                    return SIG_VALIDATION_FAILED;
-                }
-            }
-
-            address sender = userOp.sender;
-            bytes32 currentGuardian = keccak256(currentGuardianSig);
-
-            uint48 validAfter = _guardians[currentGuardian][sender].validAfter;
-            uint48 validUntil = _guardians[currentGuardian][sender].validUntil;
-
-            // validUntil == 0 means the `currentGuardian` has not been set as guardian
-            // for the userOp.sender smartAccount
-            // validUntil can never be 0 as it is set to type(uint48).max in initForSmartAccount
-            if (validUntil == 0) {
-                return SIG_VALIDATION_FAILED;
-            }
-
-            // gas efficient way to ensure all guardians are unique
-            // requires from dapp to sort signatures before packing them into bytes
-            if (currentGuardianAddress <= lastGuardianAddress)
-                revert("AccRecovery: NotUnique/BadOrder");
-
-            // detect the common validity window for all the guardians
-            // if at least one guardian is not valid yet or expired
-            // the whole userOp will be invalidated at the EntryPoint
-            if (validUntil < earliestValidUntil) {
-                earliestValidUntil = validUntil;
-            }
-            if (validAfter > latestValidAfter) {
-                latestValidAfter = validAfter;
-            }
-            lastGuardianAddress = currentGuardianAddress;
-
-            unchecked {
-                ++i;
-            }
-        }
-
-        // if all the signatures are ok, we need to check if it is a new recovery request
+        // Check if it is a userOp to submit a request or to immediately execute the request
         // anything except adding a new request to this module is allowed only if securityDelay is 0
         // which means user explicitly allowed to execute an operation immediately
-        // userOp.callData expected to be the calldata of the default execution function
-        // in this case execute(address dest, uint256 value, bytes calldata data);
-        // where `data` is the submitRecoveryRequest() method calldata
+        // guardians signatures are validated after it via _validateGuardiansSignatures
         if (
             bytes4(userOp.callData[0:4]) != EXECUTE_OPTIMIZED_SELECTOR &&
             bytes4(userOp.callData[0:4]) != EXECUTE_SELECTOR
-        ) revert("AccRecovery: Wrong selector");
+        ) revert("Account Recovery VUO02"); //Validate User Op 02 = wrong selector
 
-        (address dest, uint256 callValue, bytes memory innerCallData) = abi
-            .decode(
-                userOp.callData[4:], // skip selector
-                (address, uint256, bytes)
-            );
-        bytes4 innerSelector;
+        bytes calldata callData = userOp.callData;
+        address dest;
+        uint256 callValue;
+        bytes calldata innerCallData;
+        if (callData.length < 0x64)
+            // 0x64 = 0x4 selector + 0x20 dest + 0x20 value + 0x20 innerCallData.offset
+            revert("Account Recovery VUO04"); // Validate User Op 02 = wrong callData length
         assembly {
-            innerSelector := mload(add(innerCallData, 0x20))
+            dest := calldataload(add(callData.offset, 0x4))
+            callValue := calldataload(add(callData.offset, 0x24))
+
+            let dataOffset := add(
+                add(callData.offset, 0x04),
+                calldataload(add(callData.offset, 0x44))
+            )
+
+            let length := calldataload(dataOffset)
+            innerCallData.offset := add(dataOffset, 0x20)
+            innerCallData.length := length
         }
-        bool isValidAddingRequestUserOp = (innerSelector ==
+
+        if (innerCallData.length < 4) revert("Account Recovery VUO05"); //Validate User Op 05 = innerCallData too short
+        bytes4 innerSelector = bytes4(innerCallData);
+
+        bool isTheValidUserOpToAddARecoveryRequest = (innerSelector ==
             this.submitRecoveryRequest.selector) &&
             (dest == address(this)) &&
             callValue == 0;
+        if (isTheValidUserOpToAddARecoveryRequest)
+            _validateRequestToBeAdded(innerCallData);
+
+        bool isValidRecoveryExecutionUserOp = (innerSelector ==
+            this.executeRecovery.selector &&
+            dest == address(this) &&
+            _smartAccountSettings[smartAccount].securityDelay == 0);
+
         if (
-            isValidAddingRequestUserOp != //this a userOp to submit Recovery Request
-            (_smartAccountSettings[msg.sender].securityDelay == 0) //securityDelay is 0,
+            isTheValidUserOpToAddARecoveryRequest !=
+            isValidRecoveryExecutionUserOp
         ) {
+            //exactly one should be true
             return
-                VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
-                (uint256(earliestValidUntil) << 160) |
-                (uint256(latestValidAfter) << (160 + 48));
+                _validateGuardiansSignatures(
+                    smartAccount,
+                    userOp.signature[96:],
+                    userOpHash
+                );
         } else {
-            // a) if both conditions are true, it makes no sense, as with the 0 delay, there's no need to submit a
-            // request, as request can be immediately executed in the execution phase of userOp handling
-            // b) if non of the conditions are met, this means userOp is not for submitting a new request which is
-            // only allowed with when the securityDelay is non 0
             // not using custom error here because of how EntryPoint handles the revert data for the validation failure
-            revert("AccRecovery: Wrong userOp");
+            revert("Account Recovery VUO03"); //Validate User Op 03 = wrong userOp
         }
     }
 
@@ -369,6 +309,8 @@ contract AccountRecoveryModule is
         uint48 validUntil,
         uint48 validAfter
     ) external {
+        if (_guardians[guardian][msg.sender].validUntil == 0)
+            revert GuardianNotSet(guardian, msg.sender);
         (validUntil, validAfter) = _checkAndAdjustValidUntilValidAfter(
             validUntil,
             validAfter
@@ -379,6 +321,28 @@ contract AccountRecoveryModule is
             guardian,
             TimeFrame(validUntil, validAfter)
         );
+    }
+
+    //@inheritdoc IAccountRecoveryModule
+    function resetModuleForCaller(bytes32[] memory guardians) external {
+        uint256 length = guardians.length;
+        for (uint256 i; i < length; ) {
+            bytes32 guardian = guardians[i];
+            if (_guardians[guardian][msg.sender].validUntil == 0)
+                revert GuardianNotSet(guardian, msg.sender);
+            _removeGuardianAndChangeTresholdIfNeeded(guardian, msg.sender);
+            unchecked {
+                ++i;
+            }
+        }
+        if (_smartAccountSettings[msg.sender].guardiansCount > 0)
+            revert ResetFailed(
+                msg.sender,
+                _smartAccountSettings[msg.sender].guardiansCount
+            );
+        delete _smartAccountSettings[msg.sender];
+        delete _smartAccountRequests[msg.sender];
+        emit ModuleReset(msg.sender);
     }
 
     /**
@@ -405,6 +369,12 @@ contract AccountRecoveryModule is
     function setSecurityDelay(uint24 newSecurityDelay) external {
         _smartAccountSettings[msg.sender].securityDelay = newSecurityDelay;
         emit SecurityDelayChanged(msg.sender, newSecurityDelay);
+    }
+
+    //@inheritdoc IAccountRecoveryModule
+    function setAllowedRecoveries(uint8 allowedRecoveries) external {
+        _smartAccountSettings[msg.sender].recoveriesLeft = allowedRecoveries;
+        emit RecoveriesLeft(msg.sender, allowedRecoveries);
     }
 
     /**
@@ -464,6 +434,43 @@ contract AccountRecoveryModule is
     }
 
     /**
+     * @dev Executes recovery request for a Smart Account (msg.sender)
+     * Should be called by the Smart Account
+     * SA.execute => AccRecovery.executeRecovery
+     * Decrements recoveries left, and if 0 left, no userOps will be validated by this module
+     * It forces user to perform an explicit action:
+     *      - If user wants same guardians to be able to recover the account again,
+     *      they have to call setAllowedRecoveries() => NOT RECOMMENDED
+     *     - If user wants to change guardians, they have to
+     *          -- remove/replace guardians + adjust threshold + setAllowedRecoveries()
+     *          or
+     *          -- clear all guardians + re-init the module => RECOMMENDED
+     * @param to destination address
+     * @param value value to send
+     * @param data callData to execute
+     */
+    function executeRecovery(
+        address to,
+        uint256 value,
+        bytes calldata data
+    ) public {
+        delete _smartAccountRequests[msg.sender];
+        emit RecoveriesLeft(
+            msg.sender,
+            --_smartAccountSettings[msg.sender].recoveriesLeft
+        );
+        (bool success, bytes memory retData) = ISmartAccount(msg.sender)
+            .execTransactionFromModuleReturnData(
+                to,
+                value,
+                data,
+                Enum.Operation.Call
+            );
+        if (!success) revert RecoveryExecutionFailed(msg.sender, retData);
+        emit RecoveryExecuted(msg.sender, to, value, data);
+    }
+
+    /**
      * @dev renounces existing recovery request for a Smart Account (msg.sender)
      * Should be called by the Smart Account
      * Can be used during the security delay to cancel the request
@@ -518,6 +525,192 @@ contract AccountRecoveryModule is
                 _smartAccountSettings[smartAccount].recoveryThreshold
             );
         }
+    }
+
+    /**
+     * @dev Returns validation data based on the timestamp
+     * when the request becomes valid
+     * So the validAfter of the return (validation data) is the
+     * timestamp of the request submission + securityDelay
+     * So the request can be executed only after the security delay
+     * @param smartAccount Smart Account being recovered
+     */
+    function _validatePreSubmittedRequestExecution(
+        address smartAccount
+    ) internal view returns (uint256) {
+        uint48 reqValidAfter = _smartAccountRequests[smartAccount]
+            .requestTimestamp +
+            _smartAccountSettings[smartAccount].securityDelay;
+        return
+            VALIDATION_SUCCESS |
+            (0 << 160) | // validUntil = 0 is converted to max uint48 in EntryPoint
+            (uint256(reqValidAfter) << (160 + 48));
+    }
+
+    /**
+     * @dev Checks if the request to be added is valid
+     * The valid request should use SA.execute => this.executeRecovery flow
+     * @param innerCallData callData of the request
+     */
+    function _validateRequestToBeAdded(
+        bytes calldata innerCallData
+    ) internal view {
+        bytes calldata expectedExecuteCallData;
+        bytes4 expectedExecuteSelector;
+        address expectedThisAddress;
+        assembly {
+            let expectedExecuteCallDataArgsStart := add(
+                innerCallData.offset,
+                0x4
+            )
+            let expectedExecuteCallDataOffset := add(
+                expectedExecuteCallDataArgsStart,
+                calldataload(expectedExecuteCallDataArgsStart)
+            )
+            expectedExecuteCallData.length := calldataload(
+                expectedExecuteCallDataOffset
+            )
+            expectedExecuteCallData.offset := add(
+                expectedExecuteCallDataOffset,
+                0x20
+            )
+            if gt(expectedExecuteCallData.length, 0x24) {
+                expectedExecuteSelector := calldataload(
+                    expectedExecuteCallData.offset
+                )
+                expectedThisAddress := calldataload(
+                    add(expectedExecuteCallData.offset, 0x4)
+                )
+            }
+        }
+        if (
+            expectedExecuteSelector != EXECUTE_SELECTOR &&
+            expectedExecuteSelector != EXECUTE_OPTIMIZED_SELECTOR
+        ) {
+            revert("Account Recovery WRR01"); //Wrong Recovery Request 01 = wrong execute selector in the request
+        }
+        if (expectedThisAddress != address(this)) {
+            revert("Account Recovery WRR02"); //Wrong Recovery Request 02 = call should be to this contract
+        }
+
+        bytes4 expectedExecuteRecoverySelector;
+
+        assembly {
+            //offset of calldata argument of execute() which is executeRecovery calldata
+            let executeRecoveryCallDataOffset := add(
+                // args start position
+                add(expectedExecuteCallData.offset, 0x4),
+                // offset is stored
+                calldataload(
+                    add(
+                        expectedExecuteCallData.offset,
+                        0x44 //selector + to + value
+                    )
+                )
+            )
+
+            if gt(
+                calldataload(executeRecoveryCallDataOffset), //execute() data arg length
+                0x4
+            ) {
+                //skip 32 bytes length
+                expectedExecuteRecoverySelector := calldataload(
+                    add(0x20, executeRecoveryCallDataOffset)
+                )
+            }
+        }
+        if (expectedExecuteRecoverySelector != this.executeRecovery.selector) {
+            revert("Account Recovery WRR03"); //Wrong Recovery Request 03 = wrong executeRecovery selector in the request
+        }
+    }
+
+    /**
+     * @dev Validates guardians signatures
+     * @param smartAccount Smart Account being recovered
+     * @param moduleSignature cleaned signature
+     * @param userOpHash hash of the userOp
+     * @return validation data (sig validation result + validUntil + validAfter)
+     */
+    function _validateGuardiansSignatures(
+        address smartAccount,
+        bytes calldata moduleSignature,
+        bytes32 userOpHash
+    ) internal view returns (uint256) {
+        uint256 requiredSignatures = _smartAccountSettings[smartAccount]
+            .recoveryThreshold;
+        if (requiredSignatures == 0) revert("Account Recovery SIG01"); //Threshold not set
+
+        require(
+            moduleSignature.length >= requiredSignatures * 2 * 65,
+            "Account Recovery SIG02" //invalid length of the moduleSignature
+        );
+
+        address lastGuardianAddress;
+        address currentGuardianAddress;
+        bytes memory currentGuardianSig;
+        uint48 latestValidAfter;
+        uint48 earliestValidUntil = type(uint48).max;
+        bytes32 userOpHashSigned = userOpHash.toEthSignedMessageHash();
+
+        for (uint256 i; i < requiredSignatures; ) {
+            {
+                // even indexed signatures are signatures over userOpHash
+                // every signature is 65 bytes long and they are packed into moduleSignature
+                address currentUserOpSignerAddress = userOpHashSigned.recover(
+                    moduleSignature[2 * i * 65:(2 * i + 1) * 65]
+                );
+
+                // odd indexed signatures are signatures over CONTROL_HASH used to calculate guardian id
+                currentGuardianSig = moduleSignature[(2 * i + 1) * 65:(2 *
+                    i +
+                    2) * 65];
+
+                currentGuardianAddress = keccak256(
+                    abi.encodePacked(CONTROL_MESSAGE, smartAccount)
+                ).toEthSignedMessageHash().recover(currentGuardianSig);
+
+                if (currentUserOpSignerAddress != currentGuardianAddress) {
+                    return SIG_VALIDATION_FAILED;
+                }
+            }
+
+            bytes32 currentGuardian = keccak256(currentGuardianSig);
+
+            TimeFrame memory guardianTimeFrame = _guardians[currentGuardian][
+                smartAccount
+            ];
+
+            // validUntil == 0 means the `currentGuardian` has not been set as guardian
+            // for the smartAccount
+            // validUntil can never be 0 as it is set to type(uint48).max in initForSmartAccount
+            if (guardianTimeFrame.validUntil == 0) {
+                return SIG_VALIDATION_FAILED;
+            }
+
+            // gas efficient way to ensure all guardians are unique
+            // requires from dapp to sort signatures before packing them into bytes
+            if (currentGuardianAddress <= lastGuardianAddress)
+                revert("Account Recovery SIG03"); // NotUnique Guardian or Bad Order of Guardians
+
+            // detect the common validity window for all the guardians
+            // if at least one guardian is not valid yet or expired
+            // the whole userOp will be invalidated at the EntryPoint
+            if (guardianTimeFrame.validUntil < earliestValidUntil) {
+                earliestValidUntil = guardianTimeFrame.validUntil;
+            }
+            if (guardianTimeFrame.validAfter > latestValidAfter) {
+                latestValidAfter = guardianTimeFrame.validAfter;
+            }
+            lastGuardianAddress = currentGuardianAddress;
+
+            unchecked {
+                ++i;
+            }
+        }
+        return
+            VALIDATION_SUCCESS | //consider this userOp valid within the timeframe
+            (uint256(earliestValidUntil) << 160) |
+            (uint256(latestValidAfter) << (160 + 48));
     }
 
     /**

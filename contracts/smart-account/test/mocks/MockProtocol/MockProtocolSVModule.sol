@@ -20,8 +20,12 @@ contract MockProtocolSVM is ISessionValidationModule {
             address sessionKey,
             address protocol,
             address token,
-            uint256 maxAmount
-        ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
+            uint256 maxAmount,
+
+        ) = abi.decode(
+                _sessionKeyData,
+                (address, address, address, uint256, uint256)
+            );
 
         {
             // we expect _op.callData to be `SmartAccount.execute(to, value, calldata)` calldata
@@ -71,8 +75,12 @@ contract MockProtocolSVM is ISessionValidationModule {
             address sessionKey,
             address protocol,
             address token,
-            uint256 maxAmount
-        ) = abi.decode(_sessionKeyData, (address, address, address, uint256));
+            uint256 maxAmount,
+
+        ) = abi.decode(
+                _sessionKeyData,
+                (address, address, address, uint256, uint256)
+            );
 
         require(
             destinationContract == protocol,

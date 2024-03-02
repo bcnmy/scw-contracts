@@ -120,23 +120,32 @@ describe("SessionKey: Batched Session Router (via Bundler)", async () => {
         await ethers.getContractFactory("MockProtocolSVM")
       ).deploy();
 
+      const maxUsage = 10;
+      const maxUsageAndSAAddress = ethers.utils.hexConcat([
+        userSA.address,
+        ethers.utils.hexZeroPad(ethers.utils.hexlify(maxUsage), 8),
+      ]);
+
+      // create leaf for the erc20 session validation module
       const { sessionKeyData, leafData } = await getERC20SessionKeyParams(
         sessionKey.address,
         mockToken.address,
         mockProtocol.address,
         maxAmount,
+        maxUsageAndSAAddress,
         0,
         0,
         erc20SessionModule.address
       );
 
-      // create leaf for the fakeswap sv module
+      // create leaf for the mock protocol sv module
       const { sessionKeyData: sessionKeyData2, leafData: leafData2 } =
         await getERC20SessionKeyParams(
           sessionKey.address,
           mockProtocol.address, // contract to interact with
           mockToken.address, // token to transfer to protocol
           maxAmount,
+          maxUsageAndSAAddress,
           0,
           0,
           mockProtocolSVModule.address

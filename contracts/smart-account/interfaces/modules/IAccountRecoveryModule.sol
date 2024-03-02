@@ -21,6 +21,7 @@ interface IAccountRecoveryModule {
         uint8 guardiansCount;
         uint8 recoveryThreshold;
         uint24 securityDelay;
+        uint8 recoveriesLeft;
     }
 
     /**
@@ -32,6 +33,20 @@ interface IAccountRecoveryModule {
         bytes32 callDataHash;
         uint48 requestTimestamp;
     }
+
+    /**
+     * @dev Emitted when a recovery request is executed
+     * @param smartAccount address of the Smart Account
+     * @param recoverer module address that executed the recovery request
+     * @param recoveryCallValue value that was sent with the recovery request
+     * @param recoveryCallData calldata that was executed to recover the account
+     */
+    event RecoveryExecuted(
+        address indexed smartAccount,
+        address recoverer,
+        uint256 recoveryCallValue,
+        bytes recoveryCallData
+    );
 
     /**
      * @dev Emitted when a recovery request is submitted
@@ -94,8 +109,24 @@ interface IAccountRecoveryModule {
      */
     event SecurityDelayChanged(
         address indexed smartAccount,
-        uint48 securityDelay
+        uint24 securityDelay
     );
+
+    /**
+     * @dev Emitted when recoveries left have been changed
+     * @param smartAccount address of the Smart Account
+     * @param recoveriesLeft new recoveries allowed
+     */
+    event RecoveriesLeft(
+        address indexed smartAccount,
+        uint8 indexed recoveriesLeft
+    );
+
+    /**
+     * @dev Emitted when all the guardians and setting have been reset for the Smart Account
+     * @param smartAccount address of the Smart Account
+     */
+    event ModuleReset(address indexed smartAccount);
 
     /**
      * @dev Thrown if trying to init module for the Smart Account
@@ -150,6 +181,11 @@ interface IAccountRecoveryModule {
     error ZeroThreshold();
 
     /**
+     * @dev Thrown if trying to set zero allowed recoveries
+     */
+    error ZeroAllowedRecoveries();
+
+    /**
      * @dev Thrown if not enough or too many params provided
      */
     error InvalidAmountOfGuardianParams();
@@ -183,6 +219,19 @@ interface IAccountRecoveryModule {
     );
 
     /**
+     * @dev Thrown when recovery execution failed
+     * @param smartAccount address of the Smart Account
+     * @param returnData error data
+     */
+    error RecoveryExecutionFailed(address smartAccount, bytes returnData);
+
+    /**
+     * @dev Thrown if trying to reset module with an incomplete list of guardians
+     * @param guardiansLeft number of guardians that are still set for the Smart Account
+     */
+    error ResetFailed(address smartAccount, uint256 guardiansLeft);
+
+    /**
      * @dev Initializes the module for a Smart Account.
      * Can only be used at a time of first enabling the module for a Smart Account.
      * @param guardians the list of guardians
@@ -197,7 +246,8 @@ interface IAccountRecoveryModule {
         bytes32[] calldata guardians,
         TimeFrame[] memory timeFrames,
         uint8 recoveryThreshold,
-        uint24 securityDelay
+        uint24 securityDelay,
+        uint8 recoveriesAllowed
     ) external returns (address);
 
     /**
@@ -286,6 +336,42 @@ interface IAccountRecoveryModule {
      * Can be used during the security delay to cancel the request
      */
     function renounceRecoveryRequest() external;
+
+    /**
+     * @dev Resets the module for a Smart Account that calls the method
+     * Should be called by the Smart Account
+     * @param guardians the list of guardians that are enabled for the Smart Account
+     */
+    function resetModuleForCaller(bytes32[] memory guardians) external;
+
+    /**
+     * @dev Changes how many allowed recoveries left for a Smart Account (msg.sender)
+     * Should be called by the Smart Account
+     * @param allowedRecoveries new security delay
+     */
+    function setAllowedRecoveries(uint8 allowedRecoveries) external;
+
+    /**
+     * @dev Executes recovery request for a Smart Account (msg.sender)
+     * Should be called by the Smart Account
+     * SA.execute => AccRecovery.executeRecovery
+     * Decrements recoveries left, and if 0 left, no userOps will be validated by this module
+     * It forces user to perform an explicit action:
+     *      - If user wants same guardians to be able to recover the account again,
+     *      they have to call setAllowedRecoveries() => NOT RECOMMENDED
+     *     - If user wants to change guardians, they have to
+     *          -- remove/replace guardians + adjust threshold + setAllowedRecoveries()
+     *          or
+     *          -- clear all guardians + re-init the module => RECOMMENDED
+     * @param to destination address
+     * @param value value to send
+     * @param data callData to execute
+     */
+    function executeRecovery(
+        address to,
+        uint256 value,
+        bytes calldata data
+    ) external;
 
     /**
      * @dev Returns guardian validity timeframes for the Smart Account
