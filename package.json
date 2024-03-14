@@ -38,7 +38,7 @@
   "license": "MIT",
   "devDependencies": {
     "@nomiclabs/hardhat-ethers": "npm:hardhat-deploy-ethers@^0.3.0-beta.13",
-    "@nomiclabs/hardhat-etherscan": "^3.1.7",
+    "@nomiclabs/hardhat-etherscan": "^3.1.8",
     "@nomiclabs/hardhat-waffle": "^2.0.3",
     "@nomiclabs/hardhat-web3": "^2.0.0",
     "@openzeppelin/contracts": "^4.9.3",
@@ -87,6 +87,7 @@
     "@account-abstraction/contracts": "^0.6.0",
     "@ethersproject/abstract-signer": "^5.6.2",
     "@ethersproject/constants": "^5.6.1",
+    "@nomicfoundation/hardhat-verify": "^2.0.5",
     "axios": "^1.4.0",
     "ethereumjs-util": "^7.1.0"
   }
