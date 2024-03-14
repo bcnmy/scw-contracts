@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 
 import { HardhatUserConfig, task } from "hardhat/config";
-import "@nomiclabs/hardhat-etherscan";
+import "@nomicfoundation/hardhat-verify";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
@@ -204,6 +204,11 @@ const config: HardhatUserConfig = {
       url: `https://goerli.optimism.io`,
       accounts: hardhatAccounts,
       chainId: 420,
+    },
+    optimismSepolia: {
+      url: `https://sepolia.optimism.io/`,
+      accounts: hardhatAccounts,
+      chainId: 11155420,
     },
     optimismMainnet: {
       url: `https://mainnet.optimism.io`,
@@ -454,6 +459,7 @@ const config: HardhatUserConfig = {
       opBNBTestnet: process.env.OP_BNB_API_KEY || "",
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
+      optimismSepolia: process.env.OPTIMISTIC_API_KEY || "",
       polygon: process.env.POLYGONSCAN_API_KEY || "",
       polygonMumbai: process.env.POLYGONSCAN_API_KEY || "",
       polygonAmoy: process.env.POLYGONSCAN_API_KEY || "",
@@ -569,6 +575,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://api-testnet.lineascan.build/api",
           browserURL: "https://goerli.lineascan.build",
+        },
+      },
+      {
+        network: "optimismSepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimism.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io/",
         },
       },
       {
