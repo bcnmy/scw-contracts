@@ -190,6 +190,7 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   8453: { gasPrice: parseUnits("1.5", "gwei") },
   204: { gasPrice: parseUnits("0.1", "gwei") },
   5000: { gasPrice: parseUnits("1", "gwei") },
+  5003: { gasPrice: parseUnits("1", "gwei") },
   1284: { gasPrice: parseUnits("200", "gwei") },
   1287: { gasPrice: parseUnits("200", "gwei") },
   592: {
@@ -212,6 +213,10 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   80085: { gasPrice: parseUnits("0.001", "gwei") },
   534352: { gasPrice: parseUnits("1", "gwei") },
   56400: { gasPrice: parseUnits("150", "gwei") },
+  4653: {
+    gasPrice: parseUnits("1", "gwei"),
+  },
+  27827: { gasPrice: parseUnits("30", "gwei") },
 };
 
 export type StakingConfig = {
@@ -299,6 +304,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   5001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  5003: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -415,6 +424,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"),
   },
+  27827: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
 };
 
 // For testnets, we stake 0.1 <native tokens>. For mainnets, we use industry standard values.
@@ -495,6 +508,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   5001: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
+  },
+  5003: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("226"), // 1 MNT = $0.444
   },
   81: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -609,6 +626,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   534351: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
+  },
+  27827: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("7"), // 0.1 ETH to AVAX
   },
 };
 

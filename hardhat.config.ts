@@ -406,9 +406,31 @@ const config: HardhatUserConfig = {
       chainId: 80085,
     },
     zeroOneTestnet: {
-      url: "https://subnets.avax.network/testnetzer/testnet/rpc",
-      accounts: [process.env.PRIVATE_KEY ?? ""], // you should have this in env
+      url:
+        process.env.ZERO_ONE_TESTNET ||
+        "https://subnets.avax.network/testnetzer/testnet/rpc",
+      accounts: hardhatAccounts,
       chainId: 56400,
+    },
+    zeroOneMainnet: {
+      url:
+        process.env.ZERO_ONE_MAINNET ||
+        "https://subnets.avax.network/zeroonemai/mainnet/rpc",
+      accounts: hardhatAccounts,
+      chainId: 27827,
+    },
+    gold: {
+      url:
+        process.env.GOLD_CHAIN_MAINNET ||
+        "https://chain-rpc.gold.dev/KNkWkhCZvD6YsVcqXqapzNADZKfkV4wC1",
+      accounts: hardhatAccounts,
+      chainId: 4653,
+    },
+    mantleSepolia: {
+      url:
+        process.env.MANTLE_SEPOLIA_TESTNET || "https://rpc.sepolia.mantle.xyz/",
+      accounts: hardhatAccounts,
+      chainId: 5003,
     },
   },
   gasReporter: {
@@ -453,6 +475,7 @@ const config: HardhatUserConfig = {
       mantaTestnet: "PLACEHOLDER_STRING",
       mantleMainnet: "PLACEHOLDER_STRING",
       mantleTestnet: "PLACEHOLDER_STRING",
+      mantleSepolia: "PLACEHOLDER_STRING",
       moonbaseAlpha: process.env.MOONBEAM_KEY || "",
       moonbeam: process.env.MOONBEAM_KEY || "",
       opBNBMainnet: process.env.OP_BNB_API_KEY || "",
@@ -655,6 +678,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://explorer.testnet.mantle.xyz/api",
           browserURL: "https://explorer.testnet.mantle.xyz",
+        },
+      },
+      {
+        network: "mantleSepolia",
+        chainId: 5003,
+        urls: {
+          apiURL: "https://explorer.sepolia.mantle.xyz/api",
+          browserURL: "https://explorer.sepolia.mantle.xyz/",
         },
       },
       {
