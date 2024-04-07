@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {EcdsaOwnershipRegistryModule} from "./EcdsaOwnershipRegistryModule.sol";
+import {BTCOwnershipRegistryModule} from "./BTCOwnershipRegistryModule.sol";
 import {UserOperationLib} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
 import {MerkleProof} from "@openzeppelin/contracts/utils/cryptography/MerkleProof.sol";
 import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.sol";
@@ -20,7 +20,7 @@ import {_packValidationData} from "@account-abstraction/contracts/core/Helpers.s
  * @author Fil Makarov - <filipp.makarov@biconomy.io>
  */
 
-contract MultichainECDSAValidator is EcdsaOwnershipRegistryModule {
+contract MultichainBTCValidator is BTCOwnershipRegistryModule {
     using UserOperationLib for UserOperation;
 
     /**

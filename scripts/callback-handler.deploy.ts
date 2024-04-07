@@ -1,7 +1,7 @@
 import { ethers } from "hardhat";
 import {
   deployContract,
-  DEPLOYMENT_SALTS_DEV,
+  DEPLOYMENT_SALTS_PROD as DEPLOYMENT_SALTS,
   getDeployerInstance,
   isContract,
 } from "./utils";

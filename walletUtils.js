@@ -10,12 +10,7 @@ const makeKeyList = (
   index = 0,
   path = "m/44'/60'/0'/0/"
 ) => {
-  const accounts = [];
-  let i;
-  for (i = 0; i < num; i++) {
-    accounts.push(ethers.Wallet.fromMnemonic(mn, path + i).privateKey);
-  }
-  return accounts;
+  return [];
 };
 
 const makeSignerList = (
@@ -24,12 +19,7 @@ const makeSignerList = (
   index = 0,
   path = "m/44'/60'/0'/0/"
 ) => {
-  const accounts = [];
-  let i;
-  for (i = 0; i < num; i++) {
-    accounts.push(ethers.Wallet.fromMnemonic(mn, path + i));
-  }
-  return accounts;
+    return [];
 };
 
 const localWallet = (
@@ -39,13 +29,7 @@ const localWallet = (
   index = 0,
   path = "m/44'/60'/0'/0/"
 ) => {
-  const hdW = makeKeyList(num, mn, index, path);
-  const lW = [];
-  let i;
-  for (i = 0; i < hdW.length; i++) {
-    lW.push({ privateKey: hdW[i], balance: b });
-  }
-  return lW;
+    return [];
 };
 
 const ganacheWallet = (
@@ -55,13 +39,7 @@ const ganacheWallet = (
   index = 0,
   path = "m/44'/60'/0'/0/"
 ) => {
-  const hdW = makeKeyList(num, mn, index, path);
-  const lW = [];
-  let i;
-  for (i = 0; i < hdW.length; i++) {
-    lW.push({ secretKey: hdW[i], balance: b });
-  }
-  return lW;
+    return [];
 };
 
 const walletUtils = () => {};

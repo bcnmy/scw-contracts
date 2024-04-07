@@ -116,6 +116,11 @@ const config: HardhatUserConfig = {
       chainId: 5,
       accounts: hardhatAccounts,
     },
+    sepolia: {
+      url: 'https://sepolia.infura.io/v3/ea1d521dbd8940b7bcffd99f57fe45b4',
+      chainId: 11155111,
+      accounts: hardhatAccounts,
+    },
     polygon_mainnet: {
       url: process.env.POLYGON_URL || "",
       chainId: 137,
@@ -123,7 +128,7 @@ const config: HardhatUserConfig = {
       // : 200e9,
     },
     polygon_mumbai: {
-      url: process.env.POLYGON_MUMBAI_URL || "",
+      url: 'https://polygon-mumbai.infura.io/v3/ea1d521dbd8940b7bcffd99f57fe45b4',
       chainId: 80001,
       accounts: hardhatAccounts,
     },
