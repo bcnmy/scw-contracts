@@ -432,6 +432,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 5003,
     },
+    degenChain: {
+      url: process.env.DEGEN_CHAIN_MAINNET || "https://rpc.degen.tips",
+      accounts: hardhatAccounts,
+      chainId: 666666666,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -476,6 +481,7 @@ const config: HardhatUserConfig = {
       mantleMainnet: "PLACEHOLDER_STRING",
       mantleTestnet: "PLACEHOLDER_STRING",
       mantleSepolia: "PLACEHOLDER_STRING",
+      degenChain: "PLACEHOLDER_STRING",
       moonbaseAlpha: process.env.MOONBEAM_KEY || "",
       moonbeam: process.env.MOONBEAM_KEY || "",
       opBNBMainnet: process.env.OP_BNB_API_KEY || "",
@@ -686,6 +692,14 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://explorer.sepolia.mantle.xyz/api",
           browserURL: "https://explorer.sepolia.mantle.xyz/",
+        },
+      },
+      {
+        network: "degenChain",
+        chainId: 666666666,
+        urls: {
+          apiURL: "https://explorer.degen.tips/api",
+          browserURL: "https://explorer.degen.tips",
         },
       },
       {
