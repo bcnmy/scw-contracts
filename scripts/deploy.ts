@@ -70,6 +70,14 @@ let baseImpAddress = "0x0000002512019Dafb59528B82CB92D3c5D2423aC";
 const provider = ethers.provider;
 const contractsDeployed: Record<string, string> = {};
 
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, ms);
+  });
+}
+
 export async function deployGeneric(
   deployerInstance: Deployer,
   salt: string,
@@ -397,26 +405,36 @@ export async function mainDeploy(): Promise<Record<string, string>> {
 
   console.log("=========================================");
   await deployBaseWalletImpContract(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployEcdsaOwnershipRegistryModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployMultichainValidatorModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployPasskeyModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployAccountRecoveryModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployBatchedSessionRouterModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   // await deployErc20SessionValidationModule(deployerInstance);
   // console.log("=========================================");
   await deployAbiSessionValidationModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployAddressResolver(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
 
   console.log(

@@ -437,6 +437,18 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 666666666,
     },
+    oliveTestnet: {
+      url:
+        process.env.OLIVE_TESTNET ||
+        "https://olive-network-testnet.rpc.caldera.xyz/http",
+      accounts: hardhatAccounts,
+      chainId: 8101902,
+    },
+    cardonaTestnet: {
+      url: process.env.OLIVE_TESTNET || "https://rpc.cardona.zkevm-rpc.com",
+      accounts: hardhatAccounts,
+      chainId: 2442,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -482,6 +494,8 @@ const config: HardhatUserConfig = {
       mantleTestnet: "PLACEHOLDER_STRING",
       mantleSepolia: "PLACEHOLDER_STRING",
       degenChain: "PLACEHOLDER_STRING",
+      oliveTestnet: "PLACEHOLDER_STRING",
+      cardonaTestnet: "PLACEHOLDER_STRING",
       moonbaseAlpha: process.env.MOONBEAM_KEY || "",
       moonbeam: process.env.MOONBEAM_KEY || "",
       opBNBMainnet: process.env.OP_BNB_API_KEY || "",
@@ -700,6 +714,22 @@ const config: HardhatUserConfig = {
         urls: {
           apiURL: "https://explorer.degen.tips/api",
           browserURL: "https://explorer.degen.tips",
+        },
+      },
+      {
+        network: "oliveTestnet",
+        chainId: 8101902,
+        urls: {
+          apiURL: "https://olive-network-testnet.explorer.caldera.xyz/api",
+          browserURL: "https://olive-network-testnet.explorer.caldera.xyz/",
+        },
+      },
+      {
+        network: "cardonaTestnet",
+        chainId: 2442,
+        urls: {
+          apiURL: "https://cardona-zkevm.polygonscan.com/api",
+          browserURL: "https://cardona-zkevm.polygonscan.com/",
         },
       },
       {
