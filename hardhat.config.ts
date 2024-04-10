@@ -80,7 +80,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      //: 200e9,    
+      // : 200e9,
     },
     polygon_mumbai: {
       url: process.env.POLYGON_MUMBAI_URL || "",
@@ -107,7 +107,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-          gasPrice: 50e9
+      gasPrice: 50e9,
     },
     avalancheMain: {
       url: "https://api.avax.network/ext/bc/C/rpc",
@@ -140,7 +140,7 @@ const config: HardhatUserConfig = {
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
       chainId: 421613,
-      //gasPrice: 2e9, //2 gwei
+      // gasPrice: 2e9, //2 gwei
     },
     arbitrumTest: {
       url: "https://rinkeby.arbitrum.io/rpc",
@@ -173,7 +173,7 @@ const config: HardhatUserConfig = {
         process.env.PRIVATE_KEY !== undefined
           ? [process.env.PRIVATE_KEY]
           : walletUtils.makeKeyList(),
-      //gasPrice: 50e9,    
+      // gasPrice: 50e9,
     },
     optimismGoerli: {
       url: `https://goerli.optimism.io`,
@@ -219,6 +219,23 @@ const config: HardhatUserConfig = {
       chainId: 245022926,
       // gasPrice: 6400000
     },
+    oliveTestnet: {
+      url:
+        process.env.OLIVE_TESTNET ||
+        "https://olive-network-testnet.rpc.caldera.xyz/http",
+      accounts: [process.env.PRIVATE_KEY!],
+      chainId: 8101902,
+    },
+    cardonaTestnet: {
+      url: process.env.OLIVE_TESTNET || "https://rpc.cardona.zkevm-rpc.com",
+      accounts: [process.env.PRIVATE_KEY!],
+      chainId: 2442,
+    },
+    degenChain: {
+      url: process.env.DEGEN_CHAIN_MAINNET || "https://rpc.degen.tips",
+      accounts: [process.env.PRIVATE_KEY!],
+      chainId: 666666666,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,
@@ -234,6 +251,9 @@ const config: HardhatUserConfig = {
       bsc: process.env.BSCSCAN_API_KEY || "",
       moonbeam: process.env.MOONBEAM_KEY || "",
       moonbaseAlpha: process.env.MOONBEAM_KEY || "",
+      oliveTestnet: "PLACEHOLDER_STRING",
+      cardonaTestnet: "PLACEHOLDER_STRING",
+      degenChain: "PLACEHOLDER_STRING",
       avalancheFujiTestnet: process.env.AVALANCHE_API_KEY || "",
       avalanche: process.env.AVALANCHE_API_KEY || "",
       arbitrumGoerli: process.env.ARBITRUM_API_KEY || "",
@@ -242,6 +262,32 @@ const config: HardhatUserConfig = {
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
     },
+    customChains: [
+      {
+        network: "oliveTestnet",
+        chainId: 8101902,
+        urls: {
+          apiURL: "https://olive-network-testnet.explorer.caldera.xyz/api",
+          browserURL: "https://olive-network-testnet.explorer.caldera.xyz/",
+        },
+      },
+      {
+        network: "cardonaTestnet",
+        chainId: 2442,
+        urls: {
+          apiURL: "https://cardona-zkevm.polygonscan.com/api",
+          browserURL: "https://cardona-zkevm.polygonscan.com/",
+        },
+      },
+      {
+        network: "degenChain",
+        chainId: 666666666,
+        urls: {
+          apiURL: "https://explorer.degen.tips/api",
+          browserURL: "https://explorer.degen.tips",
+        },
+      },
+    ],
   },
 };
 

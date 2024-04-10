@@ -42,7 +42,7 @@ export enum DEPLOYMENT_SALTS {
   MULTI_SEND_CALLONLY = "DEVX_MULTI_SEND_CALLONLY_V0_30032023",
   WALLET_FACTORY = "DEVX_WALLET_FACTORY_V0_30032023",
   WALLET_IMP = "DEVX_WALLET_IMP_V0_30032023",
-  SINGELTON_PAYMASTER = "DEVX_SINGELTON_PAYMASTER_V0_30032023",
+  SINGELTON_PAYMASTER = "PROD_SINGLETON_PAYMASTER_V0_11042023_80LVBle",
 }
 
 export const factoryAbi = [
@@ -112,7 +112,7 @@ export const getDeployerInstance = async (): Promise<Deployer> => {
   //   from: metaDeployer.address,
   //   nonce: 0,
   // });
-  
+
   const provider = hardhatEthersInstance.provider;
   const [signer] = await hardhatEthersInstance.getSigners();
   const chainId = (await provider.getNetwork()).chainId;
@@ -145,8 +145,10 @@ export const deployContract = async (
   contractByteCode: string,
   deployerInstance: Deployer
 ): Promise<string> => {
-  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {maxFeePerGas: 200e9, maxPriorityFeePerGas: 75e9});
-  //const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode);
+  const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {
+    gasPrice: 10e9,
+  });
+  // const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode);
 
   console.log(`Submitted transaction ${hash} for deployment`);
 
