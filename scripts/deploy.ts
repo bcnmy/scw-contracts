@@ -428,8 +428,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   await deployBatchedSessionRouterModule(deployerInstance);
   await delay(5000);
   console.log("=========================================");
-  // await deployErc20SessionValidationModule(deployerInstance);
-  // console.log("=========================================");
+  await deployErc20SessionValidationModule(deployerInstance);
+  console.log("=========================================");
   await deployAbiSessionValidationModule(deployerInstance);
   await delay(5000);
   console.log("=========================================");

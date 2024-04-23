@@ -505,7 +505,7 @@ const config: HardhatUserConfig = {
       optimismSepolia: process.env.OPTIMISTIC_API_KEY || "",
       polygon: process.env.POLYGONSCAN_API_KEY || "",
       polygonMumbai: process.env.POLYGONSCAN_API_KEY || "",
-      polygonAmoy: process.env.POLYGONSCAN_API_KEY || "",
+      polygon_amoy: process.env.POLYGONSCAN_API_KEY || "",
       scrollMainnet: process.env.SCROLL_API_KEY || "",
       scrollTestnet: process.env.SCROLL_API_KEY || "",
       sepolia: process.env.ETHERSCAN_API_KEY || "",
