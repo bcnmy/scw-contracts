@@ -266,6 +266,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 91715,
     },
+    kartel: {
+      url: 'https://kartel-testnet.alt.technology',
+      accounts: [`0x83e65d078dc32d071b9cff2a9d50041a3ffa9e75beac2ddc3335c9be7cd172e7`],
+      chainId: 9369,
+    },
   },
 
   gasReporter: {
@@ -305,8 +310,17 @@ const config: HardhatUserConfig = {
       mantleTestnet: "PLACEHOLDER_STRING",
       mantleMainnet: "PLACEHOLDER_STRING",
       comboTestnet: process.env.COMBO_API_KEY || "",
+      kartel: "abc",
     },
     customChains: [
+      {
+        network: "kartel",
+        chainId: 9369,
+        urls: {
+          apiURL: "https://kartel-testnet-explorer.alt.technology/api",
+          browserURL: "https://kartel-testnet-explorer.alt.technology"
+        }
+      },
       {
         network: "arbitrumNova",
         chainId: 42170,

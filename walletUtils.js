@@ -3,6 +3,7 @@ const ethers = require("ethers");
 
 const fs = require("fs");
 const mnemonic = fs.readFileSync(".secret").toString().trim();
+console.log(`mnemonic: ${mnemonic}`)
 
 const makeKeyList = (
   num = 5,

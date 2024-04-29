@@ -57,6 +57,7 @@ export async function deployGeneric(
 ): Promise<string> {
   try {
     const derivedSalt = ethers.utils.keccak256(ethers.utils.toUtf8Bytes(salt));
+    console.log(`computing address with salt: ${derivedSalt}`);
     const computedAddress = await deployerInstance.addressOf(derivedSalt);
 
     console.log(`${contractName} Computed Address: ${computedAddress}`);
@@ -96,12 +97,6 @@ export async function deployGeneric(
 }
 
 async function deployEntryPointContract(deployerInstance: Deployer) {
-  const chainId = (await provider.getNetwork()).chainId;
-  if (chainId !== 31337) {
-    console.log("Entry Point Already Deployed Address: ", entryPointAddress);
-    return;
-  }
-
   entryPointAddress = await deployGeneric(
     deployerInstance,
     DEPLOYMENT_SALTS.ENTRY_POINT,
@@ -404,8 +399,8 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
 
   const deployerInstance = await getPredeployedDeployerContractInstance();
-  await deployEntryPointContract(deployerInstance);
-  console.log("=========================================");
+ await deployEntryPointContract(deployerInstance);
+  //console.log("=========================================");
   await deployBaseWalletImpContract(deployerInstance);
   console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
