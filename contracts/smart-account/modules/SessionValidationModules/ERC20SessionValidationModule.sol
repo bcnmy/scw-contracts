@@ -58,7 +58,7 @@ contract ERC20SessionValidationModule is ISessionValidationModule {
      * @param _op User Operation to be validated.
      * @param _userOpHash Hash of the User Operation to be validated.
      * @param _sessionKeyData SessionKey data, that describes sessionKey permissions
-     * @param _sessionKeySignature Signature over the the _userOpHash.
+     * @param _sessionKeySignature Signature over the _userOpHash.
      * @return true if the _op is valid, false otherwise.
      */
     function validateSessionUserOp(

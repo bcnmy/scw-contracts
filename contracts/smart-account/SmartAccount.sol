@@ -382,7 +382,7 @@ contract SmartAccount is
     /**
      * @dev This function allows entry point or SA itself to execute certain actions.
      * If the caller is not authorized, the function will revert with an error message.
-     * @notice This function acts as modifier and is marked as internal to be be called
+     * @notice This function acts as modifier and is marked as internal to be called
      * within the contract itself only.
      */
     function _requireFromEntryPointOrSelf() internal view {
@@ -393,7 +393,7 @@ contract SmartAccount is
     /**
      * @dev This function allows entry point to execute certain actions.
      * If the caller is not authorized, the function will revert with an error message.
-     * @notice This function acts as modifier and is marked as internal to be be called
+     * @notice This function acts as modifier and is marked as internal to be called
      * within the contract itself only.
      */
     function _requireFromEntryPoint() internal view {

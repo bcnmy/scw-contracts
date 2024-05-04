@@ -82,7 +82,7 @@ describe("ECDSA Registry Module: ", async () => {
       // DISCLAIMER:
       // In theory it is still possible to set smart contractd address as owner of a SA via initForSmartAccount,
       // if factory has been called directly, not via userOp.
-      // In Biconomy SDK will will perform an additional off-chain verification that address provided as owner is EOA
+      // In Biconomy SDK will perform an additional off-chain verification that address provided as owner is EOA
       // Also the initForSmartAccount method's parameter is now called `eoaOwner` instead of just `owner` to
       // highlight it should be EOA.
       // Assuming this, the explicit check for eoaOwner is not smart contract can be removed because of this
@@ -154,7 +154,7 @@ describe("ECDSA Registry Module: ", async () => {
       // DISCLAIMER:
       // In theory it is still possible to set smart contractd address as owner of a SA via initForSmartAccount,
       // if factory has been called directly, not via userOp.
-      // In Biconomy SDK will will perform an additional off-chain verification that address provided as owner is EOA
+      // In Biconomy SDK will perform an additional off-chain verification that address provided as owner is EOA
       // Also the initForSmartAccount method's parameter is now called `eoaOwner` instead of just `owner` to
       // highlight it should be EOA.
       // Assuming this, the explicit check for eoaOwner is not smart contract can be removed because of this

@@ -141,7 +141,7 @@ contract SessionKeyManager is BaseAuthorizationModule, ISessionKeyManager {
     /**
      * @dev isValidSignature according to BaseAuthorizationModule
      * @param _dataHash Hash of the data to be validated.
-     * @param _signature Signature over the the _dataHash.
+     * @param _signature Signature over the _dataHash.
      * @return always returns 0xffffffff as signing messages is not supported by SessionKeys
      */
     function isValidSignature(
