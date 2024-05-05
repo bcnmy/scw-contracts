@@ -426,6 +426,28 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 4653,
     },
+    xlayerTestnet: {
+      url: process.env.X_LAYER_TESTNET_URL || "https://testrpc.xlayer.tech",
+      accounts: hardhatAccounts,
+      chainId: 195,
+    },
+    xlayerMainnet: {
+      url: process.env.X_LAYER_MAINNET_URL || "https://rpc.xlayer.tech",
+      accounts: hardhatAccounts,
+      chainId: 196,
+    },
+    gnosisChiado: {
+      url:
+        process.env.GNOSIS_CHIADO_TESTNET_URL ||
+        "https://gnosis-chiado-rpc.publicnode.com",
+      accounts: hardhatAccounts,
+      chainId: 10200,
+    },
+    gnosisMainnet: {
+      url: process.env.GNOSIS_MAINNET_URL || "https://rpc.ankr.com/gnosis",
+      accounts: hardhatAccounts,
+      chainId: 100,
+    },
     mantleSepolia: {
       url:
         process.env.MANTLE_SEPOLIA_TESTNET || "https://rpc.sepolia.mantle.xyz/",

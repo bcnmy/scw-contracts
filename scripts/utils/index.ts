@@ -164,6 +164,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   },
   3441005: {},
   421614: {},
+  10200: { gasPrice: parseUnits("10", "gwei") },
+  195: { gasPrice: parseUnits("20", "gwei") },
 
   // Mainnets
   137: {
@@ -220,6 +222,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   666666666: { gasPrice: parseUnits("10", "gwei") },
   8101902: { gasPrice: parseUnits("5", "gwei") },
   2442: { gasPrice: parseUnits("1", "gwei") },
+  100: { gasPrice: parseUnits("10", "gwei") },
+  196: { gasPrice: parseUnits("25", "gwei") },
 };
 
 export type StakingConfig = {
@@ -346,10 +350,26 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
+  195: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  10200: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
   // Mainnets
   137: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"), // 1 MATIC = $0.5788
+  },
+  196: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  100: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
   },
   56: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -572,10 +592,22 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"),
   },
+  195: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  10200: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
   // Mainnets
   137: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("173"), // 1 MATIC = $0.5788
+    stakeInWei: parseEther("0.001"), // 1 MATIC = $0.5788
+  },
+  196: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
   },
   56: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -664,6 +696,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   666666666: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("100"),
+  },
+  100: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("1"),
   },
 };
 
