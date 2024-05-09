@@ -164,8 +164,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   },
   3441005: {},
   421614: {},
-  10200: { gasPrice: parseUnits("10", "gwei") },
-  195: { gasPrice: parseUnits("20", "gwei") },
+  10200: { gasPrice: parseUnits("5", "gwei") },
+  195: { gasPrice: parseUnits("110", "gwei") },
 
   // Mainnets
   137: {
@@ -356,7 +356,7 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
   },
   10200: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"),
+    stakeInWei: parseEther("0.01"),
   },
   // Mainnets
   137: {
@@ -598,7 +598,7 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   },
   10200: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("0.1"),
+    stakeInWei: parseEther("0.01"),
   },
   // Mainnets
   137: {
@@ -787,6 +787,7 @@ export const deployContract = async (
   }
   const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {
     ...deploymentGasPrice,
+    gasLimit: 5000000,
   });
 
   console.log(`Submitted transaction ${hash} for deployment`);
