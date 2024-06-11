@@ -59,7 +59,7 @@ contract DANSessionKeyManager is
             uint48 validUntil,
             uint48 validAfter,
             address sessionValidationModule,
-            bytes memory sessionKeyData,
+            bytes memory sessionKeyData, // This could just be a session key address
             bytes32[] memory merkleProof,
             bytes memory sessionKeySignature
         ) = abi.decode(
@@ -76,15 +76,18 @@ contract DANSessionKeyManager is
             merkleProof
         );
 
-        (address sessionKey, , , , ) = abi.decode(
-            sessionKeyData,
-            (address, address, address, uint256, uint256)
-        );
+        bytes20 sessionKeyAddressBytes;
+
+        assembly {
+            sessionKeyAddressBytes := mload(add(sessionKeyData, 0x20))
+        }
+
+        address sessionKeyEOA = address(uint160(sessionKeyAddressBytes));
 
         bool isValidSignatureFromDAN = ECDSA.recover(
             ECDSA.toEthSignedMessageHash(userOpHash),
             sessionKeySignature
-        ) == sessionKey;
+        ) == sessionKeyEOA;
 
         return
             _packValidationData(
