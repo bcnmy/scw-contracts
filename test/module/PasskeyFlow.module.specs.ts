@@ -57,16 +57,16 @@ describe("Passkeys Registry Module:", function () {
   it("Deploys Modular Smart Account with Passkey Validation Module", async () => {
     const { userSA } = await setupTests();
     expect(await userSA.isModuleEnabled(passKeyModule.address)).to.equal(true);
-    // console.log(await passKeyModule.smartAccountPassKeys(userSA.address));
+    // console.log(await passKeyModule.smartAccountPasskey(userSA.address));
     // verify pubX and pubY is set or not
     expect(
-      (await passKeyModule.smartAccountPassKeys(userSA.address))[0].valueOf()
+      (await passKeyModule.smartAccountPasskey(userSA.address))[0].valueOf()
     ).to.equal(pubX);
     expect(
-      (await passKeyModule.smartAccountPassKeys(userSA.address))[1].valueOf()
+      (await passKeyModule.smartAccountPasskey(userSA.address))[1].valueOf()
     ).to.equal(pubY);
     expect(
-      (await passKeyModule.smartAccountPassKeys(userSA.address))[2].valueOf()
+      (await passKeyModule.smartAccountPasskey(userSA.address))[2].valueOf()
     ).to.equal(keyId);
 
     expect(await ethers.provider.getBalance(userSA.address)).to.equal(

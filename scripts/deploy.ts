@@ -24,6 +24,7 @@ import {
   SmartAccountFactory__factory,
   SmartAccount__factory,
   ABISessionValidationModule__factory,
+  MultiOwnedECDSAModule__factory,
 } from "../typechain";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
@@ -245,6 +246,16 @@ async function deployPasskeyModule(deployerInstance: Deployer) {
   );
 }
 
+async function deployMultiOwnedECDSAModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.MULTIOWNED_ECDSA_VALIDATOR_MODULE,
+    `${MultiOwnedECDSAModule__factory.bytecode}`,
+    "MultiOwnedECDSAModule",
+    []
+  );
+}
+
 async function deployAccountRecoveryModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
@@ -417,6 +428,9 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   await delay(5000);
   console.log("=========================================");
   await deployPasskeyModule(deployerInstance);
+  await delay(5000);
+  console.log("=========================================");
+  await deployMultiOwnedECDSAModule(deployerInstance);
   await delay(5000);
   console.log("=========================================");
   await deployAccountRecoveryModule(deployerInstance);
