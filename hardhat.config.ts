@@ -471,6 +471,56 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 2442,
     },
+    morphTestnet: {
+      url: "https://rpc-quicknode-holesky.morphl2.io",
+      accounts: hardhatAccounts,
+      chainId: 2810,
+    },
+    five5ireTestnet: {
+      url: "https://rpc.ga.5ire.network/",
+      accounts: hardhatAccounts,
+      chainId: 997,
+    },
+    taiko: {
+      url: "https://rpc.mainnet.taiko.xyz/",
+      accounts: hardhatAccounts,
+      chainId: 167000,
+    },
+    taikoHeklaTestnet: {
+      url: "https://rpc.hekla.taiko.xyz/",
+      accounts: hardhatAccounts,
+      chainId: 167009,
+    },
+    seiMainnet: {
+      url: "https://evm-rpc.sei-apis.com/",
+      accounts: hardhatAccounts,
+      chainId: 1329,
+    },
+    seiTestnet: {
+      url: "https://evm-rpc-arctic-1.sei-apis.com",
+      accounts: hardhatAccounts,
+      chainId: 713715,
+    },
+    berachainTestnet: {
+      url: "https://bartio.rpc.berachain.com/",
+      accounts: hardhatAccounts,
+      chainId: 80084,
+    },
+    tangleTestnet: {
+      url: "https://testnet-rpc.tangle.tools",
+      accounts: hardhatAccounts,
+      chainId: 3799,
+    },
+    tangleMainnet: {
+      url: "https://rpc.tangle.tools",
+      accounts: hardhatAccounts,
+      chainId: 5845,
+    },
+    fomoTestnet: {
+      url: "https://jsonrpc1.testnet.fomochain.io",
+      accounts: hardhatAccounts,
+      chainId: 701,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

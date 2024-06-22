@@ -171,6 +171,13 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   421614: {},
   10200: { gasPrice: parseUnits("5", "gwei") },
   195: { gasPrice: parseUnits("110", "gwei") },
+  167009: { gasPrice: parseUnits("1", "gwei") },
+  997: { gasPrice: parseUnits("1", "gwei") },
+  2810: { gasPrice: parseUnits("3", "gwei") },
+  3799: { gasPrice: parseUnits("1", "gwei") },
+  713715: { gasPrice: parseUnits("1", "gwei") },
+  80084: { gasPrice: parseUnits("1", "gwei") },
+  701: { gasPrice: parseUnits("1", "gwei") },
 
   // Mainnets
   137: {
@@ -229,6 +236,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   2442: { gasPrice: parseUnits("1", "gwei") },
   100: { gasPrice: parseUnits("10", "gwei") },
   196: { gasPrice: parseUnits("25", "gwei") },
+  167000: { gasPrice: parseUnits("0.2", "gwei") },
+  1329: { gasPrice: parseUnits("1", "gwei") },
+  5845: { gasPrice: parseUnits("1", "gwei") },
 };
 
 export type StakingConfig = {
