@@ -1,7 +1,7 @@
 import * as dotenv from "dotenv";
 
 import { HardhatUserConfig, task } from "hardhat/config";
-import "@nomiclabs/hardhat-etherscan";
+import "@nomicfoundation/hardhat-verify";
 import "@nomiclabs/hardhat-waffle";
 import "@typechain/hardhat";
 import "hardhat-gas-reporter";
@@ -51,6 +51,14 @@ const config: HardhatUserConfig = {
       {
         version: "0.8.17",
         settings: {
+          optimizer: { enabled: true, runs: 800 },
+          viaIR: true,
+        },
+      },
+      {
+        version: "0.8.23",
+        settings: {
+          evmVersion: "paris",
           optimizer: { enabled: true, runs: 800 },
           viaIR: true,
         },
@@ -131,6 +139,12 @@ const config: HardhatUserConfig = {
       chainId: 80001,
       accounts: hardhatAccounts,
     },
+    polygon_amoy: {
+      url:
+        process.env.POLYGON_AMOY_URL || "https://rpc-amoy.polygon.technology/",
+      chainId: 80002,
+      accounts: hardhatAccounts,
+    },
     bnb_mainnet: {
       url: "https://bsc-dataseed2.binance.org",
       chainId: 56,
@@ -190,6 +204,11 @@ const config: HardhatUserConfig = {
       url: `https://goerli.optimism.io`,
       accounts: hardhatAccounts,
       chainId: 420,
+    },
+    optimismSepolia: {
+      url: `https://sepolia.optimism.io/`,
+      accounts: hardhatAccounts,
+      chainId: 11155420,
     },
     optimismMainnet: {
       url: `https://mainnet.optimism.io`,
@@ -345,6 +364,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 168587773,
     },
+    blastMainnet: {
+      url: process.env.BLAST_MAINNET_URL || "",
+      accounts: hardhatAccounts,
+      chainId: 81457,
+    },
     scrollTestnet: {
       url: process.env.SCROLL_TESTNET_URL || "",
       accounts: hardhatAccounts,
@@ -382,9 +406,120 @@ const config: HardhatUserConfig = {
       chainId: 80085,
     },
     zeroOneTestnet: {
-      url: "https://subnets.avax.network/testnetzer/testnet/rpc",
-      accounts: [process.env.PRIVATE_KEY ?? ""], // you should have this in env
+      url:
+        process.env.ZERO_ONE_TESTNET ||
+        "https://subnets.avax.network/testnetzer/testnet/rpc",
+      accounts: hardhatAccounts,
       chainId: 56400,
+    },
+    zeroOneMainnet: {
+      url:
+        process.env.ZERO_ONE_MAINNET ||
+        "https://subnets.avax.network/zeroonemai/mainnet/rpc",
+      accounts: hardhatAccounts,
+      chainId: 27827,
+    },
+    gold: {
+      url:
+        process.env.GOLD_CHAIN_MAINNET ||
+        "https://chain-rpc.gold.dev/KNkWkhCZvD6YsVcqXqapzNADZKfkV4wC1",
+      accounts: hardhatAccounts,
+      chainId: 4653,
+    },
+    xlayerTestnet: {
+      url: process.env.X_LAYER_TESTNET_URL || "https://testrpc.xlayer.tech",
+      accounts: hardhatAccounts,
+      chainId: 195,
+    },
+    xlayerMainnet: {
+      url: process.env.X_LAYER_MAINNET_URL || "https://rpc.xlayer.tech",
+      accounts: hardhatAccounts,
+      chainId: 196,
+    },
+    gnosisChiado: {
+      url:
+        process.env.GNOSIS_CHIADO_TESTNET_URL ||
+        "https://gnosis-chiado-rpc.publicnode.com",
+      accounts: hardhatAccounts,
+      chainId: 10200,
+    },
+    gnosisMainnet: {
+      url: process.env.GNOSIS_MAINNET_URL || "https://rpc.ankr.com/gnosis",
+      accounts: hardhatAccounts,
+      chainId: 100,
+    },
+    mantleSepolia: {
+      url:
+        process.env.MANTLE_SEPOLIA_TESTNET || "https://rpc.sepolia.mantle.xyz/",
+      accounts: hardhatAccounts,
+      chainId: 5003,
+    },
+    degenChain: {
+      url: process.env.DEGEN_CHAIN_MAINNET || "https://rpc.degen.tips",
+      accounts: hardhatAccounts,
+      chainId: 666666666,
+    },
+    oliveTestnet: {
+      url:
+        process.env.OLIVE_TESTNET ||
+        "https://olive-network-testnet.rpc.caldera.xyz/http",
+      accounts: hardhatAccounts,
+      chainId: 8101902,
+    },
+    cardonaTestnet: {
+      url: process.env.OLIVE_TESTNET || "https://rpc.cardona.zkevm-rpc.com",
+      accounts: hardhatAccounts,
+      chainId: 2442,
+    },
+    morphTestnet: {
+      url: "https://rpc-quicknode-holesky.morphl2.io",
+      accounts: hardhatAccounts,
+      chainId: 2810,
+    },
+    five5ireTestnet: {
+      url: "https://rpc.ga.5ire.network/",
+      accounts: hardhatAccounts,
+      chainId: 997,
+    },
+    taiko: {
+      url: "https://rpc.mainnet.taiko.xyz/",
+      accounts: hardhatAccounts,
+      chainId: 167000,
+    },
+    taikoHeklaTestnet: {
+      url: "https://rpc.hekla.taiko.xyz/",
+      accounts: hardhatAccounts,
+      chainId: 167009,
+    },
+    seiMainnet: {
+      url: "https://evm-rpc.sei-apis.com/",
+      accounts: hardhatAccounts,
+      chainId: 1329,
+    },
+    seiTestnet: {
+      url: "https://evm-rpc-arctic-1.sei-apis.com",
+      accounts: hardhatAccounts,
+      chainId: 713715,
+    },
+    berachainTestnet: {
+      url: "https://bartio.rpc.berachain.com/",
+      accounts: hardhatAccounts,
+      chainId: 80084,
+    },
+    tangleTestnet: {
+      url: "https://testnet-rpc.tangle.tools",
+      accounts: hardhatAccounts,
+      chainId: 3799,
+    },
+    tangleMainnet: {
+      url: "https://rpc.tangle.tools",
+      accounts: hardhatAccounts,
+      chainId: 5845,
+    },
+    fomoTestnet: {
+      url: "https://jsonrpc1.testnet.fomochain.io",
+      accounts: hardhatAccounts,
+      chainId: 701,
     },
   },
   gasReporter: {
@@ -411,6 +546,7 @@ const config: HardhatUserConfig = {
       baseSepoliaTestnet: process.env.BASE_SEPOLIA_API_KEY || "",
       beraTestnet: process.env.BERA_API_KEY || "PLACEHOLDER_STRING",
       blastTestnet: "PLACEHOLDER_STRING",
+      blastMainnet: "PLACEHOLDER_STRING",
       bsc: process.env.BSCSCAN_API_KEY || "",
       bscTestnet: process.env.BSCSCAN_API_KEY || "",
       capxTestnet: "PLACEHOLDER_STRING",
@@ -428,14 +564,20 @@ const config: HardhatUserConfig = {
       mantaTestnet: "PLACEHOLDER_STRING",
       mantleMainnet: "PLACEHOLDER_STRING",
       mantleTestnet: "PLACEHOLDER_STRING",
+      mantleSepolia: "PLACEHOLDER_STRING",
+      degenChain: "PLACEHOLDER_STRING",
+      oliveTestnet: "PLACEHOLDER_STRING",
+      cardonaTestnet: "PLACEHOLDER_STRING",
       moonbaseAlpha: process.env.MOONBEAM_KEY || "",
       moonbeam: process.env.MOONBEAM_KEY || "",
       opBNBMainnet: process.env.OP_BNB_API_KEY || "",
       opBNBTestnet: process.env.OP_BNB_API_KEY || "",
       optimisticEthereum: process.env.OPTIMISTIC_API_KEY || "",
       optimisticGoerli: process.env.OPTIMISTIC_API_KEY || "",
+      optimismSepolia: process.env.OPTIMISTIC_API_KEY || "",
       polygon: process.env.POLYGONSCAN_API_KEY || "",
       polygonMumbai: process.env.POLYGONSCAN_API_KEY || "",
+      polygon_amoy: process.env.POLYGONSCAN_API_KEY || "",
       scrollMainnet: process.env.SCROLL_API_KEY || "",
       scrollTestnet: process.env.SCROLL_API_KEY || "",
       sepolia: process.env.ETHERSCAN_API_KEY || "",
@@ -551,6 +693,14 @@ const config: HardhatUserConfig = {
         },
       },
       {
+        network: "optimismSepolia",
+        chainId: 11155420,
+        urls: {
+          apiURL: "https://api-sepolia-optimism.etherscan.io/api",
+          browserURL: "https://sepolia-optimism.etherscan.io/",
+        },
+      },
+      {
         network: "lineaMainnet",
         chainId: 59144,
         urls: {
@@ -623,6 +773,38 @@ const config: HardhatUserConfig = {
         },
       },
       {
+        network: "mantleSepolia",
+        chainId: 5003,
+        urls: {
+          apiURL: "https://explorer.sepolia.mantle.xyz/api",
+          browserURL: "https://explorer.sepolia.mantle.xyz/",
+        },
+      },
+      {
+        network: "degenChain",
+        chainId: 666666666,
+        urls: {
+          apiURL: "https://explorer.degen.tips/api",
+          browserURL: "https://explorer.degen.tips",
+        },
+      },
+      {
+        network: "oliveTestnet",
+        chainId: 8101902,
+        urls: {
+          apiURL: "https://olive-network-testnet.explorer.caldera.xyz/api",
+          browserURL: "https://olive-network-testnet.explorer.caldera.xyz/",
+        },
+      },
+      {
+        network: "cardonaTestnet",
+        chainId: 2442,
+        urls: {
+          apiURL: "https://cardona-zkevm.polygonscan.com/api",
+          browserURL: "https://cardona-zkevm.polygonscan.com/",
+        },
+      },
+      {
         network: "comboTestnet",
         chainId: 91715,
         urls: {
@@ -645,6 +827,15 @@ const config: HardhatUserConfig = {
           apiURL:
             "https://api.routescan.io/v2/network/testnet/evm/168587773/etherscan",
           browserURL: "https://testnet.blastscan.io",
+        },
+      },
+      {
+        network: "blastMainnet",
+        chainId: 81457,
+        urls: {
+          apiURL:
+            "https://api.routescan.io/v2/network/testnet/evm/81457/etherscan",
+          browserURL: "https://blastscan.io",
         },
       },
       {

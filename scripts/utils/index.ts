@@ -35,13 +35,14 @@ type DeploymentSaltsType = {
   SINGELTON_PAYMASTER: string;
   ECDSA_REGISTRY_MODULE: string;
   MULTICHAIN_VALIDATOR_MODULE: string;
+  MULTIOWNED_ECDSA_VALIDATOR_MODULE: string;
   PASSKEY_MODULE: string;
   ACCOUNT_RECOVERY_MODULE: string;
   SESSION_KEY_MANAGER_MODULE: string;
-  SESSION_KEY_MANAGER_MODULE_V2: string;
+  SESSION_KEY_MANAGER_MODULE_V2: string; // this is not Hybrid session key maanger (aka V2 redesign)
   BATCHED_SESSION_ROUTER_MODULE: string;
   ERC20_SESSION_VALIDATION_MODULE: string;
-  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE: string;
+  ABI_SESSION_VALIDATION_MODULE: string;
   ADDRESS_RESOLVER: string;
 };
 
@@ -52,15 +53,17 @@ export const DEPLOYMENT_SALTS_DEV: DeploymentSaltsType = {
   SINGELTON_PAYMASTER: "DEVX_SINGLETON_PAYMASTER_V1_21082024",
   ECDSA_REGISTRY_MODULE: "DEVX_ECDSA_REGISTRY_MODULE_V0_21082023",
   MULTICHAIN_VALIDATOR_MODULE: "DEVX_MULTICHAIN_VALIDATOR_MODULE_V0_21082023",
-  PASSKEY_MODULE: "DEVX_PASSKEY_MODULE_V0_21082023",
-  ACCOUNT_RECOVERY_MODULE: "DEVX_ACCOUNT_RECOVERY_MODULE_V0_22012024",
+  MULTIOWNED_ECDSA_VALIDATOR_MODULE:
+    "DEVX_MULTIOWNED_VALIDATOR_MODULE_V0_19062024",
+  PASSKEY_MODULE: "DEVX_PASSKEY_MODULE_V1_20022024",
+  ACCOUNT_RECOVERY_MODULE: "DEVX_ACCOUNT_RECOVERY_MODULE_V1_20022024",
   SESSION_KEY_MANAGER_MODULE: "DEVX_SESSION_KEY_MANAGER_MODULE_V1_05092023",
-  SESSION_KEY_MANAGER_MODULE_V2: "DEVX_SESSION_KEY_MANAGER_MODULE_V2",
+  SESSION_KEY_MANAGER_MODULE_V2: "DEVX_SESSION_KEY_MANAGER_MODULE_V2", // this is not Hybrid session key maanger (aka V2 redesign)
   BATCHED_SESSION_ROUTER_MODULE: "DEVX_BATCHED_SESSION_ROUTER_MODULE_V3",
   ERC20_SESSION_VALIDATION_MODULE:
     "DEVX_ERC20_SESSION_VALIDATION_MODULE_V1_05092023",
-  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE:
-    "DEVX_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V0_21082023",
+  ABI_SESSION_VALIDATION_MODULE:
+    "DEVX_ABI_SESSION_VALIDATION_MODULE_V1_20022024",
   ADDRESS_RESOLVER: "DEVX_ADDRESS_RESOLVER_V1_08112023",
 };
 
@@ -72,18 +75,23 @@ export const DEPLOYMENT_SALTS_PROD: DeploymentSaltsType = {
   ECDSA_REGISTRY_MODULE: "PROD_ECDSA_REGISTRY_MODULE_V1_22082023_ypI3tHh",
   MULTICHAIN_VALIDATOR_MODULE:
     "PROD_MULTICHAIN_VALIDATOR_MODULE_V1_22082023_vdQZbfh",
-  PASSKEY_MODULE: "PROD_PASSKEY_MODULE_V1_22082023_n0nz9WE",
-  ACCOUNT_RECOVERY_MODULE: "PROD_ACCOUNT_RECOVERY_MODULE_V1_22012024_qcebiPu", // 0x00000ab16CCBb788662929d3F9899FA1626B2122
+  MULTIOWNED_ECDSA_VALIDATOR_MODULE:
+    "PROD_MULTIOWNED_VALIDATOR_MODULE_V0_19062024_MSn4c3j", // 0x00000c82d837331e2cbe997c241316a76364d7e9
+  PASSKEY_MODULE: "PROD_PASSKEY_MODULE_V1_20022024_S6qJVK5", // 0x00000c99cbbb3b0626db6ac76c00ef1839f35773
+  ACCOUNT_RECOVERY_MODULE: "PROD_ACCOUNT_RECOVERY_MODULE_V1_2002024_CYYRFyz", // 0x0000070c210e86261752e5b5656db4cff9b5f38b
   SESSION_KEY_MANAGER_MODULE:
     "PROD_SESSION_KEY_MANAGER_MODULE_V2_05092023_N2WXNDk",
+  // this is not Hybrid session key maanger (aka V2 redesign)
   SESSION_KEY_MANAGER_MODULE_V2:
     "PROD_SESSION_KEY_MANAGER_MODULE_V2_02092023_lgskxU1", // 0x000002fbffedd9b33f4e7156f2de8d48945e7489
+  // V3 Only for internal tracking. i.e 3rd time deployment
   BATCHED_SESSION_ROUTER_MODULE:
     "PROD_BATCHED_SESSION_ROUTER_MODULE_V3_soDi8rh", // 0x00000d09967410f8c76752a104c9848b57ebba55
+  // V2 Only for internal tracking. i.e 2nd time deployment
   ERC20_SESSION_VALIDATION_MODULE:
     "PROD_ERC20_SESSION_VALIDATION_MODULE_V2_05092023NdquNFM",
-  SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE:
-    "PROD_SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE_V1_22082023_6X7yarN",
+  ABI_SESSION_VALIDATION_MODULE:
+    "PROD_ABI_SESSION_VALIDATION_MODULE_V1_20022024_BqKWZbv", // 0x000006bc2ecdae38113929293d241cf252d91861
   ADDRESS_RESOLVER: "PROD_ADDRESS_RESOLVER_V1_08112023_DZKffkv", // 0x00000e81673606e07fc79ce5f1b3b26957844468
 };
 
@@ -94,6 +102,7 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
 > = {
   // Testnets
   80001: { gasPrice: parseUnits("100", "gwei") },
+  80002: { gasPrice: parseUnits("100", "gwei") },
   97: { gasPrice: parseUnits("5", "gwei") },
   5: {
     maxPriorityFeePerGas: parseUnits("1", "gwei"),
@@ -107,6 +116,9 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
     gasPrice: parseUnits("0.1", "gwei"),
   },
   420: {
+    gasPrice: parseUnits("0.3", "gwei"),
+  },
+  11155420: {
     gasPrice: parseUnits("0.3", "gwei"),
   },
   43113: {
@@ -157,16 +169,27 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   },
   3441005: {},
   421614: {},
+  10200: { gasPrice: parseUnits("5", "gwei") },
+  195: { gasPrice: parseUnits("110", "gwei") },
+  167009: { gasPrice: parseUnits("1", "gwei") },
+  997: { gasPrice: parseUnits("1", "gwei") },
+  2810: { gasPrice: parseUnits("3", "gwei") },
+  3799: { gasPrice: parseUnits("1", "gwei") },
+  713715: { gasPrice: parseUnits("1", "gwei") },
+  80084: { gasPrice: parseUnits("1", "gwei") },
+  701: { gasPrice: parseUnits("1", "gwei") },
 
   // Mainnets
   137: {
-    // maxPriorityFeePerGas: parseUnits("50", "gwei")
+    maxFeePerGas: parseUnits("250", "gwei"),
+    maxPriorityFeePerGas: parseUnits("50", "gwei"),
   },
   56: {
     // maxPriorityFeePerGas: parseUnits("10", "gwei")
   },
   1: {
-    // maxPriorityFeePerGas: parseUnits("30", "gwei")
+    maxPriorityFeePerGas: parseUnits("2.5", "gwei"),
+    maxFeePerGas: parseUnits("300", "gwei"),
   },
   42161: { gasPrice: parseUnits("1", "gwei") },
   42170: {
@@ -181,6 +204,7 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   8453: { gasPrice: parseUnits("1.5", "gwei") },
   204: { gasPrice: parseUnits("0.1", "gwei") },
   5000: { gasPrice: parseUnits("1", "gwei") },
+  5003: { gasPrice: parseUnits("1", "gwei") },
   1284: { gasPrice: parseUnits("200", "gwei") },
   1287: { gasPrice: parseUnits("200", "gwei") },
   592: {
@@ -194,11 +218,27 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
     // gasPrice: parseUnits("10", "gwei"),
   },
   169: {},
-  168587773: { gasPrice: parseUnits("2", "gwei") },
+  168587773: { gasPrice: parseUnits("5", "gwei") },
+  81457: {
+    maxFeePerGas: parseUnits("5", "gwei"),
+    maxPriorityFeePerGas: parseUnits("3", "gwei"),
+  },
   534351: { gasPrice: parseUnits("1", "gwei") },
   80085: { gasPrice: parseUnits("0.001", "gwei") },
   534352: { gasPrice: parseUnits("1", "gwei") },
   56400: { gasPrice: parseUnits("150", "gwei") },
+  4653: {
+    gasPrice: parseUnits("1", "gwei"),
+  },
+  27827: { gasPrice: parseUnits("30", "gwei") },
+  666666666: { gasPrice: parseUnits("10", "gwei") },
+  8101902: { gasPrice: parseUnits("5", "gwei") },
+  2442: { gasPrice: parseUnits("1", "gwei") },
+  100: { gasPrice: parseUnits("10", "gwei") },
+  196: { gasPrice: parseUnits("25", "gwei") },
+  167000: { gasPrice: parseUnits("0.2", "gwei") },
+  1329: { gasPrice: parseUnits("1", "gwei") },
+  5845: { gasPrice: parseUnits("1", "gwei") },
 };
 
 export type StakingConfig = {
@@ -210,6 +250,10 @@ export type StakingConfig = {
 export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
   // Testnets
   80001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  80002: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -230,6 +274,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   420: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  11155420: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -281,6 +329,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
+  5003: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
   81: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
@@ -313,10 +365,26 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
+  195: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  10200: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
   // Mainnets
   137: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"), // 1 MATIC = $0.5788
+  },
+  196: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  100: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
   },
   56: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -386,7 +454,31 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"),
   },
+  81457: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
   534351: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
+  27827: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  4653: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
+  666666666: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("100"),
+  },
+  8101902: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("1000"),
+  },
+  2442: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.001"),
   },
@@ -396,6 +488,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
 export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   // Testnets
   80001: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  80002: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -416,6 +512,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   420: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  11155420: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
@@ -463,6 +563,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
+  5003: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("226"), // 1 MNT = $0.444
+  },
   81: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
@@ -495,11 +599,30 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
-
+  8101902: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("1000"),
+  },
+  2442: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
+  195: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  10200: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
   // Mainnets
   137: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
-    stakeInWei: parseEther("173"), // 1 MATIC = $0.5788
+    stakeInWei: parseEther("0.001"), // 1 MATIC = $0.5788
+  },
+  196: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
   },
   56: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
@@ -569,9 +692,29 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
   },
+  81457: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
   534351: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
+  },
+  27827: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("7"), // 0.1 ETH to AVAX
+  },
+  4653: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
+  666666666: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("100"),
+  },
+  100: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("1"),
   },
 };
 
@@ -659,6 +802,7 @@ export const deployContract = async (
   }
   const { hash, wait } = await deployerInstance.deploy(salt, contractByteCode, {
     ...deploymentGasPrice,
+    gasLimit: 5000000,
   });
 
   console.log(`Submitted transaction ${hash} for deployment`);

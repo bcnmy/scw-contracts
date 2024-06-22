@@ -23,7 +23,8 @@ import {
   SessionKeyManager__factory,
   SmartAccountFactory__factory,
   SmartAccount__factory,
-  SmartContractOwnershipRegistryModule__factory,
+  ABISessionValidationModule__factory,
+  MultiOwnedECDSAModule__factory,
 } from "../typechain";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
@@ -63,9 +64,20 @@ const entryPointAddress =
   process.env.ENTRY_POINT_ADDRESS ||
   "0x5FF137D4b0FDCD49DcA30c7CF57E578a026d2789";
 
+const EXECUTE_SELECTOR = "0xb61d27f6";
+const EXECUTE_OPTIMIZED_SELECTOR = "0x0000189a";
+
 let baseImpAddress = "0x0000002512019Dafb59528B82CB92D3c5D2423aC";
 const provider = ethers.provider;
 const contractsDeployed: Record<string, string> = {};
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(() => {
+      resolve();
+    }, ms);
+  });
+}
 
 export async function deployGeneric(
   deployerInstance: Deployer,
@@ -234,13 +246,26 @@ async function deployPasskeyModule(deployerInstance: Deployer) {
   );
 }
 
+async function deployMultiOwnedECDSAModule(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.MULTIOWNED_ECDSA_VALIDATOR_MODULE,
+    `${MultiOwnedECDSAModule__factory.bytecode}`,
+    "MultiOwnedECDSAModule",
+    []
+  );
+}
+
 async function deployAccountRecoveryModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
     DEPLOYMENT_SALTS.ACCOUNT_RECOVERY_MODULE,
-    `${AccountRecoveryModule__factory.bytecode}`,
+    `${AccountRecoveryModule__factory.bytecode}${encodeParam(
+      "bytes4",
+      EXECUTE_SELECTOR
+    ).slice(2)}${encodeParam("bytes4", EXECUTE_OPTIMIZED_SELECTOR).slice(2)}`,
     "AccountRecoveryModule",
-    []
+    [EXECUTE_SELECTOR, EXECUTE_OPTIMIZED_SELECTOR]
   );
 }
 
@@ -274,14 +299,12 @@ async function deployErc20SessionValidationModule(deployerInstance: Deployer) {
   );
 }
 
-async function deploySmartContractOwnershipRegistryModule(
-  deployerInstance: Deployer
-) {
+async function deployAbiSessionValidationModule(deployerInstance: Deployer) {
   await deployGeneric(
     deployerInstance,
-    DEPLOYMENT_SALTS.SMART_CONTRACT_OWNERSHIP_REGISTRY_MODULE,
-    `${SmartContractOwnershipRegistryModule__factory.bytecode}`,
-    "SmartContractOwnershipRegistryModule",
+    DEPLOYMENT_SALTS.ABI_SESSION_VALIDATION_MODULE,
+    `${ABISessionValidationModule__factory.bytecode}`,
+    "ABISessionValidationModule",
     []
   );
 }
@@ -393,24 +416,39 @@ export async function mainDeploy(): Promise<Record<string, string>> {
 
   console.log("=========================================");
   await deployBaseWalletImpContract(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployWalletFactoryContract(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployEcdsaOwnershipRegistryModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployMultichainValidatorModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployPasskeyModule(deployerInstance);
+  await delay(5000);
+  console.log("=========================================");
+  await deployMultiOwnedECDSAModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployAccountRecoveryModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deploySessionKeyManagerModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployBatchedSessionRouterModule(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
   await deployErc20SessionValidationModule(deployerInstance);
   console.log("=========================================");
+  await deployAbiSessionValidationModule(deployerInstance);
+  await delay(5000);
+  console.log("=========================================");
   await deployAddressResolver(deployerInstance);
+  await delay(5000);
   console.log("=========================================");
 
   console.log(
