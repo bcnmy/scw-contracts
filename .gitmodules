@@ -4,3 +4,6 @@
 [submodule "lib/registry"]
 	path = lib/registry
 	url = https://github.com/rhinestonewtf/registry
+[submodule "lib/account-abstraction"]
+	path = lib/account-abstraction
+	url = https://github.com/eth-infinitism/account-abstraction
