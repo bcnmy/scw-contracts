@@ -1,14 +1,20 @@
 import * as dotenv from "dotenv";
 
-import { HardhatUserConfig, task } from "hardhat/config";
-import "@nomiclabs/hardhat-etherscan";
-import "@nomiclabs/hardhat-waffle";
-import "@typechain/hardhat";
 import "hardhat-gas-reporter";
 import "solidity-coverage";
-import "hardhat-deploy";
-import "@nomiclabs/hardhat-ethers";
 import "hardhat-dependency-compiler";
+import "@nomiclabs/hardhat-waffle";
+import "@typechain/hardhat";
+import { HardhatUserConfig, task } from "hardhat/config";
+import "hardhat-deploy";
+import "@nomiclabs/hardhat-etherscan";
+import {
+  VECHAIN_URL_MAINNET,
+  VECHAIN_URL_SOLO,
+  VECHAIN_URL_TESTNET,
+} from "@vechain/hardhat-vechain";
+import "@vechain/hardhat-ethers";
+import "@vechain/hardhat-web3";
 import { parseUnits } from "ethers/lib/utils";
 
 const walletUtils = require("./walletUtils");
@@ -385,6 +391,18 @@ const config: HardhatUserConfig = {
       url: "https://subnets.avax.network/testnetzer/testnet/rpc",
       accounts: [process.env.PRIVATE_KEY ?? ""], // you should have this in env
       chainId: 56400,
+    },
+    vechainSolo: {
+      url: VECHAIN_URL_SOLO,
+      accounts: hardhatAccounts,
+    },
+    vechainTestnet: {
+      url: VECHAIN_URL_TESTNET,
+      accounts: hardhatAccounts,
+    },
+    vechainMainnet: {
+      url: VECHAIN_URL_MAINNET,
+      accounts: hardhatAccounts,
     },
   },
   gasReporter: {
