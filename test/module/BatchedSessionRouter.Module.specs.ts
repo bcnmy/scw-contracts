@@ -16,6 +16,7 @@ import {
 } from "../utils/setupHelper";
 import { computeAddress, defaultAbiCoder } from "ethers/lib/utils";
 import { ERC20SessionValidationModule } from "../../typechain";
+import { expectRevertWithCustomErrorAndArgs } from "../utils/testUtils";
 
 describe("SessionKey: Batched Session Router", async () => {
   const [deployer, smartAccountOwner, alice, sessionKey, nonAuthSessionKey] =
@@ -215,11 +216,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: SR Invalid Selector");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: SR Invalid Selector",
+      ])
+    );
   });
 
   it("Should revert if padded signature is in wrong format", async () => {
@@ -308,11 +311,13 @@ describe("SessionKey: Batched Session Router", async () => {
     );
     userOp.signature = signatureWithModuleAddress;
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted (or OOG)");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted (or OOG)",
+      ])
+    );
   });
 
   it("Should revert when signed with a session key not matching with session keys enabled for SVMs involved", async () => {
@@ -378,11 +383,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA24 signature error");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA24 signature error",
+      ])
+    );
   });
 
   it("Should revert when sessionData array is empty", async () => {
@@ -423,11 +430,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: Lengths mismatch");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: Lengths mismatch",
+      ])
+    );
   });
 
   it("Should revert if not enough session datas provided", async () => {
@@ -481,11 +490,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: Lengths mismatch");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: Lengths mismatch",
+      ])
+    );
   });
 
   it("Should revert when at least one SVM permission is violated", async () => {
@@ -551,11 +562,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: ERC20SV Max Amount Exceeded");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: ERC20SV Max Amount Exceeded",
+      ])
+    );
   });
 
   it("Should revert if at least one session key is expired or not due", async () => {
@@ -625,11 +638,13 @@ describe("SessionKey: Batched Session Router", async () => {
       validUntilForMockProtocol + 100,
     ]);
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA22 expired or not due");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA22 expired or not due",
+      ])
+    );
   });
 
   it("should revert if validUntil provided in the sig is wrong", async () => {
@@ -697,11 +712,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: SessionNotApproved");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: SessionNotApproved",
+      ])
+    );
   });
 
   it("should revert if validAfter provided in the sig is wrong", async () => {
@@ -769,11 +786,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: SessionNotApproved");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: SessionNotApproved",
+      ])
+    );
   });
 
   it("should revert if SVM address provided in the sig is wrong", async () => {
@@ -842,11 +861,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: SessionNotApproved");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: SessionNotApproved",
+      ])
+    );
   });
 
   it("should revert if Session Key Manager address provided in the sig is wrong", async () => {
@@ -916,11 +937,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: SR Invalid SKM");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: SR Invalid SKM",
+      ])
+    );
   });
 
   it("should revert if session key data provided in the sig is wrong", async () => {
@@ -996,11 +1019,13 @@ describe("SessionKey: Batched Session Router", async () => {
       sessionRouter.address
     );
 
-    await expect(
-      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: SessionNotApproved");
+    await expectRevertWithCustomErrorAndArgs(
+      entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: SessionNotApproved",
+      ])
+    );
   });
 
   describe("validateUserOp() :", async () => {

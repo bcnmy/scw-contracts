@@ -14,7 +14,10 @@ import {
   getMockToken,
   getSmartAccountWithModule,
 } from "../utils/setupHelper";
-import { encodeTransfer } from "../utils/testUtils";
+import {
+  encodeTransfer,
+  expectRevertWithCustomErrorAndArgs,
+} from "../utils/testUtils";
 import { AddressZero } from "@ethersproject/constants";
 
 describe("ECDSA Registry Module: ", async () => {
@@ -138,10 +141,13 @@ describe("ECDSA Registry Module: ", async () => {
       );
 
       deploymentUserOp.signature = signatureWithModuleAddress;
-
-      await expect(entryPoint.handleOps([deploymentUserOp], charlie.address))
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA24 signature error");
+      await expectRevertWithCustomErrorAndArgs(
+        entryPoint.handleOps([deploymentUserOp], charlie.address),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA24 signature error",
+        ])
+      );
 
       await expect(
         ecdsaRegistryModule.getOwner(expectedSmartAccountAddress)
@@ -212,9 +218,13 @@ describe("ECDSA Registry Module: ", async () => {
 
       deploymentUserOp.signature = signatureWithModuleAddress;
 
-      await expect(entryPoint.handleOps([deploymentUserOp], charlie.address))
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA24 signature error");
+      await expectRevertWithCustomErrorAndArgs(
+        entryPoint.handleOps([deploymentUserOp], charlie.address),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA24 signature error",
+        ])
+      );
 
       await expect(
         ecdsaRegistryModule.getOwner(expectedSmartAccountAddress)

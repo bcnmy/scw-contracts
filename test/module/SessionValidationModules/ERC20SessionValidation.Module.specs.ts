@@ -7,7 +7,10 @@ import {
 } from "../../utils/sessionKey";
 import { ethers, deployments, waffle } from "hardhat";
 import { makeEcdsaModuleUserOp, fillAndSign } from "../../utils/userOp";
-import { encodeTransfer } from "../../utils/testUtils";
+import {
+  encodeTransfer,
+  expectRevertWithCustomErrorAndArgs,
+} from "../../utils/testUtils";
 import {
   getEntryPoint,
   getSmartAccountImplementation,
@@ -19,6 +22,7 @@ import {
 } from "../../utils/setupHelper";
 import { BigNumber } from "ethers";
 import { UserOperation } from "../../utils/userOperation";
+import exp from "constants";
 
 describe("SessionKey: ERC20 Session Validation Module", async () => {
   const [
@@ -182,13 +186,15 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
         merkleTree,
       }
     );
-    await expect(
+    await expectRevertWithCustomErrorAndArgs(
       entryPoint.handleOps([transferUserOp], alice.address, {
         gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: ERC20SV Wrong Token");
+      }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: ERC20SV Wrong Token",
+      ])
+    );
     expect(await mockToken2.balanceOf(charlie.address)).to.equal(
       charlieToken2BalanceBefore
     );
@@ -225,13 +231,15 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
         merkleTree,
       }
     );
-    await expect(
+    await expectRevertWithCustomErrorAndArgs(
       entryPoint.handleOps([transferUserOp], alice.address, {
         gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: ERC20SV Non Zero Value");
+      }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: ERC20SV Non Zero Value",
+      ])
+    );
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore
     );
@@ -269,13 +277,16 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
         merkleTree,
       }
     );
-    await expect(
+    await expectRevertWithCustomErrorAndArgs(
       entryPoint.handleOps([transferUserOp], alice.address, {
         gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: ERC20SV Wrong Recipient");
+      }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: ERC20SV Wrong Recipient",
+      ])
+    );
+
     expect(await mockToken.balanceOf(wrongRecipient)).to.equal(
       wrongRecipientTokenBalanceBefore
     );
@@ -312,13 +323,15 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
         merkleTree,
       }
     );
-    await expect(
+    await expectRevertWithCustomErrorAndArgs(
       entryPoint.handleOps([transferUserOp], alice.address, {
         gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: ERC20SV Max Amount Exceeded");
+      }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: ERC20SV Max Amount Exceeded",
+      ])
+    );
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore
     );
@@ -359,13 +372,15 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       merkleTree.getHexProof(ethers.utils.keccak256(leafData))
     );
 
-    await expect(
+    await expectRevertWithCustomErrorAndArgs(
       entryPoint.handleOps([transferUserOp], alice.address, {
         gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA24 signature error");
+      }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA24 signature error",
+      ])
+    );
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore
     );
@@ -443,13 +458,15 @@ describe("SessionKey: ERC20 Session Validation Module", async () => {
       charlie.address
     );
 
-    await expect(
+    await expectRevertWithCustomErrorAndArgs(
       entryPoint.handleOps([transferUserOp], alice.address, {
         gasLimit: 10000000,
-      })
-    )
-      .to.be.revertedWith("FailedOp")
-      .withArgs(0, "AA23 reverted: ERC20SV Invalid Selector");
+      }),
+      entryPoint.interface.encodeErrorResult("FailedOp", [
+        0,
+        "AA23 reverted: ERC20SV Invalid Selector",
+      ])
+    );
     expect(await mockToken.balanceOf(charlie.address)).to.equal(
       charlieTokenBalanceBefore
     );

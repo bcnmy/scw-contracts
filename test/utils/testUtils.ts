@@ -8,6 +8,7 @@ import {
 } from "ethers/lib/utils";
 import {
   BigNumber,
+  ContractTransaction,
   // BigNumberish,
   // Contract,
   // ContractReceipt,
@@ -23,6 +24,8 @@ import {
 // import { expect } from "chai";
 // import { debugTransaction } from "./debugTx";
 import { keccak256 } from "ethereumjs-util";
+import { expect } from "chai";
+import exp from "constants";
 
 export const AddressZero = ethers.constants.AddressZero;
 export const HashZero = ethers.constants.HashZero;
@@ -166,4 +169,19 @@ export const encodeSignMessage = (data: string): string => {
   return SignMessageLibInterface.encodeFunctionData("signMessageOnchain", [
     data,
   ]);
+};
+
+export const expectRevertWithCustomErrorAndArgs = async (
+  tx: Promise<ContractTransaction>,
+  encodedError: string
+) => {
+  let errorThrown = false;
+  try {
+    await tx;
+  } catch (err) {
+    const revertReason = (err as any).data ?? (err as any).error.data;
+    expect(revertReason).to.equal(encodedError);
+    errorThrown = true;
+  }
+  expect(errorThrown).to.be.true;
 };

@@ -11,6 +11,7 @@ import {
 } from "../utils/setupHelper";
 import { makeEcdsaModuleUserOp } from "../utils/userOp";
 import { AddressZero } from "@ethersproject/constants";
+import { expectRevertWithCustomErrorAndArgs } from "../utils/testUtils";
 
 describe("Smart Account Setup", async () => {
   const [deployer, smartAccountOwner, alice, bob, verifiedSigner] =
@@ -121,9 +122,12 @@ describe("Smart Account Setup", async () => {
     it("Can not be called not from EntryPoint or Self", async () => {
       const { smartAccountImplementation, userSA } = await setupTests();
 
-      await expect(userSA.updateImplementation(AddressZero))
-        .to.be.revertedWith("CallerIsNotEntryPointOrSelf")
-        .withArgs(deployer.address);
+      await expectRevertWithCustomErrorAndArgs(
+        userSA.updateImplementation(AddressZero),
+        userSA.interface.encodeErrorResult("CallerIsNotEntryPointOrSelf", [
+          deployer.address,
+        ])
+      );
       expect(await userSA.getImplementation()).to.equal(
         smartAccountImplementation.address
       );
@@ -180,9 +184,12 @@ describe("Smart Account Setup", async () => {
       const { userSA } = await setupTests();
       const prevHandler = await userSA.getFallbackHandler();
 
-      await expect(userSA.setFallbackHandler(AddressZero))
-        .to.be.revertedWith("CallerIsNotEntryPointOrSelf")
-        .withArgs(deployer.address);
+      await expectRevertWithCustomErrorAndArgs(
+        userSA.setFallbackHandler(AddressZero),
+        userSA.interface.encodeErrorResult("CallerIsNotEntryPointOrSelf", [
+          deployer.address,
+        ])
+      );
       expect(await userSA.getFallbackHandler()).to.equal(prevHandler);
     });
 

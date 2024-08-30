@@ -6,7 +6,10 @@ import {
   enableNewTreeForSmartAccountViaEcdsa,
   addLeavesForSmartAccountViaEcdsa,
 } from "../utils/sessionKey";
-import { encodeTransfer } from "../utils/testUtils";
+import {
+  encodeTransfer,
+  expectRevertWithCustomErrorAndArgs,
+} from "../utils/testUtils";
 import { hexZeroPad, hexConcat } from "ethers/lib/utils";
 import {
   getEntryPoint,
@@ -260,13 +263,15 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(
         charlie.address
       );
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([transferUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: SessionNotApproved");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA23 reverted: SessionNotApproved",
+        ])
+      );
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
       );
@@ -308,13 +313,15 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(
         charlie.address
       );
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([transferUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: SessionNotApproved");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA23 reverted: SessionNotApproved",
+        ])
+      );
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
       );
@@ -355,13 +362,15 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(
         charlie.address
       );
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([transferUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: SessionNotApproved");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA23 reverted: SessionNotApproved",
+        ])
+      );
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
       );
@@ -419,13 +428,15 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(
         charlie.address
       );
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([transferUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA22 expired or not due");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA22 expired or not due",
+        ])
+      );
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
       );
@@ -484,13 +495,15 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(
         charlie.address
       );
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([transferUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA22 expired or not due");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA22 expired or not due",
+        ])
+      );
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
       );
@@ -533,13 +546,15 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(
         charlie.address
       );
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([transferUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: SessionNotApproved");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA23 reverted: SessionNotApproved",
+        ])
+      );
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
       );
@@ -580,13 +595,15 @@ describe("SessionKey: SessionKey Manager Module", async () => {
       const charlieTokenBalanceBefore = await mockToken.balanceOf(
         charlie.address
       );
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([transferUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: SessionNotApproved");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA23 reverted: SessionNotApproved",
+        ])
+      );
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
       );

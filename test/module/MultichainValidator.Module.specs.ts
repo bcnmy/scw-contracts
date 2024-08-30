@@ -6,7 +6,10 @@ import {
   makeMultichainEcdsaModuleUserOp,
 } from "../utils/userOp";
 import { getERC20SessionKeyParams } from "../utils/sessionKey";
-import { encodeTransfer } from "../utils/testUtils";
+import {
+  encodeTransfer,
+  expectRevertWithCustomErrorAndArgs,
+} from "../utils/testUtils";
 import { defaultAbiCoder, hexZeroPad, hexConcat } from "ethers/lib/utils";
 import {
   getEntryPoint,
@@ -299,13 +302,15 @@ describe("MultichainValidator Module", async () => {
         validAfter
       );
 
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([sendTokenMultichainUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA22 expired or not due");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA22 expired or not due",
+        ])
+      );
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
@@ -342,13 +347,15 @@ describe("MultichainValidator Module", async () => {
         validAfter
       );
 
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([sendTokenMultichainUserOp], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA22 expired or not due");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA22 expired or not due",
+        ])
+      );
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
@@ -410,13 +417,16 @@ describe("MultichainValidator Module", async () => {
 
       sendTokenMultichainUserOp2.nonce = sendTokenMultichainUserOp.nonce;
 
-      await expect(
+      await expectRevertWithCustomErrorAndArgs(
         entryPoint.handleOps([sendTokenMultichainUserOp2], alice.address, {
           gasLimit: 10000000,
-        })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: Invalid UserOp");
+        }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+
+          "AA23 reverted: Invalid UserOp",
+        ])
+      );
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceAfterFirstUserOp
@@ -508,11 +518,13 @@ describe("MultichainValidator Module", async () => {
       userOp.signature = signatureWithModuleAddress;
 
       // thus we expect userOp to not be validated
-      await expect(
-        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA24 signature error");
+      await expectRevertWithCustomErrorAndArgs(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA24 signature error",
+        ])
+      );
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
@@ -591,11 +603,13 @@ describe("MultichainValidator Module", async () => {
 
       userOp.signature = signatureWithModuleAddress;
 
-      await expect(
-        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA23 reverted: Invalid UserOp");
+      await expectRevertWithCustomErrorAndArgs(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA23 reverted: Invalid UserOp",
+        ])
+      );
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
@@ -632,11 +646,13 @@ describe("MultichainValidator Module", async () => {
         multichainECDSAValidator.address
       );
 
-      await expect(
-        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 })
-      )
-        .to.be.revertedWith("FailedOp")
-        .withArgs(0, "AA24 signature error");
+      await expectRevertWithCustomErrorAndArgs(
+        entryPoint.handleOps([userOp], alice.address, { gasLimit: 10000000 }),
+        entryPoint.interface.encodeErrorResult("FailedOp", [
+          0,
+          "AA24 signature error",
+        ])
+      );
 
       expect(await mockToken.balanceOf(charlie.address)).to.equal(
         charlieTokenBalanceBefore
