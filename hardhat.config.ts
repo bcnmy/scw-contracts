@@ -554,6 +554,21 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 1740,
     },
+    metalL2Mainnet: {
+      url: "https://rpc-metal-mainnet-0.t.conduit.xyz/4nvN9tL8pppXKHkjWrT128yrFUMvXBxZL",
+      accounts: hardhatAccounts,
+      chainId: 1750,
+    },
+    metalL0Testnet: {
+      url: "https://tahoe.metalblockchain.org/ext/bc/C/rpc",
+      accounts: hardhatAccounts,
+      chainId: 381932,
+    },
+    metalL0Mainnet: {
+      url: "https://api.metalblockchain.org/ext/bc/C/rpc",
+      accounts: hardhatAccounts,
+      chainId: 381931,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

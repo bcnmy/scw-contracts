@@ -25,6 +25,7 @@ import {
   SmartAccount__factory,
   ABISessionValidationModule__factory,
   MultiOwnedECDSAModule__factory,
+  BiconomySdkNft__factory,
 } from "../typechain";
 import { EntryPoint__factory } from "@account-abstraction/contracts";
 import { formatEther, isAddress } from "ethers/lib/utils";
@@ -349,6 +350,16 @@ async function deployAddressResolver(deployerInstance: Deployer) {
   );
 }
 
+async function deployBiconomySdkNFT(deployerInstance: Deployer) {
+  await deployGeneric(
+    deployerInstance,
+    DEPLOYMENT_SALTS.BICONOMY_SDK_NFT,
+    `${BiconomySdkNft__factory.bytecode}`,
+    "BiconomySDKNFT",
+    []
+  );
+}
+
 /*
  *  This function is added to support the flow with pre-deploying the deployer contract
  *  using the `deployer-contract.deploy.ts` script.
@@ -449,6 +460,10 @@ export async function mainDeploy(): Promise<Record<string, string>> {
   console.log("=========================================");
   await deployAddressResolver(deployerInstance);
   await delay(5000);
+  // 1. NFT // for every chain
+  await deployBiconomySdkNFT(deployerInstance);
+  await delay(5000);
+
   console.log("=========================================");
 
   console.log(

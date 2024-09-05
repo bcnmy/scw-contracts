@@ -45,6 +45,8 @@ type DeploymentSaltsType = {
   ERC20_SESSION_VALIDATION_MODULE: string;
   ABI_SESSION_VALIDATION_MODULE: string;
   ADDRESS_RESOLVER: string;
+  BICONOMY_SDK_NFT: string;
+  BTPM_TEST_TOKEN: string;
 };
 
 // Dev Salts
@@ -67,6 +69,8 @@ export const DEPLOYMENT_SALTS_DEV: DeploymentSaltsType = {
   ABI_SESSION_VALIDATION_MODULE:
     "DEVX_ABI_SESSION_VALIDATION_MODULE_V1_20022024",
   ADDRESS_RESOLVER: "DEVX_ADDRESS_RESOLVER_V1_08112023",
+  BICONOMY_SDK_NFT: "DEVX_BICONOMY_SDK_NFT_V1_05092024",
+  BTPM_TEST_TOKEN: "DEVX_BTPM_TEST_TOKEN_V1_05092024",
 };
 
 // Prod Salts
@@ -96,6 +100,8 @@ export const DEPLOYMENT_SALTS_PROD: DeploymentSaltsType = {
   ABI_SESSION_VALIDATION_MODULE:
     "PROD_ABI_SESSION_VALIDATION_MODULE_V1_20022024_BqKWZbv", // 0x000006bc2ecdae38113929293d241cf252d91861
   ADDRESS_RESOLVER: "PROD_ADDRESS_RESOLVER_V1_08112023_DZKffkv", // 0x00000e81673606e07fc79ce5f1b3b26957844468
+  BICONOMY_SDK_NFT: "PROD_BICONOMY_SDK_NFT_V1_05092024_MZPYRgb", // 0x0005e249b9566c26c701412ae21be3910da71318
+  BTPM_TEST_TOKEN: "PROD_BTPM_TEST_TOKEN_V1_05092024_CUBHJix", // 0x0006be192b4e06770eaa624ae7648dbf9051221c
 };
 
 export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
@@ -184,7 +190,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   701: { gasPrice: parseUnits("1", "gwei") },
   28882: { gasPrice: parseUnits("0.001", "gwei") },
   1802203764: { gasPrice: parseUnits("2", "gwei") },
-
+  1740: { gasPrice: parseUnits("5", "gwei") },
+  381932: { gasPrice: parseUnits("35", "gwei") },
   // Mainnets
   137: {
     maxFeePerGas: parseUnits("250", "gwei"),
@@ -247,6 +254,8 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   5845: { gasPrice: parseUnits("1", "gwei") },
   995: { gasPrice: parseUnits("50", "gwei") },
   288: { gasPrice: parseUnits("100", "wei") },
+  1750: { gasPrice: parseUnits("1000", "wei") },
+  381931: { gasPrice: parseUnits("35", "gwei") },
 };
 
 export type StakingConfig = {
@@ -499,6 +508,14 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
 // For testnets, we stake 0.1 <native tokens>. For mainnets, we use industry standard values.
 export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   // Testnets
+  381932: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.1"),
+  },
+  1740: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
   80084: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.01"),
@@ -757,6 +774,14 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.1"),
   },
   288: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  1750: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
+  381931: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.01"),
   },
