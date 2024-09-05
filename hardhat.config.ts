@@ -569,6 +569,16 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 381931,
     },
+    liskTestnet: {
+      url: "https://rpc.sepolia-api.lisk.com",
+      accounts: hardhatAccounts,
+      chainId: 4202,
+    },
+    liskMainnet: {
+      url: "https://rpc.api.lisk.com",
+      accounts: hardhatAccounts,
+      chainId: 1135,
+    },
   },
   gasReporter: {
     enabled: process.env.REPORT_GAS !== undefined,

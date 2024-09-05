@@ -192,6 +192,7 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   1802203764: { gasPrice: parseUnits("2", "gwei") },
   1740: { gasPrice: parseUnits("5", "gwei") },
   381932: { gasPrice: parseUnits("35", "gwei") },
+  4202: { gasPrice: parseUnits("1", "gwei") },
   // Mainnets
   137: {
     maxFeePerGas: parseUnits("250", "gwei"),
@@ -256,6 +257,7 @@ export const DEPLOYMENT_CHAIN_GAS_PRICES: Record<
   288: { gasPrice: parseUnits("100", "wei") },
   1750: { gasPrice: parseUnits("1000", "wei") },
   381931: { gasPrice: parseUnits("35", "gwei") },
+  1135: { gasPrice: parseUnits("1", "gwei") },
 };
 
 export type StakingConfig = {
@@ -508,6 +510,10 @@ export const factoryStakeConfigDevx: Record<number, StakingConfig> = {
 // For testnets, we stake 0.1 <native tokens>. For mainnets, we use industry standard values.
 export const factoryStakeConfigProd: Record<number, StakingConfig> = {
   // Testnets
+  4202: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.001"),
+  },
   381932: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.1"),
@@ -782,6 +788,10 @@ export const factoryStakeConfigProd: Record<number, StakingConfig> = {
     stakeInWei: parseEther("0.001"),
   },
   381931: {
+    unstakeDelayInSec: 60 * 60 * 24, // 1 Day
+    stakeInWei: parseEther("0.01"),
+  },
+  1135: {
     unstakeDelayInSec: 60 * 60 * 24, // 1 Day
     stakeInWei: parseEther("0.01"),
   },
