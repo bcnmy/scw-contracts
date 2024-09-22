@@ -2,7 +2,7 @@
 pragma solidity 0.8.17;
 
 import {ISessionValidationModule} from "../../modules/SessionValidationModules/ISessionValidationModule.sol";
-import {UserOperation} from "../../modules/BaseAuthorizationModule.sol";
+import {UserOperation} from "@vechain/account-abstraction-contracts/interfaces/UserOperation.sol";
 import {ECDSA} from "@openzeppelin/contracts/utils/cryptography/ECDSA.sol";
 
 contract MockSessionValidationModule is ISessionValidationModule {

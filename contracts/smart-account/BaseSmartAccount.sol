@@ -5,11 +5,11 @@ pragma solidity 0.8.17;
 /* solhint-disable no-inline-assembly */
 /* solhint-disable reason-string */
 
-import {IAccount} from "@account-abstraction/contracts/interfaces/IAccount.sol";
-import {IEntryPoint} from "@account-abstraction/contracts/interfaces/IEntryPoint.sol";
-import {UserOperationLib, UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
+import {IAccount} from "@vechain/account-abstraction-contracts/interfaces/IAccount.sol";
+import {IEntryPoint} from "@vechain/account-abstraction-contracts/interfaces/IEntryPoint.sol";
+import {UserOperationLib, UserOperation} from "@vechain/account-abstraction-contracts/interfaces/UserOperation.sol";
 import {BaseSmartAccountErrors} from "./common/Errors.sol";
-import "@account-abstraction/contracts/core/Helpers.sol";
+import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 
 /**
  * Basic account implementation.
@@ -17,6 +17,10 @@ import "@account-abstraction/contracts/core/Helpers.sol";
  * Specific account implementation should inherit it and provide the account-specific logic
  */
 abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
+    // VTHO Token Information
+    address public constant VTHO_TOKEN_ADDRESS = 0x0000000000000000000000000000456E65726779;
+    IERC20 public constant VTHO_TOKEN_CONTRACT = IERC20(VTHO_TOKEN_ADDRESS);
+
     using UserOperationLib for UserOperation;
 
     //return value in case of signature failure, with no time-range.
@@ -81,12 +85,11 @@ abstract contract BaseSmartAccount is IAccount, BaseSmartAccountErrors {
      *  this value MAY be zero, in case there is enough deposit, or the userOp has a paymaster.
      */
     function _payPrefund(uint256 missingAccountFunds) internal virtual {
+        // Review how entry point deposit accounting works when VHTO is transferred
+        // Note: VTHO prior approval must have been set first
         if (missingAccountFunds != 0) {
-            payable(msg.sender).call{
-                value: missingAccountFunds,
-                gas: type(uint256).max
-            }("");
-            //ignore failure (its EntryPoint's job to verify, not account.)
+            // Deposit specified amount to EP for SA
+            entryPoint().depositAmountTo(address(this), missingAccountFunds);
         }
     }
 }

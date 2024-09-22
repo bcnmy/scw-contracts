@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.17;
+import {UserOperation} from "@vechain/account-abstraction-contracts/interfaces/UserOperation.sol";
 
-import {UserOperation} from "../BaseAuthorizationModule.sol";
 
 abstract contract ISessionValidationModule {
     // execute(address,uint256,bytes)

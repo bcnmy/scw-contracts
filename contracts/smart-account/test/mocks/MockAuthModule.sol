@@ -1,7 +1,8 @@
 // SPDX-License-Identifier: GPL-3.0
 pragma solidity 0.8.17;
 
-import {BaseAuthorizationModule, UserOperation} from "../../modules/BaseAuthorizationModule.sol";
+import {BaseAuthorizationModule} from "../../modules/BaseAuthorizationModule.sol";
+import {UserOperation} from "@vechain/account-abstraction-contracts/interfaces/UserOperation.sol";
 
 contract MockAuthModule is BaseAuthorizationModule {
     mapping(address => bytes) internal setupData;

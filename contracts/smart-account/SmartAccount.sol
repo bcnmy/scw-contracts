@@ -138,13 +138,13 @@ contract SmartAccount is
         bytes32 userOpHash,
         uint256 missingAccountFunds
     ) external virtual override returns (uint256 validationData) {
-        if (msg.sender != address(entryPoint()))
-            revert CallerIsNotAnEntryPoint(msg.sender);
+        if (msg.sender != address(entryPoint())) revert CallerIsNotAnEntryPoint(msg.sender);
 
         (, address validationModule) = abi.decode(
             userOp.signature,
             (bytes, address)
         );
+        
         if (address(_modules[validationModule]) != address(0)) {
             validationData = IAuthorizationModule(validationModule)
                 .validateUserOp(userOp, userOpHash);
@@ -277,9 +277,15 @@ contract SmartAccount is
 
     /**
      * @dev Deposit more funds for this account in the entryPoint
+     * @param amount Amount of VTHO to approve for use by the entryPoint
      */
-    function addDeposit() public payable {
-        entryPoint().depositTo{value: msg.value}(address(this));
+    function addDeposit(uint256 amount) public payable {
+        // Transfer tokens from invoker to SA. Invoker here must have pre-approved SA for the amount to be deposited
+        require(VTHO_TOKEN_CONTRACT.transferFrom(msg.sender, _self, amount), "Amount to deposit exceeds SA's allowance");
+        // Approve EP to pull these tokens
+        require(VTHO_TOKEN_CONTRACT.approve(address(entryPoint()), amount), "Approval to EntryPoint Failed");
+        // Deposit specified amount to EP for SA
+        entryPoint().depositAmountTo(address(this), amount);
     }
 
     /**

@@ -75,6 +75,7 @@
     "@typechain/hardhat": "^2.3.0",
     "@types/mocha": "^9.0.0",
     "@vechain/hardhat-ethers": "^0.0.4",
+    "@vechain/account-abstraction-contracts": "^0.6.0",
     "@vechain/hardhat-vechain": "^0.0.4",
     "@vechain/hardhat-web3": "^0.0.4",
     "@vechain/web3-providers-connex": "1.0.0",
