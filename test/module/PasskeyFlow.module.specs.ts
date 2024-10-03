@@ -106,10 +106,11 @@ describe("Passkeys Registry Module:", function () {
     const userOpHash = getUserOpHash(userOp, entryPoint.address, chainId);
     const clientDataJSONPre = '{"type":"webauthn.get","challenge":"';
     const clientDataJSONPost =
-      '","origin":"https://webauthn.me","crossOrigin":false}';
+      '","origin":"http://localhost:3000","crossOrigin":false}';
 
     const userOpDataHashBuffer = Buffer.from(ethers.utils.arrayify(userOpHash));
-    const opHashBase64 = userOpDataHashBuffer.toString("base64");
+    let opHashBase64 = userOpDataHashBuffer.toString("base64");
+    opHashBase64 = convertBase64Url(opHashBase64);
 
     const clientDataJSON = `${clientDataJSONPre}${opHashBase64}${clientDataJSONPost}`;
 
@@ -132,6 +133,9 @@ describe("Passkeys Registry Module:", function () {
     const sigHash = ethers.utils.sha256(
       ethers.utils.hexlify(concatenatedBuffer)
     );
+
+    // console.log("sigHash", sigHash);
+
     const bn = new BN(BigNumber.from(sigHash).toString());
     const sign = keyPair.sign(bn);
 
@@ -164,3 +168,7 @@ describe("Passkeys Registry Module:", function () {
     );
   });
 });
+
+const convertBase64Url = (input: string): string => {
+  return input.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+};

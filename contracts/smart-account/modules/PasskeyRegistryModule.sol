@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
+import {Base64} from "solady/utils/Base64.sol";
 import {Secp256r1, PassKeyId} from "./PasskeyValidationModules/Secp256r1.sol";
 import {EIP1271_MAGIC_VALUE} from "contracts/smart-account/interfaces/ISignatureValidator.sol";
 import {IPasskeyRegistryModule} from "../interfaces/modules/IPasskeyRegistryModule.sol";
@@ -163,9 +163,7 @@ contract PasskeyRegistryModule is
                 (bytes32, uint256, uint256, bytes, string, string)
             );
         (keyHash);
-        string memory opHashBase64 = Base64.encode(
-            bytes.concat(userOpDataHash)
-        );
+        string memory opHashBase64 = Base64.encode(abi.encodePacked(userOpDataHash), true, true);
         string memory clientDataJSON = string.concat(
             clientDataJSONPre,
             opHashBase64,
