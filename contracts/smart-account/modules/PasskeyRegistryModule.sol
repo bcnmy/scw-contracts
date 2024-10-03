@@ -163,7 +163,11 @@ contract PasskeyRegistryModule is
                 (bytes32, uint256, uint256, bytes, string, string)
             );
         (keyHash);
-        string memory opHashBase64 = Base64.encode(abi.encodePacked(userOpDataHash), true, true);
+        string memory opHashBase64 = Base64.encode(
+            abi.encodePacked(userOpDataHash),
+            true,
+            true
+        );
         string memory clientDataJSON = string.concat(
             clientDataJSONPre,
             opHashBase64,
