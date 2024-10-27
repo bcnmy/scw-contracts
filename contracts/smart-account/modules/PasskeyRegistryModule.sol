@@ -3,7 +3,7 @@ pragma solidity ^0.8.23;
 
 import {BaseAuthorizationModule} from "./BaseAuthorizationModule.sol";
 import {UserOperation} from "@account-abstraction/contracts/interfaces/UserOperation.sol";
-import {Base64} from "@openzeppelin/contracts/utils/Base64.sol";
+import {Base64} from "node_modules/solady/src/utils/Base64.sol";
 import {Secp256r1, PassKeyId} from "./PasskeyValidationModules/Secp256r1.sol";
 import {IPasskeyRegistryModule} from "../interfaces/modules/IPasskeyRegistryModule.sol";
 import {ISignatureValidator} from "../interfaces/ISignatureValidator.sol";
@@ -17,6 +17,10 @@ import {IAuthorizationModule} from "../interfaces/IAuthorizationModule.sol";
  *         For Smart Contract Owners check SmartContractOwnership module instead
  * @author Aman Raj - <aman.raj@biconomy.io>
  */
+
+// TODO: Add transferOwnership methods..
+
+
 contract PasskeyRegistryModule is
     BaseAuthorizationModule,
     IPasskeyRegistryModule
@@ -162,7 +166,9 @@ contract PasskeyRegistryModule is
             );
         (keyHash);
         string memory opHashBase64 = Base64.encode(
-            bytes.concat(userOpDataHash)
+            abi.encodePacked(userOpDataHash),
+            true,
+            true
         );
         string memory clientDataJSON = string.concat(
             clientDataJSONPre,
