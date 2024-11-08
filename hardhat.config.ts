@@ -243,6 +243,11 @@ const config: HardhatUserConfig = {
       accounts: walletUtils.makeKeyList(),
       chainId: 245022926,
     },
+    odysseyTestnet: {
+      url: process.env.ODYSSEY_TESTNET_URL || "https://odyssey.ithaca.xyz",
+      accounts: hardhatAccounts,
+      chainId: 911867,
+    },
     baseGoerli: {
       url:
         process.env.BASE_TESTNET_URL ||
@@ -479,6 +484,11 @@ const config: HardhatUserConfig = {
       accounts: hardhatAccounts,
       chainId: 2810,
     },
+    morphMainnet: {
+      url: "https://rpc.morphl2.io",
+      accounts: hardhatAccounts,
+      chainId: 2818,
+    },
     taiko: {
       url: "https://rpc.mainnet.taiko.xyz/",
       accounts: hardhatAccounts,
@@ -528,6 +538,11 @@ const config: HardhatUserConfig = {
       url: "https://sepolia-rpc-priority.kakarot.org/",
       accounts: hardhatAccounts,
       chainId: 1802203764,
+    },
+    kakarotStrakNetSepolia: {
+      url: "https://sepolia-rpc-priority.kakarot.org/",
+      accounts: hardhatAccounts,
+      chainId: 920637907288165,
     },
     fireChainTestnet: {
       url: "https://rpc.testnet.5ire.network",
